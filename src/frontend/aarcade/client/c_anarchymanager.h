@@ -35,21 +35,19 @@ public:
 
 	// Called after rendering
 	virtual void PostRender();
+	
+	void AnarchyBegin();
 
-//	C_WebViewManager* GetWebViewManager() { return m_pWebViewManager; };
-
+	// helpers
 	std::string GenerateUniqueId();
 
-	void AnarchyBegin();
+	// accessors
 	C_WebManager* GetWebManager() { return m_pWebManager; }
-
-	//const char* GenerateHash(const char* text);
 	
 private:
 	C_WebManager* m_pWebManager;
 };
 
-//C_AnarchyManager* g_pAnarchyManager = null;
 extern C_AnarchyManager* g_pAnarchyManager;
 
 #endif

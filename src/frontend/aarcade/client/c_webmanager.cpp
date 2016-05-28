@@ -42,7 +42,7 @@ void C_WebManager::Update()
 	//	return;
 }
 
-C_WebTab* C_WebManager::GetWebTab(std::string id)
+C_WebTab* C_WebManager::FindWebTab(std::string id)
 {
 	auto foundWebTab = m_webTabs.find(id);
 	if (foundWebTab != m_webTabs.end())

@@ -323,23 +323,16 @@ void C_WebBrowser::Init()
 	m_pViewListener = new ViewListener;
 
 	m_pMasterWebView = m_pWebCore->CreateWebView(512, 256, m_pWebSession);
-	this->PrepareWebView(m_pMasterWebView);
+	m_pMasterWebView->set_load_listener(m_pMasterLoadListener);
+	m_pMasterWebView->set_view_listener(m_pMasterViewListener);
 
 	m_pMasterWebView->LoadURL(WebURL(WSLit("asset://newwindow/master")));
 }
 
 void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView)
 {
-	if (m_pMasterWebView == pWebView)
-	{
-		pWebView->set_load_listener(m_pMasterLoadListener);
-		pWebView->set_view_listener(m_pMasterViewListener);
-	}
-	else
-	{
-		pWebView->set_load_listener(m_pLoadListener);
-		pWebView->set_view_listener(m_pViewListener);
-	}
+	pWebView->set_load_listener(m_pLoadListener);
+	pWebView->set_view_listener(m_pViewListener);
 }
 
 void C_WebBrowser::OnMasterWebViewDocumentReady()
@@ -356,10 +349,7 @@ void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
 	DevMsg("WebBrowser: CreateWebView\n");
 
 	std::string id = pWebTab->GetId();
-	mCreateWebViewRequests[id] = true;
-	
 	m_pMasterWebView->ExecuteJavascript(WSLit(VarArgs("window.open('asset://newwindow/%s', '', 'width=200,height=100');", id.c_str())), WSLit(""));
-	//m_pMasterWebView->ExecuteJavascript(WSLit(VarArgs("window.open('data:text/html,<html><body>%s</body></html>', '', 'width=200,height=100');", id.c_str())), WSLit(""));
 }
 
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)
@@ -367,16 +357,11 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 	// The master webview has created a new webview on demand.
 	DevMsg("WebBrowser: OnCreateWebViewDocumentReady: %s\n", id.c_str());
 
-	// TODO:
-	// Add global JS API object to the web view.
-	// Load the URL associated with this ID into the web view.
-	// Set the state of the web tab to "ready".
-	// When ever the Web Tab actually needs to interact with the web view, it will be routed through the web browser to keep awesomium abstracted.
+	// TODO: Add global JS API object to the web view.
 
-	auto foundRequest = mCreateWebViewRequests.find(id);
-	if (foundRequest != mCreateWebViewRequests.end())
+	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+	if (pWebTab)
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebTab(id);
 		pWebTab->SetState(2);
 		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
 	}

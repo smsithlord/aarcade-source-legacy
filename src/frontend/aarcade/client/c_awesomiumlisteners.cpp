@@ -73,31 +73,6 @@ void MasterViewListener::OnShowCreatedWebView(WebView *caller, WebView *new_view
 
 	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
 	pWebBrowser->PrepareWebView(new_view);
-
-	/*
-	int iState = pWebBrowser->GetState();
-	if (iState == 2)
-	{
-		// extract a web tab id
-		std::string id;
-		std::string spec = WebStringToCharString(target_url.spec());
-
-		size_t foundPrefix = spec.find("data:text/html,<html><body>");
-		if (foundPrefix != std::string::npos)
-		{
-			size_t foundPostfix = spec.find("</body></html>");
-			if (foundPostfix != std::string::npos)
-			{
-				// we probably have an id
-				id = spec.substr(foundPrefix + 27, foundPostfix - foundPrefix - 27);
-			}
-		}
-
-		DevMsg("Detected ID is: %s\n", id.c_str());
-		pWebBrowser->OnCreateWebViewDocumentReady(id);
-		//caller->ExecuteJavascript(WSLit("window.open('data:text/html,<html><body></body></html>;', '', 'width=200,height=100');"), WSLit(""));
-	}
-	*/
 	//new_view->Destroy();
 }
 

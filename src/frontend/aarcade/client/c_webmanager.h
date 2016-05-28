@@ -17,9 +17,11 @@ public:
 	void Init();
 	void Update();
 
+	// accessors
 	C_WebBrowser* GetWebBrowser() { return m_pWebBrowser; }
-	C_WebTab* GetWebTab(std::string id);
+
 	C_WebTab* CreateWebTab(std::string url);
+	C_WebTab* FindWebTab(std::string id);
 
 	/*
 	void RelayOnMouseMove(int x, int y);
