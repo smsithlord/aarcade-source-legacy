@@ -45,3 +45,11 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Added for Anarchy Arcade
+src/frontend/*
+!src/frontend/aarcade/
+
+game/*
+#!game/frontend/
+#!game/AArcade.exe
