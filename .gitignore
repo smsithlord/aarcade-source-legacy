@@ -47,6 +47,8 @@ Temporary Items
 .apdisk
 
 # Added for Anarchy Arcade
+*.dia~
+
 src/frontend/*
 !src/frontend/aarcade/
 
