@@ -14,9 +14,9 @@ C_WebManager::C_WebManager()
 	m_iState = 0;	// uninitialized
 	m_iWebSurfaceWidth = 1280;
 	m_iWebSurfaceHeight = 720;
-	m_iVisibleWebTabsLastTick = -1;
-	m_iVisibleWebTabsCurrentTick = 0;
-	m_iLastRenderedTick = -1;
+	m_iVisibleWebTabsLastFrame = -1;
+	m_iVisibleWebTabsCurrentFrame = 0;
+	m_iLastRenderedFrame = -1;
 	m_pWebBrowser = null;
 	m_pWebSurfaceRegen = null;
 }
@@ -43,8 +43,8 @@ void C_WebManager::Update()
 	//DevMsg("WebManager: Update\n");
 
 	// Update the visible web tab estimates
-	m_iVisibleWebTabsLastTick = m_iVisibleWebTabsCurrentTick;
-	m_iVisibleWebTabsCurrentTick = 0;
+	m_iVisibleWebTabsLastFrame = m_iVisibleWebTabsCurrentFrame;
+	m_iVisibleWebTabsCurrentFrame = 0;
 
 	// Update the browser, if it exists
 	if (m_pWebBrowser)
@@ -90,8 +90,8 @@ CWebSurfaceRegen* C_WebManager::GetOrCreateWebSurfaceRegen()
 bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 {
 	//DevMsg("WebManager: ShouldRender\n");
-	int iLastRenderedTick = pWebTab->GetLastRenderedTick();
-	if (m_iLastRenderedTick != gpGlobals->tickcount && (iLastRenderedTick <= 0 || gpGlobals->tickcount - iLastRenderedTick >= m_iVisibleWebTabsLastTick))
+	int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
+	if (m_iLastRenderedFrame != gpGlobals->framecount && (iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
 		return true;
 
 	return false;

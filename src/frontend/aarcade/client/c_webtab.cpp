@@ -15,7 +15,7 @@ C_WebTab::C_WebTab(std::string url, std::string id)
 
 	m_id = id;
 	m_initialUrl = url;
-	m_iLastRenderTick = -1;
+	m_iLastRenderFrame = -1;
 	m_iState = 1;	// initializing
 
 	// create the texture (each WebTab has its own texture)
@@ -48,9 +48,9 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 		DevMsg("WebTab: OnProxyBind\n");
 	*/
 
-	if (m_iLastRenderTick < gpGlobals->tickcount)
+	if (m_iLastRenderFrame < gpGlobals->framecount)
 	{
-		g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentTick();
+		g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 
 		// render the web tab to its texture
 		if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
@@ -64,8 +64,8 @@ void C_WebTab::Render()
 	g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen()->SetWebTab(this);
 	m_pTexture->Download();
 
-	m_iLastRenderTick = gpGlobals->tickcount;
-	g_pAnarchyManager->GetWebManager()->SetLastRenderedTick(gpGlobals->tickcount);
+	m_iLastRenderFrame = gpGlobals->framecount;
+	g_pAnarchyManager->GetWebManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 
 void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)

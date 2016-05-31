@@ -95,6 +95,8 @@ void C_AnarchyManager::PreRender()
 
 void C_AnarchyManager::Update(float frametime)
 {
+	//DevMsg("Float: %f\n", frametime);	// deltatime
+	//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
 	if (m_pWebManager)
 		m_pWebManager->Update();
 

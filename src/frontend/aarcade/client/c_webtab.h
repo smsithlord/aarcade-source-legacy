@@ -15,7 +15,7 @@ public:
 	// accessors
 	std::string GetId() { return m_id; }
 	std::string GetInitialUrl() { return m_initialUrl; }
-	int GetLastRenderedTick() { return m_iLastRenderTick; }
+	int GetLastRenderedFrame() { return m_iLastRenderFrame; }
 	ITexture* GetTexture() { return m_pTexture; }
 
 	// mutators
@@ -30,7 +30,7 @@ private:
 	std::string m_id;
 	std::string m_initialUrl;
 	ITexture* m_pTexture;
-	int m_iLastRenderTick;
+	int m_iLastRenderFrame;
 	Awesomium::WebView* m_pWebView;
 };
 

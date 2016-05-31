@@ -24,12 +24,12 @@ public:
 	int GetWebSurfaceHeight() { return m_iWebSurfaceHeight; }
 
 	// mutators
-	void SetLastRenderedTick(int tick) { m_iLastRenderedTick = tick; }
+	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
 
 	C_WebTab* CreateWebTab(std::string url, std::string id = "");
 	C_WebTab* FindWebTab(std::string id);
 	CWebSurfaceRegen* GetOrCreateWebSurfaceRegen();
-	void IncrementVisibleWebTabsCurrentTick() { m_iVisibleWebTabsCurrentTick++; }
+	void IncrementVisibleWebTabsCurrentFrame() { m_iVisibleWebTabsCurrentFrame++; }
 	bool ShouldRender(C_WebTab* pWebTab);
 
 	/*
@@ -44,9 +44,9 @@ private:
 	C_WebBrowser* m_pWebBrowser;
 	std::map<std::string, C_WebTab*> m_webTabs;
 	CWebSurfaceRegen* m_pWebSurfaceRegen;
-	int m_iVisibleWebTabsLastTick;
-	int m_iVisibleWebTabsCurrentTick;
-	int m_iLastRenderedTick;
+	int m_iVisibleWebTabsLastFrame;
+	int m_iVisibleWebTabsCurrentFrame;
+	int m_iLastRenderedFrame;
 	int m_iWebSurfaceWidth;
 	int m_iWebSurfaceHeight;
 };
