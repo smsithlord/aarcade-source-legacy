@@ -3,6 +3,7 @@
 	"$basetexture" "vgui/websurface"
 	"url"	"http://smarcade.net/dlcv2/view_youtube.php?id=cG21b8Kx2DI&autoplay=1"
 	"autocreate" 1
+	"id"	"toodles"
 	"Proxies"
 	{
 		"websurface"

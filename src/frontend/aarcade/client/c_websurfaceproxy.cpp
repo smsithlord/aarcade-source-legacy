@@ -81,8 +81,11 @@ void CWebSurfaceProxy::Release()
 	*/
 
 	// Release our Loading Image
-	if( m_pOriginalTexture )
+	if (m_pOriginalTexture)
+	{
 		m_pOriginalTexture->DecrementReferenceCount();
+		m_pOriginalTexture->SetTextureRegenerator(null);
+	}
 
 	// FIXME: Do we need to delete the class-scope members too? YOUT HINK I KNO W? SHIIIIT
 
@@ -120,12 +123,27 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 	bool bShouldBind = false;
 	if (!m_pWebTab )
 	{
-		// check if we should create a web tab
-		if (m_iOriginalAutoCreate == 1 && m_iState == 0)
+		if (m_iState == 0)
 		{
-			// create a web tab
-			m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, "");
-			m_iState = 1;	// initializing
+			if (m_originalId != "")
+			{
+				// does a web tab for this id already exist?
+				C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(m_originalId);
+
+				if (pWebTab)
+					m_pWebTab = pWebTab;
+			}
+
+			if (!m_pWebTab)
+			{
+				// check if we should create a web tab
+				if (m_iOriginalAutoCreate == 1 && m_iState == 0)
+				{
+					// create a web tab
+					m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
+					m_iState = 1;	// initializing
+				}
+			}
 		}
 	}
 	else

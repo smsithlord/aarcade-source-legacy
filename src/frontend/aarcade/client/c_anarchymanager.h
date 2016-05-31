@@ -25,7 +25,7 @@ public:
 	virtual void OnRestore();
 	virtual void SafeRemoveIfDesired();
 
-	virtual bool	IsPerFrame();
+	virtual bool IsPerFrame();
 
 	// Called before rendering
 	virtual void PreRender();

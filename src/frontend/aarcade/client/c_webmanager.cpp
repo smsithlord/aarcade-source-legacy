@@ -24,6 +24,16 @@ C_WebManager::C_WebManager()
 C_WebManager::~C_WebManager()
 {
 	DevMsg("WebManager: Destructor\n");
+
+	// iterate over all web tabs and call their destructors
+	for (std::map<std::string, C_WebTab*>::iterator it = m_webTabs.begin(); it != m_webTabs.end(); ++it)
+	{
+		delete it->second;
+		it->second = null;
+	}
+
+	if (m_pWebBrowser)
+		delete m_pWebBrowser;
 }
 
 void C_WebManager::Init()

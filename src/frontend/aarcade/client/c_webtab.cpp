@@ -37,6 +37,11 @@ C_WebTab::C_WebTab(std::string url, std::string id)
 C_WebTab::~C_WebTab()
 {
 	DevMsg("WebTab: Destructor\n");
+	if (m_pTexture)
+	{
+		m_pTexture->DecrementReferenceCount();
+		m_pTexture->SetTextureRegenerator(null);
+	}
 }
 
 void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
