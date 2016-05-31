@@ -4,19 +4,20 @@
 //#include "aa_globals.h"
 #include <string>
 #include "materialsystem/ITexture.h"
+#include "c_webtab.h"
 
 class CWebSurfaceRegen : public ITextureRegenerator
 {
 public:
 	CWebSurfaceRegen();
-	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect );	// calling download is the exact same (??) as calling this function directly.  it's even synchronous.
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect );
 	void Release();
 
-//	void SetDynamicImage(DynamicImage* pImage) { m_pImage = pImage; };
-//	DynamicImage* GetDynamicImage() { return m_pImage; };
+	// mutators
+	void SetWebTab(C_WebTab* pWebTab) { m_pWebTab = pWebTab; }
 
 private:
-//	DynamicImage* m_pImage;
+	C_WebTab* m_pWebTab;
 };
 
 #endif //WEB_SURFACE_REGEN_H

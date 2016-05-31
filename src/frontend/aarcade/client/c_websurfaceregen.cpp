@@ -26,8 +26,10 @@ void CWebSurfaceRegen::Release()
 
 void CWebSurfaceRegen::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
-	DevMsg("WebSurfaceRege: RegenerateTextureBits\n");
-	return;
+	//DevMsg("WebSurfaceRege: RegenerateTextureBits\n");
+	m_pWebTab->RegenerateTextureBits(pTexture, pVTFTexture, pSubRect);
+
+	//return;
 	/*
 	if( !m_pImage )
 		return;

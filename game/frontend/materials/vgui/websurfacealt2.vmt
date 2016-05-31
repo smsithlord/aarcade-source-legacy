@@ -1,0 +1,13 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "vgui/websurface"
+	"url"	"https://www.youtube.com/watch?v=Nj8r3qmOoZ8"
+	"autocreate" 1
+	"Proxies"
+	{
+		"websurface"
+		{
+			"enable" "1"
+		}
+	}
+}

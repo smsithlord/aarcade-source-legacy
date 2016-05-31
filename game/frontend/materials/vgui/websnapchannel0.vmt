@@ -1,0 +1,14 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "vgui/websnap"
+	"$model" "1"
+	"channel"	"0"
+	"file" "http://smsithlord.com/item_portfolio.jpg"
+	"Proxies"
+	{
+		"websnap"
+		{
+			"enable" "1"
+		}
+	}
+}

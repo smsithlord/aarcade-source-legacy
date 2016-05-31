@@ -20,6 +20,7 @@ public:
 	void Update();
 
 	void CreateWebView(C_WebTab* pWebTab);
+	WebView* FindWebView(C_WebTab* pWebTab);
 
 	// accessors
 	int GetState() { return m_iState; }
@@ -28,16 +29,18 @@ public:
 	void OnMasterWebViewDocumentReady();
 
 	// regular
-	void PrepareWebView(Awesomium::WebView* pWebView);
+	void PrepareWebView(WebView* pWebView);
 	void OnCreateWebViewDocumentReady(WebView* pWebView, std::string id);
+	void RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 
 private:
 	int m_iState;
-	Awesomium::WebCore* m_pWebCore;
-	Awesomium::WebSession* m_pWebSession;
+	WebCore* m_pWebCore;
+	WebSession* m_pWebSession;
+	std::map<C_WebTab*, WebView*> m_webViews;
 	
 	// master
-	Awesomium::WebView* m_pMasterWebView;
+	WebView* m_pMasterWebView;
 	MasterLoadListener* m_pMasterLoadListener;
 	MasterViewListener* m_pMasterViewListener;
 

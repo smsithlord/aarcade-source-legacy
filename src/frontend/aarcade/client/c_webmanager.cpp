@@ -2,6 +2,7 @@
 
 //#include "aa_globals.h"
 #include "c_webmanager.h"
+#include "c_anarchymanager.h"
 //#include "Filesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -11,7 +12,10 @@ C_WebManager::C_WebManager()
 {
 	DevMsg("WebManager: Constructor\n");
 	m_iState = 0;	// uninitialized
+	m_iWebSurfaceWidth = 1280;
+	m_iWebSurfaceHeight = 720;
 	m_pWebBrowser = null;
+	m_pWebSurfaceRegen = null;
 }
 
 C_WebManager::~C_WebManager()
@@ -53,10 +57,26 @@ C_WebTab* C_WebManager::FindWebTab(std::string id)
 		return null;
 }
 
-C_WebTab* C_WebManager::CreateWebTab(std::string url)
+C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id)
 {
 	DevMsg("WebManager: CreateWebTab\n");
-	C_WebTab* pWebTab = new C_WebTab(url);
-	m_webTabs[pWebTab->GetId()] = pWebTab;
+
+	std::string validId;
+	if (id == "")
+		validId = g_pAnarchyManager->GenerateUniqueId();
+	else
+		validId = id;	// FIXME: Might want to do a check to make sure a tab with this ID doesn't already exist.
+
+	C_WebTab* pWebTab = new C_WebTab(url, validId);
+	m_webTabs[validId] = pWebTab;
+
 	return pWebTab;
+}
+
+CWebSurfaceRegen* C_WebManager::GetOrCreateWebSurfaceRegen()
+{
+	if (!m_pWebSurfaceRegen)
+		m_pWebSurfaceRegen = new CWebSurfaceRegen;
+	
+	return m_pWebSurfaceRegen;
 }

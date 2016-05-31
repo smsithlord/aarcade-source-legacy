@@ -53,5 +53,13 @@ src/frontend/*
 !src/frontend/aarcade/
 
 game/*
-#!game/frontend/
-#!game/AArcade.exe
+!game/frontend/
+game/frontend/*
+!game/frontend/materials/
+game/frontend/materials/*
+!game/frontend/materials/vgui/
+game/frontend/materials/vgui/logos/*
+!game/frontend/mapsrc/
+game/frontend/maps/graphs/*
+game/frontend/maps/dm_lockdown.bsp
+!game/frontend/maps/

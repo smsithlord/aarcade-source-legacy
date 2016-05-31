@@ -2,6 +2,7 @@
 
 #include "c_webbrowser.h"
 #include "c_anarchymanager.h"
+#include <Awesomium/BitmapSurface.h>
 //#include "aa_globals.h"
 //#include "Filesystem.h"
 
@@ -322,7 +323,7 @@ void C_WebBrowser::Init()
 	m_pLoadListener = new LoadListener;
 	m_pViewListener = new ViewListener;
 
-	m_pMasterWebView = m_pWebCore->CreateWebView(512, 256, m_pWebSession);
+	m_pMasterWebView = m_pWebCore->CreateWebView(1280, 720, m_pWebSession);
 	m_pMasterWebView->set_load_listener(m_pMasterLoadListener);
 	m_pMasterWebView->set_view_listener(m_pMasterViewListener);
 
@@ -331,6 +332,7 @@ void C_WebBrowser::Init()
 
 void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView)
 {
+	pWebView->Resize(1280, 720);
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
 }
@@ -340,8 +342,8 @@ void C_WebBrowser::OnMasterWebViewDocumentReady()
 	m_iState = 2;	// initialized
 
 	DevMsg("END OF THE WORLD!\n");
-	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
-	C_WebTab* pWebTab = pWebManager->CreateWebTab("http://www.smsithlord.com/");
+//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
+//	C_WebTab* pWebTab = pWebManager->CreateWebTab("http://www.smsithlord.com/");
 }
 
 void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
@@ -350,6 +352,15 @@ void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
 
 	std::string id = pWebTab->GetId();
 	m_pMasterWebView->ExecuteJavascript(WSLit(VarArgs("window.open('asset://newwindow/%s', '', 'width=200,height=100');", id.c_str())), WSLit(""));
+}
+
+WebView* C_WebBrowser::FindWebView(C_WebTab* pWebTab)
+{
+	auto foundWebView = m_webViews.find(pWebTab);
+	if (foundWebView != m_webViews.end())
+		return m_webViews[pWebTab];
+	else
+		return null;
 }
 
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)
@@ -363,6 +374,7 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 	if (pWebTab)
 	{
 		pWebTab->SetState(2);
+		m_webViews[pWebTab] = pWebView;
 		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
 	}
 }
@@ -371,4 +383,40 @@ void C_WebBrowser::Update()
 {
 	if (m_pWebCore)
 		m_pWebCore->Update();
+}
+
+void C_WebBrowser::RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
+{
+	//DevMsg("WebBrowser: RegenerateTextureBits\n");
+
+	WebView* pWebView = FindWebView(pWebTab);
+
+	if (!pWebView)
+		return;
+
+	BitmapSurface* surface = static_cast<BitmapSurface*>(pWebView->surface());
+	//BitmapSurface* surface = (BitmapSurface*)pWebView->surface();
+	if (surface != 0)
+		surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+		/*
+		// BLACK SCREEN deal with square texture size!!
+		if (m_iStrangeVideo == 2)
+		{
+			int sourceWidth = 1280;
+			int sourceHeight = 720;
+			int sourceStride = sourceWidth * 4;
+			unsigned char* pSourceFrame = new unsigned char[sourceStride*sourceHeight];
+
+			surface->CopyTo(pSourceFrame, sourceStride, 4, false, false);
+
+			pClientArcadeResources->ResizeFrame(pSourceFrame, pVTFTexture->ImageData(0, 0, 0));
+
+			delete[] pSourceFrame;
+		}
+		else
+		{
+			// do it regular
+			surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+		}
+		*/
 }
