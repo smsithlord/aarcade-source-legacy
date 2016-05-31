@@ -66,6 +66,24 @@ void AnarchyManager(const CCommand &args)
 
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
 
+void ActivateInputMode(const CCommand &args)
+{
+	DevMsg("Activate input mode\n");
+}
+ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
+
+void DeactivateInputMode(const CCommand &args)
+{
+	DevMsg("Deactivate input mode\n");
+}
+ConCommand deactivateinputmode("-hdview_input_toggle", DeactivateInputMode, "Turns OFF input mode.", FCVAR_NONE);
+
+void AttemptSelectObject(const CCommand &args)
+{
+	g_pAnarchyManager->AttemptSelectEntity();
+}
+ConCommand attemptselectobject("focus", AttemptSelectObject, "Attempts to select the object under your crosshair.", FCVAR_NONE);
+
 void Launch( const CCommand &args )
 {
 	if( args.ArgC() < 2 )

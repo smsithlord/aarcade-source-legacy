@@ -11,6 +11,8 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_pWebManager = null;
+	m_pSelectedEntity = null;
+//	m_pEntityGlowEffect = null;
 
 	// This section gets execute before there is a console
 	// Certain things are not safe to do from here.
@@ -130,6 +132,57 @@ void C_AnarchyManager::AnarchyBegin()
 	m_pWebManager->Init();
 }
 
+bool C_AnarchyManager::AttemptSelectEntity()
+{
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (pPlayer->GetHealth() <= 0)
+		return false;
+
+	if (pPlayer != C_BasePlayer::GetLocalPlayer())
+		return false;
+	else
+	{
+		// fire a trace line
+		trace_t tr;
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		C_BaseEntity *pEntity;
+		if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+		{
+			pEntity = tr.m_pEnt;
+			return SelectEntity(pEntity);
+		}
+	}
+}
+
+bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
+{
+	if (m_pSelectedEntity)
+		DeselectEntity(m_pSelectedEntity);
+
+	m_pSelectedEntity = pEntity;
+	AddGlowEffect(pEntity);
+	return true;
+}
+
+bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity)
+{
+	RemoveGlowEffect(m_pSelectedEntity);
+	m_pSelectedEntity = null;
+	return true;
+}
+
+void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
+{
+	engine->ServerCmd(VarArgs("addgloweffect %i", pEntity->entindex()), false);
+}
+
+void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
+{
+	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
+}
 /*
 void C_AnarchyManager::LevelInitPreEntity()
 {

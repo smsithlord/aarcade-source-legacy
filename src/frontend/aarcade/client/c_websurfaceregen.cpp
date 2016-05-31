@@ -4,7 +4,7 @@
 #include "pixelwriter.h"
 
 #include "c_websurfaceregen.h"
-#include "c_anarchymanager.h"11
+#include "c_anarchymanager.h"
 
 // For file handing
 #include "Filesystem.h"

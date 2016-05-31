@@ -37,15 +37,23 @@ public:
 	virtual void PostRender();
 	
 	void AnarchyBegin();
+	bool AttemptSelectEntity();
+	bool SelectEntity(C_BaseEntity* pEntity);
+	bool DeselectEntity(C_BaseEntity* pEntity);
+	void AddGlowEffect(C_BaseEntity* pEntity);
+	void RemoveGlowEffect(C_BaseEntity* pEntity);
 
 	// helpers
 	std::string GenerateUniqueId();
 
 	// accessors
 	C_WebManager* GetWebManager() { return m_pWebManager; }
+	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
 	C_WebManager* m_pWebManager;
+	C_BaseEntity* m_pSelectedEntity;
+	//CEntGlowEffect* m_pEntityGlowEffect;
 };
 
 extern C_AnarchyManager* g_pAnarchyManager;
