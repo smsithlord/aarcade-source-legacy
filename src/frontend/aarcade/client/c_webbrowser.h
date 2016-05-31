@@ -21,6 +21,8 @@ public:
 
 	void CreateWebView(C_WebTab* pWebTab);
 	WebView* FindWebView(C_WebTab* pWebTab);
+	void OnSelectWebTab(C_WebTab* pWebTab);
+	void OnDeselectWebTab(C_WebTab* pWebTab);
 
 	// accessors
 	int GetState() { return m_iState; }

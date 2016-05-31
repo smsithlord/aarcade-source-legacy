@@ -19,6 +19,7 @@ C_WebManager::C_WebManager()
 	m_iLastRenderedFrame = -1;
 	m_pWebBrowser = null;
 	m_pWebSurfaceRegen = null;
+	m_pSelectedWebTab = null;
 }
 
 C_WebManager::~C_WebManager()
@@ -70,6 +71,38 @@ C_WebTab* C_WebManager::FindWebTab(std::string id)
 	}
 	else
 		return null;
+}
+
+C_WebTab* C_WebManager::FindWebTab(IMaterial* pMaterial)
+{
+	auto foundId = m_materialWebTabIds.find(pMaterial);
+	if (foundId != m_materialWebTabIds.end())
+	{
+		std::string id = m_materialWebTabIds[pMaterial];
+
+		auto foundWebTab = m_webTabs.find(id);
+		if (foundWebTab != m_webTabs.end())
+			return m_webTabs[id];
+	}
+	
+	return null;
+}
+
+void C_WebManager::SetMaterialWebTabId(IMaterial* pMaterial, std::string id)
+{
+	m_materialWebTabIds[pMaterial] = id;
+}
+
+void C_WebManager::SelectWebTab(C_WebTab* pWebTab)
+{
+	m_pSelectedWebTab = pWebTab;
+	m_pWebBrowser->OnSelectWebTab(pWebTab);
+}
+
+void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
+{
+	m_pSelectedWebTab = null;
+	m_pWebBrowser->OnDeselectWebTab(pWebTab);
 }
 
 C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id)

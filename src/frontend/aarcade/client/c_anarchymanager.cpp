@@ -138,22 +138,24 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	if (pPlayer->GetHealth() <= 0)
 		return false;
 
-	if (pPlayer != C_BasePlayer::GetLocalPlayer())
-		return false;
+	// fire a trace line
+	trace_t tr;
+	Vector forward;
+	pPlayer->EyeVectors(&forward);
+	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+	C_BaseEntity *pEntity;
+	if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+	{
+		pEntity = tr.m_pEnt;
+		return SelectEntity(pEntity);
+	}
 	else
 	{
-		// fire a trace line
-		trace_t tr;
-		Vector forward;
-		pPlayer->EyeVectors(&forward);
-		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
-
-		C_BaseEntity *pEntity;
-		if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
-		{
-			pEntity = tr.m_pEnt;
-			return SelectEntity(pEntity);
-		}
+		if (m_pSelectedEntity)
+			return DeselectEntity(m_pSelectedEntity);
+		else
+			return false;
 	}
 }
 
@@ -164,6 +166,49 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 
 	m_pSelectedEntity = pEntity;
 	AddGlowEffect(pEntity);
+
+	// DETECT DYNAMIC TEXTURES
+	const model_t* model = pEntity->GetModel();//modelinfo->FindOrLoadModel(model);
+
+	IMaterial* pMaterials[1024];
+	for (int x = 0; x < 1024; x++)
+		pMaterials[x] = NULL;
+
+	modelinfo->GetModelMaterials(model, 1024, &pMaterials[0]);
+
+	//pMaterials[x]->ColorModulate(255, 0, 0);
+	//pMaterials[x]->GetPreviewImage
+
+	C_WebTab* pWebTab;
+	C_WebTab* pSelectedWebTab;
+	IMaterial* pMaterial;
+	for (int x = 0; x < 1024; x++)
+	{
+		if (pMaterials[x] && pMaterials[x]->HasProxy())
+		{
+			pMaterial = pMaterials[x];
+			pWebTab = m_pWebManager->FindWebTab(pMaterial);
+			if (pWebTab)
+			{
+				pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
+				if (pSelectedWebTab)
+					m_pWebManager->DeselectWebTab(pSelectedWebTab);
+
+				// FIXME: Add some kind of material variable that could allow us to be skipped? We'll need something like that when WebImages are added.
+				m_pWebManager->SelectWebTab(pWebTab);
+				break;
+			}
+		}
+			/*
+			Material: vgui/websurfacealt2
+			Material: vgui/websurfacealt
+			Material: vgui/websurfacealt5
+			Material: vgui/websurfacealt5
+			Material: vgui/websurfacealt7
+			*/
+	}
+
+
 	return true;
 }
 

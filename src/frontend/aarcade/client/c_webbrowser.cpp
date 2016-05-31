@@ -98,6 +98,20 @@ WebView* C_WebBrowser::FindWebView(C_WebTab* pWebTab)
 		return null;
 }
 
+void C_WebBrowser::OnSelectWebTab(C_WebTab* pWebTab)
+{
+	WebView* pWebView = FindWebView(pWebTab);
+	if (pWebView)
+		pWebView->Focus();
+}
+
+void C_WebBrowser::OnDeselectWebTab(C_WebTab* pWebTab)
+{
+	WebView* pWebView = FindWebView(pWebTab);
+	if (pWebView)
+		pWebView->Unfocus();
+}
+
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)
 {
 	// The master webview has created a new webview on demand.
