@@ -1133,3 +1133,146 @@ Level flags = 0
 Total triangle count: 40
 Writing d:\projects\aarcade-source\game\frontend\mapsrc\tester.bsp
 0 seconds elapsed
+
+
+
+materialPath: D:\Projects\AArcade-Source\game\frontend\materials
+Loading D:\Projects\AArcade-Source\game\frontend\mapsrc\tester.vmf
+ConVarRef mat_reduceparticles doesn't point to an existing ConVar
+Could not locate 'GameData' key in d:\projects\aarcade-source\game\frontend\gameinfo.txt
+fixing up env_cubemap materials on brush sides...
+0...1...2...3...4...5...6...7...8...9...100...1...2...3...4...5...6...7...8...9...10Processing areas...done (0)
+Building Faces...done (0)
+FixTjuncs...
+PruneNodes...
+WriteBSP...
+done (0)
+writing D:\Projects\AArcade-Source\game\frontend\mapsrc\tester.prt...Building visibility clusters...
+done (0)
+Creating default LDR cubemaps for env_cubemap using skybox materials:
+   skybox/sky_day01_01*.vmt
+ ! Run buildcubemaps in the engine to get the correct cube maps.
+Creating default HDR cubemaps for env_cubemap using skybox materials:
+   skybox/sky_day01_01*.vmt
+ ! Run buildcubemaps in the engine to get the correct cube maps.
+Finding displacement neighbors...
+Finding lightmap sample positions...
+Displacement Alpha : 0...1...2...3...4...5...6...7...8...9...10
+Building Physics collision data...
+done (0) (6736 bytes)
+Placing detail props : 0...1...2...3...4...5...6...7...8...9...10
+Compacting texture/material tables...
+Reduced 48 texinfos to 13
+Reduced 11 texdatas to 11 (224 bytes to 224)
+Writing D:\Projects\AArcade-Source\game\frontend\mapsrc\tester.bsp
+0 seconds elapsed
+
+
+
+8 threads
+reading d:\projects\aarcade-source\game\frontend\mapsrc\tester.bsp
+reading d:\projects\aarcade-source\game\frontend\mapsrc\tester.prt
+   4 portalclusters
+   4 numportals
+0...1...2...3...4...5...6...7...8...9...100...1...2...3...4...5...6...7...8...9...10Optimized: 0 visible clusters (0.00%)
+Total clusters visible: 16
+Average clusters visible: 4
+Building PAS...
+Average clusters audible: 4
+visdatasize:44  compressed from 64
+writing d:\projects\aarcade-source\game\frontend\mapsrc\tester.bsp
+0 seconds elapsed
+
+
+
+Could not find lights.rad in lights.rad.
+Trying VRAD BIN directory instead...
+Warning: Couldn't open texlight file D:\Projects\AArcade-Source\game\bin\lights.rad.
+Loading d:\projects\aarcade-source\game\frontend\mapsrc\tester.bsp
+24 faces
+2048 square feet [294912.00 square inches]
+0 Displacements
+0 Square Feet [0.00 Square Inches]
+24 patches before subdivision
+504 patches after subdivision
+1 direct lights
+0...1...2...3...4...5...6...7...8...9...100...1...2...3...4...5...6...7...8...9...10transfers 36380, max 170
+transfer lists:   0.3 megs
+0...1...2...3...4...5...6...7...8...9...10	Bounce #1 added RGB(15220, 4693, 623)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #2 added RGB(7941, 843, 3)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #3 added RGB(4532, 158, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #4 added RGB(2565, 29, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #5 added RGB(1464, 6, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #6 added RGB(836, 1, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #7 added RGB(477, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #8 added RGB(273, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #9 added RGB(156, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #10 added RGB(89, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #11 added RGB(51, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #12 added RGB(29, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #13 added RGB(17, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #14 added RGB(10, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #15 added RGB(5, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #16 added RGB(3, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #17 added RGB(2, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #18 added RGB(1, 0, 0)
+0...1...2...3...4...5...6...7...8...9...10	Bounce #19 added RGB(1, 0, 0)
+Build Patch/Sample Hash Table(s).....Done<0.0000 sec>
+0...1...2...3...4...5...6...7...8...9...10FinalLightFace Done
+0 of 0 (0% of) surface lights went in leaf ambient cubes.
+0...1...2...3...4...5...6...7...8...9...10Writing leaf ambient...done
+Ready to Finish
+
+Object names       Objects/Maxobjs  Memory / Maxmem  Fullness 
+------------       ---------------  ---------------  -------- 
+models                   9/1024          432/49152    ( 0.9%) 
+brushes                 14/8192          168/98304    ( 0.2%) 
+brushsides              84/65536         672/524288   ( 0.1%) 
+planes                  68/65536        1360/1310720  ( 0.1%) 
+vertexes                83/65536         996/786432   ( 0.1%) 
+nodes                   75/65536        2400/2097152  ( 0.1%) 
+texinfos                13/12288         936/884736   ( 0.1%) 
+texdata                 11/2048          352/65536    ( 0.5%) 
+dispinfos                0/0               0/0        ( 0.0%) 
+disp_verts               0/0               0/0        ( 0.0%) 
+disp_tris                0/0               0/0        ( 0.0%) 
+disp_lmsamples           0/0               0/0        ( 0.0%) 
+faces                   24/65536        1344/3670016  ( 0.0%) 
+hdr faces                0/65536           0/3670016  ( 0.0%) 
+origfaces               14/65536         784/3670016  ( 0.0%) 
+leaves                  85/65536        2720/2097152  ( 0.1%) 
+leaffaces               24/65536          48/131072   ( 0.0%) 
+leafbrushes             24/65536          48/131072   ( 0.0%) 
+areas                    2/256            16/2048     ( 0.8%) 
+surfedges              152/512000        608/2048000  ( 0.0%) 
+edges                  109/256000        436/1024000  ( 0.0%) 
+LDR worldlights          1/8192           88/720896   ( 0.0%) 
+HDR worldlights          0/8192            0/720896   ( 0.0%) 
+leafwaterdata            0/32768           0/393216   ( 0.0%) 
+waterstrips              0/32768           0/327680   ( 0.0%) 
+waterverts               0/65536           0/786432   ( 0.0%) 
+waterindices             0/65536           0/131072   ( 0.0%) 
+cubemapsamples           0/1024            0/16384    ( 0.0%) 
+overlays                 0/512             0/180224   ( 0.0%) 
+LDR lightdata         [variable]        5696/0        ( 0.0%) 
+HDR lightdata         [variable]           0/0        ( 0.0%) 
+visdata               [variable]          44/16777216 ( 0.0%) 
+entdata               [variable]        3233/393216   ( 0.8%) 
+LDR ambient table       85/65536         340/262144   ( 0.1%) 
+HDR ambient table       85/65536         340/262144   ( 0.1%) 
+LDR leaf ambient       112/65536        3136/1835008  ( 0.2%) 
+HDR leaf ambient        85/65536        2380/1835008  ( 0.1%) 
+occluders                0/0               0/0        ( 0.0%) 
+occluder polygons        0/0               0/0        ( 0.0%) 
+occluder vert ind        0/0               0/0        ( 0.0%) 
+detail props          [variable]           1/12       ( 8.3%) 
+static props          [variable]           1/12       ( 8.3%) 
+pakfile               [variable]      105655/0        ( 0.0%) 
+physics               [variable]        6736/4194304  ( 0.2%) 
+physics terrain       [variable]           2/1048576  ( 0.0%) 
+
+Level flags = 0
+
+Total triangle count: 48
+Writing d:\projects\aarcade-source\game\frontend\mapsrc\tester.bsp
+0 seconds elapsed

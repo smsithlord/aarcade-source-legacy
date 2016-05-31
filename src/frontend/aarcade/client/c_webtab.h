@@ -15,6 +15,7 @@ public:
 	// accessors
 	std::string GetId() { return m_id; }
 	std::string GetInitialUrl() { return m_initialUrl; }
+	int GetLastRenderedTick() { return m_iLastRenderTick; }
 	ITexture* GetTexture() { return m_pTexture; }
 
 	// mutators

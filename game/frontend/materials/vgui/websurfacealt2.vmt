@@ -1,7 +1,7 @@
 "VertexLitGeneric"
 {
 	"$basetexture" "vgui/websurface"
-	"url"	"https://www.youtube.com/watch?v=Nj8r3qmOoZ8"
+	"url"	"http://smarcade.net/dlcv2/view_youtube.php?id=Nj8r3qmOoZ8&autoplay=1"
 	"autocreate" 1
 	"Proxies"
 	{

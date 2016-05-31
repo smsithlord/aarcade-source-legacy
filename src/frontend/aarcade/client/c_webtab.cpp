@@ -50,10 +50,11 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 	if (m_iLastRenderTick < gpGlobals->tickcount)
 	{
-		// render the web tab to its texture
-		Render();
+		g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentTick();
 
-		m_iLastRenderTick = gpGlobals->tickcount;
+		// render the web tab to its texture
+		if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
+			Render();
 	}
 }
 
@@ -62,6 +63,9 @@ void C_WebTab::Render()
 	//DevMsg("WebTab: Render: %s\n", m_id.c_str());
 	g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen()->SetWebTab(this);
 	m_pTexture->Download();
+
+	m_iLastRenderTick = gpGlobals->tickcount;
+	g_pAnarchyManager->GetWebManager()->SetLastRenderedTick(gpGlobals->tickcount);
 }
 
 void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
