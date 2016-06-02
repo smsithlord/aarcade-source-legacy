@@ -31,7 +31,6 @@ private:
 	std::string m_initialUrl;
 	ITexture* m_pTexture;
 	int m_iLastRenderFrame;
-	Awesomium::WebView* m_pWebView;
 };
 
 #endif

@@ -42,7 +42,7 @@ private:
 //	static int				s_textureCount;	// probably needed for cleanup??
 	static CWebSurfaceRegen* s_pWebSurfaceRegen;
 
-	ITexture* CreateTexture(C_BaseEntity* pEntity);
+	//ITexture* CreateTexture(C_BaseEntity* pEntity);
 };
 
 EXPOSE_INTERFACE(CWebSurfaceProxy, IMaterialProxy, "websurface" IMATERIAL_PROXY_INTERFACE_VERSION);
