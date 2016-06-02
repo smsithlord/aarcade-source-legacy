@@ -60,6 +60,10 @@ void C_WebManager::Update()
 	// Update the browser, if it exists
 	if (m_pWebBrowser)
 		m_pWebBrowser->Update();
+
+	// FIXME: the selected web tab always renders
+	if (m_pSelectedWebTab)
+		m_pSelectedWebTab->OnProxyBind();
 }
 
 C_WebTab* C_WebManager::FindWebTab(std::string id)
@@ -102,7 +106,13 @@ void C_WebManager::SelectWebTab(C_WebTab* pWebTab)
 void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 {
 	m_pSelectedWebTab = null;
+	pWebTab->MouseMove(0.5, 0.5);
 	m_pWebBrowser->OnDeselectWebTab(pWebTab);
+}
+
+void C_WebManager::OnBrowserInitialized()
+{
+	g_pAnarchyManager->OnWebManagerInitialized();
 }
 
 C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id)
@@ -138,4 +148,22 @@ bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 		return true;
 
 	return false;
+}
+
+void C_WebManager::OnMouseMove(float fXAmount, float fYAmount)
+{
+	// these events are always for the selected web tab
+	m_pSelectedWebTab->MouseMove(fXAmount, fYAmount);
+}
+
+void C_WebManager::OnMousePress(vgui::MouseCode code)
+{
+	// these events are always for the selected web tab
+	m_pSelectedWebTab->MousePress(code);
+}
+
+void C_WebManager::OnMouseRelease(vgui::MouseCode code)
+{
+	// these events are always for the selected web tab
+	m_pSelectedWebTab->MouseRelease(code);
 }

@@ -2,6 +2,7 @@
 
 #include "c_webtab.h"
 #include "c_anarchymanager.h"
+#include "pixelwriter.h"
 //#include "aa_globals.h"
 //#include "Filesystem.h"
 
@@ -17,6 +18,8 @@ C_WebTab::C_WebTab(std::string url, std::string id)
 	m_initialUrl = url;
 	m_iLastRenderFrame = -1;
 	m_iState = 1;	// initializing
+	m_fMouseX = 0.5;
+	m_fMouseY = 0.5;
 
 	// create the texture (each WebTab has its own texture)
 	std::string textureName = "websurface_";
@@ -76,5 +79,55 @@ void C_WebTab::Render()
 void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
 //	DevMsg("WebTab: RegenerateTextureBits\n");
+
+	// draw the web tab
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->RegenerateTextureBits(this, pTexture, pVTFTexture, pSubRect);
+
+	// draw the mouse cursor
+	if (m_fMouseX != 0.5 ||m_fMouseY != 0.5)
+	{
+		// the mouse position is between 0 and 1
+		// translate the mouse position to actual pixel values
+		int iMouseX = m_fMouseX * g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+		int iMouseY = m_fMouseY * g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+
+		CPixelWriter pixelWriter;
+		pixelWriter.SetPixelMemory(pVTFTexture->Format(), pVTFTexture->ImageData(0, 0, 0), pVTFTexture->RowSizeInBytes(0));
+
+		int xmax = pSubRect->x + pSubRect->width;
+		int ymax = pSubRect->y + pSubRect->height;
+
+		int mouseHeight = 20;
+		for (int y = 0; y < mouseHeight && y < ymax; y++)
+		{
+			for (int x = 0; x < mouseHeight - y && x < xmax; x++)
+			{
+				pixelWriter.Seek(pSubRect->x + x + iMouseX, pSubRect->y + y + iMouseY);
+				pixelWriter.WritePixel(0, 255, 0, 255);
+			}
+		}
+	}
+}
+
+void C_WebTab::GetMousePos(float &fMouseX, float &fMouseY)
+{
+	fMouseX = m_fMouseX;
+	fMouseY = m_fMouseY;
+}
+
+void C_WebTab::MouseMove(float fMouseX, float fMouseY)
+{
+	m_fMouseX = fMouseX;
+	m_fMouseY = fMouseY;
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseMove(this, m_fMouseX, m_fMouseY);
+}
+
+void C_WebTab::MousePress(vgui::MouseCode code)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMousePress(this, code);
+}
+
+void C_WebTab::MouseRelease(vgui::MouseCode code)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseRelease(this, code);
 }

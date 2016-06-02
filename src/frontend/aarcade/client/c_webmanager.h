@@ -27,6 +27,7 @@ public:
 	// mutators
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
 
+	void OnBrowserInitialized();
 	C_WebTab* CreateWebTab(std::string url, std::string id = "");
 	C_WebTab* FindWebTab(std::string id);
 	C_WebTab* FindWebTab(IMaterial* pMaterial);
@@ -36,6 +37,9 @@ public:
 	CWebSurfaceRegen* GetOrCreateWebSurfaceRegen();
 	void IncrementVisibleWebTabsCurrentFrame() { m_iVisibleWebTabsCurrentFrame++; }
 	bool ShouldRender(C_WebTab* pWebTab);
+	void OnMouseMove(float fXAmount, float fYAmount);
+	void OnMousePress(vgui::MouseCode code);
+	void OnMouseRelease(vgui::MouseCode code);
 
 	/*
 	void RelayOnMouseMove(int x, int y);

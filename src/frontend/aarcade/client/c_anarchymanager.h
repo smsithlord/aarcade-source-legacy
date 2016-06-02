@@ -3,6 +3,7 @@
 
 #include <KeyValues.h>
 #include "c_webmanager.h"
+#include "c_inputmanager.h"
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
 {
@@ -37,6 +38,7 @@ public:
 	virtual void PostRender();
 	
 	void AnarchyBegin();
+	void OnWebManagerInitialized();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
 	bool DeselectEntity(C_BaseEntity* pEntity);
@@ -47,13 +49,14 @@ public:
 	std::string GenerateUniqueId();
 
 	// accessors
+	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
 	C_WebManager* m_pWebManager;
+	C_InputManager* m_pInputManager;
 	C_BaseEntity* m_pSelectedEntity;
-	//CEntGlowEffect* m_pEntityGlowEffect;
 };
 
 extern C_AnarchyManager* g_pAnarchyManager;

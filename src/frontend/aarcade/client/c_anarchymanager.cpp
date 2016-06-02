@@ -11,15 +11,8 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_pWebManager = null;
+	m_pInputManager = null;
 	m_pSelectedEntity = null;
-//	m_pEntityGlowEffect = null;
-
-	// This section gets execute before there is a console
-	// Certain things are not safe to do from here.
-	// For example, initializing the WebCore (ie. creating a WebViewManager)
-	// will cause the entire process to hang.
-
-//	m_pWebViewManager = null;
 }
 
 C_AnarchyManager::~C_AnarchyManager()
@@ -130,6 +123,17 @@ void C_AnarchyManager::AnarchyBegin()
 	DevMsg("AnarchyManager: AnarchyBegin\n");
 	m_pWebManager = new C_WebManager();
 	m_pWebManager->Init();
+	m_pInputManager = new C_InputManager();
+}
+
+void C_AnarchyManager::OnWebManagerInitialized()
+{
+	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
+	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
+	C_WebTab* pWebTab = pWebManager->CreateWebTab("http://www.smsithlord.com/", "mainmenu");
+	pWebManager->SelectWebTab(pWebTab);
+
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()
@@ -228,6 +232,7 @@ void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 {
 	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
 }
+
 /*
 void C_AnarchyManager::LevelInitPreEntity()
 {

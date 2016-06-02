@@ -68,13 +68,13 @@ ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy 
 
 void ActivateInputMode(const CCommand &args)
 {
-	DevMsg("Activate input mode\n");
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
 }
 ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 
 void DeactivateInputMode(const CCommand &args)
 {
-	DevMsg("Deactivate input mode\n");
+	g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
 }
 ConCommand deactivateinputmode("-hdview_input_toggle", DeactivateInputMode, "Turns OFF input mode.", FCVAR_NONE);
 

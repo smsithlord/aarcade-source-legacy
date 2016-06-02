@@ -22,7 +22,6 @@ C_WebBrowser::~C_WebBrowser()
 {
 	DevMsg("WebBrowser: destructor\n");
 	WebCore::Shutdown();
-	DevMsg("Yadda yadda\n");
 }
 
 void C_WebBrowser::Init()
@@ -43,7 +42,7 @@ void C_WebBrowser::Init()
 	Awesomium::WebPreferences prefs;
 	prefs.enable_plugins = true;
 	prefs.enable_smooth_scrolling = true;
-	prefs.user_stylesheet = WSLit("body{ background-color: #000000; }");
+	prefs.user_stylesheet = WSLit("{}");// body{ background - color: #000000; }");
 
 	m_pWebSession = m_pWebCore->CreateWebSession(WSLit(VarArgs("%s\\cache", engine->GetGameDirectory())), prefs);
 
@@ -75,10 +74,9 @@ void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView)
 void C_WebBrowser::OnMasterWebViewDocumentReady()
 {
 	m_iState = 2;	// initialized
+	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
 
-	DevMsg("END OF THE WORLD!\n");
-//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
-//	C_WebTab* pWebTab = pWebManager->CreateWebTab("http://www.smsithlord.com/");
+	g_pAnarchyManager->GetWebManager()->OnBrowserInitialized();
 }
 
 void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
@@ -110,6 +108,47 @@ void C_WebBrowser::OnDeselectWebTab(C_WebTab* pWebTab)
 	WebView* pWebView = FindWebView(pWebTab);
 	if (pWebView)
 		pWebView->Unfocus();
+}
+
+void C_WebBrowser::OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY)
+{
+	// the mouse position is between 0 and 1
+	// translate the mouse position to actual pixel values
+	int iMouseX = fMouseX * g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+	int iMouseY = fMouseY * g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+
+	WebView* pWebView = FindWebView(pWebTab);
+	pWebView->InjectMouseMove(iMouseX, iMouseY);
+}
+
+void C_WebBrowser::OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code)
+{
+	// translate the vgui::MouseCode into an Awesomium::MouseButton
+	int iButtonId = -1;
+	if (code == MOUSE_LEFT)
+		iButtonId = 0;
+	else if (code == MOUSE_MIDDLE)
+		iButtonId = 1;
+	else if (code == MOUSE_RIGHT)
+		iButtonId = 2;
+
+	WebView* pWebView = FindWebView(pWebTab);
+	pWebView->InjectMouseDown((MouseButton)iButtonId);
+}
+
+void C_WebBrowser::OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code)
+{
+	// translate the vgui::MouseCode into an Awesomium::MouseButton
+	int iButtonId = -1;
+	if (code == MOUSE_LEFT)
+		iButtonId = 0;
+	else if (code == MOUSE_MIDDLE)
+		iButtonId = 1;
+	else if (code == MOUSE_RIGHT)
+		iButtonId = 2;
+
+	WebView* pWebView = FindWebView(pWebTab);
+	pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
 
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)

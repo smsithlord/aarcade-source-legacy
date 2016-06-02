@@ -129,9 +129,11 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			{
 				// does a web tab for this id already exist?
 				C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(m_originalId);
-
 				if (pWebTab)
+				{
 					m_pWebTab = pWebTab;
+					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
+				}
 			}
 
 			if (!m_pWebTab)
@@ -141,10 +143,12 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 				{
 					// create a web tab
 					m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
-					g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
+					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 					m_iState = 1;	// initializing
 				}
 			}
+
+			g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 		}
 	}
 	else

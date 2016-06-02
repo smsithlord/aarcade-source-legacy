@@ -3,7 +3,7 @@
 
 #include <Awesomium/WebCore.h>
 #include <Awesomium/STLHelpers.h>
-//#include "c_awesomiumListeners.h"
+#include "vgui/MouseCode.h"
 //#include "vgui_controls/Controls.h"
 
 class C_WebTab
@@ -21,11 +21,17 @@ public:
 	// mutators
 	void SetState(int state) { m_iState = state; }
 
-	void OnProxyBind(C_BaseEntity* pBaseEntity);
+	void OnProxyBind(C_BaseEntity* pBaseEntity = null);
 	void Render();
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
+	void GetMousePos(float &fMouseX, float &fMouseY);
+	void MouseMove(float fMouseX, float fMouseY);
+	void MousePress(vgui::MouseCode code);
+	void MouseRelease(vgui::MouseCode code);
 
 private:
+	float m_fMouseX;
+	float m_fMouseY;
 	int m_iState;
 	std::string m_id;
 	std::string m_initialUrl;
