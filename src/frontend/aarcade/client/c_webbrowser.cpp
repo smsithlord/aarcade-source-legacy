@@ -80,7 +80,6 @@ void C_WebBrowser::OnMasterWebViewDocumentReady()
 {
 	m_iState = 2;	// initialized
 	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
-
 	g_pAnarchyManager->GetWebManager()->OnBrowserInitialized();
 }
 
@@ -123,7 +122,17 @@ void C_WebBrowser::OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY)
 	int iMouseY = fMouseY * g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
 
 	WebView* pWebView = FindWebView(pWebTab);
-	pWebView->InjectMouseMove(iMouseX, iMouseY);
+	if ( pWebView )
+		pWebView->InjectMouseMove(iMouseX, iMouseY);
+
+	// FIXME: ALWAYS injecting into hud web tab.  this should only happen if the hud is active.
+	C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+	if (pHudWebTab && pHudWebTab != pWebTab)
+	{
+		WebView* pHudWebView = FindWebView(pHudWebTab);
+		if (pHudWebView)
+			pHudWebView->InjectMouseMove(iMouseX, iMouseY);
+	}
 }
 
 void C_WebBrowser::OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code)
@@ -168,7 +177,14 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 	{
 		pWebTab->SetState(2);
 		m_webViews[pWebTab] = pWebView;
+
+		if (pWebTab->GetTexture()->GetImageFormat() == IMAGE_FORMAT_BGRA8888)
+			pWebView->SetTransparent(true);
+
 		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
+
+		if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)
+			g_pAnarchyManager->GetWebManager()->OnHudWebTabCreated();
 	}
 }
 
@@ -191,6 +207,13 @@ void C_WebBrowser::RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, 
 	//BitmapSurface* surface = (BitmapSurface*)pWebView->surface();
 	if (surface != 0)
 		surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+	//{
+		//ImageFormat format = pWebTab->GetTexture()->GetImageFormat();
+	//	if (format == IMAGE_FORMAT_BGRA8888 )
+//			surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+		//else if (format == IMAGE_FORMAT_BGR888)
+			//surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+	//}
 		/*
 		// BLACK SCREEN deal with square texture size!!
 		if (m_iStrangeVideo == 2)

@@ -25,6 +25,8 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	SetKeyBoardInputEnabled( true );
 	SetMouseInputEnabled( true );
 
+	m_bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
+
 	SetProportional( false );
 	SetTitleBarVisible( false );
 	SetMinimizeButtonVisible( false );
@@ -45,14 +47,13 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	}
 	*/
 
-	//ivgui()->AddTickSignal(this->GetVPanel(),1);	// disabled for in-panel view 6/29/13
-
-	if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
+	//if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
+	//if (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
+	if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && m_bFullscreen)
 	{
 		IMaterial* pMaterial = g_pMaterialSystem->FindMaterial("vgui/selectedwebtab", TEXTURE_GROUP_VGUI);
 		ITexture* pTexture = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()->GetTexture();
-		if (!pTexture)
-			DevMsg("No texture found yet!\n");
+
 		bool found;
 		IMaterialVar* pMaterialVar = pMaterial->FindVar("$basetexture", &found, false);
 		pMaterialVar->SetTextureValue(pTexture);
@@ -61,7 +62,13 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
 		pImagePanel->SetShouldScaleImage(true);
 		pImagePanel->SetSize(GetWide(), GetTall());
+		//pImagePanel->SetAutoResize() //pin
 		pImagePanel->SetImage("selectedwebtab");
+	}
+	else
+	{
+		ivgui()->AddTickSignal(this->GetVPanel(), 1);
+		ShowCursor(false);
 	}
 
 	//ShowCursor(false);
@@ -70,16 +77,10 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 
 void CInputSlate::OnTick()
 {
-	/*
 	if( GetAlpha() > 0 )
-	{
 		SetAlpha(0);	// This won't actually change anything unless the panel has finished being created
-	}
 	else
-	{
 		ivgui()->RemoveTickSignal(this->GetVPanel());
-	}
-	*/
 }
 
 void CInputSlate::OnCursorMoved(int x, int y)
@@ -829,6 +830,10 @@ void CInputSlate::OnCommand(const char* pcCommand)
 		//pAwesomium_Input->ForceClose();
 		//delete pAwesomium_Input;
 		//ShowCursor(true);
+
+		if (m_bFullscreen)
+			ShowCursor(true);
+
 		BaseClass::OnCommand(pcCommand);
 	}
 }

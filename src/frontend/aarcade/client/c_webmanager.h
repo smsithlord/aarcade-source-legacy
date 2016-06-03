@@ -20,6 +20,7 @@ public:
 
 	// accessors
 	C_WebTab* GetSelectedWebTab() { return m_pSelectedWebTab; }
+	C_WebTab* GetHudWebTab() { return m_pHudWebTab; }
 	C_WebBrowser* GetWebBrowser() { return m_pWebBrowser; }
 	int GetWebSurfaceWidth() { return m_iWebSurfaceWidth; }
 	int GetWebSurfaceHeight() { return m_iWebSurfaceHeight; }
@@ -28,7 +29,9 @@ public:
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
 
 	void OnBrowserInitialized();
-	C_WebTab* CreateWebTab(std::string url, std::string id = "");
+	void OnHudWebTabCreated();
+	C_WebTab* CreateHudWebTab();
+	C_WebTab* CreateWebTab(std::string url, std::string id = "", bool bAlpha = false);
 	C_WebTab* FindWebTab(std::string id);
 	C_WebTab* FindWebTab(IMaterial* pMaterial);
 	void SetMaterialWebTabId(IMaterial* pMaterial, std::string id);
@@ -51,6 +54,7 @@ public:
 private:
 	unsigned int m_iState;
 	C_WebTab* m_pSelectedWebTab;
+	C_WebTab* m_pHudWebTab;
 	C_WebBrowser* m_pWebBrowser;
 	std::map<std::string, C_WebTab*> m_webTabs;
 	std::map<IMaterial*, std::string> m_materialWebTabIds;

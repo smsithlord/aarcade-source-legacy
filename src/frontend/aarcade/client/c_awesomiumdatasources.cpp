@@ -81,15 +81,9 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	g_pAnarchyManager->Tokenize(binaryExtensions, tokens, ", ");
 	std::vector<std::string>::iterator foundToken = std::find(tokens.begin(), tokens.end(), fileExtension);
 	if (foundToken != tokens.end())
-	{
-		DevMsg("Found binary extension!\n");
 		datatype = RESOURCE_BINARY;
-	}
 	else
-	{
-		DevMsg("Found text extension!\n");
 		datatype = RESOURCE_TEXT;
-	}
 
 	if (datatype == RESOURCE_TEXT)
 	{
@@ -146,8 +140,8 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 				delete[] responseBuffer;
 			}
 		}
-		else
-		{
+//		else
+	//	{
 			/*	This method probably only works for non-binary files.
 			FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb", "AAPROTECTED");
 
@@ -166,7 +160,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 			delete[] responseBuffer;
 			}
 			*/
-
+		/*
 			FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "rb", "UI");
 
 			if (fileHandle)
@@ -183,6 +177,26 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 
 				delete[] responseBuffer;
 			}
+			*/
+		//}
+	}
+	else if (datatype == RESOURCE_BINARY)
+	{
+		FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "rb", "UI");
+
+		if (fileHandle)
+		{
+			int bufferSize = filesystem->Size(fileHandle);
+			unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+			filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+			responseBuffer[bufferSize] = 0; // null terminator
+
+			filesystem->Close(fileHandle);
+
+			SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+
+			delete[] responseBuffer;
 		}
 	}
 }

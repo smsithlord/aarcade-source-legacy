@@ -22,6 +22,7 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 	m_pMaterial = null;
 	m_pOriginalTexture = null;
 	m_pMaterialTextureVar = null;
+	m_pMaterialDetailBlendFactorVar = null;
 	m_pWebTab = null;
 	m_originalId = "";
 	m_iOriginalAutoCreate = 1;
@@ -58,6 +59,9 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 	m_pMaterialTextureVar = pMaterialVar;
 	m_pOriginalTexture = pMaterialVar->GetTextureValue();
 //	m_pOriginalTexture->SetTextureRegenerator(s_pWebSurfaceRegen);
+
+	bool bFoundDetailBlendFactorVar;
+	m_pMaterialDetailBlendFactorVar = m_pMaterial->FindVar("$detailblendfactor", &bFoundDetailBlendFactorVar);
 
 	pMaterialVar = m_pMaterial->FindVar("id", &found, false);
 	m_originalId = (found) ? pMaterialVar->GetStringValue() : "";
@@ -158,6 +162,11 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		{
 			m_pMaterialTextureVar->SetTextureValue(pTexture);
 			m_iState = 2;
+
+			if (m_pMaterialDetailBlendFactorVar && g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
+				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
+			else
+				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
 
 			m_pWebTab->OnProxyBind(pC_BaseEntity);
 		}

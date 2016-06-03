@@ -1,6 +1,11 @@
 "VertexLitGeneric"
 {
 	"$basetexture" "vgui/websurface"
+	"$detail" "websurface_hud"
+	"$detailblendmode" 2
+	"$detailscale" 1
+	"$detailblendfactor" 1
+	"$selfillum" 1
 	"url"	"http://smarcade.net/dlcv2/view_youtube.php?id=jvipPYFebWc&autoplay=1"
 	"autocreate" 1
 	"Proxies"

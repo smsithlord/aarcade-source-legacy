@@ -1,5 +1,46 @@
 <html>
-<body>
-<h1><b>TEST PAGE</b></h1>
-</body>
+	<head>
+		<style>
+			html
+			{
+				padding: 0;
+				margin: 0;
+				width: 100%;
+				height: 100%;
+			}
+
+			body
+			{
+				padding: 0;
+				margin: 0;
+				width: 100%;
+				height: 100%;
+				background-color: transparent;
+				color: #fff;
+			}
+
+			#cursor
+			{
+				position: absolute;
+			}
+
+			#cursor .cursorImage
+			{
+				width: 30px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="cursor"><img src="cursors/hippie_default.png" class="cursorImage" /></div>
+		<center><img src="asset://ui/aarcadetab.png" /></center>
+
+		<script>
+			var cursorElem = document.querySelector("#cursor");
+			document.addEventListener("mousemove", function(e)
+			{
+				cursorElem.style.left = e.clientX + "px";
+				cursorElem.style.top = e.clientY + "px";
+			}, true);
+		</script>
+	</body>
 </html>

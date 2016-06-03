@@ -22,6 +22,7 @@ C_WebManager::C_WebManager()
 	m_pWebBrowser = null;
 	m_pWebSurfaceRegen = null;
 	m_pSelectedWebTab = null;
+	m_pHudWebTab = null;
 }
 
 C_WebManager::~C_WebManager()
@@ -66,6 +67,10 @@ void C_WebManager::Update()
 	// FIXME: the selected web tab always renders
 	if (m_pSelectedWebTab)
 		m_pSelectedWebTab->OnProxyBind();
+
+	// FIXME: the hud web tab always renders
+	if (m_pHudWebTab && m_pHudWebTab != m_pSelectedWebTab)
+		m_pHudWebTab->OnProxyBind();
 }
 
 C_WebTab* C_WebManager::FindWebTab(std::string id)
@@ -114,10 +119,21 @@ void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 
 void C_WebManager::OnBrowserInitialized()
 {
-	g_pAnarchyManager->OnWebManagerInitialized();
+	m_pHudWebTab = CreateHudWebTab();
 }
 
-C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id)
+void C_WebManager::OnHudWebTabCreated()
+{
+	g_pAnarchyManager->OnWebManagerReady();
+}
+
+C_WebTab* C_WebManager::CreateHudWebTab()
+{
+	C_WebTab* pWebTab = CreateWebTab("asset://ui/hud.html", "hud", true);
+	return pWebTab;
+}
+
+C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id, bool bAlpha)
 {
 	DevMsg("WebManager: CreateWebTab\n");
 
@@ -127,7 +143,7 @@ C_WebTab* C_WebManager::CreateWebTab(std::string url, std::string id)
 	else
 		validId = id;	// FIXME: Might want to do a check to make sure a tab with this ID doesn't already exist.
 
-	C_WebTab* pWebTab = new C_WebTab(url, validId);
+	C_WebTab* pWebTab = new C_WebTab(url, validId, bAlpha);
 	m_webTabs[validId] = pWebTab;
 
 	return pWebTab;
@@ -146,7 +162,7 @@ bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 {
 	//DevMsg("WebManager: ShouldRender\n");
 	int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
-	if (m_iLastRenderedFrame != gpGlobals->framecount && (iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
+	if (m_iLastRenderedFrame != gpGlobals->framecount && (pWebTab == m_pHudWebTab || iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
 		return true;
 
 	return false;

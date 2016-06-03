@@ -18,9 +18,10 @@ public:
 
 	// accessors
 	bool GetInputMode() { return m_bInputMode; }
+	bool GetFullscreenMode() { return m_bFullscreenMode; }
 
 	void SetInputListener(void* pInputListener, listener_t type);
-	void ActivateInputMode();
+	void ActivateInputMode(bool bFullscreen = false);
 	void DeactivateInputMode();
 	void MouseMove(float x, float y);
 	void MousePress(vgui::MouseCode code);
@@ -28,6 +29,7 @@ public:
 	
 private:
 	bool m_bInputMode;
+	bool m_bFullscreenMode;
 	//float m_fMouseX;
 	//float m_fMouseY;
 	void* m_pInputListener;

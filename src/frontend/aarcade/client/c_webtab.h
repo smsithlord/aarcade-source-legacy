@@ -9,7 +9,7 @@
 class C_WebTab
 {
 public:
-	C_WebTab(std::string url, std::string id);
+	C_WebTab(std::string url, std::string id, bool bAlpha = false);
 	~C_WebTab();
 
 	// accessors

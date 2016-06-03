@@ -39,7 +39,7 @@ public:
 	virtual void PostRender();
 	
 	void AnarchyBegin();
-	void OnWebManagerInitialized();
+	void OnWebManagerReady();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
 	bool DeselectEntity(C_BaseEntity* pEntity);

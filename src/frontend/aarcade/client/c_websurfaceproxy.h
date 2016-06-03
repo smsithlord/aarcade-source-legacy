@@ -34,6 +34,7 @@ private:
 	C_WebTab*		m_pWebTab;
 	IMaterial*		m_pMaterial;
 	IMaterialVar*	m_pMaterialTextureVar;
+	IMaterialVar*	m_pMaterialDetailBlendFactorVar;
 	ITexture*		m_pOriginalTexture;
 	std::string		m_originalId;
 	int				m_iOriginalAutoCreate;

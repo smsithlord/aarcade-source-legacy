@@ -9,7 +9,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-C_WebTab::C_WebTab(std::string url, std::string id)
+C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 {
 	DevMsg("WebTab: Constructor\n");
 	m_iState = 0;
@@ -27,7 +27,11 @@ C_WebTab::C_WebTab(std::string url, std::string id)
 
 	int iWidth = g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
 	int iHeight = g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
-	m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+
+	if ( bAlpha )
+		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGRA8888, 1);
+	else
+		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
 
 	// get the regen and assign it
 	CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
@@ -58,7 +62,8 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 	if (m_iLastRenderFrame < gpGlobals->framecount)
 	{
-		g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
+		if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
+			g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 
 		// render the web tab to its texture
 		if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
@@ -73,7 +78,9 @@ void C_WebTab::Render()
 	m_pTexture->Download();
 
 	m_iLastRenderFrame = gpGlobals->framecount;
-	g_pAnarchyManager->GetWebManager()->SetLastRenderedFrame(gpGlobals->framecount);
+
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
+		g_pAnarchyManager->GetWebManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 
 void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
@@ -83,6 +90,7 @@ void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTextur
 	// draw the web tab
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->RegenerateTextureBits(this, pTexture, pVTFTexture, pSubRect);
 
+	/*
 	// draw the mouse cursor
 	if (m_fMouseX != 0.5 ||m_fMouseY != 0.5)
 	{
@@ -107,6 +115,7 @@ void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTextur
 			}
 		}
 	}
+	*/
 }
 
 void C_WebTab::GetMousePos(float &fMouseX, float &fMouseY)

@@ -128,14 +128,19 @@ void C_AnarchyManager::AnarchyBegin()
 	m_pInputManager = new C_InputManager();
 }
 
-void C_AnarchyManager::OnWebManagerInitialized()
+void C_AnarchyManager::OnWebManagerReady()
 {
-	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
-	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
-	C_WebTab* pWebTab = pWebManager->CreateWebTab("asset://ui/hud.html", "hud");
-	pWebManager->SelectWebTab(pWebTab);
+	// select the hud web tab and display it fullscreen
+	//C_WebTab* pWebTab = m_pWebManager->GetHudWebTab();
+	//m_pWebManager->SelectWebTab(pWebTab);
+	//m_pInputManager->ActivateInputMode(true);
 
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
+	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
+	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
+	m_pWebManager->SelectWebTab(pWebTab);
+	m_pInputManager->ActivateInputMode(true);
+
+//	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()

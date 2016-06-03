@@ -12,8 +12,7 @@ C_InputManager::C_InputManager()
 {
 	DevMsg("InputManager: Constructor\n");
 	m_bInputMode = false;
-	//m_fMouseX = 0;
-	//m_fMouseY = 0;
+	m_bFullscreenMode = false;
 	m_pInputListener = null;
 }
 
@@ -28,10 +27,12 @@ void C_InputManager::SetInputListener(void* pInputListener, listener_t type)
 	m_inputListenerType = type;
 }
 
-void C_InputManager::ActivateInputMode()
+void C_InputManager::ActivateInputMode(bool bFullscreen)
 {
 	m_bInputMode = true;
-	ShowCursor(true);
+	m_bFullscreenMode = bFullscreen;
+
+	//ShowCursor(true);
 	InputSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_GAMEDLL));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_TOOLS));
@@ -42,16 +43,13 @@ void C_InputManager::ActivateInputMode()
 void C_InputManager::DeactivateInputMode()
 {
 	m_bInputMode = false;
-	ShowCursor(false);
+	m_bFullscreenMode = false;
+	//ShowCursor(false);
 	InputSlate->Destroy();
 }
 
 void C_InputManager::MouseMove(float x, float y)
 {
-	// update stored values
-	//m_fMouseX = x;
-	//m_fMouseY = y;
-
 	// forward this info to any listeners
 	if (m_pInputListener)
 	{

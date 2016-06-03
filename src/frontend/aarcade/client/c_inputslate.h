@@ -46,6 +46,9 @@ namespace vgui
 		void OnKeyCodePressed(KeyCode code);
 //		void OnKeyCodeReleased(KeyCode code);
 
+	private:
+		bool m_bFullscreen;
+
 	protected:
 		void OnCommand(const char* pcCommand);
 
