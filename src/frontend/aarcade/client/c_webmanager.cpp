@@ -14,6 +14,8 @@ C_WebManager::C_WebManager()
 	m_iState = 0;	// uninitialized
 	m_iWebSurfaceWidth = 1280;
 	m_iWebSurfaceHeight = 720;
+	//m_iWebSurfaceWidth = 1920;
+	//m_iWebSurfaceHeight = 1080;
 	m_iVisibleWebTabsLastFrame = -1;
 	m_iVisibleWebTabsCurrentFrame = 0;
 	m_iLastRenderedFrame = -1;

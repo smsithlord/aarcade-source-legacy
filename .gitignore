@@ -63,3 +63,8 @@ game/frontend/materials/vgui/logos/*
 game/frontend/maps/graphs/*
 game/frontend/maps/dm_lockdown.bsp
 !game/frontend/maps/
+!game/frontend/resource/
+game/frontend/resource/*
+!game/frontend/resource/ui/
+game/frontend/resource/ui/*
+!game/frontend/resource/ui/html/

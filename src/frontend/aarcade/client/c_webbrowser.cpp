@@ -3,6 +3,7 @@
 #include "c_webbrowser.h"
 #include "c_anarchymanager.h"
 #include <Awesomium/BitmapSurface.h>
+#include "Filesystem.h"
 //#include "aa_globals.h"
 //#include "Filesystem.h"
 
@@ -48,6 +49,10 @@ void C_WebBrowser::Init()
 
 	NewWindowDataSource* pNewWindowDataSource = new NewWindowDataSource();
 	m_pWebSession->AddDataSource(WSLit("newwindow"), pNewWindowDataSource);
+
+	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
+	UiDataSource* pUiDataSource = new UiDataSource();
+	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
 	
 	// MASTER
 	m_pMasterLoadListener = new MasterLoadListener;
@@ -57,7 +62,7 @@ void C_WebBrowser::Init()
 	m_pLoadListener = new LoadListener;
 	m_pViewListener = new ViewListener;
 
-	m_pMasterWebView = m_pWebCore->CreateWebView(1280, 720, m_pWebSession);
+	m_pMasterWebView = m_pWebCore->CreateWebView(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight(), m_pWebSession);
 	m_pMasterWebView->set_load_listener(m_pMasterLoadListener);
 	m_pMasterWebView->set_view_listener(m_pMasterViewListener);
 
@@ -66,7 +71,7 @@ void C_WebBrowser::Init()
 
 void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView)
 {
-	pWebView->Resize(1280, 720);
+	pWebView->Resize(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight());
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
 }

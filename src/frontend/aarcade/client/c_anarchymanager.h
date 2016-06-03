@@ -4,6 +4,7 @@
 #include <KeyValues.h>
 #include "c_webmanager.h"
 #include "c_inputmanager.h"
+#include <vector>
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
 {
@@ -47,6 +48,7 @@ public:
 
 	// helpers
 	std::string GenerateUniqueId();
+	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
 	// accessors
 	C_InputManager* GetInputManager() { return m_pInputManager; }

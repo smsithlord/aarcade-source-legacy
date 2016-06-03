@@ -1,5 +1,7 @@
 #include "cbase.h"
 #include "c_anarchymanager.h"
+#include <cctype>
+#include <algorithm>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -130,7 +132,7 @@ void C_AnarchyManager::OnWebManagerInitialized()
 {
 	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
 	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
-	C_WebTab* pWebTab = pWebManager->CreateWebTab("http://www.smsithlord.com/", "mainmenu");
+	C_WebTab* pWebTab = pWebManager->CreateWebTab("asset://ui/hud.html", "hud");
 	pWebManager->SelectWebTab(pWebTab);
 
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
@@ -139,6 +141,9 @@ void C_AnarchyManager::OnWebManagerInitialized()
 bool C_AnarchyManager::AttemptSelectEntity()
 {
 	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (!pPlayer)
+		return false;
+
 	if (pPlayer->GetHealth() <= 0)
 		return false;
 
@@ -231,6 +236,30 @@ void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
 void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 {
 	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
+}
+
+void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)
+{
+	std::string safeStr = str;
+	std::transform(safeStr.begin(), safeStr.end(), safeStr.begin(), tolower);
+
+	// Skip delimiters at beginning.
+	std::string::size_type lastPos = safeStr.find_first_not_of(delimiters, 0);
+
+	// Find first "non-delimiter".
+	std::string::size_type pos = safeStr.find_first_of(delimiters, lastPos);
+
+	while (std::string::npos != pos || std::string::npos != lastPos)
+	{
+		// Found a token, add it to the vector.
+		tokens.push_back(str.substr(lastPos, pos - lastPos));
+
+		// Skip delimiters.  Note the "not_of"
+		lastPos = safeStr.find_first_not_of(delimiters, pos);
+
+		// Find next "non-delimiter"
+		pos = safeStr.find_first_of(delimiters, lastPos);
+	}
 }
 
 /*
