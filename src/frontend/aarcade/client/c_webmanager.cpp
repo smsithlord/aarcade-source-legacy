@@ -161,6 +161,10 @@ CWebSurfaceRegen* C_WebManager::GetOrCreateWebSurfaceRegen()
 bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 {
 	//DevMsg("WebManager: ShouldRender\n");
+
+	if (pWebTab == m_pHudWebTab )//|| pWebTab == g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
+		return true;
+
 	int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
 	if (m_iLastRenderedFrame != gpGlobals->framecount && (pWebTab == m_pHudWebTab || iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
 		return true;

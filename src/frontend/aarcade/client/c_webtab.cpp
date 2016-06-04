@@ -86,10 +86,8 @@ void C_WebTab::Render()
 void C_WebTab::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
 //	DevMsg("WebTab: RegenerateTextureBits\n");
-
 	// draw the web tab
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->RegenerateTextureBits(this, pTexture, pVTFTexture, pSubRect);
-
 	/*
 	// draw the mouse cursor
 	if (m_fMouseX != 0.5 ||m_fMouseY != 0.5)

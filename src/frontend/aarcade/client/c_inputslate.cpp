@@ -35,17 +35,17 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	SetSizeable( false );
 	SetMoveable( false );
 
+	//SetScheme(vgui::scheme()->LoadSchemeFromFile("resource/sourcescheme.res", "SourceScheme"));
+	//LoadControlSettings("resource/ui/inputslate.res");
 	SetWide(ScreenWidth());
 	SetTall(ScreenHeight());
 
-	// Hide all children of this panel
-	/*
+	// Hide all children of this panel (including the invisible title bar that steals mouse move input
 	for(int i=0; i<GetChildCount(); i++)
 	{
 		Panel* pPanel = GetChild(i);
 		pPanel->SetVisible(false);
 	}
-	*/
 
 	//if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
 	//if (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
@@ -64,6 +64,13 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pImagePanel->SetSize(GetWide(), GetTall());
 		//pImagePanel->SetAutoResize() //pin
 		pImagePanel->SetImage("selectedwebtab");
+
+		pImagePanel = new ImagePanel(this, "hud_webtab_panel");
+		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+		pImagePanel->SetShouldScaleImage(true);
+		pImagePanel->SetSize(GetWide(), GetTall());
+		//pImagePanel->SetAutoResize() //pin
+		pImagePanel->SetImage("hudwebtab");
 	}
 	else
 	{
@@ -85,6 +92,23 @@ void CInputSlate::OnTick()
 
 void CInputSlate::OnCursorMoved(int x, int y)
 {
+	/*
+	int pX, pY;
+	int pWidth, pHeight;
+
+	m_pImagePanel->GetPos(pX, pY);
+	m_pImagePanel->GetSize(pWidth, pHeight);
+
+	mouseX = x - pX;
+	mouseY = y - pY;
+
+	mouseX = (mouseX / (pWidth + 0.0))*m_iWidth;
+	mouseY = (mouseY / (pHeight + 0.0))*m_iHeight;
+
+	if (mouseX < 0 || mouseX > m_iWidth || mouseY < 0 || mouseY > m_iHeight)
+		m_bMouseIsOnScreen = false;
+	*/
+
 	g_pAnarchyManager->GetInputManager()->MouseMove(x / (GetWide() * 1.0), y / (GetTall() * 1.0));
 }
 

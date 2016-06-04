@@ -197,42 +197,22 @@ void C_WebBrowser::Update()
 void C_WebBrowser::RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
 	//DevMsg("WebBrowser: RegenerateTextureBits\n");
-
 	WebView* pWebView = FindWebView(pWebTab);
-
 	if (!pWebView)
 		return;
 
-	BitmapSurface* surface = static_cast<BitmapSurface*>(pWebView->surface());
-	//BitmapSurface* surface = (BitmapSurface*)pWebView->surface();
-	if (surface != 0)
-		surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
-	//{
-		//ImageFormat format = pWebTab->GetTexture()->GetImageFormat();
-	//	if (format == IMAGE_FORMAT_BGRA8888 )
-//			surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
-		//else if (format == IMAGE_FORMAT_BGR888)
-			//surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
-	//}
-		/*
-		// BLACK SCREEN deal with square texture size!!
-		if (m_iStrangeVideo == 2)
-		{
-			int sourceWidth = 1280;
-			int sourceHeight = 720;
-			int sourceStride = sourceWidth * 4;
-			unsigned char* pSourceFrame = new unsigned char[sourceStride*sourceHeight];
+	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
 
-			surface->CopyTo(pSourceFrame, sourceStride, 4, false, false);
+	LibretroInstanceInfo_t* info;
+	if( pLibretroInstance )
+		info = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->GetInfo();
 
-			pClientArcadeResources->ResizeFrame(pSourceFrame, pVTFTexture->ImageData(0, 0, 0));
-
-			delete[] pSourceFrame;
-		}
-		else
-		{
-			// do it regular
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != pWebTab && pLibretroInstance && info->state == 5)
+		g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
+	else
+	{
+		BitmapSurface* surface = static_cast<BitmapSurface*>(pWebView->surface());
+		if (surface != 0)
 			surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
-		}
-		*/
+	}
 }

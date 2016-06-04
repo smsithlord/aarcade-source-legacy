@@ -17,6 +17,7 @@
 				height: 100%;
 				background-color: transparent;
 				color: #fff;
+				overflow: hidden;
 			}
 
 			#cursor
@@ -32,10 +33,13 @@
 	</head>
 	<body>
 		<div id="cursor"><img src="cursors/hippie_default.png" class="cursorImage" /></div>
-		<center><img src="asset://ui/aarcadetab.png" /></center>
+		<!-- <center><img src="asset://ui/aarcadetab.png" /></center> -->
 
 		<script>
 			var cursorElem = document.querySelector("#cursor");
+			cursorElem.style.left = (document.body.offsetWidth / 2) + "px";
+			cursorElem.style.top = (document.body.offsetHeight / 2) + "px";
+
 			document.addEventListener("mousemove", function(e)
 			{
 				cursorElem.style.left = e.clientX + "px";

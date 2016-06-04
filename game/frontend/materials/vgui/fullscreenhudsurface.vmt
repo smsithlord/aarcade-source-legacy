@@ -1,0 +1,6 @@
+//"WorldTwoTextureBlend"
+//"VertexLitGeneric"
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/websurface"
+}

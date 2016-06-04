@@ -13,6 +13,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_pWebManager = null;
+	m_pLibretroManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
 }
@@ -94,6 +95,9 @@ void C_AnarchyManager::Update(float frametime)
 {
 	//DevMsg("Float: %f\n", frametime);	// deltatime
 	//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
+	if (m_pLibretroManager)
+		m_pLibretroManager->Update();
+
 	if (m_pWebManager)
 		m_pWebManager->Update();
 
@@ -130,17 +134,13 @@ void C_AnarchyManager::AnarchyBegin()
 
 void C_AnarchyManager::OnWebManagerReady()
 {
-	// select the hud web tab and display it fullscreen
-	//C_WebTab* pWebTab = m_pWebManager->GetHudWebTab();
-	//m_pWebManager->SelectWebTab(pWebTab);
-	//m_pInputManager->ActivateInputMode(true);
+	m_pLibretroManager = new C_LibretroManager();
 
-	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
 	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
 	m_pWebManager->SelectWebTab(pWebTab);
 	m_pInputManager->ActivateInputMode(true);
 
-//	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
+	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()

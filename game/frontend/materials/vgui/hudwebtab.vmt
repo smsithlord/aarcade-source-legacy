@@ -1,0 +1,7 @@
+//"WorldTwoTextureBlend"
+//"VertexLitGeneric"
+"UnlitGeneric"
+{
+	"$basetexture" "websurface_hud"
+	"$translucent" 1
+}

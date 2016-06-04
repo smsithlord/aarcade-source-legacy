@@ -3,6 +3,7 @@
 
 #include <KeyValues.h>
 #include "c_webmanager.h"
+#include "c_libretromanager.h"
 #include "c_inputmanager.h"
 #include <vector>
 
@@ -53,10 +54,12 @@ public:
 	// accessors
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
+	C_LibretroManager* GetLibretroManager() { return m_pLibretroManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
 	C_WebManager* m_pWebManager;
+	C_LibretroManager* m_pLibretroManager;
 	C_InputManager* m_pInputManager;
 	C_BaseEntity* m_pSelectedEntity;
 };

@@ -86,8 +86,9 @@ ConCommand attemptselectobject("focus", AttemptSelectObject, "Attempts to select
 
 void Launch( const CCommand &args )
 {
-	if( args.ArgC() < 2 )
-		return;
+	g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();
+	//if( args.ArgC() < 2 )
+//		return;
 	/*
 	C_PropSimpleImageEntity* pProp = NULL;
 	pProp = dynamic_cast<C_PropSimpleImageEntity*>( C_BaseEntity::Instance( Q_atoi(args[1]) ) );
