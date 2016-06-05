@@ -29,7 +29,7 @@ public:
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
 
 	void OnBrowserInitialized();
-	void OnHudWebTabCreated();
+	void OnHudWebTabReady();
 	C_WebTab* CreateHudWebTab();
 	C_WebTab* CreateWebTab(std::string url, std::string id = "", bool bAlpha = false);
 	C_WebTab* FindWebTab(std::string id);

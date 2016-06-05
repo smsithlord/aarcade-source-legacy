@@ -16,6 +16,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pLibretroManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
+	m_pMountManager = null;
 }
 
 C_AnarchyManager::~C_AnarchyManager()
@@ -134,11 +135,19 @@ void C_AnarchyManager::AnarchyBegin()
 
 void C_AnarchyManager::OnWebManagerReady()
 {
+	DevMsg("yarbles\n");
+
+	m_pMountManager = new C_MountManager();
+	m_pMountManager->Init();
+	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
+
 	m_pLibretroManager = new C_LibretroManager();
 
 	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
 	m_pWebManager->SelectWebTab(pWebTab);
 	m_pInputManager->ActivateInputMode(true);
+
+	DevMsg("great fuzzy blockos\n");
 
 	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
 }

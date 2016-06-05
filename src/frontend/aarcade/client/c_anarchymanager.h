@@ -5,6 +5,7 @@
 #include "c_webmanager.h"
 #include "c_libretromanager.h"
 #include "c_inputmanager.h"
+#include "c_mountmanager.h"
 #include <vector>
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
@@ -55,12 +56,14 @@ public:
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
 	C_LibretroManager* GetLibretroManager() { return m_pLibretroManager; }
+	C_MountManager* GetMountManager() { return m_pMountManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
 	C_WebManager* m_pWebManager;
 	C_LibretroManager* m_pLibretroManager;
 	C_InputManager* m_pInputManager;
+	C_MountManager* m_pMountManager;
 	C_BaseEntity* m_pSelectedEntity;
 };
 

@@ -2,11 +2,21 @@
 #define C_LIBRETRO_INSTANCE_H
 
 #include "libretro.h"
+#include "portaudio.h"
 #include <string>
 #include <vector>
-#include <mutex>
+//#include <mutex>
 //#include "c_libretrosurfaceregen.h"
 //#include <map>
+
+/*
+typedef struct
+{
+	float left_phase;
+	float right_phase;
+}
+paTestData;
+*/
 
 struct libretro_raw {
 	void(*set_environment)(retro_environment_t);
@@ -68,6 +78,21 @@ struct LibretroInstanceInfo_t
 	size_t lastframepitch;
 	retro_pixel_format videoformat;
 	bool optionshavechanged;
+	//int16_t* audiobuffer;
+	//int audiobuffersize;
+	//int audiobufferpos;
+	//void* audiostream;
+	PaStream* audiostream;
+	int samplerate;
+	int framerate;
+	float lastrendered;
+	int16_t* audiobuffer;
+	unsigned int audiobuffersize;
+	unsigned int audiobufferpos;
+	//int16_t* safebuffer;
+	//unsigned int safebuffersize;
+	//unsigned int safebufferpos;
+	bool processingaudio;
 };
 
 class C_LibretroInstance
@@ -84,6 +109,8 @@ public:
 	void OnGameLoaded();
 	void OnCoreLoaded();
 	static bool BuildInterface(libretro_raw* raw, void* pLib);
+	static void CreateAudioStream();
+	static void DestroyAudioStream();
 
 	// threaded
 	//unsigned Worker(void *params);
@@ -105,7 +132,7 @@ public:
 	// accessors
 	libretro_raw* GetRaw() { return m_raw; }
 	LibretroInstanceInfo_t* GetInfo() { return m_info; }
-	std::mutex m_mutex;
+	//std::mutex m_mutex;
 
 	// mutators	
 

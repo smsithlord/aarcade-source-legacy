@@ -182,10 +182,15 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 			pWebView->SetTransparent(true);
 
 		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
-
-		if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)
-			g_pAnarchyManager->GetWebManager()->OnHudWebTabCreated();
 	}
+}
+
+void C_WebBrowser::OnHudWebViewDocumentReady(WebView* pWebView, std::string id)
+{
+	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+	DevMsg("har har har\n");
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?
+		g_pAnarchyManager->GetWebManager()->OnHudWebTabReady();
 }
 
 void C_WebBrowser::Update()
@@ -201,14 +206,26 @@ void C_WebBrowser::RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, 
 	if (!pWebView)
 		return;
 
-	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
+	C_LibretroInstance* pLibretroInstance = null;
+	LibretroInstanceInfo_t* info = null;
 
-	LibretroInstanceInfo_t* info;
-	if( pLibretroInstance )
-		info = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->GetInfo();
+	bool bHasActiveLibretro = false;
+	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
+	if (pLibretroManager)
+	{
+		pLibretroInstance = pLibretroManager->GetSelectedLibretroInstance();
+		if (pLibretroInstance)
+		{
+			if (pLibretroInstance)
+			{
+				info = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->GetInfo();
+				bHasActiveLibretro = true;
+			}
+		}
+	}
 
-	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != pWebTab && pLibretroInstance && info->state == 5)
-		g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
+	if (bHasActiveLibretro && g_pAnarchyManager->GetWebManager()->GetHudWebTab() != pWebTab && pLibretroInstance && info->state == 5)
+			g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance()->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
 	else
 	{
 		BitmapSurface* surface = static_cast<BitmapSurface*>(pWebView->surface());

@@ -122,8 +122,9 @@ void C_WebManager::OnBrowserInitialized()
 	m_pHudWebTab = CreateHudWebTab();
 }
 
-void C_WebManager::OnHudWebTabCreated()
+void C_WebManager::OnHudWebTabReady()// Created()
 {
+	DevMsg("here\n");
 	g_pAnarchyManager->OnWebManagerReady();
 }
 
@@ -161,9 +162,18 @@ CWebSurfaceRegen* C_WebManager::GetOrCreateWebSurfaceRegen()
 bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 {
 	//DevMsg("WebManager: ShouldRender\n");
-
 	if (pWebTab == m_pHudWebTab )//|| pWebTab == g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
 		return true;
+
+	/*
+	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
+	if (pLibretroInstance)
+	{
+		LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+		if (info->processingaudio)
+			return false;
+	}
+	*/
 
 	int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
 	if (m_iLastRenderedFrame != gpGlobals->framecount && (pWebTab == m_pHudWebTab || iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))

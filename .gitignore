@@ -55,6 +55,7 @@ src/frontend/*
 game/*
 !game/frontend/
 game/frontend/*
+!game/frontend/mounts.txt
 !game/frontend/materials/
 game/frontend/materials/*
 !game/frontend/materials/vgui/

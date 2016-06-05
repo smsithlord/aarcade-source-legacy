@@ -1,0 +1,13 @@
+"mounts"
+{
+	"id" "240"
+	"base" "Counter-Strike Source/cstrike"
+	"active" 1
+	"paths"
+	{
+		"path0" "custom"
+		"path1" "."
+		"path2" "cstrike_pak_dir.vpk"
+		"path3" "download"
+	}
+}

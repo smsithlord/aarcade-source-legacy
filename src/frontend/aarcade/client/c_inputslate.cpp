@@ -53,6 +53,8 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	{
 		IMaterial* pMaterial = g_pMaterialSystem->FindMaterial("vgui/selectedwebtab", TEXTURE_GROUP_VGUI);
 		ITexture* pTexture = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()->GetTexture();
+		if (!pTexture)
+			DevMsg("Texture is not ready yet!!\n");
 
 		bool found;
 		IMaterialVar* pMaterialVar = pMaterial->FindVar("$basetexture", &found, false);

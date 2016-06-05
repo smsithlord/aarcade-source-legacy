@@ -96,6 +96,14 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 		std::string id = urlSpec.substr(18);
 		pWebBrowser->OnCreateWebViewDocumentReady(caller, id);
 	}
+	else
+	{
+		foundPrefix = urlSpec.find("asset://ui/hud.html");
+		if (foundPrefix == 0)
+		{
+			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+		}
+	}
 }
 
 void ViewListener::OnAddConsoleMessage(WebView* caller, const WebString &message, int line_number, const WebString &source)

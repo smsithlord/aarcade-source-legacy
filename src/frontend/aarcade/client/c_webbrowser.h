@@ -38,6 +38,8 @@ public:
 	void OnCreateWebViewDocumentReady(WebView* pWebView, std::string id);
 	void RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 
+	void OnHudWebViewDocumentReady(WebView* pWebView, std::string id);
+
 private:
 	int m_iState;
 	WebCore* m_pWebCore;
