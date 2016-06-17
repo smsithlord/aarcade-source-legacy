@@ -77,24 +77,34 @@ void C_MountManager::Init()
 
 bool C_MountManager::LoadMountsFromKeyValues(std::string filename)
 {
+	unsigned int mountCount = 0;
 	KeyValues* pKv = new KeyValues("mounts");
-	if (pKv->LoadFromFile(g_pFullFileSystem, filename.c_str(), "mod"))
+	if (pKv->LoadFromFile(g_pFullFileSystem, filename.c_str(), "MOD"))
 	{
-		C_Mount* pMount = new C_Mount();
+		for (KeyValues *pMountKv = pKv->GetFirstSubKey(); pMountKv; pMountKv = pMountKv->GetNextKey())
+		{
+			C_Mount* pMount = new C_Mount();
 
-		std::string id = pKv->GetString("id");
-		std::string base = pKv->GetString("base");
-		std::vector<std::string> paths;
-		for (KeyValues *sub = pKv->FindKey("paths", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-			paths.push_back(sub->GetString());
+			std::string id = pMountKv->GetString("id");
+			std::string base = pMountKv->GetString("base");
+			std::vector<std::string> paths;
+			for (KeyValues *sub = pMountKv->FindKey("paths", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+				paths.push_back(sub->GetString());
 
-		pMount->Init(id, base, paths);
+			pMount->Init(id, base, paths);
 
-		if (pKv->GetBool("active"))
-			pMount->Activate();
+			//		if (pKv->GetBool("active"))
+			//	{
+			if (pMount->Activate())
+				mountCount++;
+			//		}
+		}
 	}
 
 	pKv->deleteThis();
+
+	std::string num = VarArgs("%u", mountCount);
+	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Mounting Source Engine Games", "mounts", "0", num, num);
 
 	return false;
 }

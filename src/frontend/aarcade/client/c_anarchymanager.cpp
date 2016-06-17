@@ -13,6 +13,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_pWebManager = null;
+	m_pLoadingManager = null;
 	m_pLibretroManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
@@ -128,6 +129,8 @@ std::string C_AnarchyManager::GenerateUniqueId()
 void C_AnarchyManager::AnarchyBegin()
 {
 	DevMsg("AnarchyManager: AnarchyBegin\n");
+
+	m_pMetaverseManager = new C_MetaverseManager();
 	m_pWebManager = new C_WebManager();
 	m_pWebManager->Init();
 	m_pInputManager = new C_InputManager();
@@ -135,21 +138,51 @@ void C_AnarchyManager::AnarchyBegin()
 
 void C_AnarchyManager::OnWebManagerReady()
 {
-	DevMsg("yarbles\n");
+	m_pLoadingManager = new C_LoadingManager();
+	m_pLoadingManager->SetHeader("Anarchy Arcade - Starting Up");
+	m_pLoadingManager->AddMessage("progress", "", "Loading Local Library Items", "locallibraryitems", "", "", "");
+	m_pLoadingManager->AddMessage("progress", "", "Mounting Source Engine Games", "mounts", "", "", "");
+	m_pLoadingManager->AddMessage("progress", "", "Fetching Workshop Subscriptions", "work", "", "", "");
+	//m_pLoadingManager->AddMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "", "");
+	m_pLoadingManager->AddMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", "", "", "");
+	m_pLoadingManager->AddMessage("progress", "", "Loading Workshop Library Items", "workshoplibraryitems", "", "", "");
+	//m_pLoadingManager->AddMessage("progress", "", "Loading Legacy Workshop Library Items", "legacyworkshoplibraryitems", "", "", "");
+
+	//m_pLoadingManager->Init();
+
+	//m_pLibretroManager = new C_LibretroManager();
+
+	//C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
+	//m_pWebManager->SelectWebTab(pWebTab);
+	//m_pInputManager->ActivateInputMode(true);
+
+	//DevMsg("great fuzzy blockos\n");
+
+	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
+//}
+
+//void C_AnarchyManager::OnLoadingManagerReady()
+//{
+	// Show the loading menu
+//	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/loading.html", "metaverse", false);
+//	m_pWebManager->SelectWebTab(pWebTab);
+//	m_pInputManager->ActivateInputMode(true);
+
+//	m_pLoadingManager->AddMessage("progress", "", "Detecting Workshop Subscriptions", "work", "0", "10", "7");
+
+	// And continue starting up
+	unsigned int uItemCount = m_pMetaverseManager->LoadAllLocalItems();
+
+	std::string num = VarArgs("%u", uItemCount);
+	m_pLoadingManager->AddMessage("progress", "", "Loading Local Library Items", "locallibraryitems", "0", num, num);
+	//m_pLoadingManager->AddMessage("progress", "", "Loading Workshop Library Items", "workshoplibraryitems", "0", num, num);
 
 	m_pMountManager = new C_MountManager();
 	m_pMountManager->Init();
 	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
 
-	m_pLibretroManager = new C_LibretroManager();
-
-	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
-	m_pWebManager->SelectWebTab(pWebTab);
-	m_pInputManager->ActivateInputMode(true);
-
-	DevMsg("great fuzzy blockos\n");
-
-	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
+	m_pWorkshopManager = new C_WorkshopManager();
+	m_pWorkshopManager->Init();
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()
@@ -250,6 +283,16 @@ void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
 void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 {
 	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
+}
+
+void C_AnarchyManager::OnWorkshopManagerReady()
+{
+	//m_pWebManager->FindWebTab("mainmenu")->SetUrl("http://localhost:8001/terminal.html");
+
+	//DevMsg("Workshop manager is done, bra.\n");
+
+	m_pWorkshopManager->MountAllWorkshops();
+	//m_pMetaverseManager->LoadAllLocalItems();
 }
 
 void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)

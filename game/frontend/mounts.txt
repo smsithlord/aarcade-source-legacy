@@ -1,13 +1,34 @@
 "mounts"
 {
-	"id" "240"
-	"base" "Counter-Strike Source/cstrike"
-	"active" 1
-	"paths"
+	"mount"
 	{
-		"path0" "custom"
-		"path1" "."
-		"path2" "cstrike_pak_dir.vpk"
-		"path3" "download"
+		"id" "240"
+		"base" "Counter-Strike Source/cstrike"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "custom"
+			"path" "."
+			"path" "cstrike_pak_dir.vpk"
+			"path" "download"
+		}
+	}
+	"mount"
+	{
+		"id" "440"
+		"base" "Team Fortress 2/tf"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "custom"
+			"path" "."
+			"path" "tf2_misc_dir.vpk"
+			"path" "tf2_sound_misc_dir.vpk"
+			"path" "tf2_sound_vo_english_dir.vpk"
+			"path" "tf2_textures_dir.vpk"
+			"path" "download"
+		}
 	}
 }

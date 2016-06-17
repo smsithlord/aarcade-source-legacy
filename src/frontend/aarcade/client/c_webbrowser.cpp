@@ -17,6 +17,7 @@ C_WebBrowser::C_WebBrowser()
 	m_pWebSession = null;
 	m_pMasterWebView = null;
 	m_pMasterLoadListener = null;
+	m_pJSHandler = null;
 }
 
 C_WebBrowser::~C_WebBrowser()
@@ -53,12 +54,13 @@ void C_WebBrowser::Init()
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
 	UiDataSource* pUiDataSource = new UiDataSource();
 	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
-	
+
 	// MASTER
 	m_pMasterLoadListener = new MasterLoadListener;
 	m_pMasterViewListener = new MasterViewListener;
 
 	// REGULAR
+	m_pJSHandler = new JSHandler();
 	m_pLoadListener = new LoadListener;
 	m_pViewListener = new ViewListener;
 
@@ -69,11 +71,17 @@ void C_WebBrowser::Init()
 	m_pMasterWebView->LoadURL(WebURL(WSLit("asset://newwindow/master")));
 }
 
-void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView)
+void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 {
 	pWebView->Resize(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight());
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
+
+	if (id == "metaverse")
+	{
+		pWebView->set_js_method_handler(m_pJSHandler);
+		CreateAaApi(pWebView);
+	}
 }
 
 void C_WebBrowser::OnMasterWebViewDocumentReady()
@@ -165,6 +173,22 @@ void C_WebBrowser::OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code)
 	pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
 
+void C_WebBrowser::CreateAaApi(WebView* pWebView)
+{
+	JSValue result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& aaapiObject = result.ToObject();
+
+	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& metaverseObject = result.ToObject();
+	metaverseObject.SetCustomMethod(WSLit("OnSelectItem"), false);
+}
+
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)
 {
 	// The master webview has created a new webview on demand.
@@ -178,6 +202,16 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 		pWebTab->SetState(2);
 		m_webViews[pWebTab] = pWebView;
 
+		/*
+		if (pWebTab->GetId() == "metaverse")
+		{
+			// add or create the global aaapi object
+			
+		}
+		*/
+
+		//g_pAnarchyManager->GetMetaverseManager()->OnWebTabCreated(pWebTab);
+
 		if (pWebTab->GetTexture()->GetImageFormat() == IMAGE_FORMAT_BGRA8888)
 			pWebView->SetTransparent(true);
 
@@ -188,10 +222,61 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 void C_WebBrowser::OnHudWebViewDocumentReady(WebView* pWebView, std::string id)
 {
 	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
-	DevMsg("har har har\n");
 	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?
 		g_pAnarchyManager->GetWebManager()->OnHudWebTabReady();
 }
+
+void C_WebBrowser::OnLoadingWebViewDocumentReady(WebView* pWebView, std::string id)
+{
+	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?
+		g_pAnarchyManager->GetWebManager()->OnLoadingWebTabReady();
+}
+
+void C_WebBrowser::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)
+{
+	WebView* pWebView = m_webViews[pWebTab];
+
+	JSValue response = pWebView->ExecuteJavascriptWithResult(WSLit(objectName.c_str()), WSLit(""));
+	if (response.IsObject())
+	{
+		JSObject object = response.ToObject();
+		JSArray arguments;
+
+		for (auto argument : methodArguments)
+			arguments.Push(WSLit(argument.c_str()));
+
+		object.Invoke(WSLit(objectMethod.c_str()), arguments);
+	}
+}
+
+/*
+void C_WebBrowser::DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch)
+{
+	WebView* pWebView = m_webViews[pWebTab];
+
+	JSValue response = pWebView->ExecuteJavascriptWithResult(WSLit(objectName.c_str()), WSLit(""));
+	if (response.IsObject())
+	{
+		JSObject object = response.ToObject();
+		JSArray arguments;
+
+		for (auto eventArg : eventArgs)
+		{
+			JSObject eventObject;
+			eventObject.SetProperty(WSLit("name"), WSLit(eventArg->name.c_str()));
+
+			JSArray args;
+			for (auto arg : eventArg->args)
+				args.Push(WSLit(arg.c_str()));
+
+			arguments.Push(eventObject);
+		}
+
+		object.Invoke(WSLit(objectMethod.c_str()), arguments);
+	}
+}
+*/
 
 void C_WebBrowser::Update()
 {

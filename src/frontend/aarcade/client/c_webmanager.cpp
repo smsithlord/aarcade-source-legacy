@@ -12,10 +12,10 @@ C_WebManager::C_WebManager()
 {
 	DevMsg("WebManager: Constructor\n");
 	m_iState = 0;	// uninitialized
-	m_iWebSurfaceWidth = 1280;
-	m_iWebSurfaceHeight = 720;
-	//m_iWebSurfaceWidth = 1920;
-	//m_iWebSurfaceHeight = 1080;
+	//m_iWebSurfaceWidth = 1280;
+	//m_iWebSurfaceHeight = 720;
+	m_iWebSurfaceWidth = 1920;
+	m_iWebSurfaceHeight = 1080;
 	m_iVisibleWebTabsLastFrame = -1;
 	m_iVisibleWebTabsCurrentFrame = 0;
 	m_iLastRenderedFrame = -1;
@@ -124,8 +124,15 @@ void C_WebManager::OnBrowserInitialized()
 
 void C_WebManager::OnHudWebTabReady()// Created()
 {
-	DevMsg("here\n");
 	g_pAnarchyManager->OnWebManagerReady();
+}
+
+void C_WebManager::OnLoadingWebTabReady()
+{
+	C_LoadingManager* pLoadingManager = g_pAnarchyManager->GetLoadingManager();
+	if (pLoadingManager)
+		pLoadingManager->OnWebTabReady();
+	//g_pAnarchyManager->OnLoadingManagerReady();
 }
 
 C_WebTab* C_WebManager::CreateHudWebTab()
@@ -199,3 +206,16 @@ void C_WebManager::OnMouseRelease(vgui::MouseCode code)
 	// these events are always for the selected web tab
 	m_pSelectedWebTab->MouseRelease(code);
 }
+
+void C_WebManager::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)
+{
+	m_pWebBrowser->DispatchJavaScriptMethod(pWebTab, objectName, objectMethod, methodArguments);
+	/*
+	for (auto arg : args)
+	{
+		DevMsg("Argument: %s\n", arg->text.c_str());
+	}
+	*/
+}
+
+//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);

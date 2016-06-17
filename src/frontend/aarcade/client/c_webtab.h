@@ -5,6 +5,8 @@
 #include <Awesomium/STLHelpers.h>
 #include "vgui/MouseCode.h"
 //#include "vgui_controls/Controls.h"
+#include <vector>
+//#include "c_webmanager.h"
 
 class C_WebTab
 {
@@ -17,6 +19,7 @@ public:
 	std::string GetInitialUrl() { return m_initialUrl; }
 	int GetLastRenderedFrame() { return m_iLastRenderFrame; }
 	ITexture* GetTexture() { return m_pTexture; }
+	int GetState() { return m_iState; }
 
 	// mutators
 	void SetState(int state) { m_iState = state; }
@@ -28,6 +31,11 @@ public:
 	void MouseMove(float fMouseX, float fMouseY);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
+	void SetUrl(std::string);
+
+	//void DispatchJavaScriptEventMessages(std::string objectName, std::string objectMethod, std::vector<JSEventMessage_t*> eventArgs);
+	void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
+	//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
 
 private:
 	float m_fMouseX;

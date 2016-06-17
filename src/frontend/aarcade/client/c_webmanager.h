@@ -30,6 +30,7 @@ public:
 
 	void OnBrowserInitialized();
 	void OnHudWebTabReady();
+	void OnLoadingWebTabReady();
 	C_WebTab* CreateHudWebTab();
 	C_WebTab* CreateWebTab(std::string url, std::string id = "", bool bAlpha = false);
 	C_WebTab* FindWebTab(std::string id);
@@ -43,6 +44,10 @@ public:
 	void OnMouseMove(float fXAmount, float fYAmount);
 	void OnMousePress(vgui::MouseCode code);
 	void OnMouseRelease(vgui::MouseCode code);
+
+	void DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
+	//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
+	//void DispatchJavaScriptEventMessages(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<JSEventMessage_t*> args);
 
 	/*
 	void RelayOnMouseMove(int x, int y);

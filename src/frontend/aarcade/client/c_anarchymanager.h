@@ -3,9 +3,12 @@
 
 #include <KeyValues.h>
 #include "c_webmanager.h"
+#include "c_loadingmanager.h"
 #include "c_libretromanager.h"
 #include "c_inputmanager.h"
 #include "c_mountmanager.h"
+#include "c_workshopmanager.h"
+#include "c_metaversemanager.h"
 #include <vector>
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
@@ -42,11 +45,13 @@ public:
 	
 	void AnarchyBegin();
 	void OnWebManagerReady();
+	//void OnLoadingManagerReady();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
 	bool DeselectEntity(C_BaseEntity* pEntity);
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
+	void OnWorkshopManagerReady();
 
 	// helpers
 	std::string GenerateUniqueId();
@@ -55,15 +60,21 @@ public:
 	// accessors
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
+	C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
 	C_LibretroManager* GetLibretroManager() { return m_pLibretroManager; }
 	C_MountManager* GetMountManager() { return m_pMountManager; }
+	C_WorkshopManager* GetWorkshopManager() { return m_pWorkshopManager; }
+	C_MetaverseManager* GetMetaverseManager() { return m_pMetaverseManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
 	C_WebManager* m_pWebManager;
+	C_LoadingManager* m_pLoadingManager;
 	C_LibretroManager* m_pLibretroManager;
 	C_InputManager* m_pInputManager;
 	C_MountManager* m_pMountManager;
+	C_WorkshopManager* m_pWorkshopManager;
+	C_MetaverseManager* m_pMetaverseManager;
 	C_BaseEntity* m_pSelectedEntity;
 };
 

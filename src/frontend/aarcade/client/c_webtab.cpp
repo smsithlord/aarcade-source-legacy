@@ -3,6 +3,7 @@
 #include "c_webtab.h"
 #include "c_anarchymanager.h"
 #include "pixelwriter.h"
+
 //#include "aa_globals.h"
 //#include "Filesystem.h"
 
@@ -138,3 +139,18 @@ void C_WebTab::MouseRelease(vgui::MouseCode code)
 {
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseRelease(this, code);
 }
+
+void C_WebTab::SetUrl(std::string url)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(this)->LoadURL(WebURL(WSLit(url.c_str())));
+}
+
+void C_WebTab::DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)
+{
+	if (m_iState < 2)
+		return;
+
+	g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(this, objectName, objectMethod, methodArguments);
+}
+
+//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
