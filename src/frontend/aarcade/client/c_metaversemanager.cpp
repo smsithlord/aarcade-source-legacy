@@ -100,7 +100,11 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				//DevMsg("Unique ID: %s\n", pItem->GetString("local/info/id"));
 
 				// build a generation 3 model
-				pItem->SetString("local/title", pItem->GetString("title"));
+				std::string goodTitle = pItem->GetString("title");
+				if (Q_strcmp(pItem->GetString("group"), ""))
+					goodTitle = VarArgs("%s - %s", pItem->GetString("group"), goodTitle.c_str());
+
+				pItem->SetString("local/title", goodTitle.c_str());
 				pItem->SetString("local/keywords", "");
 				pItem->SetInt("local/dynamic", 0);
 				pItem->SetString(VarArgs("local/platforms/%s/id", AA_PLATFORM_ID), AA_PLATFORM_ID);
@@ -138,7 +142,13 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			{
 				pItem->SetString("local/info/id", g_pAnarchyManager->ExtractLegacyId(file, pItem).c_str());
 
-				pItem->SetString("local/title", pItem->GetString("title"));
+				//pItem->SetString("local/title", pItem->GetString("title"));
+
+				std::string goodTitle = pItem->GetString("title");
+				if (Q_strcmp(pItem->GetString("group"), ""))
+					goodTitle = VarArgs("%s - %s", pItem->GetString("group"), goodTitle.c_str());
+
+				pItem->SetString("local/title", goodTitle.c_str());
 				pItem->SetString("local/description", pItem->GetString("description"));
 				pItem->SetString("local/file", pItem->GetString("filelocation"));
 
@@ -487,6 +497,15 @@ KeyValues* C_MetaverseManager::GetNextLibraryItem()
 
 		return m_previousItemIterator->second;
 	}
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::GetLibraryItem(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_items.find(id);
+	if (it != m_items.end())
+		return it->second;
 	else
 		return null;
 }

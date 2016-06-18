@@ -1,6 +1,7 @@
 function ArcadeHud()
 {
 	this.cursorElem;
+	this.helpElem = null;
 	this.DOMReady().then(function()
 	{
 		this.cursorElem = document.createElement("div");
@@ -22,8 +23,68 @@ function ArcadeHud()
 			this.cursorElem.style.left = e.clientX + "px";
 			this.cursorElem.style.top = e.clientY + "px";
 		}.bind(this), true);
+
+		// prep all of the help notes
+		var elems = document.querySelectorAll(".helpNote");
+		var i, elem;
+		var numElems = elems.length;
+		for( i = 0; i < numElems; i++ )
+		{
+			elem = elems[i];
+			this.assignHelp(elem);
+		}
 	}.bind(this));
 }
+
+ArcadeHud.prototype.assignHelp = function(elem)
+{
+	elem.addEventListener("mouseover", function(e)
+	{
+		arcadeHud.addHelpMessage(this.getAttribute("help"));
+	}.bind(elem), true);
+
+	elem.addEventListener("mouseout", function(e)
+	{
+		arcadeHud.removeHelp();
+	}.bind(elem), true);
+};
+
+ArcadeHud.prototype.removeHelp = function()
+{
+	this.helpElem.parentNode.removeChild(this.helpElem);
+	this.helpElem = null;
+};
+
+ArcadeHud.prototype.addHelpMessage = function(text)
+{
+	var needsAppend;
+	if( !this.helpElem )
+	{
+		this.helpElem = document.createElement("div");
+		this.helpElem.className = "helpContainer";
+		needsAppend = true;
+	}
+	else
+	{
+		// empty out the container
+		var firstChild = this.helpElem.firstChild;
+		while( firstChild )
+		{
+			this.helpElem.removeChild(firstChild);
+			firstChild = this.helpElem.firstChild;
+		}
+
+		needsAppend = false;
+	}
+
+	var helpText = document.createElement("div");
+	var helpTextNode = document.createTextNode(text);
+	helpText.appendChild(helpTextNode);
+	this.helpElem.appendChild(helpText);
+
+	if( needsAppend )
+		document.body.appendChild(this.helpElem);
+};
 
 ArcadeHud.prototype.DOMReady = function()
 {
@@ -44,6 +105,6 @@ ArcadeHud.prototype.DOMReady = function()
 				}
 			}.bind(this)
 		};
-}
+};
 
 var arcadeHud = new ArcadeHud();

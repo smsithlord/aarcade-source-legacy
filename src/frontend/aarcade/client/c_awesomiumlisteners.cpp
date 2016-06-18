@@ -8,6 +8,7 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+/*
 namespace Awesomium
 {
 	const char* WebStringToCharString(WebString web_string)
@@ -23,7 +24,7 @@ namespace Awesomium
 		return VarArgs("%s", title.c_str());
 	}
 }
-
+*/
 // MASTER
 void MasterLoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 {

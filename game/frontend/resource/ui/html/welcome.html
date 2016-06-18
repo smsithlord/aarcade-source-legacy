@@ -6,12 +6,14 @@
 	<body>
 		<div id="messageContainer">
 			<div class="mainTitle">Main Menu</div>
-			<div class="mainButton">Metaverse</div>
-			<div class="mainButton" onclick="window.location='asset://ui/library.html';">Library</div>
-			<div class="mainButton">Options</div>
-			<div class="mainButton" onclick="aaapi.system.quit();">Quit</div>
+			<div class="mainButton disabledButton">Play</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/library.html';" help="Browse & manage your personal library.">Library</div>
+			<div class="mainButton disabledButton">Metaverse</div>
+			<div class="mainButton disabledButton">Options</div>
+			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
 		</div>
 		<a href="javascript:location.reload();" class="devReload">Reload</a>
+
 		<script>
 			//loadingManager.init();
 		</script>

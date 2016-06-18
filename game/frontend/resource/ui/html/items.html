@@ -2,26 +2,29 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script>
+			var libraryContainer = null;
+		</script>
 	</head>
 	<body>
-		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/library.html';">Back</div>Main Menu &gt; Library &gt; Items</div>
+		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/library.html';">Back</div>Library / Items</div>
 		<br />
 		<div class="librarySearchContainer">
 			<table style="width: 100%;"><tr>
 				<td align="left">
-					<input type="text" placeholder="Search..." />
+					<input class="helpNote" type="text" placeholder="Search..." help="Type the name of what you're looking for into this box." />
 				</td>
 				<td align="right">
 					<table><tr>
 						<td>
-							<select>
-								<option>type</option>
+							<select class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
+								<option value="" selected>&lt;any&gt;</option>
 							</select>
 						</td>
 						<td style="font-size: 50px; font-weight: 900; line-height: 10%;">=</td>
 						<td>
-							<select>
-								<option>&lt;any&gt;</option>
+							<select class="helpNote" help="(OPTIONAL) Select a filter value to narrow your search results.">
+								<option value="" selected>&lt;any&gt;</option>
 							</select>
 						</td>
 					</tr></table>
@@ -36,23 +39,34 @@
 				<td align="left">
 					<table><tr>
 						<td>
+							<div class="button disabledButton">Create New Item</div>
+						</td>
+						<!--
+						<td>
 							<div class="button">Browse</div>
 						</td>
 						<td>
 							<input type="text" placeholder="File Location"/>
 						</td>
+						-->
 					</tr></table>
 				</td>
 				<td align="right">
 					<table><tr>
 						<td>
-							<div class="button">Delete</div>
+							<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Launch the selected shortcut in Windows.">Launch</div>
 						</td>
 						<td>
-							<div class="button">Edit</div>
+							<div class="button disabledButton">Inspect</div>
 						</td>
 						<td>
-							<div class="button">View</div>
+							<div class="button disabledButton">Delete</div>
+						</td>
+						<td>
+							<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected item.">Edit</div>
+						</td>
+						<td>
+							<div class="button disabledButton">OK</div>
 						</td>
 					</tr></table>
 				</td>
@@ -61,14 +75,62 @@
 
 		<a href="javascript:location.reload();" class="devReload">Reload</a>
 		<script>
+			function editSelected()
+			{
+				window.location='asset://ui/editItem.html?id=' + encodeURIComponent(libraryContainer.selectedItem.item.info.id);
+			}
+
+			function launchSelected()
+			{
+				window.location='asset://ui/launchItem.html?id=' + encodeURIComponent(libraryContainer.selectedItem.item.info.id);
+			}
+
+			libraryContainer = document.querySelector("#libraryContainer");
+			libraryContainer.selectedItem = null;
+
 			function appendItem(item)
 			{
-				var libraryContainer = document.querySelector("#libraryContainer");
-
 				var itemContainer = document.createElement("div");
+				itemContainer.onselectstart = function(e)
+				{
+					e.preventDefault;
+					return false;
+				};
+
 				itemContainer.item = item;
+				itemContainer.oldBgColor = "";
+
+				//dblclick
+				itemContainer.addEventListener("click", function(e)
+				{
+					var elem = e.srcElement;
+					if( !!!elem.item )
+						return;
+
+					if( libraryContainer.selectedItem )
+					{
+						var victim = libraryContainer.selectedItem;
+						victim.style.backgroundColor = victim.oldBgColor;
+						victim.oldBgColor = "";
+						libraryContainer.selectedItem = null;
+					}
+					else
+					{
+						// Remove the disabledButton class
+						var button = document.querySelector("#editButton");
+						button.className = button.className.replace(/\bdisabledButton\b/,'');
+
+						button = document.querySelector("#launchButton");
+						button.className = button.className.replace(/\bdisabledButton\b/,'');
+					}
+
+					elem.oldBgColor = elem.style.backgroundColor;
+					elem.style.backgroundColor = "rgba(50, 50, 250, 0.7)";
+					libraryContainer.selectedItem = elem;
+				}, true);
 
 				var title = document.createElement("div");
+				title.style.pointerEvents = "none";
 				var titleNode = document.createTextNode(item.title);
 				title.appendChild(titleNode);
 				itemContainer.appendChild(title);

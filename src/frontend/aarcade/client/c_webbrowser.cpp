@@ -190,6 +190,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 
 	JSObject& systemObject = result.ToObject();
 	systemObject.SetCustomMethod(WSLit("quit"), false);
+	systemObject.SetCustomMethod(WSLit("launchItem"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -199,6 +200,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	JSObject& libraryObject = result.ToObject();
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("getLibraryItem"), true);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));

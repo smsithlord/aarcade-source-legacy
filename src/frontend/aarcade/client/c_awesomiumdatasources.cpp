@@ -12,7 +12,7 @@
 #include "tier0/memdbgon.h"
 
 using namespace Awesomium;
-
+/*
 const char* WebStringToCharString(WebString web_string)
 {
 	int len = web_string.ToUTF8(null, 0);
@@ -25,7 +25,7 @@ const char* WebStringToCharString(WebString web_string)
 
 	return VarArgs("%s", title.c_str());
 }
-
+*/
 NewWindowDataSource::NewWindowDataSource()
 {
 	DevMsg("NewWindowDataSource: Constructor\n");
@@ -61,6 +61,9 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	std::string requestPath = WebStringToCharString(path);	// everything after asset://ui/
 	std::string requestUrl = WebStringToCharString(request.url().spec());	// the entire Url
 
+	size_t found = requestPath.find_first_of("#?");
+	std::string shortPath = requestPath.substr(0, found);
+
 	enum datatype_t {
 		RESOURCE_UNKNOWN = 0,
 		RESOURCE_BINARY = 1,
@@ -70,7 +73,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	// determine the resource type
 	datatype_t datatype = RESOURCE_UNKNOWN;
 
-	std::string fileExtension = requestPath;
+	std::string fileExtension = shortPath;
 	size_t foundLastDot = fileExtension.find_last_of(".");
 	fileExtension = fileExtension.substr(foundLastDot + 1);
 	std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), tolower);
@@ -87,10 +90,10 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 
 	if (datatype == RESOURCE_TEXT)
 	{
-		if (requestPath.find(".html") == requestPath.length() - 5)
+		if (shortPath.find(".html") == shortPath.length() - 5)
 		{
 			CUtlBuffer buf;
-			if (filesystem->ReadFile(requestPath.c_str(), "UI", buf))
+			if (filesystem->ReadFile(shortPath.c_str(), "UI", buf))
 			{
 				char* data = new char[buf.Size() + 1];
 				//buf.GetString(data);
@@ -104,10 +107,10 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 				SendResponse(request_id, strlen(generatedPage.c_str()), (unsigned char*)generatedPage.c_str(), WSLit("text/html"));
 			}
 		}
-		else if (requestPath.find(".js") == requestPath.length() - 3)
+		else if (shortPath.find(".js") == shortPath.length() - 3)
 		{
 			CUtlBuffer buf;
-			if (filesystem->ReadFile(requestPath.c_str(), "UI", buf))
+			if (filesystem->ReadFile(shortPath.c_str(), "UI", buf))
 			{
 				char* data = new char[buf.Size() + 1];
 				//buf.GetString(data);
@@ -121,9 +124,9 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 				SendResponse(request_id, strlen(loadedContent.c_str()), (unsigned char*)loadedContent.c_str(), WSLit("application/javascript"));
 			}
 		}
-		else if (requestPath.find(".css") == requestPath.length() - 4)
+		else if (shortPath.find(".css") == shortPath.length() - 4)
 		{
-			FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "r", "UI");
+			FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "r", "UI");
 
 			if (fileHandle)
 			{
@@ -182,7 +185,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	}
 	else if (datatype == RESOURCE_BINARY)
 	{
-		FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "rb", "UI");
+		FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "rb", "UI");
 
 		if (fileHandle)
 		{

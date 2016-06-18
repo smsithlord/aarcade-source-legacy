@@ -31,6 +31,7 @@ public:
 
 	KeyValues* GetFirstLibraryItem();
 	KeyValues* GetNextLibraryItem();
+	KeyValues* GetLibraryItem(std::string id);
 
 	// accessors
 
