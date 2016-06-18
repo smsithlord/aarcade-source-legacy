@@ -20,7 +20,8 @@ public:
 	C_LoadingManager();
 	~C_LoadingManager();
 
-	void Init();
+	//void Init();
+	void Reset();
 
 	void SetHeader(std::string text);
 	void AddMessage(std::string type, std::string text, std::string title = "", std::string id = "", std::string min = "", std::string max = "", std::string current = "");

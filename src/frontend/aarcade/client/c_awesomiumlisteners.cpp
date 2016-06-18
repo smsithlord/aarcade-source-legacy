@@ -79,6 +79,7 @@ void MasterViewListener::OnShowCreatedWebView(WebView *caller, WebView *new_view
 	{
 		// extract a web tab id
 		std::string id = urlSpec.substr(18);
+		DevMsg("ID here is: %s\n", id.c_str());
 		pWebBrowser->PrepareWebView(new_view, id);
 	}
 	else
@@ -109,15 +110,27 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 	}
 	else
 	{
-		foundPrefix = urlSpec.find("asset://ui/hud.html");
-		if (foundPrefix == 0)
-			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+		if (!g_pAnarchyManager->GetWebManager()->GetHudReady())
+		{
+			//foundPrefix = urlSpec.find("asset://ui/hud.html");
+			//if (foundPrefix == 0)
+				//pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+			//else
+		//	{
+				foundPrefix = urlSpec.find("asset://ui/loading.html");
+				if (foundPrefix == 0)
+					pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+				//pWebBrowser->OnLoadingWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+		//	}
+		}
+		/*
 		else
 		{
 			foundPrefix = urlSpec.find("asset://ui/loading.html");
 			if ( foundPrefix == 0 )
 				pWebBrowser->OnLoadingWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 		}
+		*/
 	}
 }
 

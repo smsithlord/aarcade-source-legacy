@@ -1,61 +1,8 @@
 <html>
 	<head>
-		<style>
-			body
-			{
-				background-color: #000;
-				color: #ccc;
-				font-size: 20px;
-				margin: 0;
-			}
-
-			.mainTitle
-			{
-				font-size: 40px;
-				width: 100%;
-				background-color: rgba(50, 50, 50, 0.7);
-				text-align: center;
-				font-family: Arial;
-				padding-top: 10px;
-				padding-bottom: 10px;
-				font-style: italic;
-				text-shadow: 2px 2px 2px #000;
-				font-weight: bold;
-			}
-
-			.mainTitle div
-			{
-				display: inline;
-			}
-
-			.mainTitle div div
-			{
-				opacity: 0;
-				-webkit-transition: opacity 1s ease-in-out;
-			}
-
-			.message
-			{
-				font-size: 20px;
-				width: 70%;
-				/*background-color: #333;*/
-				/*background-image: -webkit-linear-gradient(left, #555, #555 70%, #333 70%, #333 100%);*/
-				border-radius: 20px;
-				border: 2px solid #ccc;
-				text-align: center;
-				font-family: Arial;
-				padding-top: 10px;
-				padding-bottom: 10px;
-				margin-top: 10px;
-				margin-bottom: 10px;
-				margin-left: auto;
-				margin-right: auto;
-				font-style: italic;
-				text-shadow: 2px 2px 2px #000;
-				font-weight: bold;
-			}
-		</style>
-
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		
 		<script>
 			function LoadingManager()
 			{
@@ -203,7 +150,8 @@
 	</head>
 	<body>
 		<div id="messageContainer"></div>
-		<a href="javascript:location.reload();">Hello World.</a>
+		<a href="javascript:location.reload();">Hello World.</a><br />
+		<a href="asset://ui/welcome.html">Hello World 22.</a>
 		<script>
 			loadingManager.init();
 			/*

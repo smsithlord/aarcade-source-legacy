@@ -10,6 +10,8 @@
 #include "c_workshopmanager.h"
 #include "c_metaversemanager.h"
 #include <vector>
+#include "vgui/ISystem.h"
+#include "vgui_controls/Controls.h"
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
 {
@@ -52,9 +54,12 @@ public:
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
 	void OnWorkshopManagerReady();
+	void OnMountedAllWorkshop();
 
 	// helpers
 	std::string GenerateUniqueId();
+	std::string ExtractLegacyId(std::string itemFile, KeyValues* item);
+	const char* GenerateLegacyHash(const char* text);
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
 	// accessors
@@ -68,6 +73,8 @@ public:
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
+	double m_dLastGenerateIdTime;
+	std::string m_lastGeneratedChars;
 	C_WebManager* m_pWebManager;
 	C_LoadingManager* m_pLoadingManager;
 	C_LibretroManager* m_pLibretroManager;

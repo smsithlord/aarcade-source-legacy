@@ -1,0 +1,245 @@
+html
+{
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+}
+
+body
+{
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	background-color: transparent;
+	color: #fff;
+	overflow: hidden;
+
+	/*background-color: #000;
+	color: #ccc;*/
+	font-size: 20px;
+	/*margin: 0;*/
+}
+
+#cursor
+{
+	display: none;
+	position: absolute;
+	pointer-events: none;
+}
+
+#cursor .cursorImage
+{
+	width: 30px;
+}
+
+.mainButton
+{
+/*	border: 4px solid white;*/
+/*display: inline-block;*/
+	font-size: 20px;
+	width: 10%;
+	/*background-color: #333;*/
+	/*background-image: -webkit-linear-gradient(left, #555, #555 70%, #333 70%, #333 100%);*/
+	/*background-color: rgba(150, 150, 255, 0.7);*/
+	background-color: rgba(150, 150, 150, 0.5);
+	border-radius: 20px;
+	border: 2px solid #ccc;
+	text-align: center;
+	font-family: Arial;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 30px;
+	padding-right: 30px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	margin-left: auto;
+	margin-right: auto;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+}
+
+.mainButton:hover
+{
+	background-color: rgba(150, 150, 150, 0.8);
+}
+
+.backButton
+{
+	position: absolute;
+	left: 0;
+	font-size: 20px;
+	width: 10%;
+	background-color: rgba(150, 150, 150, 0.5);
+	border-radius: 4px;
+	border: 2px solid #ccc;
+	text-align: center;
+	font-family: Arial;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	padding-left: 5px;
+	padding-right: 5px;
+	margin-left: 10px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+}
+
+.backButton:hover
+{
+	background-color: rgba(150, 150, 150, 0.8);
+}
+
+.button
+{
+	font-size: 20px;
+	background-color: rgba(150, 150, 150, 0.5);
+	border-radius: 4px;
+	border: 2px solid #ccc;
+	text-align: center;
+	font-family: Arial;
+	padding-top: 5px;
+	padding-bottom: 5px;
+ 	padding-left: 15px;
+	padding-right: 15px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+}
+
+.button:hover
+{
+	background-color: rgba(150, 150, 150, 0.8);
+}
+
+.mainTitle
+{
+	font-size: 40px;
+	width: 100%;
+	background-color: rgba(50, 50, 50, 0.7);
+	text-align: center;
+	font-family: Arial;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+}
+
+.mainTitle div
+{
+	display: inline;
+}
+
+.mainTitle div div
+{
+	opacity: 0;
+	-webkit-transition: opacity 1s ease-in-out;
+}
+
+.message
+{
+	font-size: 20px;
+	width: 70%;
+	/*background-color: #333;*/
+	/*background-image: -webkit-linear-gradient(left, #555, #555 70%, #333 70%, #333 100%);*/
+	border-radius: 20px;
+	border: 2px solid #ccc;
+	text-align: center;
+	font-family: Arial;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	margin-left: auto;
+	margin-right: auto;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+}
+
+.librarySearchContainer
+{
+	background-color: rgba(0, 0, 0, 0.7);
+	padding: 4px;
+	width: 70%;
+	/*height: 10%;*/
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.librarySearchContainer input
+{
+	/*opacity: 0.7;*/
+	font-size: 30px;
+	background-color: rgba(255, 255, 255, 0.3);/*#fff;*/
+	border: 0;
+}
+
+.librarySearchContainer select
+{
+	opacity: 0.7;
+	font-size: 30px;
+	background-color: #fff;
+	border: 0;
+}
+
+#libraryContainer
+{
+	word-wrap: break-word;
+	font-family: Arial;
+	letter-spacing: 0.1em;
+	/*display: absolute;*/
+	/*border: 2px solid rgba(255, 255, 255, 0.4);*/
+	background-color: rgba(50, 50, 50, 0.7);
+	padding: 4px;
+	width: 70%;
+	height: 50%;
+	margin-left: auto;
+	margin-right: auto;
+	overflow-y: scroll;
+}
+
+#libraryContainer::-webkit-scrollbar
+{
+	width: 20px;
+	height: 20px;
+}
+
+#libraryContainer::-webkit-scrollbar-track
+{
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7); 
+	border-radius: 10px;
+	background-color: rgba(100, 100, 100, 0.7);
+}
+
+#libraryContainer::-webkit-scrollbar-thumb
+{
+	border-radius: 10px;
+	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1); 
+	background-color: #777;
+}
+
+#libraryContainer::-webkit-scrollbar-corner
+{
+	background-color: transparent;
+}
+
+#libraryContainer div
+{
+	padding: 2px;
+}
+
+#libraryContainer div:nth-of-type(even)
+{
+	background-color: rgba(0, 0, 0, 0.5);
+}
+
+.devReload
+{
+	position: absolute;
+	top: 0;
+	right: 0;
+}

@@ -1,28 +1,14 @@
 <html>
 	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+
 		<style>
-			html
-			{
-				padding: 0;
-				margin: 0;
-				width: 100%;
-				height: 100%;
-			}
-
-			body
-			{
-				padding: 0;
-				margin: 0;
-				width: 100%;
-				height: 100%;
-				background-color: transparent;
-				color: #fff;
-				overflow: hidden;
-			}
-
 			#cursor
 			{
+				display: none;
 				position: absolute;
+				pointer-events: none;
 			}
 
 			#cursor .cursorImage
@@ -30,12 +16,14 @@
 				width: 30px;
 			}
 		</style>
+		
 	</head>
 	<body>
-		<div id="cursor"><img src="cursors/hippie_default.png" class="cursorImage" /></div>
+		<!--<div id="cursor"><img src="cursors/hippie_default.png" class="cursorImage" /></div>-->
 		<!-- <center><img src="asset://ui/aarcadetab.png" /></center> -->
 
 		<script>
+		/*
 			var cursorElem = document.querySelector("#cursor");
 			cursorElem.style.left = (document.body.offsetWidth / 2) + "px";
 			cursorElem.style.top = (document.body.offsetHeight / 2) + "px";
@@ -45,6 +33,7 @@
 				cursorElem.style.left = e.clientX + "px";
 				cursorElem.style.top = e.clientY + "px";
 			}, true);
+		*/
 		</script>
 	</body>
 </html>

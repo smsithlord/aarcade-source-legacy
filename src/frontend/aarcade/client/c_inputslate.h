@@ -34,6 +34,9 @@ namespace vgui
 		CInputSlate(vgui::VPANEL parent);
 		virtual ~CInputSlate();
 
+		//static ITexture* s_pOriginalTexture;
+	//	static IMaterial* s_pMaterial;
+
 		void OnTick();
 
 		void OnCursorMoved(int x, int y);
@@ -52,7 +55,9 @@ namespace vgui
 	protected:
 		void OnCommand(const char* pcCommand);
 
-//	private:
+	private:
+		ITexture* m_pOriginalTexture;
+		IMaterial* m_pMaterial;
 //		CWebViewInput* m_pWebViewInput;
 	};
 } // namespace vgui

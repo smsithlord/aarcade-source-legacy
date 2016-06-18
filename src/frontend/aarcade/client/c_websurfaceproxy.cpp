@@ -157,15 +157,18 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 	}
 	else
 	{
+		if (m_pWebTab->GetState() == 2)
+			m_iState = 2;
+
 		ITexture* pTexture = m_pWebTab->GetTexture();
 		if (pTexture)
 		{
 			m_pMaterialTextureVar->SetTextureValue(pTexture);
-			m_iState = 2;
+//			m_iState = 2;
 
-			if (m_pMaterialDetailBlendFactorVar && g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
+			if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
-			else
+			else if (m_pMaterialDetailBlendFactorVar)
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
 
 			m_pWebTab->OnProxyBind(pC_BaseEntity);

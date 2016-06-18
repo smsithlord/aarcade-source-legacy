@@ -1,0 +1,101 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/library.html';">Back</div>Main Menu &gt; Library &gt; Items</div>
+		<br />
+		<div class="librarySearchContainer">
+			<table style="width: 100%;"><tr>
+				<td align="left">
+					<input type="text" placeholder="Search..." />
+				</td>
+				<td align="right">
+					<table><tr>
+						<td>
+							<select>
+								<option>type</option>
+							</select>
+						</td>
+						<td style="font-size: 50px; font-weight: 900; line-height: 10%;">=</td>
+						<td>
+							<select>
+								<option>&lt;any&gt;</option>
+							</select>
+						</td>
+					</tr></table>
+				</td>
+			</tr></table>
+		</div>
+
+		<div id="libraryContainer"></div>
+
+		<div class="librarySearchContainer">
+			<table style="width: 100%;"><tr>
+				<td align="left">
+					<table><tr>
+						<td>
+							<div class="button">Browse</div>
+						</td>
+						<td>
+							<input type="text" placeholder="File Location"/>
+						</td>
+					</tr></table>
+				</td>
+				<td align="right">
+					<table><tr>
+						<td>
+							<div class="button">Delete</div>
+						</td>
+						<td>
+							<div class="button">Edit</div>
+						</td>
+						<td>
+							<div class="button">View</div>
+						</td>
+					</tr></table>
+				</td>
+			</tr></table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">Reload</a>
+		<script>
+			function appendItem(item)
+			{
+				var libraryContainer = document.querySelector("#libraryContainer");
+
+				var itemContainer = document.createElement("div");
+				itemContainer.item = item;
+
+				var title = document.createElement("div");
+				var titleNode = document.createTextNode(item.title);
+				title.appendChild(titleNode);
+				itemContainer.appendChild(title);
+
+				libraryContainer.appendChild(itemContainer);
+			}
+
+			appendItem(aaapi.library.getFirstLibraryItem());
+
+			var count = 0;
+			var repeat = setInterval(function()
+			{
+				var item = aaapi.library.getNextLibraryItem();
+				if( count < 100 && item != 0 )
+				{
+					appendItem(item);
+					count++;
+				}
+				else
+					clearInterval(repeat);
+			}, 1);
+/*
+			setTimeout(function()
+			{
+				elem.innerHTML += "<br />" + JSON.stringify(aaapi.library.getNextLibraryItem());
+			}, 300);
+*/
+		</script>
+	</body>
+</html>

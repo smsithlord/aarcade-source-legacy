@@ -33,7 +33,7 @@ C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGRA8888, 1);
 	else
 		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
-
+	
 	// get the regen and assign it
 	CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
 	m_pTexture->SetTextureRegenerator(pRegen);
@@ -45,11 +45,13 @@ C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 C_WebTab::~C_WebTab()
 {
 	DevMsg("WebTab: Destructor\n");
+
 	if (m_pTexture)
-	{
-		m_pTexture->DecrementReferenceCount();
 		m_pTexture->SetTextureRegenerator(null);
-	}
+	//{
+		//m_pTexture->DecrementReferenceCount();
+		//m_pTexture->SetTextureRegenerator(null);
+	//}
 }
 
 void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
@@ -63,24 +65,24 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 	if (m_iLastRenderFrame < gpGlobals->framecount)
 	{
-		if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
+		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
 			g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 
 		// render the web tab to its texture
-		if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
+		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() == this && g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) || (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == this && g_pAnarchyManager->GetWebManager()->GetHudPriority()) || g_pAnarchyManager->GetWebManager()->ShouldRender(this))
 			Render();
 	}
 }
 
 void C_WebTab::Render()
 {
-	//DevMsg("WebTab: Render: %s\n", m_id.c_str());
+	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
 	g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen()->SetWebTab(this);
 	m_pTexture->Download();
 
 	m_iLastRenderFrame = gpGlobals->framecount;
 
-	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
+	if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
 		g_pAnarchyManager->GetWebManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 

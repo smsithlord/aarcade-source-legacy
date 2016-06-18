@@ -31,6 +31,8 @@ public:
 
 	void CreateAaApi(WebView* pWebView);
 
+	void RemoveWebView(C_WebTab* pWebTab);
+
 	// accessors
 	int GetState() { return m_iState; }
 

@@ -24,6 +24,9 @@ public:
 	C_WebBrowser* GetWebBrowser() { return m_pWebBrowser; }
 	int GetWebSurfaceWidth() { return m_iWebSurfaceWidth; }
 	int GetWebSurfaceHeight() { return m_iWebSurfaceHeight; }
+	bool GetHudPriority() { return m_bHudPriority;}
+	bool GetSelectedPriority() { return m_bSelectedPriority; }
+	bool GetHudReady() { return m_bHudReady; }
 
 	// mutators
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
@@ -31,6 +34,7 @@ public:
 	void OnBrowserInitialized();
 	void OnHudWebTabReady();
 	void OnLoadingWebTabReady();
+	void RemoveWebTab(C_WebTab* pWebTab);
 	C_WebTab* CreateHudWebTab();
 	C_WebTab* CreateWebTab(std::string url, std::string id = "", bool bAlpha = false);
 	C_WebTab* FindWebTab(std::string id);
@@ -57,6 +61,9 @@ public:
 	*/
 	
 private:
+	bool m_bHudReady;
+	bool m_bHudPriority;
+	bool m_bSelectedPriority;
 	unsigned int m_iState;
 	C_WebTab* m_pSelectedWebTab;
 	C_WebTab* m_pHudWebTab;

@@ -3,6 +3,8 @@
 
 #include <Awesomium/WebCore.h>
 #include <Awesomium/STLHelpers.h>
+#include <string>
+#include <map>
 //#include "vgui_controls/Controls.h"
 
 using namespace Awesomium;
@@ -10,10 +12,12 @@ using namespace Awesomium;
 class JSHandler : public JSMethodHandler
 {
 public:
-	JSHandler() {};
+	JSHandler();
 	virtual ~JSHandler() {};
 	virtual void OnMethodCall(WebView* caller, unsigned int remote_object_id, const WebString& method_name, const JSArray& args);
 	virtual JSValue OnMethodCallWithReturnValue(WebView* caller, unsigned int remote_object_id, const WebString &method_name, const JSArray &args);
+//private:
+//	std::map<std::string, KeyValues*>::iterator* m_pPreviousLibraryItemIt;
 };
 
 #endif

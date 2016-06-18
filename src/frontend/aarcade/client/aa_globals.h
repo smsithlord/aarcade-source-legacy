@@ -1,7 +1,10 @@
 #ifndef AA_MAX_STRING
 #define AA_MAX_STRING 1024
+#endif
 
-//#include <string>
+#ifndef AA_PLATFORM_ID
+#define AA_PLATFORM_ID "-KJvcne3IKMZQTaG7lPo"
+#endif
 //#include "cbase.h"
 
 //#include "c_liveView.h"
@@ -17,6 +20,4 @@ struct DynamicImage {
 
 //#include <vector>
 //#include <string>
-#include "cbase.h"
-
-#endif
+//#include "cbase.h"

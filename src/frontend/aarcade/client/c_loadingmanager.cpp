@@ -19,12 +19,22 @@ C_LoadingManager::~C_LoadingManager()
 	DevMsg("LoadingManager: Destructor\n");
 }
 
-/*
-void C_LoadingManager::Init()
+
+//void C_LoadingManager::Init()
+//{
+//	m_pWebTab = g_pAnarchyManager->GetWebManager()->
+//}
+
+void C_LoadingManager::Reset()
 {
-	m_pWebTab = g_pAnarchyManager->GetWebManager()->
+	if (m_pWebTab)
+	{
+		if (m_pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+			g_pAnarchyManager->GetWebManager()->RemoveWebTab(m_pWebTab);
+
+		m_pWebTab = null;
+	}
 }
-*/
 
 void C_LoadingManager::SetHeader(std::string text)
 {
@@ -68,9 +78,16 @@ void C_LoadingManager::AddMessage(std::string type, std::string text, std::strin
 
 void C_LoadingManager::CreateWebTab()
 {
+	/* just use the hud
 	m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab("asset://ui/loading.html", "loading", false);
 	g_pAnarchyManager->GetWebManager()->SelectWebTab(m_pWebTab);
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+	*/
+
+	m_pWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+	g_pAnarchyManager->GetWebManager()->SelectWebTab(m_pWebTab);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+	this->OnWebTabReady();
 }
 
 void C_LoadingManager::DispatchMethods()

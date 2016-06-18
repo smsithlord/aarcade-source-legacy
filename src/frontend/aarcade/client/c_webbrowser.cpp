@@ -77,17 +77,17 @@ void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
 
-	if (id == "metaverse")
-	{
+//	if (id == "metaverse")
+//	{
 		pWebView->set_js_method_handler(m_pJSHandler);
 		CreateAaApi(pWebView);
-	}
+//	}
 }
 
 void C_WebBrowser::OnMasterWebViewDocumentReady()
 {
 	m_iState = 2;	// initialized
-	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
+//	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
 	g_pAnarchyManager->GetWebManager()->OnBrowserInitialized();
 }
 
@@ -155,7 +155,8 @@ void C_WebBrowser::OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code)
 		iButtonId = 2;
 
 	WebView* pWebView = FindWebView(pWebTab);
-	pWebView->InjectMouseDown((MouseButton)iButtonId);
+	if ( pWebView )
+		pWebView->InjectMouseDown((MouseButton)iButtonId);
 }
 
 void C_WebBrowser::OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code)
@@ -170,7 +171,8 @@ void C_WebBrowser::OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code)
 		iButtonId = 2;
 
 	WebView* pWebView = FindWebView(pWebTab);
-	pWebView->InjectMouseUp((MouseButton)iButtonId);
+	if ( pWebView )
+		pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
 
 void C_WebBrowser::CreateAaApi(WebView* pWebView)
@@ -181,12 +183,46 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 
 	JSObject& aaapiObject = result.ToObject();
 
+	// SYSTEM
+	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.system"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& systemObject = result.ToObject();
+	systemObject.SetCustomMethod(WSLit("quit"), false);
+
+	// LIBRARY
+	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& libraryObject = result.ToObject();
+	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);
+
+	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));
 	if (!result.IsObject())
 		return;
 
 	JSObject& metaverseObject = result.ToObject();
 	metaverseObject.SetCustomMethod(WSLit("OnSelectItem"), false);
+	*/
+}
+
+void C_WebBrowser::RemoveWebView(C_WebTab* pWebTab)
+{
+	// FIXME: Blindly unfocusing because the web tab doesn't remember if its focused or not!!
+	g_pAnarchyManager->GetWebManager()->DeselectWebTab(pWebTab);
+	g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+
+	std::map<C_WebTab*, WebView*>::iterator it = m_webViews.find(pWebTab);
+	if (it != m_webViews.end())
+	{
+		WebView* pWebView = m_webViews[pWebTab];
+		pWebView->Destroy();
+		m_webViews.erase(it);
+	}
 }
 
 void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string id)
@@ -222,15 +258,23 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 void C_WebBrowser::OnHudWebViewDocumentReady(WebView* pWebView, std::string id)
 {
 	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+
+	pWebTab->SetState(2);
+	m_webViews[pWebTab] = pWebView;
+
 	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?
 		g_pAnarchyManager->GetWebManager()->OnHudWebTabReady();
 }
 
 void C_WebBrowser::OnLoadingWebViewDocumentReady(WebView* pWebView, std::string id)
 {
+	/*
 	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
 	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?
 		g_pAnarchyManager->GetWebManager()->OnLoadingWebTabReady();
+	else
+		DevMsg("Wait\n\n\n\n\nERROR ERROR ERROR\n");
+	*/
 }
 
 void C_WebBrowser::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)

@@ -16,11 +16,16 @@
 
 using namespace vgui;
 
+//ITexture* CInputSlate::s_pOriginalTexture = null;
+//IMaterial* CInputSlate::s_pMaterial = null;
 CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
 //	SetParent( parent );
 
 //	m_pWebViewManager = C_AnarchyManager::GetSelf()->GetWebViewManager();
+
+	m_pOriginalTexture = null;
+	m_pMaterial = null;
 
 	SetKeyBoardInputEnabled( true );
 	SetMouseInputEnabled( true );
@@ -39,6 +44,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	//LoadControlSettings("resource/ui/inputslate.res");
 	SetWide(ScreenWidth());
 	SetTall(ScreenHeight());
+	SetPaintBackgroundEnabled(false);
 
 	// Hide all children of this panel (including the invisible title bar that steals mouse move input
 	for(int i=0; i<GetChildCount(); i++)
@@ -49,32 +55,37 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 
 	//if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
 	//if (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
-	if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && m_bFullscreen)
+	if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() )//&& g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())//&& m_bFullscreen)
 	{
-		IMaterial* pMaterial = g_pMaterialSystem->FindMaterial("vgui/selectedwebtab", TEXTURE_GROUP_VGUI);
+		m_pMaterial = g_pMaterialSystem->FindMaterial("vgui/selectedwebtab", TEXTURE_GROUP_VGUI);
 		ITexture* pTexture = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()->GetTexture();
 		if (!pTexture)
 			DevMsg("Texture is not ready yet!!\n");
 
 		bool found;
-		IMaterialVar* pMaterialVar = pMaterial->FindVar("$basetexture", &found, false);
+		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
+		m_pOriginalTexture = pMaterialVar->GetTextureValue();
 		pMaterialVar->SetTextureValue(pTexture);
 
-		ImagePanel* pImagePanel = new ImagePanel(this, "selected_webtab_panel");
-		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
-		pImagePanel->SetShouldScaleImage(true);
-		pImagePanel->SetSize(GetWide(), GetTall());
-		//pImagePanel->SetAutoResize() //pin
-		pImagePanel->SetImage("selectedwebtab");
+		if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+		{
+			ImagePanel* pImagePanel = new ImagePanel(this, "selected_webtab_panel");
+			pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+			pImagePanel->SetShouldScaleImage(true);
+			pImagePanel->SetSize(GetWide(), GetTall());
+			//pImagePanel->SetAutoResize() //pin
+			pImagePanel->SetImage("selectedwebtab");
+		}
 
-		pImagePanel = new ImagePanel(this, "hud_webtab_panel");
+		ImagePanel* pImagePanel = new ImagePanel(this, "hud_webtab_panel");
 		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
 		pImagePanel->SetShouldScaleImage(true);
 		pImagePanel->SetSize(GetWide(), GetTall());
 		//pImagePanel->SetAutoResize() //pin
 		pImagePanel->SetImage("hudwebtab");
 	}
-	else
+//	else
+	if ( !m_bFullscreen)
 	{
 		ivgui()->AddTickSignal(this->GetVPanel(), 1);
 		ShowCursor(false);
@@ -866,7 +877,12 @@ void CInputSlate::OnCommand(const char* pcCommand)
 
 CInputSlate::~CInputSlate()
 {
-	// do nothing
+	if (m_pOriginalTexture)
+	{
+		bool found;
+		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
+		pMaterialVar->SetTextureValue(m_pOriginalTexture);
+	}
 }
 
 class CInputSlateInterface : public IInputSlate

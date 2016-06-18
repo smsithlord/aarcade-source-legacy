@@ -129,7 +129,7 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 	}
 }
 
-bool C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, SteamUGCDetails_t* pDetails)
+bool C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails)
 {
 	SteamUGCDetails_t* details = null;
 	if (pDetails)
@@ -205,7 +205,8 @@ bool C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 
 			std::string fullPath = VarArgs("%s\\", installFolder);
 			
-			uNumItems = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItems(fullPath);
+			std::string id = VarArgs("%llu", details->m_nPublishedFileId);
+			uNumItems = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItemsLegacy(uNumModels, fullPath, id, "");
 //			g_pFullFileSystem->AddSearchPath(installFolder, "MOD", PATH_ADD_TO_TAIL);
 			DevMsg("Mounted %s for %llu\n", installFolder, details->m_nPublishedFileId);
 		}
@@ -228,20 +229,24 @@ void C_WorkshopManager::MountAllWorkshops()
 	bool bIsLegacy;
 	unsigned int uNumItemsTotal = 0;
 	unsigned int uNumLegacyItemsTotal = 0;
+	unsigned int uNumModelsTotal = 0;
+	unsigned int uNumLegacyModelsTotal = 0;
 	for (std::map<PublishedFileId_t, SteamUGCDetails_t*>::iterator it = m_details.begin(); it != m_details.end(); ++it)
 	{
-		unsigned int uNumItems;
-		if (this->MountWorkshop(it->first, bIsLegacy, uNumItems, it->second))
+		unsigned int uNumItems, uNumModels;
+		if (this->MountWorkshop(it->first, bIsLegacy, uNumItems, uNumModels, it->second))
 		{
 			if (bIsLegacy)
 			{
 				legacyCount++;
 				uNumLegacyItemsTotal += uNumItems;
+				uNumLegacyModelsTotal += uNumModels;
 			}
 			else
 			{
 				count++;
 				uNumItemsTotal += uNumItems;
+				uNumModelsTotal += uNumModels;
 			}
 		}
 		else
@@ -253,13 +258,20 @@ void C_WorkshopManager::MountAllWorkshops()
 	std::string current = VarArgs("%u", count);
 	//g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", min, current, max);
 
+	max = VarArgs("%u", uNumModelsTotal);
+	min = "0";
+	current = VarArgs("%u", uNumModelsTotal);
+	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", min, current, max);
+
 	max = VarArgs("%u", uNumItemsTotal);
 	min = "0";
 	current = VarArgs("%u", uNumItemsTotal);
-	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Library Items", "workshoplibraryitems", min, current, max);
+	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", min, current, max);
 
 	max = VarArgs("%u", legacyCount);
 	min = "0";
 	current = VarArgs("%u", legacyCount);
 	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
+
+	g_pAnarchyManager->OnMountedAllWorkshop();
 }

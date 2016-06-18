@@ -14,7 +14,7 @@ public:
 
 	void Init();
 	void OnQueryComplete(C_WorkshopQuery* pQuery);
-	bool MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, SteamUGCDetails_t* pDetails = null);
+	bool MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails = null);
 	void AddWorkshopDetails(SteamUGCDetails_t* pDetails);
 	void MountAllWorkshops();
 
