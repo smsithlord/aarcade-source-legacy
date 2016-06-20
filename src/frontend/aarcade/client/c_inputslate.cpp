@@ -125,20 +125,11 @@ void CInputSlate::OnCursorMoved(int x, int y)
 	g_pAnarchyManager->GetInputManager()->MouseMove(x / (GetWide() * 1.0), y / (GetTall() * 1.0));
 }
 
-/*
-void CHDViewInput::OnMouseDoublePressed(MouseCode code)
+void CInputSlate::OnMouseDoublePressed(MouseCode code)
 {
-//	ConVar* pConVar = cvar->FindVar("hdview_input_lock");
-//	pConVar->SetValue(1);
-
-	DevMsg("Double pressed!\n");
+//	g_pAnarchyManager->GetInputManager()->MousePress(code);
+	g_pAnarchyManager->GetInputManager()->MousePress(code);
 }
-
-		//JSArray args;
-		//JSValue window2 = pWebView->ExecuteJavascriptWithResult(WSLit("function BgAlt(){document.body.style.backgroundColor = \"#00FFFF\";}"), WSLit(""));
-		//window.ToObject().Invoke(WSLit("BgAlt"), args);
-
-		*/
 
 void CInputSlate::OnMousePressed(MouseCode code)
 {
@@ -152,7 +143,7 @@ void CInputSlate::OnMouseReleased(MouseCode code)
 
 void CInputSlate::OnKeyCodePressed(KeyCode code)
 {
-	bool shift = (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT));
+	g_pAnarchyManager->GetInputManager()->KeyCodePressed(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
 
 	/*
 	if( code == KEY_Q && shift )
@@ -163,7 +154,7 @@ void CInputSlate::OnKeyCodePressed(KeyCode code)
 		m_pWebViewManager->RelayOnKeyDown(code);
 	*/
 
-	DevMsg("Key pressed: %i %i\n", code, shift);
+//	DevMsg("Key pressed: %i %i\n", code, shift);
 }
 /*
 	using namespace Awesomium;
@@ -805,8 +796,12 @@ void CInputSlate::OnKeyCodePressed(KeyCode code)
 	}
 }
 
-void CHDViewInput::OnKeyCodeReleased(KeyCode code)
+*/
+
+void CInputSlate::OnKeyCodeReleased(KeyCode code)
 {
+	g_pAnarchyManager->GetInputManager()->KeyCodeReleased(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
+	/*
 	using namespace Awesomium;
 
 	if( !web_view )
@@ -828,8 +823,10 @@ void CHDViewInput::OnKeyCodeReleased(KeyCode code)
 	pWebKeyboardEvent.native_key_code = pWebKeyboardEvent.virtual_key_code;
 
 	pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
+	*/
 }
 
+/*
 void CHDViewInput::OnTick()
 {
 	// turn us invisible if the button isn't held down

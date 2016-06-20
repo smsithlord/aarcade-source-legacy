@@ -142,6 +142,16 @@ void C_WebTab::MouseRelease(vgui::MouseCode code)
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseRelease(this, code);
 }
 
+void C_WebTab::KeyCodePress(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnKeyCodePressed(this, code, bShiftState, bCtrlState, bAltState);
+}
+
+void C_WebTab::KeyCodeRelease(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnKeyCodeReleased(this, code, bShiftState, bCtrlState, bAltState);
+}
+
 void C_WebTab::SetUrl(std::string url)
 {
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(this)->LoadURL(WebURL(WSLit(url.c_str())));

@@ -89,3 +89,36 @@ void C_InputManager::MouseRelease(vgui::MouseCode code)
 		}
 	}
 }
+
+void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	// forward this info to any listeners
+	if (m_pInputListener)
+	{
+		if (m_inputListenerType == LISTENER_WEB_MANAGER)
+		{
+			C_WebManager* pWebManager = static_cast<C_WebManager*>(m_pInputListener);
+			if (pWebManager)
+			{
+				pWebManager->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+			}
+		}
+	}
+}
+
+
+void C_InputManager::KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	// forward this info to any listeners
+	if (m_pInputListener)
+	{
+		if (m_inputListenerType == LISTENER_WEB_MANAGER)
+		{
+			C_WebManager* pWebManager = static_cast<C_WebManager*>(m_pInputListener);
+			if (pWebManager)
+			{
+				pWebManager->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState);
+			}
+		}
+	}
+}

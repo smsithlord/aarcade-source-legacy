@@ -42,12 +42,12 @@ namespace vgui
 		void OnCursorMoved(int x, int y);
 		void OnMousePressed(MouseCode code);
 		void OnMouseReleased(MouseCode code);
-//		void OnMouseDoublePressed(MouseCode code);
+		void OnMouseDoublePressed(MouseCode code);
 
 //		void ForceClose();
 
 		void OnKeyCodePressed(KeyCode code);
-//		void OnKeyCodeReleased(KeyCode code);
+		void OnKeyCodeReleased(KeyCode code);
 
 	private:
 		bool m_bFullscreen;

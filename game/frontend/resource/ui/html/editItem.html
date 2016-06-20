@@ -9,6 +9,8 @@
 	<body>
 		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/items.html';">Back</div>Library / Items / Edit</div>
 
+		<br />
+
 		<div id="itemContainer"></div>
 		<a href="javascript:location.reload();" class="devReload">Reload</a>
 
@@ -58,10 +60,37 @@ function getParameterByName(name, url) {
 				fieldContainer.appendChild(fieldKey);
 
 				fieldValue = document.createElement("div");
-				fieldValueInput = document.createElement("input");
-				fieldValueInput.type = "text";
-				fieldValueInput.value = item[x];
-				fieldValue.appendChild(fieldValueInput);
+
+				if( x === "type" )
+				{
+					var fieldValueSelect = document.createElement("select");
+/*
+					var type = aaapi.library.getLibraryType(item[x]);
+					if(item[x] != 0)
+					{
+						*/
+
+					var types = aaapi.library.getAllLibraryTypes();
+					var x;
+					for( y in types )
+					{
+						var type = types[y];
+						var fieldValueOption = document.createElement("option");
+						fieldValueOption.value = type.info.id;
+						fieldValueOption.text = type.title;
+						fieldValueSelect.appendChild(fieldValueOption);
+					}
+
+					fieldValueSelect.value = item[x];
+					fieldValue.appendChild(fieldValueSelect);
+				}
+				else
+				{
+					fieldValueInput = document.createElement("input");
+					fieldValueInput.type = "text";
+					fieldValueInput.value = item[x];
+					fieldValue.appendChild(fieldValueInput);
+				}
 
 				fieldContainer.appendChild(fieldValue);
 				itemContainer.appendChild(fieldContainer);

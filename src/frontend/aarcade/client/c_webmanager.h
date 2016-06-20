@@ -48,6 +48,8 @@ public:
 	void OnMouseMove(float fXAmount, float fYAmount);
 	void OnMousePress(vgui::MouseCode code);
 	void OnMouseRelease(vgui::MouseCode code);
+	void OnKeyCodePressed(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void OnKeyCodeReleased(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 
 	void DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);

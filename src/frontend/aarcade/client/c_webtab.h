@@ -31,6 +31,9 @@ public:
 	void MouseMove(float fMouseX, float fMouseY);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
+	void KeyCodePress(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void KeyCodeRelease(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+
 	void SetUrl(std::string);
 
 	//void DispatchJavaScriptEventMessages(std::string objectName, std::string objectMethod, std::vector<JSEventMessage_t*> eventArgs);

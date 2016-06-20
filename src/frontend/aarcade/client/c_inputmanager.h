@@ -2,6 +2,7 @@
 #define C_INPUT_MANAGER_H
 
 #include "vgui/MouseCode.h"
+#include "vgui/KeyCode.h"
 
 enum listener_t
 {
@@ -26,6 +27,8 @@ public:
 	void MouseMove(float x, float y);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
+	void KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	
 private:
 	bool m_bInputMode;

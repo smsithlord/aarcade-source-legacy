@@ -554,7 +554,7 @@ void C_AnarchyManager::OnMountedAllWorkshop()
 void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)
 {
 	std::string safeStr = str;
-	std::transform(safeStr.begin(), safeStr.end(), safeStr.begin(), tolower);
+	std::transform(safeStr.begin(), safeStr.end(), safeStr.begin(), ::tolower);
 
 	// Skip delimiters at beginning.
 	std::string::size_type lastPos = safeStr.find_first_not_of(delimiters, 0);

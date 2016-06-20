@@ -12,22 +12,31 @@
 		<div class="librarySearchContainer">
 			<table style="width: 100%;"><tr>
 				<td align="left">
-					<input class="helpNote" type="text" placeholder="Search..." help="Type the name of what you're looking for into this box." />
+					<form id="searchBox">
+						<input class="helpNote" type="text" placeholder="Search..." help="Type the name of what you're looking for into this box." />
+					</form>
 				</td>
 				<td align="right">
+					<select id="filterTypeSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
+						<option value="" selected>&lt;Any Type&gt;</option>
+					</select>
+					<!--
 					<table><tr>
 						<td>
 							<select class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
-								<option value="" selected>&lt;any&gt;</option>
+								<option value="" selected>Filter Type</option>
 							</select>
 						</td>
+						
 						<td style="font-size: 50px; font-weight: 900; line-height: 10%;">=</td>
 						<td>
 							<select class="helpNote" help="(OPTIONAL) Select a filter value to narrow your search results.">
 								<option value="" selected>&lt;any&gt;</option>
 							</select>
 						</td>
+					
 					</tr></table>
+					-->
 				</td>
 			</tr></table>
 		</div>
@@ -75,6 +84,115 @@
 
 		<a href="javascript:location.reload();" class="devReload">Reload</a>
 		<script>
+			libraryContainer = document.querySelector("#libraryContainer");
+			libraryContainer.selectedItem = null;
+
+			var searchBox = document.querySelector("#searchBox");
+			var types = aaapi.library.getAllLibraryTypes();
+			var filterTypeSelect = document.querySelector("#filterTypeSelect");
+			var x;
+			for( y in types )
+			{
+				var type = types[y];
+				var fieldValueOption = document.createElement("option");
+				fieldValueOption.value = type.info.id;
+				fieldValueOption.text = type.title;
+				filterTypeSelect.appendChild(fieldValueOption);
+			}
+
+			filterTypeSelect.addEventListener("change", function(e)
+			{
+				var elem = e.srcElement;
+
+				// clear out the contents of the search results
+				while(libraryContainer.firstChild)
+					libraryContainer.removeChild(libraryContainer.firstChild);
+
+				if(libraryContainer.selectedItem)
+				{
+					libraryContainer.selectedItem = null;
+
+					// Add the disabledButton class
+					var button = document.querySelector("#editButton");
+					if( button.className.search(/\bdisabledButton\b/) === -1 )
+						button.className += " disabledButton";
+
+					button = document.querySelector("#launchButton");
+					if( button.className.search(/\bdisabledButton\b/) === -1 )
+						button.className += " disabledButton";
+				}
+
+				var searchElem = searchBox.querySelector("input");
+				var item = aaapi.library.findFirstLibraryItem(searchElem.value, elem.value);
+				if( item != 0 )
+				{
+					appendItem(item);
+
+					var count = 0;
+					var repeat = setInterval(function()
+					{
+						var item = aaapi.library.findNextLibraryItem();
+						if( count < 100 && item != 0 )
+						{
+							appendItem(item);
+							count++;
+						}
+						else
+							clearInterval(repeat);
+					}, 1);
+				}
+			}, true);
+
+			searchBox.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var form = e.srcElement;
+				var elem = form.querySelector("input");
+				if( elem.value.length > 1 )
+				{
+					// clear out the contents of the search results
+					while(libraryContainer.firstChild)
+						libraryContainer.removeChild(libraryContainer.firstChild);
+
+					if(libraryContainer.selectedItem)
+					{
+						libraryContainer.selectedItem = null;
+
+						// Add the disabledButton class
+						var button = document.querySelector("#editButton");
+						if( button.className.search(/\bdisabledButton\b/) === -1 )
+							button.className += " disabledButton";
+
+						button = document.querySelector("#launchButton");
+						if( button.className.search(/\bdisabledButton\b/) === -1 )
+							button.className += " disabledButton";
+					}
+
+					//var item = aaapi.library.findFirstLibraryItem(elem.value);
+					var item = aaapi.library.findFirstLibraryItem(elem.value, filterTypeSelect.value);
+					if( item != 0 )
+					{
+						appendItem(item);
+
+						var count = 0;
+						var repeat = setInterval(function()
+						{
+							var item = aaapi.library.findNextLibraryItem();
+							if( count < 100 && item != 0 )
+							{
+								appendItem(item);
+								count++;
+							}
+							else
+								clearInterval(repeat);
+						}, 1);
+					}
+				}
+
+				return false;
+			}, true);
+
 			function editSelected()
 			{
 				window.location='asset://ui/editItem.html?id=' + encodeURIComponent(libraryContainer.selectedItem.item.info.id);
@@ -85,12 +203,11 @@
 				window.location='asset://ui/launchItem.html?id=' + encodeURIComponent(libraryContainer.selectedItem.item.info.id);
 			}
 
-			libraryContainer = document.querySelector("#libraryContainer");
-			libraryContainer.selectedItem = null;
-
 			function appendItem(item)
 			{
 				var itemContainer = document.createElement("div");
+				itemContainer.className = "libraryItemContainer";
+
 				itemContainer.onselectstart = function(e)
 				{
 					e.preventDefault;
@@ -101,6 +218,16 @@
 				itemContainer.oldBgColor = "";
 
 				//dblclick
+				itemContainer.addEventListener("dblclick", function(e)
+				{
+					if(libraryContainer.selectedItem)
+					{
+						// we have chosen it
+						//var elem = document.querySelector("#editButton");
+						editSelected();
+					}
+				}, true);
+
 				itemContainer.addEventListener("click", function(e)
 				{
 					var elem = e.srcElement;
@@ -127,9 +254,23 @@
 					elem.oldBgColor = elem.style.backgroundColor;
 					elem.style.backgroundColor = "rgba(50, 50, 250, 0.7)";
 					libraryContainer.selectedItem = elem;
-				}, true);
+				}, true);				
+
+				var type = document.createElement("div");
+				type.className = "libraryItemType";
+				type.style.pointerEvents = "none";
+
+				var typeNode;
+				if(!!types[item.type])
+					typeNode = document.createTextNode(types[item.type].title);
+				else
+					typeNode = document.createTextNode("");
+
+				type.appendChild(typeNode);
+				itemContainer.appendChild(type);
 
 				var title = document.createElement("div");
+				title.className = "libraryItemTitle";
 				title.style.pointerEvents = "none";
 				var titleNode = document.createTextNode(item.title);
 				title.appendChild(titleNode);

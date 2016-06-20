@@ -23,11 +23,14 @@ public:
 
 	void CreateWebView(C_WebTab* pWebTab);
 	WebView* FindWebView(C_WebTab* pWebTab);
+	C_WebTab* FindWebTab(WebView* pWebView);
 	void OnSelectWebTab(C_WebTab* pWebTab);
 	void OnDeselectWebTab(C_WebTab* pWebTab);
 	void OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY);
 	void OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code);
 	void OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code);
+	void OnKeyCodePressed(C_WebTab* pWebTab, vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void OnKeyCodeReleased(C_WebTab* pWebTab, vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 
 	void CreateAaApi(WebView* pWebView);
 
@@ -66,6 +69,7 @@ private:
 	JSHandler* m_pJSHandler;
 	LoadListener* m_pLoadListener;
 	ViewListener* m_pViewListener;
+	MenuListener* m_pMenuListener;
 
 	// JS Handlers next...
 };

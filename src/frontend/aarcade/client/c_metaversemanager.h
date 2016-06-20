@@ -29,11 +29,24 @@ public:
 	unsigned int LoadAllLocalApps(std::string filePath = "");
 	std::string ResolveLegacyApp(std::string legacyApp);
 
+	KeyValues* GetFirstLibraryType();
+	KeyValues* GetNextLibraryType();
+	KeyValues* GetLibraryType(std::string id);
+	//KeyValues* GetLibraryType(std::string id);
+
 	KeyValues* GetFirstLibraryItem();
 	KeyValues* GetNextLibraryItem();
 	KeyValues* GetLibraryItem(std::string id);
 
+	KeyValues* FindFirstLibraryItem(KeyValues* pSearchInfo);
+	KeyValues* FindNextLibraryItem();
+	KeyValues* FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
+	KeyValues* FindLibraryItem(KeyValues* pSearchInfo);
+
+	KeyValues* GetLibraryApp(std::string id);
+
 	// accessors
+	KeyValues* GetPreviousSearchInfo() { return m_pPreviousSearchInfo; }
 
 	// mutators
 	
@@ -43,7 +56,10 @@ private:
 	std::map<std::string, KeyValues*> m_models;
 	std::map<std::string, KeyValues*> m_items;
 	std::map<std::string, KeyValues*> m_types;
-	std::map<std::string, KeyValues*>::iterator m_previousItemIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousGetTypeIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousFindItemIterator;
+	KeyValues* m_pPreviousSearchInfo;
 };
 
 #endif

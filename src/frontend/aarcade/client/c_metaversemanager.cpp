@@ -4,6 +4,7 @@
 #include "aa_globals.h"
 #include "c_metaversemanager.h"
 #include "filesystem.h"
+#include <algorithm>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -12,11 +13,15 @@ C_MetaverseManager::C_MetaverseManager()
 {
 	DevMsg("MetaverseManager: Constructor\n");
 	m_pWebTab = null;
+	m_pPreviousSearchInfo = null;
 }
 
 C_MetaverseManager::~C_MetaverseManager()
 {
 	DevMsg("MetaverseManager: Destructor\n");
+
+	if (m_pPreviousSearchInfo)
+		m_pPreviousSearchInfo->deleteThis();
 
 	// m_apps
 	while (!m_apps.empty())
@@ -153,12 +158,14 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				pItem->SetString("local/file", pItem->GetString("filelocation"));
 
 				// NEEDS RESOLVING!!
-				std::string resolvedType = this->ResolveLegacyType(pItem->GetString("type"));
+				std::string legacyType = pItem->GetString("type");
+				std::string resolvedType = this->ResolveLegacyType(legacyType);
 				pItem->SetString("local/type", resolvedType.c_str());
 
 				// NEEDS RESOLVING!!
-				std::string resolvedApp = this->ResolveLegacyApp(pItem->GetString("app"));
-				pItem->SetString("local/app", pItem->GetString("app"));
+				std::string legacyApp = pItem->GetString("app");
+				std::string resolvedApp = this->ResolveLegacyApp(legacyApp);
+				pItem->SetString("local/app", resolvedApp.c_str());
 				pItem->SetString("local/reference", pItem->GetString("detailsurl"));
 				pItem->SetString("local/preview", pItem->GetString("trailerurl"));
 				pItem->SetString("local/download", pItem->GetString("downloadurl"));
@@ -337,9 +344,20 @@ KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string fileP
 		if (!pActive)
 			pActive = pType->FindKey("local");
 
-		std::string id = pActive->GetString("info/id");
-		m_types[id] = pType;
+		if (pActive)
+		{
+			std::string id = pActive->GetString("info/id");
+			m_types[id] = pType;
+			DevMsg("adding type: %s\n", id.c_str());
+		}
+		else
+		{
+			pType->deleteThis();
+			pType = null;
+		}
 	}
+
+	return pType;
 }
 
 unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
@@ -380,6 +398,9 @@ unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
 
 std::string C_MetaverseManager::ResolveLegacyType(std::string legacyType)
 {
+	if (legacyType == "")
+		return "-KKa1MHJTls2KqNphWFM";
+
 	// iterate through the types
 	KeyValues* active;
 	for (std::map<std::string, KeyValues*>::iterator it = m_types.begin(); it != m_types.end(); ++it)
@@ -388,7 +409,7 @@ std::string C_MetaverseManager::ResolveLegacyType(std::string legacyType)
 		if (!active)
 			active = it->second->FindKey("local");
 
-		if (!Q_strcmp(it->second->GetString("title"), legacyType.c_str()))
+		if (!Q_stricmp(active->GetString("title"), legacyType.c_str()))
 		{
 			return it->first;
 		}
@@ -466,7 +487,10 @@ unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 
 std::string C_MetaverseManager::ResolveLegacyApp(std::string legacyApp)
 {
-	// iterate through the apps
+	if (legacyApp == "")
+		return "";
+
+	// iterate through the types
 	KeyValues* active;
 	for (std::map<std::string, KeyValues*>::iterator it = m_apps.begin(); it != m_apps.end(); ++it)
 	{
@@ -474,37 +498,268 @@ std::string C_MetaverseManager::ResolveLegacyApp(std::string legacyApp)
 		if (!active)
 			active = it->second->FindKey("local");
 
-		if (!Q_strcmp(active->GetString("title"), legacyApp.c_str()))
-		{
+		if (!Q_stricmp(active->GetString("title"), legacyApp.c_str()))
 			return it->first;
-		}
 	}
 
 	return "";
 }
 
+KeyValues* C_MetaverseManager::GetFirstLibraryType()
+{
+	m_previousGetTypeIterator = m_types.begin();
+	if (m_previousGetTypeIterator != m_types.end())
+		return m_previousGetTypeIterator->second;
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::GetNextLibraryType()
+{
+	if (m_previousGetTypeIterator != m_types.end())
+	{
+		m_previousGetTypeIterator++;
+		
+		if (m_previousGetTypeIterator != m_types.end())
+			return m_previousGetTypeIterator->second;
+	}
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::GetLibraryType(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_types.find(id);
+	if (it != m_types.end())
+		return it->second;
+	else
+		return null;
+}
+
 KeyValues* C_MetaverseManager::GetFirstLibraryItem()
 {
-	m_previousItemIterator = m_items.begin();
-	return m_previousItemIterator->second;
+	m_previousGetItemIterator = m_items.begin();
+	if (m_previousGetItemIterator != m_items.end())
+		return m_previousGetItemIterator->second;
+
+	return null;
 }
 
 KeyValues* C_MetaverseManager::GetNextLibraryItem()
 {
-	if (m_previousItemIterator != m_items.end())
+	if (m_previousGetItemIterator != m_items.end())
 	{
-		m_previousItemIterator++;
+		m_previousGetItemIterator++;
 
-		return m_previousItemIterator->second;
+		if (m_previousGetItemIterator != m_types.end())
+			return m_previousGetItemIterator->second;
 	}
-	else
-		return null;
+
+	return null;
 }
 
 KeyValues* C_MetaverseManager::GetLibraryItem(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_items.find(id);
 	if (it != m_items.end())
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	//unsigned int i, numTokens;
+	bool bFoundMatch;
+	while (it != m_items.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = potential->FindKey("current");
+		if (!active)
+			active = potential->FindKey("local");
+		if (active)
+		{
+			// active has the potential item data
+			// pSearchInfo has the search criteria
+			bool bGood = false;
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "title")
+				{
+					if (!Q_strcmp(searchField->GetString(), ""))
+						bGood = true;
+					else
+					{
+						potentialBuf = active->GetString("title");
+						std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+						searchBuf = searchField->GetString();
+						std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+						/*
+						searchTokens.clear();
+						g_pAnarchyManager->Tokenize(searchBuf, searchTokens, " ");
+						numTokens = searchTokens.size();
+
+						for (i = 0; i < numTokens; i++)
+						{
+						if (searchTokens[i].length() < 2)
+						continue;
+
+						if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+						{
+						bFoundMatch = true;
+						break;
+						}
+						}
+						*/
+
+						if (potentialBuf.find(searchBuf) != std::string::npos)
+							bGood = true;
+						else
+							bGood = false;
+					}
+				}
+				else if (fieldName == "type")
+				{
+					if (!Q_strcmp(searchField->GetString(), "") || !Q_strcmp(active->GetString("type"), searchField->GetString()))
+						bGood = true;
+					else
+						bGood = false;
+				}
+
+				if (!bGood)
+					break;
+			}
+
+			if (bGood)
+			{
+				bFoundMatch = true;
+				break;
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	unsigned int i, numTokens;
+	bool bFoundMatch;
+	std::map<std::string, KeyValues*>::iterator it = m_items.begin();
+	while (it != m_items.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = potential->FindKey("current");
+		if (!active)
+			active = potential->FindKey("local");
+		if (active)
+		{
+			// active has the potential item data
+			// pSearchInfo has the search criteria
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "title")
+				{
+					potentialBuf = searchField->GetString();
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = pSearchInfo->GetString(fieldName.c_str());
+					searchTokens.clear();
+					g_pAnarchyManager->Tokenize(searchBuf, searchTokens, ", ");
+					numTokens = searchTokens.size();
+
+					for (i = 0; i < numTokens; i++)
+					{
+						if (searchTokens[i].length() < 2)
+							continue;
+
+						if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+						{
+							bFoundMatch = true;
+							break;
+						}
+					}
+
+					if (bFoundMatch)
+						break;
+
+				}
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	// Do this here because we MUST handle the deletion for findNext and findFirst, so this usage should match!!
+	pSearchInfo->deleteThis();
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindFirstLibraryItem(KeyValues* pSearchInfo)
+{
+	// remember this search query
+	if (!m_pPreviousSearchInfo)
+		m_pPreviousSearchInfo = pSearchInfo;// new KeyValues("search");
+	else if (m_pPreviousSearchInfo != pSearchInfo)	// this should never be called!!!
+	{
+		m_pPreviousSearchInfo->deleteThis();
+		m_pPreviousSearchInfo = pSearchInfo;
+	}
+
+	m_previousFindItemIterator = m_items.begin();
+
+	// start the search
+	KeyValues* response = this->FindLibraryItem(m_pPreviousSearchInfo, m_previousFindItemIterator);
+	return response;
+}
+
+KeyValues* C_MetaverseManager::FindNextLibraryItem()
+{
+	// continue the search
+	KeyValues* response = null;
+	m_previousFindItemIterator++;
+	if (m_previousFindItemIterator != m_items.end())
+		response = this->FindLibraryItem(m_pPreviousSearchInfo, m_previousFindItemIterator);
+	return response;
+}
+
+KeyValues* C_MetaverseManager::GetLibraryApp(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_apps.find(id);
+	if (it != m_apps.end())
 		return it->second;
 	else
 		return null;

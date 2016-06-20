@@ -14,10 +14,10 @@ C_WebManager::C_WebManager()
 {
 	DevMsg("WebManager: Constructor\n");
 	m_iState = 0;	// uninitialized
-	m_iWebSurfaceWidth = 1280;
-	m_iWebSurfaceHeight = 720;
-	//m_iWebSurfaceWidth = 1920;
-	//m_iWebSurfaceHeight = 1080;
+	//m_iWebSurfaceWidth = 1280;
+	//m_iWebSurfaceHeight = 720;
+	m_iWebSurfaceWidth = 1920;
+	m_iWebSurfaceHeight = 1080;
 	m_bHudPriority = false;
 	m_bSelectedPriority = false;
 	m_iVisibleWebTabsLastFrame = -1;
@@ -296,6 +296,18 @@ void C_WebManager::OnMouseRelease(vgui::MouseCode code)
 {
 	// these events are always for the selected web tab
 	m_pSelectedWebTab->MouseRelease(code);
+}
+
+void C_WebManager::OnKeyCodePressed(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	// these events are always for the selected web tab
+	m_pSelectedWebTab->KeyCodePress(code, bShiftState, bCtrlState, bAltState);
+}
+
+void C_WebManager::OnKeyCodeReleased(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	// these events are always for the selected web tab
+	m_pSelectedWebTab->KeyCodeRelease(code, bShiftState, bCtrlState, bAltState);
 }
 
 void C_WebManager::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)

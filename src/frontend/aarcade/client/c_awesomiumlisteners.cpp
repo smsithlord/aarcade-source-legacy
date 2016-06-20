@@ -152,3 +152,59 @@ void ViewListener::OnChangeTargetURL(WebView* caller, const WebURL &url)
 {
 	DevMsg("ViewListener: OnChangeTargetURL: %s\n", WebStringToCharString(url.spec()));
 }
+
+
+void MenuListener::OnShowPopupMenu(WebView *caller, const WebPopupMenuInfo &menu_info)
+{
+	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+	C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+	WebView* pHudWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pHudWebTab);
+
+	DevMsg("Pop menu detected!\n");
+
+	std::vector<std::string> methodArguments;
+	methodArguments.push_back(pWebTab->GetId());
+	methodArguments.push_back(VarArgs("%i", menu_info.bounds.x));
+	methodArguments.push_back(VarArgs("%i", menu_info.bounds.y));
+	methodArguments.push_back(VarArgs("%i", menu_info.bounds.width));
+	methodArguments.push_back(VarArgs("%i", menu_info.bounds.height));
+	methodArguments.push_back(VarArgs("%i", menu_info.item_height));
+	methodArguments.push_back(VarArgs("%f", menu_info.item_font_size));
+	methodArguments.push_back(VarArgs("%i", menu_info.selected_item));
+	methodArguments.push_back(VarArgs("%i", menu_info.right_aligned));
+
+	for (int i = 0; i < menu_info.items.size(); i++)
+	{
+		if (menu_info.items[i].type == kWebMenuItemType_Option)
+			methodArguments.push_back("Option");
+		else if (menu_info.items[i].type == kWebMenuItemType_CheckableOption)
+			methodArguments.push_back("CheckableOption");
+		else if (menu_info.items[i].type == kWebMenuItemType_Group)
+			methodArguments.push_back("Group");
+		else if (menu_info.items[i].type == kWebMenuItemType_Separator)
+			methodArguments.push_back("Separator");
+
+		methodArguments.push_back(WebStringToCharString(menu_info.items[i].label));
+		methodArguments.push_back(WebStringToCharString(menu_info.items[i].tooltip));
+		methodArguments.push_back(VarArgs("%i", menu_info.items[i].action));
+		methodArguments.push_back(VarArgs("%i", menu_info.items[i].right_to_left));
+		methodArguments.push_back(VarArgs("%i", menu_info.items[i].has_directional_override));
+		methodArguments.push_back(VarArgs("%i", menu_info.items[i].enabled));
+		methodArguments.push_back(VarArgs("%i", menu_info.items[i].checked));
+	}
+	
+	std::string objectName = "window.arcadeHud";
+	std::string objectMethod = "showPopupMenu";
+
+	JSValue response = pHudWebView->ExecuteJavascriptWithResult(WSLit(objectName.c_str()), WSLit(""));
+	if (response.IsObject())
+	{
+		JSObject object = response.ToObject();
+		JSArray arguments;
+
+		for (auto argument : methodArguments)
+			arguments.Push(WSLit(argument.c_str()));
+
+		object.InvokeAsync(WSLit(objectMethod.c_str()), arguments);
+	}
+}

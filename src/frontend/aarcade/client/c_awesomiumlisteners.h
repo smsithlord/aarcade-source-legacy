@@ -49,4 +49,10 @@ class ViewListener : public WebViewListener::View
 	void OnShowCreatedWebView(WebView* caller, WebView* new_view, const WebURL &opener_url, const WebURL &target_url, const Rect &initial_pos, bool is_popup);
 };
 
+class MenuListener : public WebViewListener::Menu
+{
+	void OnShowPopupMenu(WebView *caller, const WebPopupMenuInfo &menu_info);
+	void OnShowContextMenu(WebView *caller, const WebContextMenuInfo &menu_info) {};
+};
+
 #endif
