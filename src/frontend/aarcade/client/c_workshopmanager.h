@@ -14,12 +14,16 @@ public:
 
 	void Init();
 	void OnQueryComplete(C_WorkshopQuery* pQuery);
-	bool MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails = null);
+
+	void MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails = null);
+	void OnMountWorkshopFail();
+	void OnMountWorkshopSucceed();
+
 	void AddWorkshopDetails(SteamUGCDetails_t* pDetails);
 
-	void MountAllWorkshops();
-	bool MountFirstWorkshop();
-	bool MountNextWorkshop();
+	//void MountAllWorkshops();
+	void MountFirstWorkshop();
+	void MountNextWorkshop();
 	void MountWorkshopClose();
 
 	unsigned int GetNumDetails();
@@ -31,6 +35,12 @@ public:
 private:
 	std::map<PublishedFileId_t, SteamUGCDetails_t*> m_details;
 	std::map<PublishedFileId_t, SteamUGCDetails_t*>::iterator m_previousMountWorkshopIterator;
+	bool m_bMountWorkshopIsLegacy;
+	//unsigned int m_uMountWorkshopNumLegacyItems;
+	unsigned int m_uMountWorkshopuNumItems;
+	unsigned int m_uMountWorkshopNumModels;
+//	unsigned int m_uMountWorkshopuNumItemsTotal;
+//	unsigned int m_uMountWorkshopNumModelsTotal;
 };
 
 class C_WorkshopQuery

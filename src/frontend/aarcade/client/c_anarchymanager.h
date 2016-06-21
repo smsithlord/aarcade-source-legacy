@@ -76,6 +76,7 @@ public:
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
+	int m_iState;
 	double m_dLastGenerateIdTime;
 	std::string m_lastGeneratedChars;
 	C_WebManager* m_pWebManager;

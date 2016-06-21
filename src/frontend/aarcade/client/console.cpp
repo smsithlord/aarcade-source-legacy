@@ -92,13 +92,37 @@ void Launch( const CCommand &args )
 
 	//std::string fullPath = VarArgs("%s\\", installFolder);
 
-	unsigned int uNumModels = 0;
-	unsigned int uNumItems = 0;
+	//unsigned int uNumModels = 0;
+	//unsigned int uNumItems = 0;
 	//std::string id = VarArgs("%llu", details->m_nPublishedFileId);
+
+
+
+
+
+
+
+
+
+
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "0");
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-	uNumItems = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItemsLegacy(uNumModels, path, "", "");
+	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
+
+
+
+
+
+
+
+
+
+
+
+
+//	uNumItems = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItemsLegacy(uNumModels, path, "", "");
 	//			g_pFullFileSystem->AddSearchPath(installFolder, "MOD", PATH_ADD_TO_TAIL);
-	DevMsg("Loaded %u items from %s\n", uNumItems, path.c_str());
+	//DevMsg("Loaded %u items from %s\n", uNumItems, path.c_str());
 
 	//if( args.ArgC() < 2 )
 //		return;

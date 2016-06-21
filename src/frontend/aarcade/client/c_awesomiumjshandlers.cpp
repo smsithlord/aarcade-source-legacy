@@ -107,6 +107,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("loadLocalAppClose"))	// shouldn't really ever be called!!! (unless user abors the loading process)
 		g_pAnarchyManager->GetMetaverseManager()->LoadLocalAppClose();
+	/*
 	else if (method_name == WSLit("mountNextWorkshopCallback"))
 	{
 		// FIXME: This should be done outside of the awesomeium-specific classes!!
@@ -121,6 +122,28 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pWorkshopManager->MountWorkshopClose();
 			g_pAnarchyManager->OnMountAllWorkshopsComplete();
 		}
+	}
+	*/
+	else if (method_name == WSLit("mountNextWorkshopCallback"))
+	{
+		// FIXME: This should be done outside of the awesomeium-specific classes!!
+		C_WorkshopManager* pWorkshopManager = g_pAnarchyManager->GetWorkshopManager();
+		//C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		pWorkshopManager->MountNextWorkshop();
+	}
+	else if (method_name == WSLit("loadNextLocalItemLegacyCallback"))
+	{
+		// FIXME: This should be done outside of the awesomeium-specific classes!!
+		C_WorkshopManager* pWorkshopManager = g_pAnarchyManager->GetWorkshopManager();
+		C_MetaverseManager* pMetaverseManager = g_pAnarchyManager->GetMetaverseManager();
+		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		g_pAnarchyManager->GetMetaverseManager()->LoadNextLocalItemLegacy();
+//		{
+		//	pMetaverseManager->LoadLocalItemLegacyClose();
+			//pWorkshopManager->OnMountWorkshopSucceed();
+	//	}
 	}
 }
 

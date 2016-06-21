@@ -13,14 +13,16 @@ public:
 	~C_MetaverseManager();
 	
 	void OnWebTabCreated(C_WebTab* pWebTab);
+	void OnMountAllWorkshopsCompleted();
 
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 
-	KeyValues* LoadFirstLocalItemLegacy(bool& bIsModel, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
-	KeyValues* LoadNextLocalItemLegacy(bool& bIsModel);
+	void LoadFirstLocalItemLegacy(bool bFastMode = true, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
+	void LoadNextLocalItemLegacy();
 	void LoadLocalItemLegacyClose();
+	void ResolveLoadLocalItemLegacyBuffer();
 
 	// local
 	std::string ResolveLegacyType(std::string legacyType);
@@ -55,6 +57,7 @@ public:
 
 	// accessors
 	KeyValues* GetPreviousSearchInfo() { return m_pPreviousSearchInfo; }
+	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 
 	// mutators
 	

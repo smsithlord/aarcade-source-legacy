@@ -63,6 +63,22 @@ void C_MetaverseManager::OnWebTabCreated(C_WebTab* pWebTab)
 	m_pWebTab = pWebTab;
 }
 
+void C_MetaverseManager::OnMountAllWorkshopsCompleted()
+{
+	// Now that ALL workshop content has been loaded, we can make more intellegent decisions on how to resolve shit.
+	// FIXME: BEFORE resolving, let's mount the AArcade folder if it needs to be.
+	// UNFIXME: Might not be required.  Importing shit from AArcade folder will only need to happen once if items get saved out during 1st import.
+	this->ResolveLoadLocalItemLegacyBuffer();
+
+	/*
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "0");
+	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
+	*/
+
+	g_pAnarchyManager->OnMountAllWorkshopsComplete();
+}
+
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath, std::string workshopIds, std::string mountIds)
 {
 	//KeyValues* pItem2 = new KeyValues("item");
@@ -153,8 +169,8 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 
 				// TODO: Generate an ID and add this to the library!!
 				bIsModel = true;
-				pItem->deleteThis();
-				pItem = null;
+	//			pItem->deleteThis();
+//				pItem = null;
 			//	return null;
 			}
 			else
@@ -204,6 +220,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 						resolvedMarquee = "";
 				}
 				pItem->SetString("local/marquee", resolvedMarquee.c_str());
+				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
 				//DevMsg("WIN!\n");
 				// TODO: Generate an ID and add this to the library!!
 			}
@@ -353,8 +370,11 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 	return numResponses;// count;
 }
 
-KeyValues* C_MetaverseManager::LoadFirstLocalItemLegacy(bool& bIsModel, std::string filePath, std::string workshopIds, std::string mountIds)
+void C_MetaverseManager::LoadFirstLocalItemLegacy(bool bFastMode, std::string filePath, std::string workshopIds, std::string mountIds)
 {
+	// only need to do this on the first one.
+	//bool bBadFastMode = true;
+
 	if (m_previousLoadLocalItemLegacyFilePath != "")
 		this->LoadLocalItemLegacyClose();
 
@@ -362,6 +382,10 @@ KeyValues* C_MetaverseManager::LoadFirstLocalItemLegacy(bool& bIsModel, std::str
 	m_previousLoadLocalItemLegacyFilePath = filePath;
 	m_previousLocaLocalItemLegacyWorkshopIds = workshopIds;
 	m_previousLoadLocalItemLegacyMountIds = mountIds;
+
+	// for bad fast mode counting (works differently than async)
+	unsigned int uMountWorkshopNumModels = 0;
+	unsigned int uMountWorkshopNumItems = 0;
 
 	KeyValues* pItem;
 	std::string fullPath = m_previousLoadLocalItemLegacyFilePath + "library\\*";
@@ -393,7 +417,7 @@ KeyValues* C_MetaverseManager::LoadFirstLocalItemLegacy(bool& bIsModel, std::str
 
 			// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
 			std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
-			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+			//pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
 
 			// MAKE THE FILE PATH NICE
 			char path_buffer[AA_MAX_STRING];
@@ -402,19 +426,63 @@ KeyValues* C_MetaverseManager::LoadFirstLocalItemLegacy(bool& bIsModel, std::str
 			foundName = path_buffer;
 			// FINISHED MAKING THE FILE PATH NICE
 
+			bool bIsModel;
 			pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
 			if (pItem)
 			{
-				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
-				return pItem;
+				if (bIsModel)
+					uMountWorkshopNumModels++;
+				else
+					uMountWorkshopNumItems++;
+
+				if (!bFastMode)
+				{
+					if (bIsModel)
+					{
+						if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+						else
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+					}
+					else
+					{
+						if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+						else
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					}
+					return;
+				}
 			}
+
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+		}
+
+		g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
+		pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+		//break;
+	}
+
+	if (bFastMode)
+	{
+		if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+		{
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
+		}
+		else
+		{
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
 		}
 	}
 
-	return null;
+	g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();	
+	this->LoadLocalItemLegacyClose();
+	return;
 }
 
-KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
+void C_MetaverseManager::LoadNextLocalItemLegacy()
 {
 	KeyValues* pItem;
 	const char *pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
@@ -428,7 +496,7 @@ KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
 
 		// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
 		std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
-		pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+		//pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
 
 		// MAKE THE FILE PATH NICE
 		char path_buffer[AA_MAX_STRING];
@@ -437,13 +505,32 @@ KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
 		foundName = path_buffer;
 		// FINISHED MAKING THE FILE PATH NICE
 
+		bool bIsModel;
 		pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
 		if (pItem)
 		{
-			m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
-			return pItem;
+			if (bIsModel)
+			{
+				if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+				else
+					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+			}
+			else
+			{
+				if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+				else
+					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+			}
+			return;
 		}
+
+		pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+		//break;
 	}
+
+	g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
 
 	// done searching a folder, continue on to next folder
 	std::string fullPath = m_previousLoadLocalItemLegacyFilePath + "library\\*";
@@ -475,7 +562,6 @@ KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
 
 			// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
 			std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
-			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
 
 			// MAKE THE FILE PATH NICE
 			char path_buffer[AA_MAX_STRING];
@@ -484,38 +570,104 @@ KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
 			foundName = path_buffer;
 			// FINISHED MAKING THE FILE PATH NICE
 
+			bool bIsModel;
 			pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
 			if (pItem)
 			{
-				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
-				return pItem;
+				if (bIsModel)
+				{
+					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+					else
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+				}
+				else
+				{
+					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					else
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+				}
+				return;
 			}
+
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
 		}
+
+		g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
+		pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+		//break;
 	}
 
-	return null;
+	g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
+	this->LoadLocalItemLegacyClose();
+	return;
 }
 
 void C_MetaverseManager::LoadLocalItemLegacyClose()
 {
 	if (m_previousLoadLocalItemLegacyFilePath != "")
 	{
-		g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFolderHandle);
+//		g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFolderHandle);
 
-		if (m_previousLoadLocalItemLegacyFolderPath != "")
-			g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
+//		if (m_previousLoadLocalItemLegacyFolderPath != "")
+//			g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
 
 		m_previousLoadLocalItemLegacyFilePath = "";
 		m_previousLoadLocalItemLegacyFolderPath = "";
 		m_previousLocaLocalItemLegacyWorkshopIds = "";
 		m_previousLoadLocalItemLegacyMountIds = "";
-		m_previousLoadLocalItemsLegacyBuffer.empty();
+		m_previousLoadLocalItemsLegacyBuffer.clear();
 	}
+}
+
+void C_MetaverseManager::ResolveLoadLocalItemLegacyBuffer()
+{
+	// This usually gets done after all  workshop mounts are done, but since this is an after-the-fact one, gotta do it again manually here
+	unsigned int numResponses = m_previousLoadLocalItemsLegacyBuffer.size();
+	unsigned int i;
+	unsigned int j;
+	KeyValues* pItem;
+	KeyValues* active;
+	unsigned int numVictims;
+	std::vector<KeyValues*> victims;
+	for (i = 0; i < numResponses; i++)
+	{
+		pItem = m_previousLoadLocalItemsLegacyBuffer[i];
+
+		// now actually resolve the models and add the items!
+		// NEEDS RESOLVING!!
+		std::string resolvedModel = this->ResolveLegacyModel(pItem->GetString("lastmodel"));
+
+		active = pItem->FindKey("current");
+		if (!active)
+			active = pItem->FindKey("local", true);
+
+		active->SetString("model", resolvedModel.c_str());
+
+		// remove everything not in local or current or generation
+		for (KeyValues *sub = pItem->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		{
+			if (Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "generation"))
+				victims.push_back(sub);
+		}
+
+		numVictims = victims.size();
+		for (j = 0; j < numVictims; j++)
+			pItem->RemoveSubKey(victims[j]);
+
+		if (numVictims > 0)
+			victims.clear();
+
+		std::string id = VarArgs("%s", pItem->GetString("local/info/id"));
+		m_items[id] = pItem;
+	}
+
+	m_previousLoadLocalItemsLegacyBuffer.clear();
 }
 
 KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string filePath)
 {
-
 	KeyValues* pType = new KeyValues("type");
 	bool bLoaded;
 

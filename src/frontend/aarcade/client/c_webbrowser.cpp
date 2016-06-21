@@ -911,6 +911,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	JSObject& callbacksObject = result.ToObject();
 	callbacksObject.SetCustomMethod(WSLit("loadNextLocalAppCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("mountNextWorkshopCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("loadNextLocalItemLegacyCallback"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));

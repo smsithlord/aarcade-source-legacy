@@ -17,6 +17,7 @@ extern C_AnarchyManager* g_pAnarchyManager(&g_AnarchyManager);
 C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager")
 {
 	DevMsg("AnarchyManager: Constructor\n");
+	m_iState = 0;
 	m_pWebManager = null;
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
@@ -550,23 +551,32 @@ void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 void C_AnarchyManager::OnWorkshopManagerReady()
 {
 	// mount ALL workshops
+	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
 	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
 	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
 
-	///* do it async instead!!
+	/* do it async instead!!
 	bool result = m_pWorkshopManager->MountFirstWorkshop();
 	if (result)
 		m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "0", std::string(VarArgs("%u", m_pWorkshopManager->GetNumDetails())), "+", "mountNextWorkshopCallback");
 	else
 		this->OnMountAllWorkshopsComplete();
-	//*/
+	*/
 
-	//m_pWorkshopManager->MountFirstWorkshop();
+	m_pWorkshopManager->MountFirstWorkshop();
 }
 
 void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
-	m_pWebManager->GetSelectedWebTab()->SetUrl("asset://ui/welcome.html");
+	if (m_iState < 1)
+	{
+		m_iState = 1;
+		m_pWebManager->GetSelectedWebTab()->SetUrl("asset://ui/welcome.html");
+	}
+	else
+	{
+		DevMsg("Done again!!\n");
+	}
 }
 
 void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)
