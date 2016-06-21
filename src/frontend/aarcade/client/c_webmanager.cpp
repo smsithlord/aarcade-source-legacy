@@ -222,6 +222,8 @@ C_WebTab* C_WebManager::CreateHudWebTab()
 {
 	//C_WebTab* pWebTab = CreateWebTab("asset://ui/hud.html", "hud", true);
 	C_WebTab* pWebTab = CreateWebTab("asset://ui/loading.html", "hud", true);
+	//g_pAnarchyManager->GetWebManager()->SelectWebTab(pWebTab);
+//	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
 	return pWebTab;
 }
 
@@ -319,6 +321,11 @@ void C_WebManager::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objec
 		DevMsg("Argument: %s\n", arg->text.c_str());
 	}
 	*/
+}
+
+void C_WebManager::DispatchJavaScriptMethods(C_WebTab* pWebTab)
+{
+	m_pWebBrowser->DispatchJavaScriptMethods(pWebTab);
 }
 
 //void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);

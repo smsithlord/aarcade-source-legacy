@@ -66,13 +66,13 @@
 							<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Launch the selected shortcut in Windows.">Launch</div>
 						</td>
 						<td>
-							<div class="button disabledButton">Inspect</div>
-						</td>
-						<td>
 							<div class="button disabledButton">Delete</div>
 						</td>
 						<td>
 							<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected item.">Edit</div>
+						</td>
+						<td>
+							<div class="button disabledButton">Inspect</div>
 						</td>
 						<td>
 							<div class="button disabledButton">OK</div>
@@ -88,6 +88,8 @@
 			libraryContainer.selectedItem = null;
 
 			var searchBox = document.querySelector("#searchBox");
+			searchBox.querySelector("input").focus();
+
 			var types = aaapi.library.getAllLibraryTypes();
 			var filterTypeSelect = document.querySelector("#filterTypeSelect");
 			var x;
@@ -149,8 +151,8 @@
 
 				var form = e.srcElement;
 				var elem = form.querySelector("input");
-				if( elem.value.length > 1 )
-				{
+				//if( elem.value.length > 1 )
+				//{
 					// clear out the contents of the search results
 					while(libraryContainer.firstChild)
 						libraryContainer.removeChild(libraryContainer.firstChild);
@@ -188,7 +190,7 @@
 								clearInterval(repeat);
 						}, 1);
 					}
-				}
+				//}
 
 				return false;
 			}, true);
@@ -226,6 +228,18 @@
 						//var elem = document.querySelector("#editButton");
 						editSelected();
 					}
+				}, true);
+
+				itemContainer.addEventListener("mouseover", function(e)
+				{
+					var elem = e.srcElement;
+					arcadeHud.showCursorPreviewImage(elem.item.marquee, elem.item.screen);
+				}, true);
+
+				itemContainer.addEventListener("mouseout", function(e)
+				{
+					var elem = e.srcElement;
+					arcadeHud.hideCursorPreviewImage();
 				}, true);
 
 				itemContainer.addEventListener("click", function(e)

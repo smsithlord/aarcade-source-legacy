@@ -8,6 +8,13 @@
 #include <vector>
 //#include "c_webmanager.h"
 
+struct JavaScriptMethodCall_t
+{
+	std::string objectName;
+	std::string methodName;
+	std::vector<std::string> methodArguments;
+};
+
 class C_WebTab
 {
 public:
@@ -36,11 +43,18 @@ public:
 
 	void SetUrl(std::string);
 
+	void DispatchJavaScriptMethodCalls();
 	//void DispatchJavaScriptEventMessages(std::string objectName, std::string objectMethod, std::vector<JSEventMessage_t*> eventArgs);
-	void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
+	//void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
 
+	// hud webtab only
+	void SetHudTitle(std::string title);
+	void AddHudLoadingMessage(std::string type, std::string text, std::string title = "", std::string id = "", std::string min = "", std::string max = "", std::string current = "", std::string callbackMethod = "");
+	std::vector<JavaScriptMethodCall_t*> GetJavaScriptMethodCalls() { return m_javaScriptMethodCalls; }
+
 private:
+	std::vector<JavaScriptMethodCall_t*> m_javaScriptMethodCalls;
 	float m_fMouseX;
 	float m_fMouseY;
 	int m_iState;

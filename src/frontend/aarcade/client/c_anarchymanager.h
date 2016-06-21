@@ -3,7 +3,7 @@
 
 #include <KeyValues.h>
 #include "c_webmanager.h"
-#include "c_loadingmanager.h"
+//#include "c_loadingmanager.h"
 #include "c_libretromanager.h"
 #include "c_inputmanager.h"
 #include "c_mountmanager.h"
@@ -45,16 +45,19 @@ public:
 	// Called after rendering
 	virtual void PostRender();
 	
+	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void AnarchyBegin();
 	void OnWebManagerReady();
+	void OnLoadAllLocalAppsComplete();
+	void OnWorkshopManagerReady();
+	void OnMountAllWorkshopsComplete();
+
 	//void OnLoadingManagerReady();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
 	bool DeselectEntity(C_BaseEntity* pEntity);
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
-	void OnWorkshopManagerReady();
-	void OnMountedAllWorkshop();
 
 	// helpers
 	std::string GenerateUniqueId();
@@ -65,7 +68,7 @@ public:
 	// accessors
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
-	C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
+	//C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
 	C_LibretroManager* GetLibretroManager() { return m_pLibretroManager; }
 	C_MountManager* GetMountManager() { return m_pMountManager; }
 	C_WorkshopManager* GetWorkshopManager() { return m_pWorkshopManager; }
@@ -76,7 +79,7 @@ private:
 	double m_dLastGenerateIdTime;
 	std::string m_lastGeneratedChars;
 	C_WebManager* m_pWebManager;
-	C_LoadingManager* m_pLoadingManager;
+	//C_LoadingManager* m_pLoadingManager;
 	C_LibretroManager* m_pLibretroManager;
 	C_InputManager* m_pInputManager;
 	C_MountManager* m_pMountManager;

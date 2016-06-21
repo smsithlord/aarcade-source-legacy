@@ -154,15 +154,53 @@ void C_WebTab::KeyCodeRelease(vgui::MouseCode code, bool bShiftState, bool bCtrl
 
 void C_WebTab::SetUrl(std::string url)
 {
-	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(this)->LoadURL(WebURL(WSLit(url.c_str())));
+	WebView* pWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(this);
+	if (pWebView)
+		pWebView->LoadURL(WebURL(WSLit(url.c_str())));
+	else
+		DevMsg("ERROR: cOULD NOT FIND WEB VIEW!\n\n");
 }
 
-void C_WebTab::DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)
+void C_WebTab::DispatchJavaScriptMethodCalls()
 {
-	if (m_iState < 2)
+	// do it in batches to reduce sync calls to the web view to O(1) instead of O(N) (assuming every method using the same JS object.)
+	g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethods(this);
+	m_javaScriptMethodCalls.clear();
+}
+
+void C_WebTab::SetHudTitle(std::string title)
+{
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
 		return;
 
-	g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(this, objectName, objectMethod, methodArguments);
+	JavaScriptMethodCall_t* pJavaScriptMethodCall = new JavaScriptMethodCall_t;
+	pJavaScriptMethodCall->objectName = "arcadeHud";
+	pJavaScriptMethodCall->methodName = "setHudeTitle";
+	pJavaScriptMethodCall->methodArguments.push_back(title);
+	m_javaScriptMethodCalls.push_back(pJavaScriptMethodCall);
+
+	if (m_iState >= 2)
+		this->DispatchJavaScriptMethodCalls();
 }
 
-//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
+void C_WebTab::AddHudLoadingMessage(std::string type, std::string text, std::string title, std::string id, std::string min, std::string max, std::string current, std::string callbackMethod)
+{
+	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this)
+		return;
+
+	JavaScriptMethodCall_t* pJavaScriptMethodCall = new JavaScriptMethodCall_t;
+	pJavaScriptMethodCall->objectName = "arcadeHud";
+	pJavaScriptMethodCall->methodName = "addHudLoadingMessage";
+	pJavaScriptMethodCall->methodArguments.push_back(type);
+	pJavaScriptMethodCall->methodArguments.push_back(text);
+	pJavaScriptMethodCall->methodArguments.push_back(title);
+	pJavaScriptMethodCall->methodArguments.push_back(id);
+	pJavaScriptMethodCall->methodArguments.push_back(min);
+	pJavaScriptMethodCall->methodArguments.push_back(max);
+	pJavaScriptMethodCall->methodArguments.push_back(current);
+	pJavaScriptMethodCall->methodArguments.push_back(callbackMethod);
+	m_javaScriptMethodCalls.push_back(pJavaScriptMethodCall);
+
+	if (m_iState >= 2)
+		this->DispatchJavaScriptMethodCalls();
+}

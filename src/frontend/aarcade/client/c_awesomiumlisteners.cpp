@@ -112,18 +112,22 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 	else
 	{
 		if (!g_pAnarchyManager->GetWebManager()->GetHudReady())
-		{
+			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+		//{
+			//foundPrefix = urlSpec.find("asset://ui/loading.html");
+			//if (foundPrefix == 0)
+			//	pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 			//foundPrefix = urlSpec.find("asset://ui/hud.html");
 			//if (foundPrefix == 0)
 				//pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 			//else
 		//	{
-				foundPrefix = urlSpec.find("asset://ui/loading.html");
-				if (foundPrefix == 0)
-					pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+//				foundPrefix = urlSpec.find("asset://ui/loading.html");
+//				if (foundPrefix == 0)
+//					pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 				//pWebBrowser->OnLoadingWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 		//	}
-		}
+		//}
 		/*
 		else
 		{

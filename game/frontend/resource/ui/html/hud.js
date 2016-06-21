@@ -1,9 +1,33 @@
 function ArcadeHud()
 {
+	this.clickThruElem;
 	this.cursorElem;
-	this.helpElem = null;
-	this.DOMReady().then(function()
+	this.cursorPreviewImageElem;
+	this.cursorImageElem;
+	this.helpElem;
+	this.hudLoadingMessageContainer;
+	this.hudLoadingMessages = {};
+	this.DOMReady = false;
+	this.onDOMReady().then(function()
 	{
+		this.DOMReady = true;
+		this.helpElem = document.createElement("div");
+		this.helpElem.className = "helpContainer";
+		this.hudLoadingMessagesContainer = document.createElement("div");
+		this.hudLoadingMessagesContainer.className = "hudLoadingMessagesContainer";
+		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
+		document.body.appendChild(this.helpElem);
+
+		document.body.addEventListener("dblclick", function(e)
+		{
+			console.log("dblclicked: " + (e.target === document.body));
+		}, true);
+
+		document.body.addEventListener("click", function(e)
+		{
+			console.log("clicked: " + (e.target === document.body));
+		}, true);
+
 		this.cursorElem = document.createElement("div");
 		this.cursorElem.id = "cursor";
 
@@ -14,7 +38,23 @@ function ArcadeHud()
 		this.cursorElem.style.left = (document.body.offsetWidth / 2) + "px";
 		this.cursorElem.style.top = (document.body.offsetHeight / 2) + "px";
 
+		this.cursorPreviewImageElem = document.createElement("img");
+		this.cursorPreviewImageElem.style.cssText = "border: 3px solid #000; display: none; margin-top: 35px; max-width: 40%; max-height: 40%; vertical-align: top;";
+		this.cursorPreviewImageElem.backupUri = "";
+		this.cursorPreviewImageElem.addEventListener("load", function(e)
+		{
+			var elem = e.srcElement;
+			elem.style.display = "inline-block";
+		}, true);
+		this.cursorPreviewImageElem.addEventListener("error", function(e)
+		{
+			var elem = e.srcElement;
+			if( elem.backupUri !== "" && elem.backupUri !== elem.src )
+				elem.src = elem.backupUri;
+		}, true);
+
 		this.cursorElem.appendChild(this.cursorImageElem);
+		this.cursorElem.appendChild(this.cursorPreviewImageElem);
 		document.body.appendChild(this.cursorElem);
 
 		document.addEventListener("mousemove", function(e)
@@ -33,8 +73,185 @@ function ArcadeHud()
 			elem = elems[i];
 			this.assignHelp(elem);
 		}
+
+		// dispatch messages we may have gotten before the DOM was ready
+		this.dispatchHudLoadingMessages();
 	}.bind(this));
 }
+
+ArcadeHud.prototype.setHudTitle = function(text)
+{
+	/*
+	this.title = text;
+	this.titleNode.nodeValue = this.title;
+	*/
+};
+
+ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, max, current, callbackMethod)
+{
+	var message = {
+		"type": type,
+		"text": text,
+		"title": title,
+		"id": id,
+		"min": min,
+		"max": max,
+		"current": current,
+		"callbackMethod": callbackMethod	// always in the system sub-object
+	};
+
+	if( !!!this.hudLoadingMessages[id] )
+	{
+		this.hudLoadingMessages[id] = {
+			"message": message
+		};
+	}
+	else
+		this.hudLoadingMessages[id].message = message;
+
+	if( this.DOMReady )
+		this.dispatchHudLoadingMessages();
+};
+
+ArcadeHud.prototype.dispatchHudLoadingMessages = function()
+{
+	var empty = true;
+	var x, message, messageObject, className, progressText, percent;
+	for( x in this.hudLoadingMessages )
+	{
+		messageObject = this.hudLoadingMessages[x];
+
+		if( !!!messageObject.container )
+		{
+			messageObject.container = document.createElement("div");
+			this.hudLoadingMessagesContainer.appendChild(messageObject.container);
+		}
+		else
+		{
+			if( !!!messageObject.message )
+				continue;
+
+			// empty out the container
+			var firstChild = messageObject.container.firstChild;
+			while( firstChild )
+			{
+				messageObject.container.removeChild(firstChild);
+				firstChild = messageObject.container.firstChild;
+			}
+		}
+
+		empty = false;
+
+		if( messageObject.message.type === "progress" )
+		{
+			var goodCurrent;
+			if( messageObject.message.current[0] === "+" )
+			{
+				var delta = (messageObject.message.current.length === 1) ? 1 : parseInt(messageObject.message.current.substring(1));
+
+				if( !!!messageObject.container.previousCurrent )
+					messageObject.container.previousCurrent = delta;
+				else
+					messageObject.container.previousCurrent += delta;
+
+				goodCurrent = messageObject.container.previousCurrent.toString();
+			}
+			else
+				goodCurrent = messageObject.message.current;
+
+			progressText = "";
+			if( goodCurrent !== "" )
+			{
+				if( messageObject.message.max !== "" )
+					progressText += " (" + goodCurrent + "/" + messageObject.message.max + ")";
+				else
+					progressText = " (" + goodCurrent + ")";
+			}
+
+			className = "hudLoadingMessageContainer progress";
+
+			percent = 0;
+			if( messageObject.message.max === "0" || messageObject.message.max === "" )
+				percent = 100;
+			else if( progressText !== "" )
+			{
+				if( messageObject.message.max === goodCurrent )
+					percent = 100;
+
+				percent = Math.floor((parseInt(goodCurrent) / parseInt(messageObject.message.max)) * 100);
+
+				/*
+				if( percent === 100 )
+				{
+					setTimeout(function()
+					{
+						this.container.parentNode.removeChild(this.container);
+					}.bind(messageObject), 500);
+				}
+				*/
+			}
+
+			messageObject.container.style.backgroundImage = "-webkit-linear-gradient(left, rgba(100, 100, 100, 1.0), rgba(100, 100, 100, 1.0) " + percent + "%, rgba(50, 50, 50, 0.7) " + percent + "%, rgba(50, 50, 50, 0.7) 100%)";
+			messageObject.container.innerText = messageObject.message.title + progressText;
+		}
+		else
+		{
+			className = "hudLoadingMessageContainer";
+			messageObject.container.innerText = messageObject.message.text;
+		}
+
+		if(  messageObject.message.callbackMethod !== "" )
+		{
+			if( !!aaapi.callbacks[messageObject.message.callbackMethod] )
+			{
+				messageObject.container.callbackMethod = messageObject.message.callbackMethod;
+				setTimeout(function()
+				{
+					aaapi.callbacks[this.callbackMethod]();
+					//this.parentNode.removeChild(this);
+				}.bind(messageObject.container), 1);
+			}
+		}
+
+		messageObject.container.className = className;
+		delete messageObject.message;
+	}
+
+	if( !empty )
+		this.helpElem.style.display = "block";
+};
+
+ArcadeHud.prototype.showCursorPreviewImage = function(uri, backupUri)
+{
+	var goodUri;
+	var goodBackupUri;
+
+	if( uri !== "" )
+	{
+		goodUri = uri;
+		goodBackupUri = backupUri;
+	}
+	else if( goodBackupUri !== "" )
+	{
+		goodUri = backupUri;
+		goodBackupUri = "";
+	}
+
+	if( this.cursorPreviewImageElem.src === goodUri )
+		this.cursorPreviewImageElem.style.display = "inline-block";
+	else
+	{
+		this.cursorPreviewImageElem.style.display = "none";
+
+		this.cursorPreviewImageElem.backupUri = goodBackupUri;
+		this.cursorPreviewImageElem.src = goodUri;
+	}
+};
+
+ArcadeHud.prototype.hideCursorPreviewImage = function(uri)
+{
+	this.cursorPreviewImageElem.style.display = "none";
+};
 
 ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemHeight, fontSize, selectedItem, rightAligned)
 {
@@ -76,7 +293,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	blackout.style.cssText = "background-color: transparent; position: fixed; top: 0; left: 0; bottom: 0; right: 0;";
 	blackout.popup = popup;
 
-	blackout.addEventListener("click", function(e)
+	blackout.addEventListener("mousedown", function(e)
 	{
 		var elem = e.srcElement;
 		// make sure the blackout elem is what got clicked
@@ -198,7 +415,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	container.appendChild(popupMenuItems);
 	container.appendChild(optionSearchContainer);
 
-	blackout.appendChild(container, this.cursorElem);
+	blackout.appendChild(container);
 	document.body.insertBefore(blackout, this.cursorElem);
 
 	optionSearch.focus();
@@ -227,42 +444,44 @@ ArcadeHud.prototype.assignHelp = function(elem)
 
 ArcadeHud.prototype.removeHelp = function()
 {
-	this.helpElem.parentNode.removeChild(this.helpElem);
-	this.helpElem = null;
+	// empty out messages
+	var firstChild = this.helpElem.firstChild;
+	while( firstChild )
+	{
+		if( firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+			break;
+
+		this.helpElem.removeChild(firstChild);
+		firstChild = this.helpElem.firstChild;
+	}
+
+	// if there are no loading messages, hide the message slate
+	if( !firstChild || !!!firstChild.firstChild )
+		this.helpElem.style.display = "none";
 };
 
 ArcadeHud.prototype.addHelpMessage = function(text)
 {
-	var needsAppend;
-	if( !this.helpElem )
+	// empty out messages
+	var firstChild = this.helpElem.firstChild;
+	while( firstChild )
 	{
-		this.helpElem = document.createElement("div");
-		this.helpElem.className = "helpContainer";
-		needsAppend = true;
-	}
-	else
-	{
-		// empty out the container
-		var firstChild = this.helpElem.firstChild;
-		while( firstChild )
-		{
-			this.helpElem.removeChild(firstChild);
-			firstChild = this.helpElem.firstChild;
-		}
+		if( firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+			break;
 
-		needsAppend = false;
+		this.helpElem.removeChild(firstChild);
+		firstChild = this.helpElem.firstChild;
 	}
 
 	var helpText = document.createElement("div");
+	helpText.className = "helpMessage";
 	var helpTextNode = document.createTextNode(text);
 	helpText.appendChild(helpTextNode);
-	this.helpElem.appendChild(helpText);
-
-	if( needsAppend )
-		document.body.appendChild(this.helpElem);
+	this.helpElem.insertBefore(helpText, this.helpElem.firstChild);
+	this.helpElem.style.display = "block";
 };
 
-ArcadeHud.prototype.DOMReady = function()
+ArcadeHud.prototype.onDOMReady = function()
 {
 	// Async
 	return {

@@ -2,6 +2,7 @@
 #define C_METAVERSE_MANAGER_H
 
 #include "c_webtab.h"
+#include "filesystem.h"
 //#include <string>
 //#include <vector>
 
@@ -13,26 +14,29 @@ public:
 	
 	void OnWebTabCreated(C_WebTab* pWebTab);
 
-	// local
+	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 
+	KeyValues* LoadFirstLocalItemLegacy(bool& bIsModel, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
+	KeyValues* LoadNextLocalItemLegacy(bool& bIsModel);
+	void LoadLocalItemLegacyClose();
+
+	// local
+	std::string ResolveLegacyType(std::string legacyType);
 	KeyValues* LoadLocalType(std::string file, std::string filePath = "");
 	unsigned int LoadAllLocalTypes(std::string filePath = "");
-	std::string ResolveLegacyType(std::string legacyType);
 
+	std::string ResolveLegacyModel(std::string legacyModel);
 	KeyValues* LoadLocalModel(std::string file, std::string filePath = "");
 	unsigned int LoadAllLocalModels(std::string filePath = "");
-	std::string ResolveLegacyModel(std::string legacyModel);
 
-	KeyValues* LoadLocalApp(std::string file, std::string filePath = "");
-	unsigned int LoadAllLocalApps(std::string filePath = "");
 	std::string ResolveLegacyApp(std::string legacyApp);
-
-	KeyValues* GetFirstLibraryType();
-	KeyValues* GetNextLibraryType();
-	KeyValues* GetLibraryType(std::string id);
-	//KeyValues* GetLibraryType(std::string id);
+	KeyValues* LoadLocalApp(std::string file, std::string filePath = "", std::string searchPath = "");
+	unsigned int LoadAllLocalApps(std::string filePath = "");
+	KeyValues* LoadFirstLocalApp(std::string filePath = "");
+	KeyValues* LoadNextLocalApp();
+	void LoadLocalAppClose();
 
 	KeyValues* GetFirstLibraryItem();
 	KeyValues* GetNextLibraryItem();
@@ -42,6 +46,10 @@ public:
 	KeyValues* FindNextLibraryItem();
 	KeyValues* FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
 	KeyValues* FindLibraryItem(KeyValues* pSearchInfo);
+
+	KeyValues* GetFirstLibraryType();
+	KeyValues* GetNextLibraryType();
+	KeyValues* GetLibraryType(std::string id);
 
 	KeyValues* GetLibraryApp(std::string id);
 
@@ -57,9 +65,21 @@ private:
 	std::map<std::string, KeyValues*> m_items;
 	std::map<std::string, KeyValues*> m_types;
 	std::map<std::string, KeyValues*>::iterator m_previousGetTypeIterator;
-	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;	// are these used yet?????
 	std::map<std::string, KeyValues*>::iterator m_previousFindItemIterator;
 	KeyValues* m_pPreviousSearchInfo;
+
+	FileFindHandle_t m_previousLoadLocalAppFileHandle;
+	std::string m_previousLoadLocalAppFilePath;
+
+	FileFindHandle_t m_previousLoadLocalItemLegacyFileHandle;
+	FileFindHandle_t m_previousLoadLocalItemLegacyFolderHandle;
+	std::string m_previousLoadLocalItemLegacyFile;
+	std::string m_previousLoadLocalItemLegacyFilePath;
+	std::string m_previousLoadLocalItemLegacyFolderPath;
+	std::string m_previousLocaLocalItemLegacyWorkshopIds;
+	std::string m_previousLoadLocalItemLegacyMountIds;
+	std::vector<KeyValues*> m_previousLoadLocalItemsLegacyBuffer;
 };
 
 #endif

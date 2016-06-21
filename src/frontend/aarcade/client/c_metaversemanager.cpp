@@ -20,6 +20,12 @@ C_MetaverseManager::~C_MetaverseManager()
 {
 	DevMsg("MetaverseManager: Destructor\n");
 
+	if (m_previousLoadLocalAppFilePath != "")
+	{
+		g_pFullFileSystem->FindClose(m_previousLoadLocalAppFileHandle);
+		m_previousLoadLocalAppFilePath = "";
+	}
+
 	if (m_pPreviousSearchInfo)
 		m_pPreviousSearchInfo->deleteThis();
 
@@ -67,6 +73,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 	bool bLoaded;
 	
 	std::string fullFile = filePath + file;
+	//DevMsg("Try: %s\n", fullFile);
 	if (filePath != "")
 	{
 		//std::string fullFile = filePath + file;
@@ -75,8 +82,12 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 	else
 		bLoaded = pItem->LoadFromFile(g_pFullFileSystem, file.c_str(), "MOD");
 
+//	DevMsg("Here: %s\n", fullFile.c_str());
+
+	bIsModel = false;
 	if ( !bLoaded )
 	{
+		//DevMsg("Failed to load: %s\n", file.c_str());
 		pItem->deleteThis();
 		pItem = null;
 	}
@@ -101,6 +112,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			size_t foundExt = modelFile.find(".mdl");
 			if (foundExt == modelFile.length() - 4)
 			{
+				/*
 				pItem->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId().c_str());
 				//DevMsg("Unique ID: %s\n", pItem->GetString("local/info/id"));
 
@@ -129,9 +141,9 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				}
 
 				for (unsigned int i = 0; i < victims.size(); i++)
-				{
 					pItem->RemoveSubKey(victims[i]);
-				}
+				*/
+
 				/*
 				std::string max = VarArgs("%u", 50000);
 				std::string min = "0";
@@ -141,7 +153,9 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 
 				// TODO: Generate an ID and add this to the library!!
 				bIsModel = true;
-				return null;
+				pItem->deleteThis();
+				pItem = null;
+			//	return null;
 			}
 			else
 			{
@@ -190,13 +204,12 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 						resolvedMarquee = "";
 				}
 				pItem->SetString("local/marquee", resolvedMarquee.c_str());
-				
+				//DevMsg("WIN!\n");
 				// TODO: Generate an ID and add this to the library!!
 			}
 		}
 	}
 
-	bIsModel = false;
 	return pItem;
 }
 
@@ -206,7 +219,7 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 
 	FileFindHandle_t testFolderHandle;
 	std::string fullPath = filePath + "library\\*";
-	
+	//DevMsg("Path here is: %s\n", fullPath);
 	const char *pFoldername = g_pFullFileSystem->FindFirst(fullPath.c_str(), &testFolderHandle);
 
 	std::vector<KeyValues*> items;
@@ -222,8 +235,9 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 			pFoldername = g_pFullFileSystem->FindNext(testFolderHandle);
 			continue;
 		}
-
+		
 		std::string FolderPath = VarArgs("library\\%s", pFoldername);
+		//DevMsg("Folder name: %s%s\n", filePath.c_str(), FolderPath.c_str());
 		if (!g_pFullFileSystem->FindIsDirectory(testFolderHandle))
 		{
 			DevMsg("All items files must be within a subfolder!\n");
@@ -232,7 +246,7 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 		}
 
 		FileFindHandle_t testFileHandle;
-		const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\*.itm", FolderPath.c_str()), &testFileHandle);
+		const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s%s\\*.itm", filePath.c_str(), FolderPath.c_str()), &testFileHandle);
 
 		while (pFilename != NULL)
 		{
@@ -244,22 +258,24 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 
 			// Check real quick if this item is of the format [itemName].[workshop_id].itm, ie. check if it has 2 dots or only 1.
 			// PROBABLY STILL REQUIRED FOR LEGACY SUPPORT
-			std::string foundName = pFilename;
-			foundName = foundName.substr(foundName.find_first_of(".") + 1);
+	//		std::string foundName = pFilename;
+//			foundName = foundName.substr(foundName.find_first_of(".") + 1);
 
-			if (foundName.find(".") != std::string::npos)
-				continue;
+//			if (foundName.find(".") != std::string::npos)
+	//			continue;
 
-			foundName = VarArgs("%s/%s", FolderPath.c_str(), pFilename);
+			std::string foundName = VarArgs("%s\\%s", FolderPath.c_str(), pFilename);
+			//DevMsg("Tester here is: %s%s\n", filePath.c_str(), foundName.c_str());
 			pFilename = g_pFullFileSystem->FindNext(testFileHandle);
 
 			// MAKE THE FILE PATH NICE
 			char path_buffer[AA_MAX_STRING];
 			Q_strcpy(path_buffer, foundName.c_str());
 			V_FixSlashes(path_buffer);
-
+			/*
 			for (int i = 0; path_buffer[i] != '\0'; i++)
 				path_buffer[i] = tolower(path_buffer[i]);
+			*/
 			// FINISHED MAKING THE FILE PATH NICE
 
 			foundName = path_buffer;
@@ -267,6 +283,7 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 			//this->AddItemFile(foundName.c_str());
 
 			bIsModel = false;
+			//DevMsg("Try: %s\\%s\n", filePath.c_str(), foundName.c_str());
 			responseKv = this->LoadLocalItemLegacy(bIsModel, foundName, filePath, workshopIds, mountIds);
 			if ( responseKv )
 			{
@@ -286,9 +303,14 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 
 	g_pFullFileSystem->FindClose(testFolderHandle);
 
+	//DevMsg("Recounting:\n");
 	unsigned int numResponses = items.size();
 	unsigned int i;
+	unsigned int numVictims;
+	unsigned int j;
+	KeyValues* active;
 	KeyValues* pItem;
+	std::vector<KeyValues*> victims;
 	for (i = 0; i < numResponses; i++)
 	{
 		pItem = items[i];
@@ -296,26 +318,199 @@ unsigned int C_MetaverseManager::LoadAllLocalItemsLegacy(unsigned int& uNumModel
 		// now actually resolve the models and add the items!
 		// NEEDS RESOLVING!!
 		std::string resolvedModel = this->ResolveLegacyModel(pItem->GetString("lastmodel"));
-		pItem->SetString("local/model", resolvedModel.c_str());
-		//pItem->SetString("current/model", resolvedModel.c_str());
+
+		active = pItem->FindKey("current");
+		if (!active)
+			active = pItem->FindKey("local", true);
+
+		active->SetString("model", resolvedModel.c_str());
 
 		// remove everything not in local or current or generation
 		for (KeyValues *sub = pItem->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 		{
 			if (Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "generation"))
-				sub->SetString(null, "");
+				victims.push_back(sub);
 		}
+
+		numVictims = victims.size();
+		for (j = 0; j < numVictims; j++)
+			pItem->RemoveSubKey(victims[j]);
+
+		if ( numVictims > 0 )
+			victims.clear();
 
 		std::string id = VarArgs("%s", pItem->GetString("local/info/id"));
 		m_items[id] = pItem;
 		count++;
+
+//		DevMsg("\tCounting \n", )
 	}
 
 	while (!items.empty())
 		items.pop_back();
 
 	uNumModels = modelCount;
-	return count;
+	return numResponses;// count;
+}
+
+KeyValues* C_MetaverseManager::LoadFirstLocalItemLegacy(bool& bIsModel, std::string filePath, std::string workshopIds, std::string mountIds)
+{
+	if (m_previousLoadLocalItemLegacyFilePath != "")
+		this->LoadLocalItemLegacyClose();
+
+	// start it
+	m_previousLoadLocalItemLegacyFilePath = filePath;
+	m_previousLocaLocalItemLegacyWorkshopIds = workshopIds;
+	m_previousLoadLocalItemLegacyMountIds = mountIds;
+
+	KeyValues* pItem;
+	std::string fullPath = m_previousLoadLocalItemLegacyFilePath + "library\\*";
+	const char *pFoldername = g_pFullFileSystem->FindFirst(fullPath.c_str(), &m_previousLoadLocalItemLegacyFolderHandle);
+	while (pFoldername != NULL)
+	{
+		if (!Q_strcmp(pFoldername, ".") || !Q_strcmp(pFoldername, ".."))
+		{
+			pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+			continue;
+		}
+
+		m_previousLoadLocalItemLegacyFolderPath = VarArgs("library\\%s", pFoldername);
+		if (!g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalItemLegacyFolderHandle))
+		{
+			DevMsg("All items files must be within a subfolder!\n");
+			pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+			continue;
+		}
+
+		const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s%s\\*.itm", m_previousLoadLocalItemLegacyFilePath.c_str(), m_previousLoadLocalItemLegacyFolderPath.c_str()), &m_previousLoadLocalItemLegacyFileHandle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalItemLegacyFileHandle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+				continue;
+			}
+
+			// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
+			std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+
+			// MAKE THE FILE PATH NICE
+			char path_buffer[AA_MAX_STRING];
+			Q_strcpy(path_buffer, foundName.c_str());
+			V_FixSlashes(path_buffer);
+			foundName = path_buffer;
+			// FINISHED MAKING THE FILE PATH NICE
+
+			pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
+			if (pItem)
+			{
+				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
+				return pItem;
+			}
+		}
+	}
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::LoadNextLocalItemLegacy(bool& bIsModel)
+{
+	KeyValues* pItem;
+	const char *pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalItemLegacyFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+			continue;
+		}
+
+		// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
+		std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
+		pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+		foundName = path_buffer;
+		// FINISHED MAKING THE FILE PATH NICE
+
+		pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
+		if (pItem)
+		{
+			m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
+			return pItem;
+		}
+	}
+
+	// done searching a folder, continue on to next folder
+	std::string fullPath = m_previousLoadLocalItemLegacyFilePath + "library\\*";
+	const char *pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+	while (pFoldername != NULL)
+	{
+		if (!Q_strcmp(pFoldername, ".") || !Q_strcmp(pFoldername, ".."))
+		{
+			pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+			continue;
+		}
+
+		m_previousLoadLocalItemLegacyFolderPath = VarArgs("library\\%s", pFoldername);
+		if (!g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalItemLegacyFolderHandle))
+		{
+			DevMsg("All items files must be within a subfolder!\n");
+			pFoldername = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFolderHandle);
+			continue;
+		}
+
+		const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s%s\\*.itm", m_previousLoadLocalItemLegacyFilePath.c_str(), m_previousLoadLocalItemLegacyFolderPath.c_str()), &m_previousLoadLocalItemLegacyFileHandle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalItemLegacyFileHandle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+				continue;
+			}
+
+			// WE'VE FOUND A FILE TO ATTEMPT TO LOAD!!!
+			std::string foundName = VarArgs("%s\\%s", m_previousLoadLocalItemLegacyFolderPath.c_str(), pFilename);
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
+
+			// MAKE THE FILE PATH NICE
+			char path_buffer[AA_MAX_STRING];
+			Q_strcpy(path_buffer, foundName.c_str());
+			V_FixSlashes(path_buffer);
+			foundName = path_buffer;
+			// FINISHED MAKING THE FILE PATH NICE
+
+			pItem = this->LoadLocalItemLegacy(bIsModel, foundName, m_previousLoadLocalItemLegacyFilePath, m_previousLocaLocalItemLegacyWorkshopIds, m_previousLoadLocalItemLegacyMountIds);
+			if (pItem)
+			{
+				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
+				return pItem;
+			}
+		}
+	}
+
+	return null;
+}
+
+void C_MetaverseManager::LoadLocalItemLegacyClose()
+{
+	if (m_previousLoadLocalItemLegacyFilePath != "")
+	{
+		g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFolderHandle);
+
+		if (m_previousLoadLocalItemLegacyFolderPath != "")
+			g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
+
+		m_previousLoadLocalItemLegacyFilePath = "";
+		m_previousLoadLocalItemLegacyFolderPath = "";
+		m_previousLocaLocalItemLegacyWorkshopIds = "";
+		m_previousLoadLocalItemLegacyMountIds = "";
+		m_previousLoadLocalItemsLegacyBuffer.empty();
+	}
 }
 
 KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string filePath)
@@ -418,19 +613,18 @@ std::string C_MetaverseManager::ResolveLegacyType(std::string legacyType)
 	return "";
 }
 
-KeyValues* C_MetaverseManager::LoadLocalApp(std::string file, std::string filePath)
+KeyValues* C_MetaverseManager::LoadLocalApp(std::string file, std::string filePath, std::string searchPath)
 {
-
 	KeyValues* pApp = new KeyValues("app");
 	bool bLoaded;
 
-	if (filePath != "")
-	{
+//	if (filePath != "")
+	//{
 		std::string fullFile = filePath + file;
-		bLoaded = pApp->LoadFromFile(g_pFullFileSystem, fullFile.c_str(), "");
-	}
-	else
-		bLoaded = pApp->LoadFromFile(g_pFullFileSystem, file.c_str(), "MOD");
+		bLoaded = pApp->LoadFromFile(g_pFullFileSystem, fullFile.c_str(), searchPath.c_str());
+	//}
+	//else
+		//bLoaded = pApp->LoadFromFile(g_pFullFileSystem, file.c_str(), "MOD");
 
 	if (!bLoaded)
 	{
@@ -447,6 +641,8 @@ KeyValues* C_MetaverseManager::LoadLocalApp(std::string file, std::string filePa
 		std::string id = pActive->GetString("info/id");
 		m_apps[id] = pApp;
 	}
+
+	return pApp;
 }
 
 unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
@@ -477,7 +673,7 @@ unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 		// FINISHED MAKING THE FILE PATH NICE
 
 		foundName = path_buffer;
-		if (this->LoadLocalApp(foundName, filePath))
+		if (this->LoadLocalApp(foundName, filePath, "MOD"))
 			count++;
 	}
 
@@ -503,6 +699,84 @@ std::string C_MetaverseManager::ResolveLegacyApp(std::string legacyApp)
 	}
 
 	return "";
+}
+
+KeyValues* C_MetaverseManager::LoadFirstLocalApp(std::string filePath)
+{
+	if (m_previousLoadLocalAppFilePath != "")
+		this->LoadLocalAppClose();
+
+	m_previousLoadLocalAppFilePath = filePath;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx("library\\apps\\*.key", filePath.c_str(), &m_previousLoadLocalAppFileHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalAppFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalAppFileHandle);
+			continue;
+		}
+
+		std::string foundName = pFilename;
+		foundName = VarArgs("library\\apps\\%s", pFilename);
+		
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+
+		for (int i = 0; path_buffer[i] != '\0'; i++)
+			path_buffer[i] = tolower(path_buffer[i]);
+		// FINISHED MAKING THE FILE PATH NICE
+
+		foundName = path_buffer;
+		return this->LoadLocalApp(foundName, "", m_previousLoadLocalAppFilePath);
+	}
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::LoadNextLocalApp()
+{
+//	if ( != "")
+//		g_pFullFileSystem->FindClose(m_previousLoadLocalAppFileHandle);
+
+	const char *pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalAppFileHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(m_previousLoadLocalAppFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalAppFileHandle);
+			continue;
+		}
+
+		std::string foundName = pFilename;
+		foundName = VarArgs("library\\apps\\%s", pFilename);
+
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+
+		for (int i = 0; path_buffer[i] != '\0'; i++)
+			path_buffer[i] = tolower(path_buffer[i]);
+		// FINISHED MAKING THE FILE PATH NICE
+
+		foundName = path_buffer;
+		return this->LoadLocalApp(foundName, "", m_previousLoadLocalAppFilePath);
+	}
+
+	//g_pFullFileSystem->FindClose(m_previousLoadLocalAppFileHandle);
+	//m_previousLoadLocalAppFilePath = "";
+	return null;
+}
+
+void C_MetaverseManager::LoadLocalAppClose()
+{
+	if (m_previousLoadLocalAppFilePath != "")
+	{
+		g_pFullFileSystem->FindClose(m_previousLoadLocalAppFileHandle);
+		m_previousLoadLocalAppFilePath = "";
+	}
 }
 
 KeyValues* C_MetaverseManager::GetFirstLibraryType()

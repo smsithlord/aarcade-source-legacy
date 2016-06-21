@@ -884,6 +884,9 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("launchItem"), false);
 	systemObject.SetCustomMethod(WSLit("didSelectPopupMenuItem"), true);
 	systemObject.SetCustomMethod(WSLit("didCancelPopupMenu"), true);
+	systemObject.SetCustomMethod(WSLit("loadFirstLocalApp"), false);
+	systemObject.SetCustomMethod(WSLit("loadNextLocalApp"), false);
+	systemObject.SetCustomMethod(WSLit("loadLocalAppClose"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -899,6 +902,15 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
+
+	// CALLBACKS
+	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.callbacks"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& callbacksObject = result.ToObject();
+	callbacksObject.SetCustomMethod(WSLit("loadNextLocalAppCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("mountNextWorkshopCallback"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));
@@ -992,6 +1004,35 @@ void C_WebBrowser::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objec
 			arguments.Push(WSLit(argument.c_str()));
 
 		object.InvokeAsync(WSLit(objectMethod.c_str()), arguments);
+	}
+}
+
+void C_WebBrowser::DispatchJavaScriptMethods(C_WebTab* pWebTab)
+{
+	WebView* pWebView = m_webViews[pWebTab];
+
+	std::string previousObjectName = "-1";
+
+	JSValue response;
+	JSObject responseObject;
+	std::vector<JavaScriptMethodCall_t*>& methodCalls = pWebTab->GetJavaScriptMethodCalls();
+	for (auto pJavaScriptMethodCall : methodCalls)
+	{
+		if (previousObjectName != pJavaScriptMethodCall->objectName)
+		{
+			previousObjectName = pJavaScriptMethodCall->objectName;
+			response = pWebView->ExecuteJavascriptWithResult(WSLit(pJavaScriptMethodCall->objectName.c_str()), WSLit(""));
+			if (!response.IsObject())
+				continue;
+
+			responseObject = response.ToObject();
+		}
+
+		JSArray arguments;
+		for (auto argument : pJavaScriptMethodCall->methodArguments)
+			arguments.Push(WSLit(argument.c_str()));
+
+		responseObject.InvokeAsync(WSLit(pJavaScriptMethodCall->methodName.c_str()), arguments);
 	}
 }
 

@@ -18,7 +18,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_pWebManager = null;
-	m_pLoadingManager = null;
+	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
@@ -50,8 +50,8 @@ void C_AnarchyManager::Shutdown()
 	delete m_pWebManager;
 	m_pWebManager = null;
 
-	delete m_pLoadingManager;
-	m_pLoadingManager = null;
+//	delete m_pLoadingManager;
+	//m_pLoadingManager = null;
 
 	delete m_pLibretroManager;
 	m_pLibretroManager = null;
@@ -367,59 +367,74 @@ void C_AnarchyManager::AnarchyBegin()
 
 void C_AnarchyManager::OnWebManagerReady()
 {
-	m_pLoadingManager = new C_LoadingManager();
-	m_pLoadingManager->SetHeader("Anarchy Arcade - Starting Up");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Types", "locallibrarytypes", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Models", "locallibrarymodels", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Items", "locallibraryitems", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Mounting Source Engine Games", "mounts", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Fetching Workshop Subscriptions", "work", "", "", "");
-	//m_pLoadingManager->AddMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "");
-	m_pLoadingManager->AddMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "");
-	//m_pLoadingManager->AddMessage("progress", "", "Loading Legacy Items", "legacyworkshoplibraryitems", "", "", "");
+	C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
+	g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
 
-	//m_pLoadingManager->Init();
+	unsigned int uCount;
+	std::string num;
 
-	//m_pLibretroManager = new C_LibretroManager();
-
-	//C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/welcomemenu.html", "mainmenu", false);
-	//m_pWebManager->SelectWebTab(pWebTab);
-	//m_pInputManager->ActivateInputMode(true);
-
-	//DevMsg("great fuzzy blockos\n");
-
-	//C_WebTab* pWebTab = pWebManager->CreateWebTab("http://localhost:8001/terminal.html", "metaverse");
-//}
-
-//void C_AnarchyManager::OnLoadingManagerReady()
-//{
-	// Show the loading menu
-//	C_WebTab* pWebTab = m_pWebManager->CreateWebTab("asset://ui/loading.html", "metaverse", false);
-//	m_pWebManager->SelectWebTab(pWebTab);
-//	m_pInputManager->ActivateInputMode(true);
-
-//	m_pLoadingManager->AddMessage("progress", "", "Detecting Workshop Subscriptions", "work", "0", "10", "7");
+	//pHudWebTab->SetHudTitle("Loading Stuff");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "");
+	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Items", "locallibraryitems", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Mounting Source Engine Games", "mounts", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "");
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "");
+	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Legacy Items", "legacyworkshoplibraryitems", "", "", "");
 
 	// And continue starting up
-	unsigned int uItemCount = m_pMetaverseManager->LoadAllLocalTypes();
-	std::string num = VarArgs("%u", uItemCount);
-	m_pLoadingManager->AddMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+	uCount = m_pMetaverseManager->LoadAllLocalTypes();
+	num = VarArgs("%u", uCount);
+	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
 
-	uItemCount = m_pMetaverseManager->LoadAllLocalModels();
-	num = VarArgs("%u", uItemCount);
-	m_pLoadingManager->AddMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
+
+	 //= m_pMetaverseManager->LoadAllLocalTypes();
+	//std::string num = VarArgs("%u", uItemCount);
+//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+
+	uCount = m_pMetaverseManager->LoadAllLocalModels();
+	num = VarArgs("%u", uCount);
+	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
 	
-	uItemCount = m_pMetaverseManager->LoadAllLocalApps();
-	num = VarArgs("%u", uItemCount);
-	m_pLoadingManager->AddMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
+	//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
+
+	// load ALL local apps
+	KeyValues* app = m_pMetaverseManager->LoadFirstLocalApp("MOD");
+	if (app)
+		pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
+	else
+		this->OnLoadAllLocalAppsComplete();
+
+	/*
+	while ( yar )
+		yar = m_pMetaverseManager->LoadNextLocalApp();
+	*/
+
+	//m_pMetaverseManager->LoadLocalAppClose();
+
+	//num = VarArgs("%u", uItemCount);
+	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
 
 	//uItemCount = m_pMetaverseManager->LoadAllLocalItemsLegacy();
 	//num = VarArgs("%u", uItemCount);
 	//m_pLoadingManager->AddMessage("progress", "", "Loading Items", "locallibraryitems", "0", num, num);
+	/*
+	m_pMountManager = new C_MountManager();
+	m_pMountManager->Init();
+	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
 
+	m_pWorkshopManager = new C_WorkshopManager();
+	m_pWorkshopManager->Init();
+	*/
+}
+
+void C_AnarchyManager::OnLoadAllLocalAppsComplete()
+{
 	m_pMountManager = new C_MountManager();
 	m_pMountManager->Init();
 	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
@@ -534,21 +549,24 @@ void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 
 void C_AnarchyManager::OnWorkshopManagerReady()
 {
-	//m_pWebManager->FindWebTab("mainmenu")->SetUrl("http://localhost:8001/terminal.html");
+	// mount ALL workshops
+	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
+	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
 
-	//DevMsg("Workshop manager is done, bra.\n");
+	///* do it async instead!!
+	bool result = m_pWorkshopManager->MountFirstWorkshop();
+	if (result)
+		m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "0", std::string(VarArgs("%u", m_pWorkshopManager->GetNumDetails())), "+", "mountNextWorkshopCallback");
+	else
+		this->OnMountAllWorkshopsComplete();
+	//*/
 
-	m_pWorkshopManager->MountAllWorkshops();
-	//m_pMetaverseManager->LoadAllLocalItems();
+	//m_pWorkshopManager->MountFirstWorkshop();
 }
 
-void C_AnarchyManager::OnMountedAllWorkshop()
+void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
-	m_pLoadingManager->Reset();
-
 	m_pWebManager->GetSelectedWebTab()->SetUrl("asset://ui/welcome.html");
-	g_pAnarchyManager->GetWebManager()->SelectWebTab(m_pWebManager->GetHudWebTab());
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
 }
 
 void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)

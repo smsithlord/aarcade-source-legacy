@@ -50,6 +50,7 @@ public:
 	void OnHudWebViewDocumentReady(WebView* pWebView, std::string id);
 	void OnLoadingWebViewDocumentReady(WebView* pWebView, std::string id);
 	void DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
+	void DispatchJavaScriptMethods(C_WebTab* pWebTab);
 	//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
 
 private:

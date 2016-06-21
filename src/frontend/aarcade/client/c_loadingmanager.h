@@ -23,8 +23,8 @@ public:
 	//void Init();
 	void Reset();
 
-	void SetHeader(std::string text);
-	void AddMessage(std::string type, std::string text, std::string title = "", std::string id = "", std::string min = "", std::string max = "", std::string current = "");
+	void SetHudHeader(std::string text);
+	void AddHudLoadingMessage(std::string type, std::string text, std::string title = "", std::string id = "", std::string min = "", std::string max = "", std::string current = "");
 	void CreateWebTab();
 	void OnWebTabReady();
 	void DispatchMethods();

@@ -16,7 +16,13 @@ public:
 	void OnQueryComplete(C_WorkshopQuery* pQuery);
 	bool MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails = null);
 	void AddWorkshopDetails(SteamUGCDetails_t* pDetails);
+
 	void MountAllWorkshops();
+	bool MountFirstWorkshop();
+	bool MountNextWorkshop();
+	void MountWorkshopClose();
+
+	unsigned int GetNumDetails();
 
 	// accessors
 
@@ -24,6 +30,7 @@ public:
 	
 private:
 	std::map<PublishedFileId_t, SteamUGCDetails_t*> m_details;
+	std::map<PublishedFileId_t, SteamUGCDetails_t*>::iterator m_previousMountWorkshopIterator;
 };
 
 class C_WorkshopQuery

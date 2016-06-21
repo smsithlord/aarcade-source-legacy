@@ -36,7 +36,7 @@ void C_LoadingManager::Reset()
 	}
 }
 
-void C_LoadingManager::SetHeader(std::string text)
+void C_LoadingManager::SetHudHeader(std::string text)
 {
 	LoadingMessage_t* pLoadingMessage = new LoadingMessage_t;
 	pLoadingMessage->name = "setTitle";
@@ -53,7 +53,7 @@ void C_LoadingManager::SetHeader(std::string text)
 		this->CreateWebTab();
 }
 
-void C_LoadingManager::AddMessage(std::string type, std::string text, std::string title, std::string id, std::string min, std::string max, std::string current)
+void C_LoadingManager::AddHudLoadingMessage(std::string type, std::string text, std::string title, std::string id, std::string min, std::string max, std::string current)
 {
 	LoadingMessage_t* pLoadingMessage = new LoadingMessage_t;
 	pLoadingMessage->name = "addMessage";

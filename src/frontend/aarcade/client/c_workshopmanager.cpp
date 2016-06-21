@@ -22,16 +22,14 @@ void C_WorkshopManager::Init()
 {
 	DevMsg("WorkshopManager: Init\n");
 
+	// Start the 
 	AccountID_t aid = steamapicontext->SteamUser()->GetSteamID().GetAccountID();
 	UGCQueryHandle_t hUGCQuery = steamapicontext->SteamUGC()->CreateQueryUserUGCRequest(aid, k_EUserUGCList_Subscribed, k_EUGCMatchingUGCType_Items, k_EUserUGCListSortOrder_SubscriptionDateDesc, engine->GetAppID(), engine->GetAppID(), 1);
-	//steamapicontext->SteamUGC()->SetMatchAnyTag(hUGCQuery, true);
 
 	SteamAPICall_t hAPICall = steamapicontext->SteamUGC()->SendQueryUGCRequest(hUGCQuery);
 
 	C_WorkshopQuery* pWorkshopQuery = new C_WorkshopQuery();
 	pWorkshopQuery->Init(hAPICall);
-	//CCallResult<C_WorkshopQuery, SteamUGCQueryCompleted_t> callbackUGCQueried;
-	//pWorkshopQuery->callbackUGCQueried.Set(hAPICall, pWorkshopQuery, &C_WorkshopQuery::OnUGCQueried);	// will this get removed when it falls out of scope??
 }
 
 void C_WorkshopManager::OnQueryComplete(C_WorkshopQuery* pQuery)
@@ -81,9 +79,12 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 				g_pAnarchyManager->GetWorkshopManager()->AddWorkshopDetails(pDetails);
 				DevMsg("Added %s\n", pDetails->m_rgchTitle);// %llu\n", pDetails->m_nPublishedFileId);
 
+				///*
 				std::string num = VarArgs("%u", i + previousNum + 1);
 				std::string max = VarArgs("%u", pResult->m_unTotalMatchingResults);
-				g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Fetching Workshop Subscriptions", "work", "0", max, num);
+				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "0", max, num);
+//				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "", "", "");
+				//*/
 				
 
 				/*
@@ -205,8 +206,18 @@ bool C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 
 			std::string fullPath = VarArgs("%s\\", installFolder);
 			
+			// FIXME: Actually check that this IS a legacy workshop item!! (generation < 3)
 			std::string id = VarArgs("%llu", details->m_nPublishedFileId);
 			uNumItems = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItemsLegacy(uNumModels, fullPath, id, "");
+
+			C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+			std::string num = "+" + std::string(VarArgs("%u", uNumModels));
+			pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", num);
+
+			num = "+" + std::string(VarArgs("%u", uNumItems));
+			pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", num);
+
 //			g_pFullFileSystem->AddSearchPath(installFolder, "MOD", PATH_ADD_TO_TAIL);
 			DevMsg("Mounted %s for %llu\n", installFolder, details->m_nPublishedFileId);
 		}
@@ -261,17 +272,136 @@ void C_WorkshopManager::MountAllWorkshops()
 	max = VarArgs("%u", uNumModelsTotal);
 	min = "0";
 	current = VarArgs("%u", uNumModelsTotal);
-	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", min, current, max);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", min, current, max);
 
 	max = VarArgs("%u", uNumItemsTotal);
 	min = "0";
 	current = VarArgs("%u", uNumItemsTotal);
-	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", min, current, max);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", min, current, max);
 
 	max = VarArgs("%u", legacyCount);
 	min = "0";
 	current = VarArgs("%u", legacyCount);
-	g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
 
+	g_pAnarchyManager->OnMountAllWorkshopsComplete();
+}
+
+bool C_WorkshopManager::MountFirstWorkshop()
+{
+	// start the search
+	unsigned int count = 0;
+	unsigned int legacyCount = 0;
+	bool bIsLegacy;
+	unsigned int uNumItemsTotal = 0;
+	unsigned int uNumLegacyItemsTotal = 0;
+	unsigned int uNumModelsTotal = 0;
+	unsigned int uNumLegacyModelsTotal = 0;
+
+	m_previousMountWorkshopIterator = m_details.begin();
+	if (m_previousMountWorkshopIterator != m_details.end() )
+	{
+		unsigned int uNumItems, uNumModels;
+
+		// TODO: This Mountworkshop call needs to be async!!!!!
+		// .... which means EVERYTHING before it must be async too!!!!!
+		if (this->MountWorkshop(m_previousMountWorkshopIterator->first, bIsLegacy, uNumItems, uNumModels, m_previousMountWorkshopIterator->second))
+		{
+			if (bIsLegacy)
+			{
+				legacyCount++;
+				uNumLegacyItemsTotal += uNumItems;
+				uNumLegacyModelsTotal += uNumModels;
+			}
+			else
+			{
+				count++;
+				uNumItemsTotal += uNumItems;
+				uNumModelsTotal += uNumModels;
+			}
+		}
+		else
+		{
+			DevMsg("WorkshopManager: Failed to mount workshop addon!\n");
+			return false;
+		}
+	}
+	else
+		return false;
+	/*
+	std::string max = VarArgs("%u", count);
+	std::string min = "0";
+	std::string current = VarArgs("%u", count);
+	//g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", min, current, max);
+
+	max = VarArgs("%u", uNumModelsTotal);
+	min = "0";
+	current = VarArgs("%u", uNumModelsTotal);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", min, current, max);
+
+	max = VarArgs("%u", uNumItemsTotal);
+	min = "0";
+	current = VarArgs("%u", uNumItemsTotal);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", min, current, max);
+
+	max = VarArgs("%u", legacyCount);
+	min = "0";
+	current = VarArgs("%u", legacyCount);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
+	
 	g_pAnarchyManager->OnMountedAllWorkshop();
+	*/
+	return true;
+}
+
+bool C_WorkshopManager::MountNextWorkshop()
+{
+	// continue the search
+	unsigned int count = 0;
+	unsigned int legacyCount = 0;
+	bool bIsLegacy;
+	unsigned int uNumItemsTotal = 0;
+	unsigned int uNumLegacyItemsTotal = 0;
+	unsigned int uNumModelsTotal = 0;
+	unsigned int uNumLegacyModelsTotal = 0;
+
+	m_previousMountWorkshopIterator++;
+	if (m_previousMountWorkshopIterator != m_details.end())
+	{
+		unsigned int uNumItems, uNumModels;
+		if (this->MountWorkshop(m_previousMountWorkshopIterator->first, bIsLegacy, uNumItems, uNumModels, m_previousMountWorkshopIterator->second))
+		{
+			if (bIsLegacy)
+			{
+				legacyCount++;
+				uNumLegacyItemsTotal += uNumItems;
+				uNumLegacyModelsTotal += uNumModels;
+			}
+			else
+			{
+				count++;
+				uNumItemsTotal += uNumItems;
+				uNumModelsTotal += uNumModels;
+			}
+		}
+		else
+		{
+			DevMsg("WorkshopManager: Failed to mount workshop addon!\n");
+			return false;
+		}
+	}
+	else
+		return false;
+
+	return true;
+}
+
+void C_WorkshopManager::MountWorkshopClose()
+{
+	//g_pAnarchyManager->OnMountedAllWorkshop();
+}
+
+unsigned int C_WorkshopManager::GetNumDetails()
+{
+	return m_details.size();
 }

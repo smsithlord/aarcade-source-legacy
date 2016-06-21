@@ -90,6 +90,38 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			}
 		}
 	}
+	else if (method_name == WSLit("loadNextLocalAppCallback"))
+	{
+		// FIXME: This should be done outside of the awesomeium-specific classes!!
+		C_MetaverseManager* pMetaverseManager = g_pAnarchyManager->GetMetaverseManager();
+		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		KeyValues* app = pMetaverseManager->LoadNextLocalApp();
+		if (app)
+			pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
+		else
+		{
+			pMetaverseManager->LoadLocalAppClose();
+			g_pAnarchyManager->OnLoadAllLocalAppsComplete();
+		}
+	}
+	else if (method_name == WSLit("loadLocalAppClose"))	// shouldn't really ever be called!!! (unless user abors the loading process)
+		g_pAnarchyManager->GetMetaverseManager()->LoadLocalAppClose();
+	else if (method_name == WSLit("mountNextWorkshopCallback"))
+	{
+		// FIXME: This should be done outside of the awesomeium-specific classes!!
+		C_WorkshopManager* pWorkshopManager = g_pAnarchyManager->GetWorkshopManager();
+		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		bool result = pWorkshopManager->MountNextWorkshop();
+		if (result)
+			pHudWebTab->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "0", std::string(VarArgs("%u", pWorkshopManager->GetNumDetails())), "+", "mountNextWorkshopCallback");
+		else
+		{
+			pWorkshopManager->MountWorkshopClose();
+			g_pAnarchyManager->OnMountAllWorkshopsComplete();
+		}
+	}
 }
 
 void AddSubKeys(KeyValues* kv, JSObject& object)
