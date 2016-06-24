@@ -1,6 +1,9 @@
 function ArcadeHud()
 {
 	this.platformId = "-KJvcne3IKMZQTaG7lPo";
+	this.selectedWebTab = null;
+	this.pinHudButtonElem;
+	this.returnHudButtonElem;
 	this.clickThruElem;
 	this.cursorElem;
 	this.cursorPreviewImageElem;
@@ -12,6 +15,12 @@ function ArcadeHud()
 	this.onDOMReady().then(function()
 	{
 		this.DOMReady = true;
+
+		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
+		this.returnHudButtonElem = document.body.querySelector("#returnHudButton");
+		
+		aaapi.system.requestActivateInputMode();
+
 		this.helpElem = document.createElement("div");
 		this.helpElem.className = "helpContainer";
 		this.hudLoadingMessagesContainer = document.createElement("div");
@@ -115,6 +124,49 @@ function ArcadeHud()
 		this.dispatchHudLoadingMessages();
 	}.bind(this));
 }
+
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned)
+{
+	isFullscreen = parseInt(isFullscreen);
+	isHudPinned = parseInt(isHudPinned);
+
+	if( isHudPinned )
+	{
+		this.pinHudButtonElem.style.display = "none";
+		this.returnHudButtonElem.style.display = "inline-block";
+	}
+	else
+	{
+		this.pinHudButtonElem.style.display = "inline-block";
+		this.returnHudButtonElem.style.display = "none";
+	}
+
+	if( isFullscreen )
+		this.cursorImageElem.style.display = "none";
+	else
+		this.cursorImageElem.style.display = "block";
+
+
+/*
+	var selectedWebTab = aaapi.system.getSelectedWebTab();
+	if( selectedWebTab && (!this.selectedWebTab || selectedWebTab.id !== this.selectedWebTab.id) )
+	{
+		if( !selectedWebTab || selectedWebTab.id === "hud" )
+			document.body.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+		else
+			document.body.style.backgroundColor = "transparent";
+
+		if( isHudPinned )
+			this.pinHudButtonElem.style.display = "none";
+		else
+			this.pinHudButtonElem.style.display = "table-cell";
+
+		this.selectedWebTab = selectedWebTab;
+	}
+	*/
+
+//	document.body.style.backgroundColor = "transparent";
+};
 
 ArcadeHud.prototype.setHudTitle = function(text)
 {
@@ -260,7 +312,7 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 	{
 		if( isNewMsg )
 			this.hudLoadingMessagesContainer.scrollTop = this.hudLoadingMessagesContainer.scrollHeight;
-		
+
 		this.helpElem.style.display = "block";
 	}
 };

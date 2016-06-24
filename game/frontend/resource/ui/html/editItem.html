@@ -11,11 +11,6 @@
 			<div class="hudHeaderRow">
 				<div class="hudHeaderCell" style="text-align: left;">
 					<div class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
-							<img src="asset://ui/return.png" /> Return
-						</div>
-					</div>
-					<div class="hudHeaderButtonContainer">
 						<div class="hudHeaderButton helpNote" help="Go back to the previous menu." onclick="window.location='asset://ui/items.html';">
 							<img src="asset://ui/backarrow.png" /> Back
 						</div>
@@ -27,9 +22,14 @@
 					</div>
 				</div>
 				<div class="hudHeaderCell" style="text-align: right;">
-					<div class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode();">
-							Input&nbsp;&nbsp;<img src="asset://ui/inputicon.png" />
+					<div id="pinHudButton" class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
+							Pin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
+						</div>
+					</div>
+					<div id="returnHudButton"class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
+							Unpin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
 						</div>
 					</div>
 				</div>

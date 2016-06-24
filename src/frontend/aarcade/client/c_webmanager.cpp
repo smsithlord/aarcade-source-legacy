@@ -29,6 +29,7 @@ C_WebManager::C_WebManager()
 	m_pWebBrowser = null;
 	m_pWebSurfaceRegen = null;
 	m_pSelectedWebTab = null;
+	m_pFocusedWebTab = null;
 	m_pHudWebTab = null;
 	m_bHudReady = false;
 }
@@ -153,12 +154,33 @@ void C_WebManager::SetMaterialWebTabId(IMaterial* pMaterial, std::string id)
 	m_materialWebTabIds[pMaterial] = id;
 }
 
+void C_WebManager::FocusWebTab(C_WebTab* pWebTab)
+{
+	if (m_pFocusedWebTab)
+		this->UnfocusWebTab(m_pFocusedWebTab);
+
+	m_pFocusedWebTab = pWebTab;
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FocusWebTab(pWebTab);
+}
+
+void C_WebManager::UnfocusWebTab(C_WebTab* pWebTab)
+{
+	if (m_pFocusedWebTab != pWebTab)
+		return;
+
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->UnfocusWebTab(pWebTab);
+	m_pFocusedWebTab = null;
+}
+
 void C_WebManager::SelectWebTab(C_WebTab* pWebTab)
 {
 	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
 
 	m_pSelectedWebTab = pWebTab;
-	m_pWebBrowser->OnSelectWebTab(pWebTab);
+
+	// give focus to the newly selected web tab
+	this->FocusWebTab(pWebTab);
+	//m_pWebBrowser->OnSelectWebTab(pWebTab);
 
 	/*
 	IMaterial* pMaterial = vgui::CInputSlate::s_pMaterial;
@@ -185,7 +207,8 @@ void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 {
 	m_pSelectedWebTab = null;
 	pWebTab->MouseMove(0.5, 0.5);
-	m_pWebBrowser->OnDeselectWebTab(pWebTab);
+	this->UnfocusWebTab(pWebTab);
+	//m_pWebBrowser->OnDeselectWebTab(pWebTab);
 
 	g_pAnarchyManager->GetInputManager()->SetInputListener(null, LISTENER_NONE);
 	/*
@@ -228,20 +251,13 @@ void C_WebManager::OnHudWebTabReady()// Created()
 	g_pAnarchyManager->OnWebManagerReady();
 }
 
-void C_WebManager::OnLoadingWebTabReady()
+void C_WebManager::OnActivateInputMode(bool bFullscreenMode)
 {
-	/*
-	C_LoadingManager* pLoadingManager = g_pAnarchyManager->GetLoadingManager();
-	if (pLoadingManager)
-		pLoadingManager->OnWebTabReady();
-	*/
-
-
-
-
-
-
-	//g_pAnarchyManager->OnLoadingManagerReady();
+	// notify the HUD that input mode has been activated (so it can update its "input lock/pin" button mostly)
+	std::vector<std::string> args;
+	args.push_back(VarArgs("%i", (bFullscreenMode)));
+	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));	// FIXME: There will probably be other ways for the HUD to be pinned, such as pressing ESC to bring it up.
+	this->DispatchJavaScriptMethod(m_pHudWebTab, "arcadeHud", "onActivateInputMode", args);
 }
 
 void C_WebManager::RemoveWebTab(C_WebTab* pWebTab)
@@ -401,13 +417,15 @@ void C_WebManager::OnMouseRelease(vgui::MouseCode code)
 void C_WebManager::OnKeyCodePressed(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
 	// these events are always for the selected web tab
-	m_pSelectedWebTab->KeyCodePress(code, bShiftState, bCtrlState, bAltState);
+//	m_pSelectedWebTab->KeyCodePress(code, bShiftState, bCtrlState, bAltState);
+	m_pFocusedWebTab->KeyCodePress(code, bShiftState, bCtrlState, bAltState);
 }
 
 void C_WebManager::OnKeyCodeReleased(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
 	// these events are always for the selected web tab
-	m_pSelectedWebTab->KeyCodeRelease(code, bShiftState, bCtrlState, bAltState);
+	//m_pSelectedWebTab->KeyCodeRelease(code, bShiftState, bCtrlState, bAltState);
+	m_pFocusedWebTab->KeyCodeRelease(code, bShiftState, bCtrlState, bAltState);
 }
 
 void C_WebManager::DispatchJavaScriptMethod(C_WebTab* pWebTab, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)

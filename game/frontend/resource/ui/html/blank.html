@@ -3,7 +3,7 @@
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
 	</head>
-	<body>
+	<body style="background-color: transparent;">
 		<div class="hudHeaderContainer">
 			<div class="hudHeaderRow">
 				<div class="hudHeaderCell" style="text-align: right;">
@@ -24,24 +24,6 @@
 					</div>
 				</div>
 			</div>
-		</div>
-
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell"></div>
-					<div class="hudContentHeaderCell">
-						Main
-					</div>
-					<div class="hudContentHeaderCell hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open."><img src="asset://ui/xicon.png" /></div>
-				</div>
-			</div>
-
-			<div class="mainButton" helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map and begin your adventure!">Play</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/library.html';" help="Browse & manage your personal library.">Library</div>
-			<div class="mainButton disabledButton">Metaverse</div>
-			<div class="mainButton disabledButton">Options</div>
-			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">Reload</a>

@@ -20,6 +20,8 @@ public:
 	// accessors
 	bool GetInputMode() { return m_bInputMode; }
 	bool GetFullscreenMode() { return m_bFullscreenMode; }
+	bool GetForceInputMode() { return m_bForcedInputMode; }
+	bool GetWasForceInputMode() { return m_bWasForcedInputMode; }
 
 	void SetInputListener(void* pInputListener, listener_t type);
 	void ActivateInputMode(bool bFullscreen = false);
@@ -32,6 +34,7 @@ public:
 	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	
 private:
+	bool m_bWasForcedInputMode;
 	bool m_bForcedInputMode;
 	bool m_bInputMode;
 	bool m_bFullscreenMode;

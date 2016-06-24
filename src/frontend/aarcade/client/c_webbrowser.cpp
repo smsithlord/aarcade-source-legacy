@@ -147,14 +147,14 @@ C_WebTab* C_WebBrowser::FindWebTab(WebView* pWebView)
 	return null;
 }
 
-void C_WebBrowser::OnSelectWebTab(C_WebTab* pWebTab)
+void C_WebBrowser::FocusWebTab(C_WebTab* pWebTab)
 {
 	WebView* pWebView = FindWebView(pWebTab);
 	if (pWebView)
 		pWebView->Focus();
 }
 
-void C_WebBrowser::OnDeselectWebTab(C_WebTab* pWebTab)
+void C_WebBrowser::UnfocusWebTab(C_WebTab* pWebTab)
 {
 	WebView* pWebView = FindWebView(pWebTab);
 	if (pWebView)
@@ -913,6 +913,8 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("forceInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("hudMouseDown"), false);
 	systemObject.SetCustomMethod(WSLit("hudMouseUp"), false);
+	systemObject.SetCustomMethod(WSLit("getSelectedWebTab"), true);
+	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));

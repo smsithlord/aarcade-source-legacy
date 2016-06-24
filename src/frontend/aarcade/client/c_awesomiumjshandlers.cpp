@@ -242,7 +242,28 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		}
 
 		if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+		{
+			if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != pWebTab)
+				g_pAnarchyManager->GetWebManager()->FocusWebTab(pWebTab);
+
 			pWebTab->MousePress(button);
+		}
+		else if (!bPassThru)
+		{
+			if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+				g_pAnarchyManager->GetWebManager()->FocusWebTab(g_pAnarchyManager->GetWebManager()->GetHudWebTab());
+		}
+	}
+	else if (method_name == WSLit("requestActivateInputMode"))
+	{
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+		if (!pWebTab)
+			return;
+
+		std::vector<std::string> params;
+		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
+		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
+		g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
 	}
 }
 
@@ -540,6 +561,19 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 
 		return response;
+	}
+	else if (method_name == WSLit("getSelectedWebTab"))
+	{
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+
+		if (pWebTab)
+		{
+			JSObject response;
+			response.SetProperty(WSLit("id"), WSLit(pWebTab->GetId().c_str()));
+			return response;
+		}
+		
+		return JSValue(null);
 	}
 	else
 		return WSLit("0");

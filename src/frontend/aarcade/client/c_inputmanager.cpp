@@ -13,6 +13,7 @@ C_InputManager::C_InputManager()
 	DevMsg("InputManager: Constructor\n");
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
+	m_bWasForcedInputMode = false;
 	m_bFullscreenMode = false;
 	m_pInputListener = null;
 }
@@ -34,6 +35,7 @@ void C_InputManager::ForceInputMode()
 		return;
 
 	m_bForcedInputMode = true;
+	m_bWasForcedInputMode = true;
 }
 
 void C_InputManager::ActivateInputMode(bool bFullscreen)
@@ -51,6 +53,9 @@ void C_InputManager::ActivateInputMode(bool bFullscreen)
 
 	//ShowCursor(true);
 	InputSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
+
+	g_pAnarchyManager->GetWebManager()->OnActivateInputMode(m_bFullscreenMode);
+
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_GAMEDLL));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_TOOLS));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_INGAMESCREENS));
@@ -77,6 +82,7 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
+	m_bWasForcedInputMode = false;
 	m_bFullscreenMode = false;
 	//ShowCursor(false);
 	InputSlate->Destroy();

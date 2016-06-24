@@ -22,6 +22,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
 	SetParent( parent );
 
+	m_bCursorAlphaZero = false;
 	m_bCursorHidden = false;
 
 //	m_pWebViewManager = C_AnarchyManager::GetSelf()->GetWebViewManager();
@@ -87,13 +88,12 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pImagePanel->SetImage("hudwebtab");
 	}
 //	else
-	/*
+
 	if ( !m_bFullscreen)
 	{
-		ivgui()->AddTickSignal(this->GetVPanel(), 1);
+		m_bCursorHidden = true;
 		ShowCursor(false);
 	}
-	*/
 
 	// for opacity
 	ivgui()->AddTickSignal(this->GetVPanel());
@@ -116,23 +116,32 @@ void CInputSlate::OnTick()
 void CInputSlate::OnTick()
 {
 	bool bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
-	if (!bFullscreen && !m_bCursorHidden )
+	if (!bFullscreen && !m_bCursorAlphaZero)
 	{
 		if (GetAlpha() > 0)
 			SetAlpha(0);
 		else
 		{
 			DevMsg("hiding cursor\n");
-			m_bCursorHidden = true;
-			ShowCursor(false);
+			m_bCursorAlphaZero = true;
+
+			if (!m_bCursorHidden)
+			{
+				m_bCursorHidden = true;
+				ShowCursor(false);
+			}
 		}
 	}
-	else if (bFullscreen && m_bCursorHidden )
+	else if (bFullscreen && m_bCursorAlphaZero)
 	{
 		DevMsg("showing cursor\n");
 		SetAlpha(255);
-		m_bCursorHidden = false;
-		ShowCursor(true);
+		m_bCursorAlphaZero = false;
+		if (m_bCursorHidden)
+		{
+			m_bCursorHidden = false;
+			ShowCursor(true);
+		}
 	}
 	//else
 		//ivgui()->RemoveTickSignal(this->GetVPanel());
