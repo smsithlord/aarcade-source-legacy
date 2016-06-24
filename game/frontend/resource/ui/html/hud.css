@@ -106,23 +106,34 @@ body
 .hudHeaderContainer
 {
 	display: table;
-	height: 45px;
 	width: 100%;
-	border-collapse: separate;
-	border-spacing: 0px 0px;
+	position: relative;
+	top: -65px;
+	-webkit-transition: top 0.3s ease-in-out;
 }
 
-.hudHeaderRow
+.hudHeaderNavigationContainer
 {
-	display: table-row;
+	display: table;
+	width: 90%;
+	background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+	border-radius: 0 0 10px 10px;
+	border: 2px solid #ccc;
+	border-top: 0;
+	margin-bottom: -2px;
+	margin-left: auto;
+	margin-right: auto;
+	height: 60px;
 }
 
-.hudHeaderCell
+.hudHeaderContainerTable
 {
-	white-space: nowrap;
-	width: 33%;
-	display: table-cell;
+	pointer-events: none;
+	width: 100%;
+	display: table;
+	text-align: center;
 	font-size: 26px;
+	/*
 	background-color: rgba(50, 50, 50, 0.9);
 	text-align: center;
 	vertical-align: middle;
@@ -132,6 +143,21 @@ body
 	text-shadow: 2px 2px 2px #000;
 	font-weight: bold;
 	border-bottom: 3px solid rgba(0, 0, 0, 1.0);
+	*/
+	border-collapse: separate;
+	border-spacing: 0 0;
+}
+
+.hudHeaderContainerRow
+{
+	display: table-row;
+}
+
+.hudHeaderContainerCell
+{
+	display: table-cell;
+	vertical-align: top;
+	width: 33%;
 }
 
 .hudHeaderButtonContainer
@@ -139,29 +165,30 @@ body
 	display: inline-block;
 	padding-left: 5px;
 	padding-right: 5px;
-	vertical-align: middle;
+	text-align: center;
+	vertical-align: top;
+	font-family: Arial;
 }
 
 .hudHeaderButton
 {
 	display: table-cell;
+	pointer-events: auto;
 	vertical-align: middle;
-	/*height: 50px;*/
 	font-size: 20px;
 	white-space: nowrap;
 	background-color: rgba(150, 150, 150, 0.5);
-	border-radius: 4px;
+	border-radius: 0 0 10px 10px;
 	border: 2px solid #ccc;
 	text-align: center;
-	/*
-	padding-top: 5px;
-	padding-bottom: 5px;
-	*/
 	padding-left: 15px;
 	padding-right: 15px;
+	padding-top: 2px;
+	padding-bottom: 4px;
 	font-style: italic;
 	text-shadow: 2px 2px 2px #000;
 	font-weight: bold;
+	-webkit-box-shadow: 3px 5px 8px #000;
 }
 
 .hudHeaderButton img
@@ -174,9 +201,20 @@ body
 	background-color: rgba(150, 150, 150, 0.8);
 }
 
+.hudHeaderButtonOn
+{
+	background-color: rgba(250, 50, 50, 0.7);
+}
+
+.hudHeaderButtonOn:hover
+{
+	background-color: rgba(250, 50, 50, 1.0);
+}
+
 .hudContent
 {
-/*	border: 3px solid #000;*/
+	-webkit-box-shadow: 3px 5px 8px #000;
+	border-radius: 10px;
 	background-color: rgba(0, 0, 0, 0.9);
 	margin-left: auto;
 	margin-right: auto;
@@ -188,11 +226,13 @@ body
 
 .hudContentHeader
 {
+	border-radius: 10px 10px 0 0;
 	display: table;
 	white-space: nowrap;
 	width: 100%;
 	font-size: 26px;
-	background-color: rgba(50, 50, 50, 0.9);
+	/*background-color: rgba(50, 50, 50, 0.9);*/
+	background-color: rgba(250, 50, 50, 0.7);
 	text-align: center;
 	vertical-align: middle;
 	font-family: Arial;
@@ -234,19 +274,24 @@ body
 	text-align: center;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.5);
-	border: 2px solid transparent;
+	/*border: 2px solid transparent;*/
 }
 
 .hudContentHeaderButton:hover
 {
-	background-color: rgba(100, 100, 100, 0.5);
-	border: 2px solid #999;	
+	background-color: rgba(250, 50, 50, 0.9);
+	/*border: 2px solid #fff;	*/
 }
 
-.hudContentHeaderButton:nth-of-type(2)
+.hudContentHeaderButton:nth-of-type(1)
 {
+	border-radius: 10px 0 0 0;
+}
+
+.hudContentHeaderButton:nth-of-type(3)
+{
+	border-radius: 0px 10px 0 0;
 	text-align: center;
-	text-align: right;
 }
 
 /*
@@ -280,7 +325,7 @@ body
 
 #mapsContainer::-webkit-scrollbar-track
 {
-	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7); 
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
 	border-radius: 10px;
 	background-color: rgba(100, 100, 100, 0.7);
 }
@@ -288,7 +333,7 @@ body
 #mapsContainer::-webkit-scrollbar-thumb
 {
 	border-radius: 10px;
-	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1); 
+	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
 	background-color: #777;
 }
 
@@ -354,7 +399,7 @@ body
 
 .hudLoadingMessagesContainer::-webkit-scrollbar-track
 {
-	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7); 
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
 	border-radius: 10px;
 	background-color: rgba(100, 100, 100, 0.7);
 }
@@ -362,7 +407,7 @@ body
 .hudLoadingMessagesContainer::-webkit-scrollbar-thumb
 {
 	border-radius: 10px;
-	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1); 
+	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
 	background-color: #777;
 }
 
@@ -542,7 +587,7 @@ body
 
 .popupMenuItems::-webkit-scrollbar-track
 {
-	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7); 
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
 	border-radius: 10px;
 	background-color: rgba(100, 100, 100, 0.7);
 }
@@ -550,7 +595,7 @@ body
 .popupMenuItems::-webkit-scrollbar-thumb
 {
 	border-radius: 10px;
-	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1); 
+	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
 	background-color: #777;
 }
 
@@ -601,6 +646,11 @@ body
 	margin-right: auto;
 }
 
+.librarySearchContainer:nth-of-type(2)
+{
+	border-radius: 0 0 10px 10px;
+}
+
 .librarySearchContainer input
 {
 	width: 50%;
@@ -633,24 +683,22 @@ body
 .libraryItemType
 {
 	display: inline-block;
-	/*
-	float: right;
-	text-align: right;
-	*/
 	color: #999;
 	font-style: italic;
 	width: 10%;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
+	text-shadow: 2px 2px 2px #000;
+	font-size: 16px;
 }
 
 .libraryItemTitle
 {
 	display: inline-block;
-	width: 90%;
 	white-space: normal;
 	word-wrap: break-word;
+	width: 88%;
 	text-shadow: 2px 2px 2px #000;
 }
 
@@ -664,6 +712,8 @@ body
 	/*padding: 4px;*/
 	width: 100%;
 	height: 100%;
+	/*height: 80%;
+	max-height: 100%;*/
 /*	margin-left: auto;
 	margin-right: auto;*/
 	overflow-y: scroll;
@@ -682,7 +732,7 @@ body
 
 #libraryContainer::-webkit-scrollbar-track
 {
-	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7); 
+	-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
 	border-radius: 10px;
 	background-color: rgba(100, 100, 100, 0.7);
 }
@@ -690,7 +740,7 @@ body
 #libraryContainer::-webkit-scrollbar-thumb
 {
 	border-radius: 10px;
-	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1); 
+	-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
 	background-color: #777;
 }
 
@@ -704,19 +754,21 @@ body
 	padding: 2px;
 }
 
-#libraryContainer .libraryItemContainer
+.libraryItemContainer
 {
-	white-space: nowrap;
+	width: 100%;
 }
 
 #libraryContainer .libraryItemContainer:nth-of-type(even)
 {
 	background-color: rgba(0, 0, 0, 0.5);
+	padding: 4px;
 }
 
 #libraryContainer .libraryItemContainer:nth-of-type(odd)
 {
 	background-color: rgba(50, 50, 50, 0.5);/*0.7);*/
+	padding: 4px;
 }
 
 #loadingImage
@@ -735,7 +787,7 @@ body
 {
 	position: absolute;
 	top: 0;
-	right: 400px;
+	right: 0;
 }
 
 #pinHudButton

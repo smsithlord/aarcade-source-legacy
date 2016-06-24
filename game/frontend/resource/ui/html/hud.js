@@ -125,6 +125,16 @@ function ArcadeHud()
 	}.bind(this));
 }
 
+ArcadeHud.prototype.expandAddressMenu = function()
+{
+	var elem = document.body.querySelector(".hudHeaderContainer");
+
+	if( elem.style.top != "0px" )
+		elem.style.top = "0px";
+	else
+		elem.style.top = "-65px";
+};
+
 ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned)
 {
 	isFullscreen = parseInt(isFullscreen);
