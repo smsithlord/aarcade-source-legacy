@@ -7,7 +7,34 @@
 		</script>
 	</head>
 	<body>
-		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/items.html';">Back</div>Library / Items / Edit</div>
+		<div class="hudHeaderContainer">
+			<div class="hudHeaderRow">
+				<div class="hudHeaderCell" style="text-align: left;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
+							<img src="asset://ui/return.png" /> Return
+						</div>
+					</div>
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Go back to the previous menu." onclick="window.location='asset://ui/items.html';">
+							<img src="asset://ui/backarrow.png" /> Back
+						</div>
+					</div>
+				</div>
+				<div class="hudHeaderCell">
+					<div>
+						Library / Items / Edit
+					</div>
+				</div>
+				<div class="hudHeaderCell" style="text-align: right;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode();">
+							Input&nbsp;&nbsp;<img src="asset://ui/inputicon.png" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 
 		<br />
 

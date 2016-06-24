@@ -21,6 +21,8 @@ public:
 	void Init();
 	void Update();
 
+	void ReleaseWebView(C_WebTab* pWebTab);
+
 	void CreateWebView(C_WebTab* pWebTab);
 	WebView* FindWebView(C_WebTab* pWebTab);
 	C_WebTab* FindWebTab(WebView* pWebView);

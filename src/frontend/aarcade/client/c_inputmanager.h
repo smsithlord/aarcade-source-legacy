@@ -23,7 +23,8 @@ public:
 
 	void SetInputListener(void* pInputListener, listener_t type);
 	void ActivateInputMode(bool bFullscreen = false);
-	void DeactivateInputMode();
+	void ForceInputMode();
+	void DeactivateInputMode(bool bForce = false);
 	void MouseMove(float x, float y);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
@@ -31,6 +32,7 @@ public:
 	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	
 private:
+	bool m_bForcedInputMode;
 	bool m_bInputMode;
 	bool m_bFullscreenMode;
 	//float m_fMouseX;

@@ -230,18 +230,28 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 void C_WorkshopManager::OnMountWorkshopFail()
 {
 	// before 
+	//this->OnMountWorkshopSucceed();
+	//this->MountWorkshopClose();
 	g_pAnarchyManager->GetMetaverseManager()->OnMountAllWorkshopsCompleted();
-	this->MountWorkshopClose();
 }
 
 void C_WorkshopManager::OnMountWorkshopSucceed()
 {
+	g_pAnarchyManager->GetMetaverseManager()->ResolveLoadLocalItemLegacyBuffer();
+
 	if (g_pAnarchyManager->GetMetaverseManager()->GetPreviousLocaLocalItemLegacyWorkshopIds() != "")
+	{
+		// DON'T CALL THIS UNTIL AFTER MAPS ARE LOADED TOO!! (only items have been loaded so far)
+		// wellll, maybe its OK to to call it now.  maps should be loaded LAST, after everything else is already in.
 		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+", "mountNextWorkshopCallback");
+	}
 	else
 	{
-		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "1");
-		g_pAnarchyManager->GetMetaverseManager()->ResolveLoadLocalItemLegacyBuffer();
+		//g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "1");
+//		g_pAnarchyManager->GetMetaverseManager()->ResolveLoadLocalItemLegacyBuffer();
+		g_pAnarchyManager->GetMetaverseManager()->DetectAllMaps();
+//		g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
+//		g_pAnarchyManager->OnMountAllWorkshopsComplete();
 	}
 }
 

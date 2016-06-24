@@ -14,15 +14,18 @@ C_WebManager::C_WebManager()
 {
 	DevMsg("WebManager: Constructor\n");
 	m_iState = 0;	// uninitialized
-	//m_iWebSurfaceWidth = 1280;
-	//m_iWebSurfaceHeight = 720;
-	m_iWebSurfaceWidth = 1920;
-	m_iWebSurfaceHeight = 1080;
-	m_bHudPriority = false;
-	m_bSelectedPriority = false;
+	m_iWebSurfaceWidth = 1280;
+	m_iWebSurfaceHeight = 720;
+	//m_iWebSurfaceWidth = 1920;
+	//m_iWebSurfaceHeight = 1080;
+	m_bHudPriority = true;// false;
+	m_bSelectedPriority = true;// false;
 	m_iVisibleWebTabsLastFrame = -1;
+	m_iVisiblePriorityWebTabsLastFrame = -1;
 	m_iVisibleWebTabsCurrentFrame = 0;
+	m_iVisiblePriorityWebTabsCurrentFrame = 0;
 	m_iLastRenderedFrame = -1;
+	m_iLastPriorityRenderedFrame = -1;
 	m_pWebBrowser = null;
 	m_pWebSurfaceRegen = null;
 	m_pSelectedWebTab = null;
@@ -43,6 +46,16 @@ C_WebManager::~C_WebManager()
 
 	if (m_pWebBrowser)
 		delete m_pWebBrowser;
+
+	delete m_pWebSurfaceRegen;
+
+	CWebSurfaceProxy* pProxy;
+	while (!m_webSurfaceProxies.empty())
+	{
+		pProxy = m_webSurfaceProxies[m_webSurfaceProxies.size() - 1];
+		pProxy->Release();
+		m_webSurfaceProxies.pop_back();
+	}
 }
 
 void C_WebManager::Init()
@@ -65,11 +78,28 @@ void C_WebManager::Update()
 	m_iVisibleWebTabsLastFrame = m_iVisibleWebTabsCurrentFrame;
 	m_iVisibleWebTabsCurrentFrame = 0;
 
+	m_iVisiblePriorityWebTabsLastFrame = m_iVisiblePriorityWebTabsCurrentFrame;
+	m_iVisiblePriorityWebTabsCurrentFrame = 0;
+
 	// Update the browser, if it exists
 	if (m_pWebBrowser)
 		m_pWebBrowser->Update();
 
+	// assume that the hud and selected web tabs are priority
+	if (m_pSelectedWebTab)
+	{
+		m_pSelectedWebTab->OnProxyBind();
+		g_pAnarchyManager->GetWebManager()->IncrementVisiblePriorityWebTabsCurrentFrame();
+	}
+	
+	if (m_pHudWebTab && m_pHudWebTab != m_pSelectedWebTab && g_pAnarchyManager->GetInputManager()->GetInputMode())
+	{
+		m_pHudWebTab->OnProxyBind();
+		g_pAnarchyManager->GetWebManager()->IncrementVisiblePriorityWebTabsCurrentFrame();
+	}
+
 	// FIXME: the selected web tab always renders
+	/*
 	if (m_pSelectedWebTab)
 	{
 		m_pSelectedWebTab->OnProxyBind();
@@ -77,15 +107,19 @@ void C_WebManager::Update()
 		if (!m_bSelectedPriority)
 			g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 	}
+	*/
 
 	// FIXME: the hud web tab always renders
-	if (m_pHudWebTab && m_pHudWebTab != m_pSelectedWebTab && m_pSelectedWebTab)
+	//if (m_pHudWebTab && m_pHudWebTab != m_pSelectedWebTab && m_pSelectedWebTab)
+	/*
+	if (m_pHudWebTab && g_pAnarchyManager->GetInputManager()->GetInputMode())
 	{
 		m_pHudWebTab->OnProxyBind();
 
 		if ( !m_bHudPriority )
 			g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 	}
+	*/
 }
 
 C_WebTab* C_WebManager::FindWebTab(std::string id)
@@ -166,6 +200,21 @@ void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 		vgui::CInputSlate::s_pOriginalTexture = null;
 	}
 	*/
+}
+
+void C_WebManager::LevelShutdownPreEntity()
+{
+	// close all webtabs except for important ones
+	C_WebTab* victim;
+	std::map<std::string, C_WebTab*>::iterator it = m_webTabs.begin();
+	while (it != m_webTabs.end())
+	{
+		victim = it->second;
+		it++;
+
+		if (victim != m_pHudWebTab)
+			RemoveWebTab(victim);
+	}
 }
 
 void C_WebManager::OnBrowserInitialized()
@@ -251,33 +300,80 @@ CWebSurfaceRegen* C_WebManager::GetOrCreateWebSurfaceRegen()
 	return m_pWebSurfaceRegen;
 }
 
+bool C_WebManager::IsPriorityWebTab(C_WebTab* pWebTab)
+{
+	return (pWebTab == m_pHudWebTab && this->GetHudPriority()) || (pWebTab == m_pSelectedWebTab && this->GetSelectedPriority());
+}
 
 bool C_WebManager::ShouldRender(C_WebTab* pWebTab)
 {
-	//DevMsg("WebManager: ShouldRender\n");
-	//if (pWebTab == m_pHudWebTab)//|| pWebTab == g_pAnarchyManager->GetWebManager()->GetSelectedWebTab())
-	//{
-	//	if (m_pSelectedWebTab)
-//			return true;
-	//	else
-	//		return false;
-//	}
+	// don't render more than 1 web tab per frame
+	if (m_iLastRenderedFrame == gpGlobals->framecount || m_iLastPriorityRenderedFrame == gpGlobals->framecount)
+		return false;
 
-	/*
-	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
-	if (pLibretroInstance)
+	bool bIsPriorityWebTab = this->IsPriorityWebTab(pWebTab);
+	if (bIsPriorityWebTab)
 	{
-		LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
-		if (info->processingaudio)
-			return false;
-	}
-	*/
+//		DevMsg("num priority web views: %i\n", m_iVisiblePriorityWebTabsLastFrame);
+		int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
+		//int iLastPriorityRenderedFrame = pWebTab->GetLastRenderedFrame();
+		//SetLastPriorityRenderedFrame
+		// we are a priority web tab
 
-	int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
-	//DevMsg("Last Frame: %i\n", m_iVisibleWebTabsLastFrame);
-	//if (m_iLastRenderedFrame != gpGlobals->framecount && (pWebTab == m_pHudWebTab || iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
-	if (m_iLastRenderedFrame != gpGlobals->framecount && (iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame))
-		return true;
+		/*
+		// don't render if there are still regular web tabs waiting to render
+		if (gpGlobals->framecount - m_iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)
+			return false;
+		*/
+
+		// always render the 1st time
+		if (iLastRenderedFrame <= 0)
+			return true;
+
+		// render if we're the only visible (priority) web tab
+	//	if (m_iVisiblePriorityWebTabsLastFrame <= 1)
+	//		return true;
+
+		// render if we've waited long enough for all other (priority) web views to render
+
+		// Need to wait an extra tick if there are any non-priority web tabs waiting.
+		int iExtraOne = 0;
+		if (m_iVisibleWebTabsLastFrame > 0)
+			iExtraOne = 1;
+
+		if (gpGlobals->framecount - iLastRenderedFrame >= m_iVisiblePriorityWebTabsLastFrame + iExtraOne)
+			return true;
+	}
+	else
+	{
+		//DevMsg("num priority web views: %i\n", m_iVisiblePriorityWebTabsLastFrame);
+		int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
+
+	//	int frameCount = m_iLastPriorityRenderedFrame;// gpGlobals->framecount - m_iLastPriorityRenderedFrame;
+		// we are a regular web tab
+
+		// don't render if there are still priority web tabs waiting to render
+	//	if (m_iVisiblePriorityWebTabsLastFrame > 0 && frameCount - m_iLastPriorityRenderedFrame >= m_iVisiblePriorityWebTabsLastFrame)
+		//	return false;
+
+		// always render the 1st time
+		if (iLastRenderedFrame <= 0)
+			return true;
+
+		// render if we're the only visible (regular) web tab
+	//	if (m_iVisibleWebTabsLastFrame <= 1)
+	//		return true;
+
+		// render if we've waited long enough for all other (regular) web views to render
+		//if (frameCount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)
+		if (m_iVisiblePriorityWebTabsLastFrame > 0 && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= m_iVisiblePriorityWebTabsLastFrame + m_iVisibleWebTabsLastFrame - 1)
+			return true;
+		else if (m_iVisiblePriorityWebTabsLastFrame <= 0 && gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)
+			return true;
+	}
+
+//	if (m_iLastRenderedFrame != gpGlobals->framecount && (iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || ((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || (((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)))
+//		return true;
 
 	return false;
 }
@@ -291,13 +387,15 @@ void C_WebManager::OnMouseMove(float fXAmount, float fYAmount)
 void C_WebManager::OnMousePress(vgui::MouseCode code)
 {
 	// these events are always for the selected web tab
-	m_pSelectedWebTab->MousePress(code);
+	//m_pSelectedWebTab->MousePress(code);
+	m_pHudWebTab->MousePress(code);
 }
 
 void C_WebManager::OnMouseRelease(vgui::MouseCode code)
 {
 	// these events are always for the selected web tab
-	m_pSelectedWebTab->MouseRelease(code);
+	//m_pSelectedWebTab->MouseRelease(code);
+	m_pHudWebTab->MouseRelease(code);
 }
 
 void C_WebManager::OnKeyCodePressed(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState)
@@ -328,4 +426,7 @@ void C_WebManager::DispatchJavaScriptMethods(C_WebTab* pWebTab)
 	m_pWebBrowser->DispatchJavaScriptMethods(pWebTab);
 }
 
-//void DispatchJavaScriptMethodBatch(C_WebTab* pWebTab, std::vector<MethodBatch_t*> batch);
+void C_WebManager::RegisterProxy(CWebSurfaceProxy* pProxy)
+{
+	m_webSurfaceProxies.push_back(pProxy);
+}

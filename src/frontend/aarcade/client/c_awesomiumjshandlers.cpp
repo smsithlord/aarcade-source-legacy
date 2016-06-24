@@ -145,6 +145,105 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			//pWorkshopManager->OnMountWorkshopSucceed();
 	//	}
 	}
+	else if (method_name == WSLit("detectNextMapCallback"))
+	{
+		bool bAlreadyExists = false;
+		KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->DetectNextMap(bAlreadyExists);
+		if (map)
+		{
+			if( bAlreadyExists )
+				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+0", "detectNextMapCallback");
+			else
+				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+", "detectNextMapCallback");
+		}
+		else
+			g_pAnarchyManager->GetMetaverseManager()->OnDetectAllMapsCompleted();
+
+	//	C_WorkshopManager* pWorkshopManager = g_pAnarchyManager->GetWorkshopManager();
+		//C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		//pWorkshopManager->MountNextWorkshop();
+	}
+	else if (method_name == WSLit("loadMap"))
+	{
+
+		std::string mapId = WebStringToCharString(args[0].ToString());
+		KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->GetMap(mapId);
+		KeyValues* active = map->FindKey("current");
+		if (!active)
+			active = map->FindKey("local", true);
+
+		std::string mapName = active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
+		mapName = mapName.substr(0, mapName.length() - 4);
+		engine->ClientCmd(VarArgs("map %s\n", mapName.c_str()));
+	}
+	else if (method_name == WSLit("deactivateInputMode"))
+	{
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+	}
+	else if (method_name == WSLit("forceInputMode"))
+	{
+		g_pAnarchyManager->GetInputManager()->ForceInputMode();
+	}
+	else if (method_name == WSLit("hudMouseUp"))
+	{
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		if (!pWebTab)
+			return;
+
+		int code = args[0].ToInteger();
+		bool bPassThru = args[1].ToBoolean();
+
+		ButtonCode_t button;
+		switch (code)
+		{
+			case 0:
+			defaut:
+				button = MOUSE_LEFT;
+				break;
+
+			case 1:
+				button = MOUSE_RIGHT;
+				break;
+
+			case 2:
+				button = MOUSE_MIDDLE;
+				break;
+		}
+
+
+		if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+			pWebTab->MouseRelease(button);
+	}
+	else if (method_name == WSLit("hudMouseDown"))
+	{
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		if (!pWebTab)
+			return;
+
+		int code = args[0].ToInteger();
+		bool bPassThru = args[1].ToBoolean();
+
+		ButtonCode_t button;
+		switch (code)
+		{
+		case 0:
+		default:
+			button = MOUSE_LEFT;
+			break;
+
+		case 1:
+			button = MOUSE_RIGHT;
+			break;
+
+		case 2:
+			button = MOUSE_MIDDLE;
+			break;
+		}
+
+		if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+			pWebTab->MousePress(button);
+	}
 }
 
 void AddSubKeys(KeyValues* kv, JSObject& object)
@@ -390,6 +489,57 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		else
 			return JSValue(0);
+	}
+	else if (method_name == WSLit("detectAllMapScreenshots"))
+	{
+		JSObject response;
+
+		std::map<std::string, std::string>& screenshots = g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
+		std::map<std::string, std::string>::iterator it = screenshots.begin();
+		while (it != screenshots.end())
+		{
+			response.SetProperty(WSLit(it->first.c_str()), WSLit(it->second.c_str()));
+			it++;
+		}
+
+		return response;
+	}
+	else if (method_name == WSLit("getAllMapScreenshots"))
+	{
+		JSObject response;
+
+		std::map<std::string, std::string>& screenshots = g_pAnarchyManager->GetMetaverseManager()->GetAllMapScreenshots();
+		std::map<std::string, std::string>::iterator it = screenshots.begin();
+		while (it != screenshots.end())
+		{
+			response.SetProperty(WSLit(it->first.c_str()), WSLit(it->second.c_str()));
+			it++;
+		}
+
+		return response;
+	}
+	else if (method_name == WSLit("getAllMaps"))
+	{
+		JSObject response;
+
+		std::map<std::string, KeyValues*>& maps = g_pAnarchyManager->GetMetaverseManager()->GetAllMaps();
+		std::map<std::string, KeyValues*>::iterator it = maps.begin();
+		KeyValues* active;
+		KeyValues* map;
+		while (it != maps.end())
+		{
+			map = it->second;
+			active = map->FindKey("current");
+			if (!active)
+				active = map->FindKey("local", true);
+
+			JSObject mapObject;
+			AddSubKeys(active, mapObject);
+			response.SetProperty(WSLit(active->GetString("info/id")), mapObject);
+			it++;
+		}
+
+		return response;
 	}
 	else
 		return WSLit("0");

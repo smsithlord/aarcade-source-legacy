@@ -34,7 +34,7 @@ CWebSurfaceProxy::~CWebSurfaceProxy()
 	DevMsg("WebSurfaceProxy: Destructor\n");
 //	if( m_pOriginalTexture != null )	// FIXME When would this ever not exist for this type of proxy?
 	//{
-		m_pOriginalTexture->SetTextureRegenerator(null);
+//		m_pOriginalTexture->SetTextureRegenerator(null);
 	//}
 	// FIXME: Do we need to reduce the texture reference or delete the m_pTexture as well?
 	// FIXME: Does this get called every map load? Should all the textureregens in the m_pImageInstances get NULL'd too?
@@ -56,6 +56,8 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 		return false;
 	}
 
+	g_pAnarchyManager->GetWebManager()->RegisterProxy(this);
+
 	m_pMaterialTextureVar = pMaterialVar;
 	m_pOriginalTexture = pMaterialVar->GetTextureValue();
 //	m_pOriginalTexture->SetTextureRegenerator(s_pWebSurfaceRegen);
@@ -68,6 +70,8 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 
 	pMaterialVar = m_pMaterial->FindVar("url", &found, false);
 	m_originalUrl = (found) ? pMaterialVar->GetStringValue() : "";
+
+	/*DevMsg("Original URL is: %s\n", m_originalUrl.c_str());*/
 
 	pMaterialVar = m_pMaterial->FindVar("autocreate", &found, false);
 	m_iOriginalAutoCreate = (found) ? pMaterialVar->GetIntValue() : 0;
@@ -85,15 +89,15 @@ void CWebSurfaceProxy::Release()
 	*/
 
 	// Release our Loading Image
-	if (m_pOriginalTexture)
-	{
-		m_pOriginalTexture->DecrementReferenceCount();
-		m_pOriginalTexture->SetTextureRegenerator(null);
-	}
+	//if (m_pOriginalTexture)
+	//{
+		//m_pOriginalTexture->DecrementReferenceCount();
+		//m_pOriginalTexture->SetTextureRegenerator(null);
+	//}
 
 	// FIXME: Do we need to delete the class-scope members too? YOUT HINK I KNO W? SHIIIIT
 
-	delete this;
+//	delete this;
 }
 
 //ITexture* CWebSurfaceProxy::CreateTexture(C_BaseEntity* pEntity = null)
@@ -166,7 +170,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			m_pMaterialTextureVar->SetTextureValue(pTexture);
 //			m_iState = 2;
 
-			if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
+			if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 			else if (m_pMaterialDetailBlendFactorVar)
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);

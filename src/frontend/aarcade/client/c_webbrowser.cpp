@@ -31,6 +31,8 @@ C_WebBrowser::~C_WebBrowser()
 {
 	DevMsg("WebBrowser: destructor\n");
 	WebCore::Shutdown();
+
+	//delete pNewWindowDataSource
 }
 
 void C_WebBrowser::Init()
@@ -62,6 +64,10 @@ void C_WebBrowser::Init()
 	UiDataSource* pUiDataSource = new UiDataSource();
 	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
 
+	//g_pFullFileSystem->AddSearchPath(VarArgs("%s\\screenshots", engine->GetGameDirectory()), "SCREENSHOTS");
+	ScreenshotDataSource* pScreenshotDataSource = new ScreenshotDataSource();
+	m_pWebSession->AddDataSource(WSLit("screenshots"), pScreenshotDataSource);
+
 	// MASTER
 	m_pMasterLoadListener = new MasterLoadListener;
 	m_pMasterViewListener = new MasterViewListener;
@@ -86,11 +92,11 @@ void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 	pWebView->set_view_listener(m_pViewListener);
 	pWebView->set_menu_listener(m_pMenuListener);
 
-//	if (id == "metaverse")
-//	{
+	if (id == "hud")
+	{
 		pWebView->set_js_method_handler(m_pJSHandler);
 		CreateAaApi(pWebView);
-//	}
+	}
 }
 
 void C_WebBrowser::OnMasterWebViewDocumentReady()
@@ -98,6 +104,16 @@ void C_WebBrowser::OnMasterWebViewDocumentReady()
 	m_iState = 2;	// initialized
 //	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
 	g_pAnarchyManager->GetWebManager()->OnBrowserInitialized();
+}
+
+void C_WebBrowser::ReleaseWebView(C_WebTab* pWebTab)
+{
+	WebView* pWebView = this->FindWebView(pWebTab);
+	if (!pWebView)
+		return;
+
+	pWebView->Unfocus();
+	pWebView->Destroy();
 }
 
 void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
@@ -156,9 +172,9 @@ void C_WebBrowser::OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY)
 	if ( pWebView )
 		pWebView->InjectMouseMove(iMouseX, iMouseY);
 
-	// FIXME: ALWAYS injecting into hud web tab.  this should only happen if the hud is active.
+	// inject mouse movement into the HUD too, if its active.
 	C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
-	if (pHudWebTab && pHudWebTab != pWebTab)
+	if (pHudWebTab && pHudWebTab != pWebTab && g_pAnarchyManager->GetInputManager()->GetInputMode())
 	{
 		WebView* pHudWebView = FindWebView(pHudWebTab);
 		if (pHudWebView)
@@ -178,6 +194,7 @@ void C_WebBrowser::OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code)
 		iButtonId = 2;
 
 	WebView* pWebView = FindWebView(pWebTab);
+	//WebView* pWebView = FindWebView(g_pAnarchyManager->GetWebManager()->GetHudWebTab());
 	if ( pWebView )
 		pWebView->InjectMouseDown((MouseButton)iButtonId);
 }
@@ -194,6 +211,7 @@ void C_WebBrowser::OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code)
 		iButtonId = 2;
 
 	WebView* pWebView = FindWebView(pWebTab);
+	//WebView* pWebView = FindWebView(g_pAnarchyManager->GetWebManager()->GetHudWebTab());
 	if ( pWebView )
 		pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
@@ -887,6 +905,14 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("loadFirstLocalApp"), false);
 	systemObject.SetCustomMethod(WSLit("loadNextLocalApp"), false);
 	systemObject.SetCustomMethod(WSLit("loadLocalAppClose"), false);
+	systemObject.SetCustomMethod(WSLit("detectAllMapScreenshots"), true);
+	systemObject.SetCustomMethod(WSLit("getAllMapScreenshots"), true);
+	systemObject.SetCustomMethod(WSLit("getAllMaps"), true);
+	systemObject.SetCustomMethod(WSLit("loadMap"), false);
+	systemObject.SetCustomMethod(WSLit("deactivateInputMode"), false);
+	systemObject.SetCustomMethod(WSLit("forceInputMode"), false);
+	systemObject.SetCustomMethod(WSLit("hudMouseDown"), false);
+	systemObject.SetCustomMethod(WSLit("hudMouseUp"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -912,6 +938,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	callbacksObject.SetCustomMethod(WSLit("loadNextLocalAppCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("mountNextWorkshopCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("loadNextLocalItemLegacyCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("detectNextMapCallback"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));
@@ -965,6 +992,7 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 			pWebView->SetTransparent(true);
 
 		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
+		DevMsg("Loading initial URL: %s\n", pWebTab->GetInitialUrl().c_str());
 	}
 }
 

@@ -68,6 +68,8 @@ void C_AnarchyManager::Shutdown()
 
 	delete m_pMetaverseManager;
 	m_pMetaverseManager = null;
+
+	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
 }
 
 void C_AnarchyManager::LevelInitPreEntity()
@@ -88,6 +90,15 @@ void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
 void C_AnarchyManager::LevelShutdownPreEntity()
 {
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
+	C_BaseEntity* pEntity = this->GetSelectedEntity();
+	if (pEntity)
+		this->DeselectEntity(pEntity);
+
+	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
+	if (pWebTab)
+		m_pWebManager->DeselectWebTab(pWebTab);
+
+	m_pWebManager->LevelShutdownPreEntity();
 }
 
 void C_AnarchyManager::LevelShutdownPostEntity()
@@ -361,9 +372,9 @@ void C_AnarchyManager::AnarchyBegin()
 	DevMsg("AnarchyManager: AnarchyBegin\n");
 
 	m_pMetaverseManager = new C_MetaverseManager();
+	m_pInputManager = new C_InputManager();
 	m_pWebManager = new C_WebManager();
 	m_pWebManager->Init();
-	m_pInputManager = new C_InputManager();
 }
 
 void C_AnarchyManager::OnWebManagerReady()
@@ -374,25 +385,11 @@ void C_AnarchyManager::OnWebManagerReady()
 
 	unsigned int uCount;
 	std::string num;
-
-	//pHudWebTab->SetHudTitle("Loading Stuff");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "");
-	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Items", "locallibraryitems", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Mounting Source Engine Games", "mounts", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "");
-//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "");
-	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Legacy Items", "legacyworkshoplibraryitems", "", "", "");
-
+	
 	// And continue starting up
 	uCount = m_pMetaverseManager->LoadAllLocalTypes();
 	num = VarArgs("%u", uCount);
 	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
-
 
 	 //= m_pMetaverseManager->LoadAllLocalTypes();
 	//std::string num = VarArgs("%u", uItemCount);
@@ -411,27 +408,6 @@ void C_AnarchyManager::OnWebManagerReady()
 	else
 		this->OnLoadAllLocalAppsComplete();
 
-	/*
-	while ( yar )
-		yar = m_pMetaverseManager->LoadNextLocalApp();
-	*/
-
-	//m_pMetaverseManager->LoadLocalAppClose();
-
-	//num = VarArgs("%u", uItemCount);
-	//pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
-
-	//uItemCount = m_pMetaverseManager->LoadAllLocalItemsLegacy();
-	//num = VarArgs("%u", uItemCount);
-	//m_pLoadingManager->AddMessage("progress", "", "Loading Items", "locallibraryitems", "0", num, num);
-	/*
-	m_pMountManager = new C_MountManager();
-	m_pMountManager->Init();
-	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
-
-	m_pWorkshopManager = new C_WorkshopManager();
-	m_pWorkshopManager->Init();
-	*/
 }
 
 void C_AnarchyManager::OnLoadAllLocalAppsComplete()
@@ -554,14 +530,6 @@ void C_AnarchyManager::OnWorkshopManagerReady()
 	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
 	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
 	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
-
-	/* do it async instead!!
-	bool result = m_pWorkshopManager->MountFirstWorkshop();
-	if (result)
-		m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "0", std::string(VarArgs("%u", m_pWorkshopManager->GetNumDetails())), "+", "mountNextWorkshopCallback");
-	else
-		this->OnMountAllWorkshopsComplete();
-	*/
 
 	m_pWorkshopManager->MountFirstWorkshop();
 }

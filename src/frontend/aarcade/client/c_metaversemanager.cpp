@@ -20,6 +20,8 @@ C_MetaverseManager::~C_MetaverseManager()
 {
 	DevMsg("MetaverseManager: Destructor\n");
 
+	m_mapScreenshots.clear();
+
 	if (m_previousLoadLocalAppFilePath != "")
 	{
 		g_pFullFileSystem->FindClose(m_previousLoadLocalAppFileHandle);
@@ -57,26 +59,26 @@ C_MetaverseManager::~C_MetaverseManager()
 		m_types.erase(m_types.begin());
 	}
 }
-
+/*
 void C_MetaverseManager::OnWebTabCreated(C_WebTab* pWebTab)
 {
 	m_pWebTab = pWebTab;
 }
+*/
 
 void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 {
-	// Now that ALL workshop content has been loaded, we can make more intellegent decisions on how to resolve shit.
-	// FIXME: BEFORE resolving, let's mount the AArcade folder if it needs to be.
-	// UNFIXME: Might not be required.  Importing shit from AArcade folder will only need to happen once if items get saved out during 1st import.
-	this->ResolveLoadLocalItemLegacyBuffer();
+	// FIXME this junction should take place in the anarchy manager!!
 
 	/*
-	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "0");
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
 	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
 	*/
 
-	g_pAnarchyManager->OnMountAllWorkshopsComplete();
+	g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
+//	g_pAnarchyManager->OnMountAllWorkshopsComplete();
 }
 
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath, std::string workshopIds, std::string mountIds)
@@ -379,11 +381,11 @@ void C_MetaverseManager::LoadFirstLocalItemLegacy(bool bFastMode, std::string fi
 		this->LoadLocalItemLegacyClose();
 
 	// start it
+	m_previousLoadLocalItemLegacyFastMode = bFastMode;
 	m_previousLoadLocalItemLegacyFilePath = filePath;
 	m_previousLocaLocalItemLegacyWorkshopIds = workshopIds;
 	m_previousLoadLocalItemLegacyMountIds = mountIds;
 
-	// for bad fast mode counting (works differently than async)
 	unsigned int uMountWorkshopNumModels = 0;
 	unsigned int uMountWorkshopNumItems = 0;
 
@@ -472,8 +474,8 @@ void C_MetaverseManager::LoadFirstLocalItemLegacy(bool bFastMode, std::string fi
 		}
 		else
 		{
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
 		}
 	}
 
@@ -484,6 +486,9 @@ void C_MetaverseManager::LoadFirstLocalItemLegacy(bool bFastMode, std::string fi
 
 void C_MetaverseManager::LoadNextLocalItemLegacy()
 {
+	unsigned int uMountWorkshopNumModels = 0;
+	unsigned int uMountWorkshopNumItems = 0;
+
 	KeyValues* pItem;
 	const char *pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
 	while (pFilename != NULL)
@@ -510,20 +515,28 @@ void C_MetaverseManager::LoadNextLocalItemLegacy()
 		if (pItem)
 		{
 			if (bIsModel)
-			{
-				if (m_previousLocaLocalItemLegacyWorkshopIds != "")
-					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
-				else
-					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
-			}
+				uMountWorkshopNumModels++;
 			else
+				uMountWorkshopNumItems++;
+
+			if (!m_previousLoadLocalItemLegacyFastMode)
 			{
-				if (m_previousLocaLocalItemLegacyWorkshopIds != "")
-					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+				if (bIsModel)
+				{
+					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+					else
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+				}
 				else
-					g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+				{
+					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					else
+						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+				}
+				return;
 			}
-			return;
 		}
 
 		pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
@@ -575,20 +588,28 @@ void C_MetaverseManager::LoadNextLocalItemLegacy()
 			if (pItem)
 			{
 				if (bIsModel)
-				{
-					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
-						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
-					else
-						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
-				}
+					uMountWorkshopNumModels++;
 				else
+					uMountWorkshopNumItems++;
+
+				if (!m_previousLoadLocalItemLegacyFastMode)
 				{
-					if (m_previousLocaLocalItemLegacyWorkshopIds != "")
-						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					if (bIsModel)
+					{
+						if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+						else
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", "+", "loadNextLocalItemLegacyCallback");
+					}
 					else
-						g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					{
+						if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+						else
+							g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", "+", "loadNextLocalItemLegacyCallback");
+					}
+					return;
 				}
-				return;
 			}
 
 			pFilename = g_pFullFileSystem->FindNext(m_previousLoadLocalItemLegacyFileHandle);
@@ -599,7 +620,22 @@ void C_MetaverseManager::LoadNextLocalItemLegacy()
 		//break;
 	}
 
+	if (m_previousLoadLocalItemLegacyFastMode)
+	{
+		if (m_previousLocaLocalItemLegacyWorkshopIds != "")
+		{
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
+		}
+		else
+		{
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Models", "oldlibrarymodels", "", "", std::string(VarArgs("+%u", uMountWorkshopNumModels)));
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Items", "oldlibraryitems", "", "", std::string(VarArgs("+%u", uMountWorkshopNumItems)));
+		}
+	}
+
 	g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
+	//g_pAnarchyManager->GetMetaverseManager()->OnMountWorkshopSucceed();
 	this->LoadLocalItemLegacyClose();
 	return;
 }
@@ -612,12 +648,12 @@ void C_MetaverseManager::LoadLocalItemLegacyClose()
 
 //		if (m_previousLoadLocalItemLegacyFolderPath != "")
 //			g_pFullFileSystem->FindClose(m_previousLoadLocalItemLegacyFileHandle);
-
+		m_previousLoadLocalItemLegacyFastMode = false;
 		m_previousLoadLocalItemLegacyFilePath = "";
 		m_previousLoadLocalItemLegacyFolderPath = "";
 		m_previousLocaLocalItemLegacyWorkshopIds = "";
 		m_previousLoadLocalItemLegacyMountIds = "";
-		m_previousLoadLocalItemsLegacyBuffer.clear();
+//		m_previousLoadLocalItemsLegacyBuffer.clear();
 	}
 }
 
@@ -1189,6 +1225,203 @@ KeyValues* C_MetaverseManager::GetLibraryApp(std::string id)
 		return it->second;
 	else
 		return null;
+}
+
+std::map<std::string, std::string>& C_MetaverseManager::DetectAllMapScreenshots()
+{
+	size_t found;
+	std::string id;
+	std::map<std::string, std::string>::iterator it;
+
+	// GRAB A LIST OF THE LATEST SCREENSHOT FOR EACH FILE NAME BEFORE HAND, so screenshots can be bound to maps as they are added.
+	FileFindHandle_t pFileFindHandle;
+	const char *pScreenshotName = g_pFullFileSystem->FindFirstEx("screenshots\\*.jpg", "MOD", &pFileFindHandle);
+	while (pScreenshotName != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
+		{
+			pScreenshotName = g_pFullFileSystem->FindNext(pFileFindHandle);
+			continue;
+		}
+
+		// doesn't matter if it already exists, overwrite it with this one
+		id = pScreenshotName;
+
+		found = id.find_last_of(".");
+		if (found != std::string::npos)
+		{
+			id = id.substr(0, found - 4);
+			m_mapScreenshots[id] = pScreenshotName;
+		}
+
+		pScreenshotName = g_pFullFileSystem->FindNext(pFileFindHandle);
+	}
+	g_pFullFileSystem->FindClose(pFileFindHandle);
+
+	return m_mapScreenshots;
+}
+
+KeyValues* C_MetaverseManager::GetMap(std::string mapId)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_maps.find(mapId);
+	if (it != m_maps.end())
+		return it->second;
+	return null;
+}
+
+void C_MetaverseManager::DetectAllMaps()
+{
+	bool bAlreadyExists;
+	KeyValues* map = this->DetectFirstMap(bAlreadyExists);
+	if (map)
+	{
+		if (bAlreadyExists)
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+0", "detectNextMapCallback");
+		else
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+", "detectNextMapCallback");
+	}
+	else
+		this->OnDetectAllMapsCompleted();
+}
+
+void C_MetaverseManager::OnDetectAllMapsCompleted()
+{
+	DevMsg("Done detecting maps!\n");
+	g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
+	g_pAnarchyManager->OnMountAllWorkshopsComplete();
+}
+
+KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
+{
+	//if (m_previousDetectLocalMapFilePath != "")	// FIXME: need a way to detect if there is already a DetectFirst/Next query active.
+		//this->DetectLocalMapClose();
+
+	const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.bsp", "GAME", &m_previousDetectLocalMapFileHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(m_previousDetectLocalMapFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(m_previousDetectLocalMapFileHandle);
+			continue;
+		}
+
+		std::string foundName = pFilename;
+		//foundName = VarArgs("maps\\%s", pFilename);
+
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+		foundName = path_buffer;
+		// FINISHED MAKING THE FILE PATH NICE
+
+		KeyValues* active;
+		std::map<std::string, KeyValues*>::iterator it = m_maps.begin();
+		while (it != m_maps.end())
+		{
+			active = it->second->FindKey("current");
+			if (!active)
+				active = it->second->FindKey("local", true);
+
+			if (!Q_strcmp(active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), foundName.c_str()))
+			{
+				//g_pFullFileSystem->FindClose(m_previousDetectLocalMapFileHandle);
+				return it->second;
+			}
+
+			it++;
+		}
+
+		// if we haven't found a map for this yet, let's make one.
+		KeyValues* map = new KeyValues("map");
+		map->SetInt("generation", 3);
+
+		// add standard info
+		std::string id = g_pAnarchyManager->GenerateUniqueId();
+		map->SetString("local/info/id", id.c_str());
+		map->SetInt("local/info/created", 0);
+		map->SetString("local/info/owner", "local");
+		map->SetInt("local/info/removed", 0);
+		map->SetString("local/info/remover", "");
+		map->SetString("local/info/alias", "");
+
+		std::string mapName = foundName.substr(0, foundName.length() - 4);
+		map->SetString("local/title", mapName.c_str());
+		map->SetString("local/keywords", "");
+		map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/file", foundName.c_str());
+
+		m_maps[id.c_str()] = map;
+		return map;
+	}
+
+	g_pFullFileSystem->FindClose(m_previousDetectLocalMapFileHandle);
+	return null;
+}
+
+KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
+{
+	const char *pFilename = g_pFullFileSystem->FindNext(m_previousDetectLocalMapFileHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(m_previousDetectLocalMapFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(m_previousDetectLocalMapFileHandle);
+			continue;
+		}
+
+		std::string foundName = pFilename;
+		//foundName = VarArgs("maps\\%s", pFilename);
+
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+		foundName = path_buffer;
+		// FINISHED MAKING THE FILE PATH NICE
+
+		KeyValues* active;
+		std::map<std::string, KeyValues*>::iterator it = m_maps.begin();
+		while (it != m_maps.end())
+		{
+			active = it->second->FindKey("current");
+			if (!active)
+				active = it->second->FindKey("local", true);
+
+			if (!Q_strcmp(active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), foundName.c_str()))
+			{
+				//g_pFullFileSystem->FindClose(m_previousDetectLocalMapFileHandle);
+				bAlreadyExists = true;
+				return it->second;
+			}
+
+			it++;
+		}
+
+		// if we haven't found a map for this yet, let's make one.
+		KeyValues* map = new KeyValues("map");
+		map->SetInt("generation", 3);
+
+		// add standard info
+		std::string id = g_pAnarchyManager->GenerateUniqueId();
+		map->SetString("local/info/id", id.c_str());
+		map->SetInt("local/info/created", 0);
+		map->SetString("local/info/owner", "local");
+		map->SetInt("local/info/removed", 0);
+		map->SetString("local/info/remover", "");
+		map->SetString("local/info/alias", "");
+
+		std::string mapName = foundName.substr(0, foundName.length() - 4);
+		map->SetString("local/title", mapName.c_str());
+		map->SetString("local/keywords", "");
+		map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/file", foundName.c_str());
+
+		m_maps[id.c_str()] = map;
+		bAlreadyExists = false;
+		return map;
+	}
+
+	g_pFullFileSystem->FindClose(m_previousDetectLocalMapFileHandle);
+	return null;
 }
 
 KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string filePath)

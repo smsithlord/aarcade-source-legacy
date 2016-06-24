@@ -7,8 +7,37 @@
 		</script>
 	</head>
 	<body>
-		<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/library.html';">Back</div>Library / Items</div>
+		<div class="hudHeaderContainer">
+			<div class="hudHeaderRow">
+				<div class="hudHeaderCell" style="text-align: left;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
+							<img src="asset://ui/return.png" /> Return
+						</div>
+					</div>
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Go back to the previous menu." onclick="window.location='asset://ui/library.html';">
+							<img src="asset://ui/backarrow.png" /> Back
+						</div>
+					</div>
+				</div>
+				<div class="hudHeaderCell">
+					<div>
+						Library / Items
+					</div>
+				</div>
+				<div class="hudHeaderCell" style="text-align: right;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode();">
+							Input&nbsp;&nbsp;<img src="asset://ui/inputicon.png" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<br />
+
 		<div class="librarySearchContainer">
 			<table style="width: 100%;"><tr>
 				<td align="left">
@@ -20,23 +49,6 @@
 					<select id="filterTypeSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
 						<option value="" selected>&lt;Any Type&gt;</option>
 					</select>
-					<!--
-					<table><tr>
-						<td>
-							<select class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
-								<option value="" selected>Filter Type</option>
-							</select>
-						</td>
-						
-						<td style="font-size: 50px; font-weight: 900; line-height: 10%;">=</td>
-						<td>
-							<select class="helpNote" help="(OPTIONAL) Select a filter value to narrow your search results.">
-								<option value="" selected>&lt;any&gt;</option>
-							</select>
-						</td>
-					
-					</tr></table>
-					-->
 				</td>
 			</tr></table>
 		</div>

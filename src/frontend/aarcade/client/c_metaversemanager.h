@@ -12,12 +12,12 @@ public:
 	C_MetaverseManager();
 	~C_MetaverseManager();
 	
-	void OnWebTabCreated(C_WebTab* pWebTab);
+	//void OnWebTabCreated(C_WebTab* pWebTab);
 	void OnMountAllWorkshopsCompleted();
 
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
-	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
+	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");	// probably obsolete!!!
 
 	void LoadFirstLocalItemLegacy(bool bFastMode = true, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 	void LoadNextLocalItemLegacy();
@@ -55,6 +55,18 @@ public:
 
 	KeyValues* GetLibraryApp(std::string id);
 
+	std::map<std::string, std::string>& DetectAllMapScreenshots();
+	std::map<std::string, std::string>& GetAllMapScreenshots() { return m_mapScreenshots; }
+
+
+	KeyValues* GetMap(std::string mapId);
+	std::map<std::string, KeyValues*>& GetAllMaps() { return m_maps; }
+	void DetectAllMaps();
+	KeyValues* DetectFirstMap(bool& bAlreadyExists);
+	KeyValues* DetectNextMap(bool& bAlreadyExists);
+	void OnDetectAllMapsCompleted();
+	//void DetectMapClose();
+
 	// accessors
 	KeyValues* GetPreviousSearchInfo() { return m_pPreviousSearchInfo; }
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
@@ -63,6 +75,9 @@ public:
 	
 private:
 	C_WebTab* m_pWebTab;
+	std::map<std::string, std::string> m_mapScreenshots;
+
+	std::map<std::string, KeyValues*> m_maps;
 	std::map<std::string, KeyValues*> m_apps;
 	std::map<std::string, KeyValues*> m_models;
 	std::map<std::string, KeyValues*> m_items;
@@ -77,12 +92,16 @@ private:
 
 	FileFindHandle_t m_previousLoadLocalItemLegacyFileHandle;
 	FileFindHandle_t m_previousLoadLocalItemLegacyFolderHandle;
+	bool m_previousLoadLocalItemLegacyFastMode;
 	std::string m_previousLoadLocalItemLegacyFile;
 	std::string m_previousLoadLocalItemLegacyFilePath;
 	std::string m_previousLoadLocalItemLegacyFolderPath;
 	std::string m_previousLocaLocalItemLegacyWorkshopIds;
 	std::string m_previousLoadLocalItemLegacyMountIds;
 	std::vector<KeyValues*> m_previousLoadLocalItemsLegacyBuffer;
+
+	//std::string m_previousDetectLocalMapFilePath;
+	FileFindHandle_t m_previousDetectLocalMapFileHandle;
 };
 
 #endif

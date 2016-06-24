@@ -68,7 +68,8 @@ ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy 
 
 void ActivateInputMode(const CCommand &args)
 {
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode();
+	//bool fullscreen = (args.ArgC() > 1);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode();// fullscreen);
 }
 ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 
@@ -108,6 +109,9 @@ void Launch( const CCommand &args )
 	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "0");
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
 	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+	//DevMsg("Loaded %u items from %s\n", uNumItems, path.c_str());
 
 
 
@@ -141,3 +145,10 @@ void Launch( const CCommand &args )
 }
 
 ConCommand launch( "aa_activated", Launch, "Usage: aa_activated entindex" );
+
+void DetectAllMaps(const CCommand &args)
+{
+	g_pAnarchyManager->GetMetaverseManager()->DetectAllMaps();
+	//DevMsg("Detect all maps!\n");
+}
+ConCommand detectallmaps("detectallmaps", DetectAllMaps, "Usage: aa_activated entindex");

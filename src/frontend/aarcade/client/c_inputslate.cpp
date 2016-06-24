@@ -20,7 +20,9 @@ using namespace vgui;
 //IMaterial* CInputSlate::s_pMaterial = null;
 CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
-//	SetParent( parent );
+	SetParent( parent );
+
+	m_bCursorHidden = false;
 
 //	m_pWebViewManager = C_AnarchyManager::GetSelf()->GetWebViewManager();
 
@@ -85,22 +87,55 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pImagePanel->SetImage("hudwebtab");
 	}
 //	else
+	/*
 	if ( !m_bFullscreen)
 	{
 		ivgui()->AddTickSignal(this->GetVPanel(), 1);
 		ShowCursor(false);
 	}
+	*/
+
+	// for opacity
+	ivgui()->AddTickSignal(this->GetVPanel());
 
 	//ShowCursor(false);
 	SetVisible(true);
+	Activate();
 }
 
+/*
 void CInputSlate::OnTick()
 {
 	if( GetAlpha() > 0 )
 		SetAlpha(0);	// This won't actually change anything unless the panel has finished being created
 	else
 		ivgui()->RemoveTickSignal(this->GetVPanel());
+}
+*/
+
+void CInputSlate::OnTick()
+{
+	bool bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
+	if (!bFullscreen && !m_bCursorHidden )
+	{
+		if (GetAlpha() > 0)
+			SetAlpha(0);
+		else
+		{
+			DevMsg("hiding cursor\n");
+			m_bCursorHidden = true;
+			ShowCursor(false);
+		}
+	}
+	else if (bFullscreen && m_bCursorHidden )
+	{
+		DevMsg("showing cursor\n");
+		SetAlpha(255);
+		m_bCursorHidden = false;
+		ShowCursor(true);
+	}
+	//else
+		//ivgui()->RemoveTickSignal(this->GetVPanel());
 }
 
 void CInputSlate::OnCursorMoved(int x, int y)
@@ -144,659 +179,7 @@ void CInputSlate::OnMouseReleased(MouseCode code)
 void CInputSlate::OnKeyCodePressed(KeyCode code)
 {
 	g_pAnarchyManager->GetInputManager()->KeyCodePressed(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
-
-	/*
-	if( code == KEY_Q && shift )
-	{
-		OnCommand("close");
-	}
-	else
-		m_pWebViewManager->RelayOnKeyDown(code);
-	*/
-
-//	DevMsg("Key pressed: %i %i\n", code, shift);
 }
-/*
-	using namespace Awesomium;
-
-	if( !web_view )
-		return;
-
-	WebView* pWebView = static_cast<WebView*>(web_view);
-
-	WebKeyboardEvent pWebKeyboardEvent;
-	pWebKeyboardEvent.type = WebKeyboardEvent::kTypeKeyDown;
-
-	pWebKeyboardEvent.modifiers = 0;
-
-	bool shift = (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT));
-	bool ctrl = (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL));
-	bool alt = (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT));
-
-	if ( shift )
-		pWebKeyboardEvent.modifiers |= MODIFIER_SHIFT;
-
-	if ( ctrl )
-		pWebKeyboardEvent.modifiers |= MODIFIER_CONTROL;
-
-	if ( alt )
-		pWebKeyboardEvent.modifiers |= MODIFIER_ALT;
-
-	int virtualKeyCode = KeyCodes::AK_UNKNOWN;
-	std::string actualCharOutput = "";
-
-	switch( code )
-	{
-		case KEY_0:
-			virtualKeyCode = 0x30;
-			if( shift )
-				actualCharOutput = ')';
-			else
-				actualCharOutput = '0';
-			break;
-
-		case KEY_1:
-			virtualKeyCode = 0x31;
-			if( shift )
-				actualCharOutput = '!';
-			else
-				actualCharOutput = '1';
-			break;
-
-		case KEY_2:
-			virtualKeyCode = 0x32;
-			if( shift )
-				actualCharOutput = '@';
-			else
-				actualCharOutput = '2';
-			break;
-
-		case KEY_3:
-			virtualKeyCode = 0x33;
-			if( shift )
-				actualCharOutput = '#';
-			else
-				actualCharOutput = '3';
-			break;
-
-		case KEY_4:
-			virtualKeyCode = 0x34;
-			if( shift )
-				actualCharOutput = '$';
-			else
-				actualCharOutput = '4';
-			break;
-
-		case KEY_5:
-			virtualKeyCode = 0x35;
-			if( shift )
-				actualCharOutput = '%';
-			else
-				actualCharOutput = '5';
-			break;
-
-		case KEY_6:
-			virtualKeyCode = 0x36;
-			if( shift )
-				actualCharOutput = '^';
-			else
-				actualCharOutput = '6';
-			break;
-
-		case KEY_7:
-			virtualKeyCode = 0x37;
-			if( shift )
-				actualCharOutput = '&';
-			else
-				actualCharOutput = '7';
-			break;
-
-		case KEY_8:
-			virtualKeyCode = 0x38;
-			if( shift )
-				actualCharOutput = '*';
-			else
-				actualCharOutput = '8';
-			break;
-
-		case KEY_9:
-			virtualKeyCode = 0x39;
-			if( shift )
-				actualCharOutput = '(';
-			else
-				actualCharOutput = '9';
-			break;
-
-		case KEY_A:
-			virtualKeyCode = 0x41;
-			if( shift )
-				actualCharOutput = 'A';
-			else
-				actualCharOutput = 'a';
-			break;
-
-		case KEY_B:
-			virtualKeyCode = 0x42;
-			if( shift )
-				actualCharOutput = 'B';
-			else
-				actualCharOutput = 'b';
-			break;
-
-		case KEY_C:
-			virtualKeyCode = 0x43;
-			if( shift )
-				actualCharOutput = 'C';
-			else
-				actualCharOutput = 'c';
-			break;
-
-		case KEY_D:
-			virtualKeyCode = 0x44;
-			if( shift )
-				actualCharOutput = 'D';
-			else
-				actualCharOutput = 'd';
-			break;
-
-		case KEY_E:
-			virtualKeyCode = 0x45;
-			if( shift )
-				actualCharOutput = 'E';
-			else
-				actualCharOutput = 'e';
-			break;
-
-		case KEY_F:
-			virtualKeyCode = 0x46;
-			if( shift )
-				actualCharOutput = 'F';
-			else
-				actualCharOutput = 'f';
-			break;
-
-		case KEY_G:
-			virtualKeyCode = 0x47;
-			if( shift )
-				actualCharOutput = 'G';
-			else
-				actualCharOutput = 'g';
-			break;
-
-		case KEY_H:
-			virtualKeyCode = 0x48;
-			if( shift )
-				actualCharOutput = 'H';
-			else
-				actualCharOutput = 'h';
-			break;
-
-		case KEY_I:
-			virtualKeyCode = 0x49;
-			if( shift )
-				actualCharOutput = 'I';
-			else
-				actualCharOutput = 'i';
-			break;
-
-		case KEY_J:
-			virtualKeyCode = 0x4A;
-			if( shift )
-				actualCharOutput = 'J';
-			else
-				actualCharOutput = 'j';
-			break;
-
-		case KEY_K:
-			virtualKeyCode = 0x4B;
-			if( shift )
-				actualCharOutput = 'K';
-			else
-				actualCharOutput = 'k';
-			break;
-
-		case KEY_L:
-			virtualKeyCode = 0x4C;
-			if( shift )
-				actualCharOutput = 'L';
-			else
-				actualCharOutput = 'l';
-			break;
-
-		case KEY_M:
-			virtualKeyCode = 0x4D;
-			if( shift )
-				actualCharOutput = 'M';
-			else
-				actualCharOutput = 'm';
-			break;
-
-		case KEY_N:
-			virtualKeyCode = 0x4E;
-			if( shift )
-				actualCharOutput = 'N';
-			else
-				actualCharOutput = 'n';
-			break;
-
-		case KEY_O:
-			virtualKeyCode = 0x4F;
-			if( shift )
-				actualCharOutput = 'O';
-			else
-				actualCharOutput = 'o';
-			break;
-
-		case KEY_P:
-			virtualKeyCode = 0x50;
-			if( shift )
-				actualCharOutput = 'P';
-			else
-				actualCharOutput = 'p';
-			break;
-
-		case KEY_Q:
-			virtualKeyCode = 0x51;
-			if( shift )
-				actualCharOutput = 'Q';
-			else
-				actualCharOutput = 'q';
-			break;
-
-		case KEY_R:
-			virtualKeyCode = 0x52;
-			if( shift )
-				actualCharOutput = 'R';
-			else
-				actualCharOutput = 'r';
-			break;
-
-		case KEY_S:
-			virtualKeyCode = 0x53;
-			if( shift )
-				actualCharOutput = 'S';
-			else
-				actualCharOutput = 's';
-			break;
-
-		case KEY_T:
-			virtualKeyCode = 0x54;
-			if( shift )
-				actualCharOutput = 'T';
-			else
-				actualCharOutput = 't';
-			break;
-
-		case KEY_U:
-			virtualKeyCode = 0x55;
-			if( shift )
-				actualCharOutput = 'U';
-			else
-				actualCharOutput = 'u';
-			break;
-
-		case KEY_V:
-			virtualKeyCode = 0x56;
-			if( shift )
-				actualCharOutput = 'V';
-			else
-				actualCharOutput = 'v';
-			break;
-
-		case KEY_W:
-			virtualKeyCode = 0x57;
-			if( shift )
-				actualCharOutput = 'W';
-			else
-				actualCharOutput = 'w';
-			break;
-
-		case KEY_X:
-			virtualKeyCode = 0x58;
-			if( shift )
-				actualCharOutput = 'X';
-			else
-				actualCharOutput = 'x';
-			break;
-
-		case KEY_Y:
-			virtualKeyCode = 0x59;
-			if( shift )
-				actualCharOutput = 'Y';
-			else
-				actualCharOutput = 'y';
-			break;
-
-		case KEY_Z:
-			virtualKeyCode = 0x5A;
-			if( shift )
-				actualCharOutput = 'Z';
-			else
-				actualCharOutput = 'z';
-			break;
-
-		case KEY_PAD_0:
-			virtualKeyCode = 0x60;
-			if( !shift )
-				actualCharOutput = '0';
-			break;
-
-		case KEY_PAD_1:
-			virtualKeyCode = 0x61;
-			actualCharOutput = '1';
-			break;
-
-		case KEY_PAD_2:
-			virtualKeyCode = 0x62;
-			actualCharOutput = '2';
-			break;
-
-		case KEY_PAD_3:
-			virtualKeyCode = 0x63;
-			actualCharOutput = '3';
-			break;
-
-		case KEY_PAD_4:
-			virtualKeyCode = 0x64;
-			actualCharOutput = '4';
-			break;
-
-		case KEY_PAD_5:
-			virtualKeyCode = 0x65;
-			actualCharOutput = '5';
-			break;
-
-		case KEY_PAD_6:
-			virtualKeyCode = 0x66;
-			actualCharOutput = '6';
-			break;
-
-		case KEY_PAD_7:
-			virtualKeyCode = 0x67;
-			actualCharOutput = '7';
-			break;
-
-		case KEY_PAD_8:
-			virtualKeyCode = 0x68;
-			actualCharOutput = '8';
-			break;
-
-		case KEY_PAD_9:
-			virtualKeyCode = 0x69;
-			actualCharOutput = '9';
-			break;
-
-		case KEY_PAD_DIVIDE:
-			virtualKeyCode = 0x6F;
-			actualCharOutput = '/';
-			break;
-
-		case KEY_PAD_MULTIPLY:
-			virtualKeyCode = 0x6A;
-			actualCharOutput = '*';
-			break;
-
-		case KEY_PAD_MINUS:
-			virtualKeyCode = 0x6D;
-			actualCharOutput = '-';
-			break;
-
-		case KEY_PAD_PLUS:
-			virtualKeyCode = 0x6B;
-			actualCharOutput = '+';
-			break;
-
-		case KEY_PAD_ENTER:
-			virtualKeyCode = 0x0D;
-			actualCharOutput = '\r';
-			break;
-
-		case KEY_PAD_DECIMAL:
-			virtualKeyCode = 0x6E;
-			actualCharOutput = '.';
-			break;
-
-		case KEY_LBRACKET:
-			virtualKeyCode = 0xDB;
-			if( shift )
-				actualCharOutput = '{';
-			else
-				actualCharOutput = '[';
-			break;
-
-		case KEY_RBRACKET:
-			virtualKeyCode = 0xDD;
-			if( shift )
-				actualCharOutput = '}';
-			else
-				actualCharOutput = ']';
-			break;
-
-		case KEY_SEMICOLON:
-			virtualKeyCode = 0xBA;
-			if( shift )
-				actualCharOutput = ':';
-			else
-				actualCharOutput = ';';
-			break;
-
-		case KEY_APOSTROPHE:
-			virtualKeyCode = 0xDE;
-			if( shift )
-				actualCharOutput = '"';
-			else
-				actualCharOutput = '\'';
-			break;
-
-		case KEY_BACKQUOTE:
-			virtualKeyCode = 0xC0;
-			if( shift )
-				actualCharOutput = '~';
-			else
-				actualCharOutput = '`';
-			break;
-
-		case KEY_COMMA:
-			virtualKeyCode = 0xBC;
-			if( shift )
-				actualCharOutput = '<';
-			else
-				actualCharOutput = ',';
-			break;
-
-		case KEY_PERIOD:
-			virtualKeyCode = 0xBE;
-			if( shift )
-				actualCharOutput = '>';
-			else
-				actualCharOutput = '.';
-			break;
-
-		case KEY_SLASH:
-			virtualKeyCode = 0xBF;
-			if( shift )
-				actualCharOutput = '?';
-			else
-				actualCharOutput = '/';
-			break;
-
-		case KEY_BACKSLASH:
-			virtualKeyCode = 0xDC;
-			if( shift )
-				actualCharOutput = '|';
-			else
-				actualCharOutput = '\\';
-			break;
-
-		case KEY_MINUS:
-			virtualKeyCode = 0xBD;
-			if( shift )
-				actualCharOutput = '_';
-			else
-				actualCharOutput = '-';
-			break;
-
-		case KEY_EQUAL:
-			virtualKeyCode = 0xBB;
-			if( shift )
-				actualCharOutput = '+';
-			else
-				actualCharOutput = '=';
-			break;
-
-		case KEY_ENTER:
-			virtualKeyCode = 0x0D;
-			actualCharOutput = '\r';
-			break;
-
-		case KEY_SPACE:
-			virtualKeyCode = 0x20;
-			actualCharOutput = ' ';
-			break;
-
-		case KEY_BACKSPACE:
-			virtualKeyCode = 0x08;
-			break;
-
-		case KEY_TAB:
-			virtualKeyCode = 0x09;
-			break;
-
-		case KEY_CAPSLOCK:
-			virtualKeyCode = 0x14;
-			break;
-
-		case KEY_NUMLOCK:
-			virtualKeyCode = 0x90;
-			break;
-
-		case KEY_ESCAPE:
-			virtualKeyCode = 0x1B;
-			break;
-
-		case KEY_SCROLLLOCK:
-			virtualKeyCode = 0x91;
-			break;
-
-		case KEY_INSERT:
-			virtualKeyCode = 0x2D;
-			break;
-
-		case KEY_DELETE:
-			virtualKeyCode = 0x2E;
-			break;
-
-		case KEY_HOME:
-			virtualKeyCode = 0x24;
-			break;
-
-		case KEY_END:
-			virtualKeyCode = 0x23;
-			break;
-
-		case KEY_PAGEUP:
-			virtualKeyCode = 0x21;
-			break;
-
-		case KEY_PAGEDOWN:
-			virtualKeyCode = 0x22;
-			break;
-
-		case KEY_LSHIFT:
-			virtualKeyCode = 0xA0;
-			break;
-
-		case KEY_RSHIFT:
-			virtualKeyCode = 0xA1;
-			break;
-
-		case KEY_LALT:
-			virtualKeyCode = 0x12;
-			break;
-
-		case KEY_RALT:
-			virtualKeyCode = 0x12;
-			break;
-
-		case KEY_LCONTROL:
-			virtualKeyCode = 0xA2;
-			break;
-
-		case KEY_RCONTROL:
-			virtualKeyCode = 0xA3;
-			break;
-
-		case KEY_LWIN:
-			virtualKeyCode = 0x5B;
-			break;
-
-		case KEY_RWIN:
-			virtualKeyCode = 0x5C;
-			break;
-
-		case KEY_APP:
-			virtualKeyCode = 0x5D;
-			break;
-
-		case KEY_UP:
-			virtualKeyCode = 0x26;
-			break;
-
-		case KEY_LEFT:
-			virtualKeyCode = 0x25;
-			break;
-
-		case KEY_DOWN:
-			virtualKeyCode = 0x28;
-			break;
-
-		case KEY_RIGHT:
-			virtualKeyCode = 0x27;
-			break;
-	}
-
-	char outputChar = actualCharOutput[0];
-
-	char* buf = new char[20];
-    pWebKeyboardEvent.virtual_key_code = virtualKeyCode;
-    GetKeyIdentifierFromVirtualKeyCode(pWebKeyboardEvent.virtual_key_code, &buf);
-    strcpy(pWebKeyboardEvent.key_identifier, buf);
-    delete[] buf;
-
-	pWebKeyboardEvent.native_key_code = pWebKeyboardEvent.virtual_key_code;
-
-	bool hasChar = false;
-
-	// If this key generates text output...
-	if( actualCharOutput != "" )
-		hasChar = true;
-
-	if( hasChar )
-	{
-		pWebKeyboardEvent.text[0] = outputChar;
-		pWebKeyboardEvent.unmodified_text[0] = outputChar;
-	}
-	else
-	{
-		pWebKeyboardEvent.text[0] = null;
-		pWebKeyboardEvent.unmodified_text[0] = null;
-	}
-
-	pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
-
-	// If this key has text output, we gotta send a char msg too
-	if( hasChar )
-	{
-		pWebKeyboardEvent.type = WebKeyboardEvent::kTypeChar;
-
-		pWebKeyboardEvent.virtual_key_code = virtualKeyCode;
-		pWebKeyboardEvent.native_key_code = virtualKeyCode;
-
-		pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
-	}
-}
-
-*/
 
 void CInputSlate::OnKeyCodeReleased(KeyCode code)
 {
@@ -865,8 +248,10 @@ void CInputSlate::OnCommand(const char* pcCommand)
 		//delete pAwesomium_Input;
 		//ShowCursor(true);
 
+		/*
 		if (m_bFullscreen)
 			ShowCursor(true);
+			*/
 
 		BaseClass::OnCommand(pcCommand);
 	}
@@ -874,11 +259,21 @@ void CInputSlate::OnCommand(const char* pcCommand)
 
 CInputSlate::~CInputSlate()
 {
+	/*
 	if (m_pOriginalTexture)
 	{
 		bool found;
 		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
-		pMaterialVar->SetTextureValue(m_pOriginalTexture);
+		if( pMaterialVar )
+			pMaterialVar->SetTextureValue(m_pOriginalTexture);
+	}
+	*/
+
+	if (m_bCursorHidden)
+	{
+		m_bCursorHidden = false;
+		ShowCursor(true);
+		DevMsg("showing cursor\n");
 	}
 }
 

@@ -4,18 +4,38 @@
 		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div id="messageContainer">
-			<div class="mainTitle">Main Menu</div>
-			<div class="mainButton disabledButton">Play</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/library.html';" help="Browse & manage your personal library.">Library</div>
-			<div class="mainButton disabledButton">Metaverse</div>
-			<div class="mainButton disabledButton">Options</div>
-			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
+		<div class="hudHeaderContainer">
+			<div class="hudHeaderRow">
+				<div class="hudHeaderCell" style="text-align: left;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
+							<img src="asset://ui/return.png" /> Return
+						</div>
+					</div>
+				</div>
+				<div class="hudHeaderCell">
+					<div>
+						Menu <a href="asset://ui/loadImage.html">te</a>
+					</div>
+				</div>
+				<div class="hudHeaderCell" style="text-align: right;">
+					<div class="hudHeaderButtonContainer">
+						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode();">
+							Input&nbsp;&nbsp;<img src="asset://ui/inputicon.png" />
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
-		<a href="javascript:location.reload();" class="devReload">Reload</a>
 
-		<script>
-			//loadingManager.init();
-		</script>
+		<br />
+
+		<div class="mainButton" helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map and begin your adventure!">Play</div>
+		<div class="mainButton helpNote" onclick="window.location='asset://ui/library.html';" help="Browse & manage your personal library.">Library</div>
+		<div class="mainButton disabledButton">Metaverse</div>
+		<div class="mainButton disabledButton">Options</div>
+		<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
+
+		<a href="javascript:location.reload();" class="devReload">Reload</a>
 	</body>
 </html>

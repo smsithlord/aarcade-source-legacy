@@ -46,12 +46,17 @@ C_WebTab::~C_WebTab()
 {
 	DevMsg("WebTab: Destructor\n");
 
+	//if (m_pTexture)
+	//	m_pTexture->SetTextureRegenerator(null);
+
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->ReleaseWebView(this);
+
 	if (m_pTexture)
+	{
 		m_pTexture->SetTextureRegenerator(null);
-	//{
-		//m_pTexture->DecrementReferenceCount();
-		//m_pTexture->SetTextureRegenerator(null);
-	//}
+//		m_pTexture->DecrementReferenceCount();
+//		m_pTexture->DeleteIfUnreferenced();
+	}
 }
 
 void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
@@ -65,24 +70,37 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 	if (m_iLastRenderFrame < gpGlobals->framecount)
 	{
-		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
+//		if (g_pAnarchyManager->GetWebManager()->IsPriorityWebTab(this))
+//			g_pAnarchyManager->GetWebManager()->IncrementVisiblePriorityWebTabsCurrentFrame();
+//		else
+		if (!g_pAnarchyManager->GetWebManager()->IsPriorityWebTab(this))
 			g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
 
+//		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
+			//g_pAnarchyManager->GetWebManager()->IncrementVisibleWebTabsCurrentFrame();
+
+		//if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
 		// render the web tab to its texture
-		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() == this && g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) || (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == this && g_pAnarchyManager->GetWebManager()->GetHudPriority()) || g_pAnarchyManager->GetWebManager()->ShouldRender(this))
+//		if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() == this && g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) || (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == this && g_pAnarchyManager->GetWebManager()->GetHudPriority()) || g_pAnarchyManager->GetWebManager()->ShouldRender(this))
+		if (g_pAnarchyManager->GetWebManager()->ShouldRender(this))
 			Render();
 	}
 }
 
 void C_WebTab::Render()
 {
+	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
+//	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
 	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
 	g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen()->SetWebTab(this);
 	m_pTexture->Download();
 
 	m_iLastRenderFrame = gpGlobals->framecount;
 
-	if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
+	//if ((g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetSelectedPriority()) && (g_pAnarchyManager->GetWebManager()->GetHudWebTab() != this || !g_pAnarchyManager->GetWebManager()->GetHudPriority()))
+	if (g_pAnarchyManager->GetWebManager()->IsPriorityWebTab(this))
+		g_pAnarchyManager->GetWebManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
+	else
 		g_pAnarchyManager->GetWebManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 

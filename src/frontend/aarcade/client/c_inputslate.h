@@ -38,6 +38,7 @@ namespace vgui
 	//	static IMaterial* s_pMaterial;
 
 		void OnTick();
+		//void PaintBackground();
 
 		void OnCursorMoved(int x, int y);
 		void OnMousePressed(MouseCode code);
@@ -54,8 +55,10 @@ namespace vgui
 
 	protected:
 		void OnCommand(const char* pcCommand);
+		//virtual void PaintBackground();
 
 	private:
+		bool m_bCursorHidden;
 		ITexture* m_pOriginalTexture;
 		IMaterial* m_pMaterial;
 //		CWebViewInput* m_pWebViewInput;

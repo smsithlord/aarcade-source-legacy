@@ -23,4 +23,12 @@ public:
 	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
 };
 
+class ScreenshotDataSource : public DataSource
+{
+public:
+	ScreenshotDataSource();
+	virtual ~ScreenshotDataSource();
+	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
+};
+
 #endif

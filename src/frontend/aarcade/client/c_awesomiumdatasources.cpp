@@ -203,3 +203,163 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 		}
 	}
 }
+
+ScreenshotDataSource::ScreenshotDataSource()
+{
+	DevMsg("ScreenshotDataSource: Constructor\n");
+}
+
+ScreenshotDataSource::~ScreenshotDataSource()
+{
+	DevMsg("ScreenshotDataSource: Destructor\n");
+}
+
+void ScreenshotDataSource::OnRequest(int request_id, const ResourceRequest& request, const WebString& path)
+{
+	DevMsg("ScreenshotDataSource: OnRequest: %s\n", WebStringToCharString(path));
+
+	std::string requestPath = WebStringToCharString(path);	// everything after asset://ui/
+	std::string requestUrl = WebStringToCharString(request.url().spec());	// the entire Url
+
+	size_t found = requestPath.find_first_of("#?");
+	std::string shortPath = "screenshots\\" + requestPath.substr(0, found);
+
+	enum datatype_t {
+		RESOURCE_UNKNOWN = 0,
+		RESOURCE_BINARY = 1,
+		RESOURCE_TEXT = 2
+	};
+
+	// determine the resource type
+	datatype_t datatype = RESOURCE_UNKNOWN;
+
+	std::string fileExtension = shortPath;
+	size_t foundLastDot = fileExtension.find_last_of(".");
+	fileExtension = fileExtension.substr(foundLastDot + 1);
+	std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), tolower);
+
+	std::string binaryExtensions = "jpg jpeg tbn png gif tbn tga";
+
+	std::vector<std::string> tokens;
+	g_pAnarchyManager->Tokenize(binaryExtensions, tokens, " ");
+	std::vector<std::string>::iterator foundToken = std::find(tokens.begin(), tokens.end(), fileExtension);
+	if (foundToken != tokens.end())
+		datatype = RESOURCE_BINARY;
+	else
+		datatype = RESOURCE_TEXT;
+
+	if (datatype == RESOURCE_TEXT)
+	{
+		if (shortPath.find(".html") == shortPath.length() - 5)
+		{
+			CUtlBuffer buf;
+			if (filesystem->ReadFile(shortPath.c_str(), "MOD", buf))
+			{
+				char* data = new char[buf.Size() + 1];
+				//buf.GetString(data);
+				buf.GetStringManualCharCount(data, buf.Size());
+				data[buf.Size()] = 0; // null terminator
+
+				std::string generatedPage = data;
+
+				delete[] data;
+
+				SendResponse(request_id, strlen(generatedPage.c_str()), (unsigned char*)generatedPage.c_str(), WSLit("text/html"));
+			}
+		}
+		else if (shortPath.find(".js") == shortPath.length() - 3)
+		{
+			CUtlBuffer buf;
+			if (filesystem->ReadFile(shortPath.c_str(), "MOD", buf))
+			{
+				char* data = new char[buf.Size() + 1];
+				//buf.GetString(data);
+				buf.GetStringManualCharCount(data, buf.Size());
+				data[buf.Size()] = 0; // null terminator
+
+				std::string loadedContent = data;
+
+				delete[] data;
+
+				SendResponse(request_id, strlen(loadedContent.c_str()), (unsigned char*)loadedContent.c_str(), WSLit("application/javascript"));
+			}
+		}
+		else if (shortPath.find(".css") == shortPath.length() - 4)
+		{
+			FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "r", "MOD");
+
+			if (fileHandle)
+			{
+				int bufferSize = filesystem->Size(fileHandle);
+				unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+				filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+				responseBuffer[bufferSize] = 0; // null terminator
+
+				filesystem->Close(fileHandle);
+
+				SendResponse(request_id, bufferSize, responseBuffer, WSLit("text/css"));
+
+				delete[] responseBuffer;
+			}
+		}
+		//		else
+		//	{
+		/*	This method probably only works for non-binary files.
+		FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb", "AAPROTECTED");
+
+		if( fileHandle )
+		{
+		int bufferSize = filesystem->Size(fileHandle);
+		unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+		filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+		responseBuffer[bufferSize] = 0; // null terminator
+
+		filesystem->Close(fileHandle);
+
+		SendResponse(request_id, bufferSize, responseBuffer, WSLit("image"));
+
+		delete[] responseBuffer;
+		}
+		*/
+		/*
+		FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "rb", "UI");
+
+		if (fileHandle)
+		{
+		int bufferSize = filesystem->Size(fileHandle);
+		unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+		filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+		responseBuffer[bufferSize] = 0; // null terminator
+
+		filesystem->Close(fileHandle);
+
+		SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+
+		delete[] responseBuffer;
+		}
+		*/
+		//}
+	}
+	else if (datatype == RESOURCE_BINARY)
+	{
+		FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "rb", "MOD");
+
+		if (fileHandle)
+		{
+			int bufferSize = filesystem->Size(fileHandle);
+			unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+			filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+			responseBuffer[bufferSize] = 0; // null terminator
+
+			filesystem->Close(fileHandle);
+
+			SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+
+			delete[] responseBuffer;
+		}
+	}
+}

@@ -111,6 +111,7 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 	}
 	else
 	{
+		DevMsg("hariy: %s\n", urlSpec.c_str());
 		if (!g_pAnarchyManager->GetWebManager()->GetHudReady())
 			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
 		//{

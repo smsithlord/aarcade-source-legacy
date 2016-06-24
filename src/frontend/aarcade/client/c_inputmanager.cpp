@@ -12,6 +12,7 @@ C_InputManager::C_InputManager()
 {
 	DevMsg("InputManager: Constructor\n");
 	m_bInputMode = false;
+	m_bForcedInputMode = false;
 	m_bFullscreenMode = false;
 	m_pInputListener = null;
 }
@@ -27,10 +28,26 @@ void C_InputManager::SetInputListener(void* pInputListener, listener_t type)
 	m_inputListenerType = type;
 }
 
+void C_InputManager::ForceInputMode()
+{
+	if (!m_bInputMode)
+		return;
+
+	m_bForcedInputMode = true;
+}
+
 void C_InputManager::ActivateInputMode(bool bFullscreen)
 {
+	if (m_bInputMode)
+		return;
+
 	m_bInputMode = true;
-	m_bFullscreenMode = bFullscreen;
+	m_bFullscreenMode = !g_pAnarchyManager->GetSelectedEntity();// (bFullscreen || !g_pAnarchyManager->GetSelectedEntity());	// Only allow non-fullscreen mode if there is an entity selected
+
+	// if no web tab is selected, then select the hud web tab.
+	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
+	if (!pWebManager->GetSelectedWebTab())
+		pWebManager->SelectWebTab(pWebManager->GetHudWebTab());
 
 	//ShowCursor(true);
 	InputSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
@@ -40,9 +57,26 @@ void C_InputManager::ActivateInputMode(bool bFullscreen)
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_CLIENTDLL));
 }
 
-void C_InputManager::DeactivateInputMode()
+void C_InputManager::DeactivateInputMode(bool bForce)
 {
+	if (!bForce && m_bForcedInputMode)
+	{
+		m_bForcedInputMode = false;
+		return;
+	}
+	
+	if (!m_bInputMode)
+		return;
+
+	if (m_bFullscreenMode)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
+	{
+		C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
+		if (pWebManager->GetSelectedWebTab())
+			pWebManager->DeselectWebTab(pWebManager->GetSelectedWebTab());
+	}
+
 	m_bInputMode = false;
+	m_bForcedInputMode = false;
 	m_bFullscreenMode = false;
 	//ShowCursor(false);
 	InputSlate->Destroy();

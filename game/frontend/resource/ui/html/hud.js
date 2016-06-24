@@ -1,11 +1,12 @@
 function ArcadeHud()
 {
+	this.platformId = "-KJvcne3IKMZQTaG7lPo";
 	this.clickThruElem;
 	this.cursorElem;
 	this.cursorPreviewImageElem;
 	this.cursorImageElem;
 	this.helpElem;
-	this.hudLoadingMessageContainer;
+	this.hudLoadingMessagesContainer;
 	this.hudLoadingMessages = {};
 	this.DOMReady = false;
 	this.onDOMReady().then(function()
@@ -18,15 +19,51 @@ function ArcadeHud()
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
 		document.body.appendChild(this.helpElem);
 
+/*
 		document.body.addEventListener("dblclick", function(e)
 		{
 			console.log("dblclicked: " + (e.target === document.body));
 		}, true);
+*/
 
+		document.body.addEventListener("mousedown", function(e)
+		{
+//			console.log("mouse down: " + (e.target === document.body));
+
+//			if(e.target === document.body)
+//			{
+				var buttonCode = 0;
+				if( e.button === 1 )
+					buttonCode = 1;
+				else if( e.button === 2 )
+					buttonCode = 2;
+				aaapi.system.hudMouseDown(buttonCode, (e.target === document.body));
+//			}
+		}, true);
+
+		document.body.addEventListener("mouseup", function(e)
+		{
+//			console.log("mouse up: " + (e.target === document.body));
+
+//			if(e.target === document.body)
+//			{
+				var buttonCode = 0;
+				if( e.button === 1 )
+					buttonCode = 1;
+				else if( e.button === 2 )
+					buttonCode = 2;
+				aaapi.system.hudMouseUp(buttonCode, (e.target === document.body));
+//			}
+		}, true);
+
+/*
 		document.body.addEventListener("click", function(e)
 		{
-			console.log("clicked: " + (e.target === document.body));
+			//console.log("clicked: " + (e.target === document.body));
+			if( (e.target === document.body) )
+				aaapi.system.hud
 		}, true);
+*/
 
 		this.cursorElem = document.createElement("div");
 		this.cursorElem.id = "cursor";
@@ -115,6 +152,7 @@ ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, 
 
 ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 {
+	var isNewMsg = false;
 	var empty = true;
 	var x, message, messageObject, className, progressText, percent;
 	for( x in this.hudLoadingMessages )
@@ -123,6 +161,7 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 
 		if( !!!messageObject.container )
 		{
+			isNewMsg = true;
 			messageObject.container = document.createElement("div");
 			this.hudLoadingMessagesContainer.appendChild(messageObject.container);
 		}
@@ -218,7 +257,12 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 	}
 
 	if( !empty )
+	{
+		if( isNewMsg )
+			this.hudLoadingMessagesContainer.scrollTop = this.hudLoadingMessagesContainer.scrollHeight;
+		
 		this.helpElem.style.display = "block";
+	}
 };
 
 ArcadeHud.prototype.showCursorPreviewImage = function(uri, backupUri)

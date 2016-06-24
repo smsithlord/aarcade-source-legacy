@@ -7,6 +7,7 @@
 #include "c_webbrowser.h"
 #include "c_webtab.h"
 #include "c_websurfaceregen.h"
+#include "c_websurfaceproxy.h"
 #include <map>
 
 class C_WebManager
@@ -30,6 +31,9 @@ public:
 
 	// mutators
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
+	void SetLastPriorityRenderedFrame(int frame) { m_iLastPriorityRenderedFrame = frame; }
+
+	void LevelShutdownPreEntity();
 
 	void OnBrowserInitialized();
 	void OnHudWebTabReady();
@@ -44,6 +48,11 @@ public:
 	void DeselectWebTab(C_WebTab* pWebTab);
 	CWebSurfaceRegen* GetOrCreateWebSurfaceRegen();
 	void IncrementVisibleWebTabsCurrentFrame() { m_iVisibleWebTabsCurrentFrame++; }
+	void IncrementVisiblePriorityWebTabsCurrentFrame() { m_iVisiblePriorityWebTabsCurrentFrame++; }
+
+	bool IsPriorityWebTab(C_WebTab* pWebTab);
+	unsigned int GetNumPriorityWebTabs() { return 2; }
+
 	bool ShouldRender(C_WebTab* pWebTab);
 	void OnMouseMove(float fXAmount, float fYAmount);
 	void OnMousePress(vgui::MouseCode code);
@@ -63,6 +72,8 @@ public:
 	void RelayOnKeyDown(vgui::KeyCode code);
 	*/
 	
+	void RegisterProxy(CWebSurfaceProxy* pProxy);
+
 private:
 	bool m_bHudReady;
 	bool m_bHudPriority;
@@ -74,9 +85,13 @@ private:
 	std::map<std::string, C_WebTab*> m_webTabs;
 	std::map<IMaterial*, std::string> m_materialWebTabIds;
 	CWebSurfaceRegen* m_pWebSurfaceRegen;
+	std::vector<CWebSurfaceProxy*> m_webSurfaceProxies;
 	int m_iVisibleWebTabsLastFrame;
+	int m_iVisiblePriorityWebTabsLastFrame;
 	int m_iVisibleWebTabsCurrentFrame;
+	int m_iVisiblePriorityWebTabsCurrentFrame;
 	int m_iLastRenderedFrame;
+	int m_iLastPriorityRenderedFrame;
 	int m_iWebSurfaceWidth;
 	int m_iWebSurfaceHeight;
 };

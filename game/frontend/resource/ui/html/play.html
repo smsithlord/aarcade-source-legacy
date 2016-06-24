@@ -20,7 +20,7 @@
 				</div>
 				<div class="hudHeaderCell">
 					<div>
-						Library
+						Play
 					</div>
 				</div>
 				<div class="hudHeaderCell" style="text-align: right;">
@@ -32,21 +32,52 @@
 				</div>
 			</div>
 		</div>
-		
-		<br />
-		
-		<div class="mainButton helpNote" onclick="window.location='asset://ui/items.html';" help="Items are shortcuts to local files or internet links.">Items</div>
-		<div class="mainButton disabledButton">Nodes</div>
-		<div class="mainButton disabledButton">Models</div>
-		<div class="mainButton disabledButton" help="Maps are the 3D worlds that you build your desktops in.">Maps</div>
-		<div class="mainButton disabledButton">Types</div>
-		<div class="mainButton disabledButton">Apps</div>
-		<div class="mainButton disabledButton">Databases</div>		
 
-<!--		<div class="backButton">Back</div> -->
+		<br />
+
+		<div id="mapsContainer"></div>
+
 		<a href="javascript:location.reload();" class="devReload">Reload</a>
+
 		<script>
-			//loadingManager.init();
+			var mapsContainer = document.querySelector("#mapsContainer");
+
+			var screenshots = aaapi.system.detectAllMapScreenshots();
+			var maps = aaapi.system.getAllMaps();
+
+			var count = 0;
+			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
+			for( x in maps )
+			{
+				mapName = maps[x].platforms[arcadeHud.platformId].file;
+				mapName = mapName.substring(0, mapName.length-4);
+
+				mapContainer = document.createElement("div");
+				mapContainer.className = "mapThumbContainer";
+				mapContainer.map = maps[x];
+				mapContainer.addEventListener("click", function(e)
+				{
+					aaapi.system.deactivateInputMode();
+					aaapi.system.loadMap(this.map.info.id);
+				}.bind(mapContainer), true);
+
+				mapImage = document.createElement("img");
+				if( !!screenshots[mapName] )
+					mapImage.src = "asset://screenshots/" + screenshots[mapName];
+				else
+					mapImage.src = "asset://ui/map.jpg";
+
+				mapContainer.appendChild(mapImage);
+
+				mapTitle = document.createElement("div");
+				mapTitleNode = document.createTextNode(maps[x].title);
+
+				mapTitle.appendChild(mapTitleNode);
+				mapContainer.appendChild(mapTitle);
+
+				mapsContainer.appendChild(mapContainer);
+				count++;
+			}
 		</script>
 	</body>
 </html>
