@@ -5,21 +5,35 @@
 	</head>
 	<body style="background-color: transparent;">
 		<div class="hudHeaderContainer">
-			<div class="hudHeaderRow">
-				<div class="hudHeaderCell" style="text-align: right;">
-					<div class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Show the main menu." onclick="window.location='asset://ui/welcome.html';">
-							&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
+			<div class="hudHeaderNavigationContainer">
+				helloo world
+			</div>
+			<div class="hudHeaderContainerTable">
+				<div class="hudHeaderContainerRow">
+					<div class="hudHeaderContainerCell">
+					</div>
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Expand the address bar." onclick="arcadeHud.expandAddressMenu();">
+								AArcade
+							</div>
 						</div>
 					</div>
-					<div id="pinHudButton" class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Pin the HUD to stay open." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
-							Pin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton helpNote" help="Show the main menu." onclick="window.location='asset://ui/welcome.html';">
+								&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
+							</div>
 						</div>
-					</div>
-					<div id="returnHudButton"class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Unpin & close the HUD." onclick="aaapi.system.deactivateInputMode();">
-							Unpin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
+						<div id="returnHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Unpin & close the HUD." onclick="aaapi.system.deactivateInputMode();">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
+						</div>
+						<div id="pinHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton helpNote" help="Pin the HUD to stay open." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
 						</div>
 					</div>
 				</div>

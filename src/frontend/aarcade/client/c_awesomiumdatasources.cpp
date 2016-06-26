@@ -56,10 +56,17 @@ UiDataSource::~UiDataSource()
 
 void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, const WebString& path)
 {
-	DevMsg("UiDataSource: OnRequest: %s\n", WebStringToCharString(path));
+//	DevMsg("UiDataSource: OnRequest: %s\n", WebStringToCharString(path));
 
 	std::string requestPath = WebStringToCharString(path);	// everything after asset://ui/
 	std::string requestUrl = WebStringToCharString(request.url().spec());	// the entire Url
+
+	DevMsg("UiDataSource: OnRequest: %s from %s\n", requestPath.c_str(), requestUrl.c_str());
+	if (requestPath == "undefined")
+	{
+		SendResponse(request_id, 0, null, WSLit("text/html"));
+		return;
+	}
 
 	size_t found = requestPath.find_first_of("#?");
 	std::string shortPath = requestPath.substr(0, found);

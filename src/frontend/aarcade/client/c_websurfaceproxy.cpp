@@ -11,15 +11,28 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+std::map<std::string, std::map<std::string, ITexture*>> CWebSurfaceProxy::s_simpleImages;
+
 //int CWebSurfaceProxy::s_textureCount = 0;
 CWebSurfaceRegen* CWebSurfaceProxy::s_pWebSurfaceRegen = null;
+
+void CWebSurfaceProxy::OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
+{
+	DevMsg("WebSurfaceProxy: OnSimpleImageRendered\n");
+	s_simpleImages[channel][itemId] = pTexture;
+
+	if (field != "" && field != channel && field != "file")	// FIXME: more intellegent look-ahead before requesting images be rendered would speed stuff up a lot.
+		s_simpleImages[field][itemId] = pTexture;
+}
 
 CWebSurfaceProxy::CWebSurfaceProxy()
 {
 	DevMsg("WebSurfaceProxy: Constructor\n");
 	m_iState = 0;
 	m_id = "";
+	m_pCurrentWebTab = null;
 	m_pMaterial = null;
+	m_pCurrentTexture = null;
 	m_pOriginalTexture = null;
 	m_pMaterialTextureVar = null;
 	m_pMaterialDetailBlendFactorVar = null;
@@ -27,11 +40,12 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 	m_originalId = "";
 	m_iOriginalAutoCreate = 1;
 	m_originalUrl = "";
+	m_originalSimpleImageChannel = "";
 }
 
 CWebSurfaceProxy::~CWebSurfaceProxy()
 {
-	DevMsg("WebSurfaceProxy: Destructor\n");
+	//DevMsg("WebSurfaceProxy: Destructor\n");
 //	if( m_pOriginalTexture != null )	// FIXME When would this ever not exist for this type of proxy?
 	//{
 //		m_pOriginalTexture->SetTextureRegenerator(null);
@@ -75,7 +89,53 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 
 	pMaterialVar = m_pMaterial->FindVar("autocreate", &found, false);
 	m_iOriginalAutoCreate = (found) ? pMaterialVar->GetIntValue() : 0;
+
+	//pMaterialVar = m_pMaterial->FindVar("simpleimage", &found, false);
+	//m_bOriginalSimpleImage = (found) ? (pMaterialVar->GetIntValue() != 0) : false;
+
+	pMaterialVar = m_pMaterial->FindVar("simpleimagechannel", &found, false);
+	m_originalSimpleImageChannel = (found) ? pMaterialVar->GetStringValue() : "";
 	return true;
+}
+
+void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>& simpleImages)
+{
+	// set all owned textures's regenerator to null
+	ITexture* pTexture;
+	std::map<ITexture*, bool> usedTextures;
+	std::map<std::string, std::map<std::string, ITexture*>>::iterator it = simpleImages.begin();
+	std::map<std::string, ITexture*>::iterator it2;
+	while (it != simpleImages.end())
+	{
+		it2 = it->second.begin();
+		while (it2 != it->second.end())
+		{
+			if (usedTextures.find(it2->second) == usedTextures.end())
+			{
+				usedTextures[it2->second] = true;
+
+				//do work
+				pTexture = it2->second;
+				pTexture->SetTextureRegenerator(null);
+
+				pTexture->DecrementReferenceCount();
+				pTexture->DeleteIfUnreferenced();
+			}
+
+			it2++;
+		}
+
+		it->second.clear();
+		it++;
+	}
+
+	simpleImages.clear();
+	usedTextures.clear();
+}
+
+void CWebSurfaceProxy::LevelShutdownPreEntity()
+{
+	ReleaseSimpleImages(s_simpleImages);
 }
 
 void CWebSurfaceProxy::Release()
@@ -98,6 +158,11 @@ void CWebSurfaceProxy::Release()
 	// FIXME: Do we need to delete the class-scope members too? YOUT HINK I KNO W? SHIIIIT
 
 //	delete this;
+
+	//m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+
+	// release the simple images
+	//ReleaseSimpleImages(s_simpleImages);
 }
 
 //ITexture* CWebSurfaceProxy::CreateTexture(C_BaseEntity* pEntity = null)
@@ -140,6 +205,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 				if (pWebTab)
 				{
 					m_pWebTab = pWebTab;
+					m_pCurrentWebTab = m_pWebTab;
 					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 				}
 			}
@@ -151,12 +217,14 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 				{
 					// create a web tab
 					m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
+					m_pCurrentWebTab = m_pWebTab;
 					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 					m_iState = 1;	// initializing
 				}
 			}
 
-			g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
+			if ( m_pWebTab)
+				g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 		}
 	}
 	else
@@ -164,19 +232,91 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		if (m_pWebTab->GetState() == 2)
 			m_iState = 2;
 
-		ITexture* pTexture = m_pWebTab->GetTexture();
-		if (pTexture)
+		// a regular proxy will need to grab the web tab's texture before it binds
+		if (m_originalSimpleImageChannel == "")
 		{
-			m_pMaterialTextureVar->SetTextureValue(pTexture);
-//			m_iState = 2;
+			ITexture* pTexture = m_pWebTab->GetTexture();
+			if (pTexture)
+			{
+				m_pMaterialTextureVar->SetTextureValue(pTexture);
+				//			m_iState = 2;
 
-			if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
-				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
-			else if (m_pMaterialDetailBlendFactorVar)
-				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
+				if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
+					m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
+				else if (m_pMaterialDetailBlendFactorVar)
+					m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
 
-			m_pWebTab->OnProxyBind(pC_BaseEntity);
+				m_pWebTab->OnProxyBind(pC_BaseEntity);
+			}
 		}
+		else
+		{
+			C_BaseEntity* pSelectedEntity = g_pAnarchyManager->GetSelectedEntity();
+			C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen")
+			{
+				ITexture* pTexture = pSelectedWebTab->GetTexture();
+				m_pMaterialTextureVar->SetTextureValue(pTexture);	// no need to increment reference, because the selected web tab is always priority
+			}
+			else
+			{
+				// if a texture exists for this shortcut's item's id for this channel, then we're done already.
+				// otherwise, we have to request the web tab to render us, which will be ignored 90% of the time, but thats OK.
+				bool bTextureExists = false;
+				C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pC_BaseEntity);
+				if (pShortcut)
+				{
+					std::string itemId = pShortcut->GetItemId();
+					if (itemId != "")
+					{
+						//std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalId);
+						std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalSimpleImageChannel);
+						if (it != s_simpleImages.end())
+						{
+							std::map<std::string, ITexture*>::iterator it2 = it->second.find(itemId);
+							if (it2 != it->second.end())
+							{
+								// we have found our texture.  swap it in and we're done.
+								if (it2->second)	// only use it if it's non-null
+									m_pMaterialTextureVar->SetTextureValue(it2->second);
+								else
+									m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+
+								bTextureExists = true;
+							}
+						}
+
+						if (!bTextureExists)
+						{
+							if (m_pWebTab->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
+							{
+								// If the request was accepted, then we need to get rdy to get the result.
+								s_simpleImages[m_originalSimpleImageChannel][itemId] = null;
+							}
+						}
+					}
+				}
+
+				if (!bTextureExists)
+					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);	// Note that there is 1 case where bTextureExists can be true but the original texture still gets swapped in.
+			}
+		}
+	}
+
+	if (!m_pWebTab)
+	{
+		C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		if (pSelectedWebTab)
+		{
+			ITexture* pSelectedTexture = pSelectedWebTab->GetTexture();
+			m_pMaterialTextureVar->SetTextureValue(pSelectedTexture);
+		}
+	}
+
+	// even if we didn't find a new web tab this bind, continue acting as if the old one is still active.
+	if (m_pCurrentWebTab && m_pCurrentWebTab != m_pWebTab)
+	{
+		m_pCurrentWebTab->OnProxyBind(pC_BaseEntity);
 	}
 }
 	//DevMsg("WebSurfaceProxy: OnBind\n");

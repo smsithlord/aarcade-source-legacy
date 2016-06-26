@@ -4,6 +4,7 @@
 //#include <vector>
 //#include <map>
 //#include "c_baseentity.h"
+#include "c_prop_shortcut.h"
 #include <KeyValues.h>
 #include "proxyentity.h"
 #include "materialsystem/IMaterialVar.h"
@@ -11,6 +12,7 @@
 //#include "imaterialproxydict.h"
 #include "c_websurfaceregen.h"
 #include "c_webtab.h"
+#include <map>
 
 class CWebSurfaceProxy : public CEntityMaterialProxy
 {
@@ -21,24 +23,32 @@ public:
 	virtual void OnBind(C_BaseEntity *pC_BaseEntity = null);
 	virtual void Release();
 
+	void LevelShutdownPreEntity();
+
 	// mutators
 	//void SetId(std::string id) { m_id = id; }
 
 	// accessors
 	IMaterial *GetMaterial() { return m_pMaterial; }
 	static CWebSurfaceRegen* GetTextureRegenerator() { return s_pWebSurfaceRegen; };
+	static void OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture);
 
 private:
 	int				m_iState;
 	std::string		m_id;
+	C_WebTab*		m_pCurrentWebTab;
 	C_WebTab*		m_pWebTab;
 	IMaterial*		m_pMaterial;
 	IMaterialVar*	m_pMaterialTextureVar;
 	IMaterialVar*	m_pMaterialDetailBlendFactorVar;
 	ITexture*		m_pOriginalTexture;
+	ITexture*		m_pCurrentTexture;
 	std::string		m_originalId;
 	int				m_iOriginalAutoCreate;
 	std::string		m_originalUrl;
+
+	std::string		m_originalSimpleImageChannel;
+	static std::map<std::string, std::map<std::string, ITexture*>> s_simpleImages;	// a map of shortcut to
 
 //	static int				s_textureCount;	// probably needed for cleanup??
 	static CWebSurfaceRegen* s_pWebSurfaceRegen;

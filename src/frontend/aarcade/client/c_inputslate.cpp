@@ -16,11 +16,18 @@
 
 using namespace vgui;
 
+long CInputSlate::m_fPreviousTime = 0;
+
 //ITexture* CInputSlate::s_pOriginalTexture = null;
 //IMaterial* CInputSlate::s_pMaterial = null;
 CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
 	SetParent( parent );
+
+	// automatically pin the input slate open if it was just opened a moment ago
+	long currentTime = system()->GetTimeMillis();
+	if (m_fPreviousTime > 0 && currentTime - m_fPreviousTime < 200)
+		g_pAnarchyManager->GetInputManager()->ForceInputMode();
 
 	m_bCursorAlphaZero = false;
 	m_bCursorHidden = false;
@@ -268,6 +275,7 @@ void CInputSlate::OnCommand(const char* pcCommand)
 
 CInputSlate::~CInputSlate()
 {
+	m_fPreviousTime = system()->GetTimeMillis();
 	/*
 	if (m_pOriginalTexture)
 	{

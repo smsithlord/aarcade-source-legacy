@@ -12,6 +12,8 @@
 
 C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 {
+	m_bReadyForNextSimpleImage = false;
+
 	DevMsg("WebTab: Constructor\n");
 	m_iState = 0;
 
@@ -29,14 +31,19 @@ C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 	int iWidth = g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
 	int iHeight = g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
 
-	if ( bAlpha )
-		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGRA8888, 1);
+	if (m_id != "images")
+	{
+		if (bAlpha)
+			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGRA8888, 1);
+		else
+			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+
+		// get the regen and assign it
+		CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
+		m_pTexture->SetTextureRegenerator(pRegen);
+	}
 	else
-		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
-	
-	// get the regen and assign it
-	CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
-	m_pTexture->SetTextureRegenerator(pRegen);
+		m_pTexture = null;
 
 	// create the web view
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->CreateWebView(this);
@@ -49,18 +56,30 @@ C_WebTab::~C_WebTab()
 	//if (m_pTexture)
 	//	m_pTexture->SetTextureRegenerator(null);
 
+	//pTexture->SetTextureRegenerator(null);
+
+	//pTexture->DecrementReferenceCount();
+	//pTexture->DeleteIfUnreferenced();
+
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->ReleaseWebView(this);
 
 	if (m_pTexture)
 	{
-		m_pTexture->SetTextureRegenerator(null);
+		DevMsg("Destroying web tab texture.\n");
+		//if (m_id != "images")
+		//	m_pTexture->SetTextureRegenerator(null);
 //		m_pTexture->DecrementReferenceCount();
 //		m_pTexture->DeleteIfUnreferenced();
 	}
+
+	DevMsg("Done destroying web tab.\n");
 }
 
 void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (m_id == "images")
+		return;
+
 	/*
 	if ( pBaseEntity )
 		DevMsg("WebTab: OnProxyBind: %i\n", pBaseEntity->entindex());
@@ -89,6 +108,8 @@ void C_WebTab::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 void C_WebTab::Render()
 {
+	if (m_id == "images")
+		return;
 	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
 //	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
 	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
@@ -177,6 +198,35 @@ void C_WebTab::SetUrl(std::string url)
 		pWebView->LoadURL(WebURL(WSLit(url.c_str())));
 	else
 		DevMsg("ERROR: cOULD NOT FIND WEB VIEW!\n\n");
+}
+
+bool C_WebTab::RequestLoadSimpleImage(std::string channel, std::string itemId)
+{
+	if (m_id != "images" || !m_bReadyForNextSimpleImage)
+		return false;
+
+	// check if we are ready to accept a new image request
+	std::vector<std::string> args;
+	args.push_back(channel);
+	args.push_back(itemId);	// these should also be remembered locally too, so we can load entire websites as images too.
+
+	m_bReadyForNextSimpleImage = false;
+	DispatchJavaScriptMethod("imageLoader", "loadImage", args);
+	return true;
+}
+
+void C_WebTab::OnSimpleImageReady(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
+{
+	if (m_id != "images" )
+		return;
+
+	CWebSurfaceProxy::OnSimpleImageRendered(channel, itemId, field, pTexture);
+	m_bReadyForNextSimpleImage = true;
+}
+
+void C_WebTab::DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->DispatchJavaScriptMethod(this, objectName, objectMethod, methodArguments);
 }
 
 void C_WebTab::DispatchJavaScriptMethodCalls()

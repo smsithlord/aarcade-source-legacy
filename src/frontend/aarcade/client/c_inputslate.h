@@ -52,6 +52,7 @@ namespace vgui
 
 	private:
 		bool m_bFullscreen;
+		static long m_fPreviousTime;
 
 	protected:
 		void OnCommand(const char* pcCommand);

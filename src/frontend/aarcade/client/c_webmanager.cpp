@@ -87,13 +87,13 @@ void C_WebManager::Update()
 		m_pWebBrowser->Update();
 
 	// assume that the hud and selected web tabs are priority
-	if (m_pSelectedWebTab)
+	if (m_pSelectedWebTab && m_pSelectedWebTab->GetId() != "images")
 	{
 		m_pSelectedWebTab->OnProxyBind();
 		g_pAnarchyManager->GetWebManager()->IncrementVisiblePriorityWebTabsCurrentFrame();
 	}
 	
-	if (m_pHudWebTab && m_pHudWebTab != m_pSelectedWebTab && g_pAnarchyManager->GetInputManager()->GetInputMode())
+	if (m_pHudWebTab && (m_pHudWebTab != m_pSelectedWebTab || !m_pSelectedWebTab || m_pSelectedWebTab->GetId() == "images") && g_pAnarchyManager->GetInputManager()->GetInputMode())
 	{
 		m_pHudWebTab->OnProxyBind();
 		g_pAnarchyManager->GetWebManager()->IncrementVisiblePriorityWebTabsCurrentFrame();
@@ -211,6 +211,11 @@ void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 	//m_pWebBrowser->OnDeselectWebTab(pWebTab);
 
 	g_pAnarchyManager->GetInputManager()->SetInputListener(null, LISTENER_NONE);
+
+	if (pWebTab->GetId().find("auto") == 0)
+		this->RemoveWebTab(pWebTab);
+
+	DevMsg("done removing web tab\n");
 	/*
 	// update the live webview texture
 	IMaterial* pMaterial = vgui::CInputSlate::s_pMaterial;
@@ -238,6 +243,11 @@ void C_WebManager::LevelShutdownPreEntity()
 		if (victim != m_pHudWebTab)
 			RemoveWebTab(victim);
 	}
+
+	unsigned int i;
+	unsigned int numProxies = m_webSurfaceProxies.size();
+	for (i = 0; i < numProxies; i++)
+		m_webSurfaceProxies[i]->LevelShutdownPreEntity();
 }
 
 void C_WebManager::OnBrowserInitialized()
@@ -257,6 +267,10 @@ void C_WebManager::OnActivateInputMode(bool bFullscreenMode)
 	std::vector<std::string> args;
 	args.push_back(VarArgs("%i", (bFullscreenMode)));
 	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));	// FIXME: There will probably be other ways for the HUD to be pinned, such as pressing ESC to bring it up.
+	
+	std::string mapName = VarArgs("%s", g_pAnarchyManager->MapName());
+	args.push_back(VarArgs("%i", (mapName != "(null)")));
+
 	this->DispatchJavaScriptMethod(m_pHudWebTab, "arcadeHud", "onActivateInputMode", args);
 }
 
@@ -286,7 +300,7 @@ void C_WebManager::RemoveWebTab(C_WebTab* pWebTab)
 C_WebTab* C_WebManager::CreateHudWebTab()
 {
 	//C_WebTab* pWebTab = CreateWebTab("asset://ui/hud.html", "hud", true);
-	C_WebTab* pWebTab = CreateWebTab("asset://ui/loading.html", "hud", true);
+	C_WebTab* pWebTab = CreateWebTab("asset://ui/startup.html", "hud", true);
 	//g_pAnarchyManager->GetWebManager()->SelectWebTab(pWebTab);
 //	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
 	return pWebTab;

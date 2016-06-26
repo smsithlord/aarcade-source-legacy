@@ -24,6 +24,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
 	m_pMountManager = null;
+	m_pInstanceManager = null;
 	m_dLastGenerateIdTime = 0;
 	m_lastGeneratedChars = "000000000000";
 }
@@ -48,6 +49,10 @@ void C_AnarchyManager::Shutdown()
 {
 	DevMsg("AnarchyManager: Shutdown\n");
 
+	m_pInputManager->DeactivateInputMode();
+	delete m_pInputManager;
+	m_pInputManager = null;
+
 	delete m_pWebManager;
 	m_pWebManager = null;
 
@@ -57,9 +62,6 @@ void C_AnarchyManager::Shutdown()
 	delete m_pLibretroManager;
 	m_pLibretroManager = null;
 
-	delete m_pInputManager;
-	m_pInputManager = null;
-
 	delete m_pMountManager;
 	m_pMountManager = null;
 
@@ -68,6 +70,9 @@ void C_AnarchyManager::Shutdown()
 
 	delete m_pMetaverseManager;
 	m_pMetaverseManager = null;
+
+	delete m_pInstanceManager;
+	m_pInstanceManager = null;
 
 	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
 }
@@ -252,10 +257,19 @@ std::string C_AnarchyManager::ExtractLegacyId(std::string itemFile, KeyValues* i
 
 	std::string nameSnip = "";
 	bool bPassed = true;
-	size_t found = itemFile.find_last_of("/\\");
-	if (found == std::string::npos)
+
+	size_t found = itemFile.find(":");
+	if (found != std::string::npos)
 		bPassed = false;
-	else
+
+	if (bPassed)
+	{
+		found = itemFile.find_last_of("/\\");
+		if (found == std::string::npos)
+			bPassed = false;
+	}
+
+	if (bPassed)
 	{
 		nameSnip = itemFile.substr(found + 1);
 		found = nameSnip.find_first_of(".");
@@ -284,9 +298,13 @@ std::string C_AnarchyManager::ExtractLegacyId(std::string itemFile, KeyValues* i
 			}
 		}
 	}
+	
+	// generate a legacy ID based on the filelocation if given an item to work with
+	if (!bPassed && item)
+		nameSnip = this->GenerateLegacyHash(item->GetString("filelocation"));
 
 	if (!bPassed)
-		nameSnip = this->GenerateLegacyHash(item->GetString("filelocation"));
+		nameSnip = "";
 
 	return nameSnip;
 }
@@ -371,6 +389,7 @@ void C_AnarchyManager::AnarchyBegin()
 {
 	DevMsg("AnarchyManager: AnarchyBegin\n");
 
+	m_pInstanceManager = new C_InstanceManager();
 	m_pMetaverseManager = new C_MetaverseManager();
 	m_pInputManager = new C_InputManager();
 	m_pWebManager = new C_WebManager();
@@ -470,6 +489,12 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	//pMaterials[x]->ColorModulate(255, 0, 0);
 	//pMaterials[x]->GetPreviewImage
 
+	std::string itemId;
+	std::string tabTitle;
+	std::string uri;
+	KeyValues* item;
+	KeyValues* active;
+	C_PropShortcutEntity* pShortcut;
 	C_WebTab* pWebTab;
 	C_WebTab* pSelectedWebTab;
 	IMaterial* pMaterial;
@@ -478,15 +503,57 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 		if (pMaterials[x] && pMaterials[x]->HasProxy())
 		{
 			pMaterial = pMaterials[x];
+//			bool found;
+	//		IMaterialVar* pMaterialVar = pMaterial->FindVar("simpleimagechannel", &found);
+		//	if (found && !Q_strcmp(pMaterialVar->GetStringValue(), 
+			// FIXME: Add some kind of material variable that could allow us to be skipped? We'll need something like that when WebImages are added.
 			pWebTab = m_pWebManager->FindWebTab(pMaterial);
 			if (pWebTab)
 			{
-				pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
-				if (pSelectedWebTab)
-					m_pWebManager->DeselectWebTab(pSelectedWebTab);
+				// if this is the "images" web tab, we should create a NEW web tab for it (usually) because we don't actually show the iamges web tab.
+				bool bImagesAndHandled = false;
+				if (pWebTab->GetId() == "images")
+				{
+					pShortcut = dynamic_cast<C_PropShortcutEntity*>(m_pSelectedEntity);
+					if (pShortcut)
+					{
+						tabTitle = "auto" + pShortcut->GetItemId();
+						pWebTab = this->GetWebManager()->FindWebTab(tabTitle);
+						if (!pWebTab)
+						{
+							itemId = pShortcut->GetItemId();
+							item = m_pMetaverseManager->GetLibraryItem(itemId);
+							if (item)
+							{
+								active = item->FindKey("current");
+								if (!active)
+									active = item->FindKey("local", true);
 
-				// FIXME: Add some kind of material variable that could allow us to be skipped? We'll need something like that when WebImages are added.
-				m_pWebManager->SelectWebTab(pWebTab);
+								std::string uri = "asset://ui/autoInspectItem.html?id=" + itemId + "&screen=" + std::string(active->GetString("screen")) + "&marquee=" + std::string(active->GetString("marquee")) + "&preview=" + std::string(active->GetString("preview")) + "&reference=" + std::string(active->GetString("reference")) + "&file=" + std::string(active->GetString("file"));
+
+								WebURL url = WebURL(WSLit(uri.c_str()));
+//								DevMsg("Parsed is: %s\n", WebStringToCharString(url.spec()));
+								pWebTab = m_pWebManager->CreateWebTab(WebStringToCharString(url.spec()), tabTitle);
+							}
+						}
+					}
+				}
+				else
+				{
+					pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
+					if (pSelectedWebTab)
+						m_pWebManager->DeselectWebTab(pSelectedWebTab);
+				}
+
+				pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
+				if (pSelectedWebTab && pSelectedWebTab != pWebTab)
+				{
+					m_pWebManager->DeselectWebTab(pSelectedWebTab);
+					m_pWebManager->SelectWebTab(pWebTab);
+				}
+				else if ( !pSelectedWebTab )
+					m_pWebManager->SelectWebTab(pWebTab);
+
 				break;
 			}
 		}

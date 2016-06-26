@@ -9,6 +9,7 @@
 #include "c_mountmanager.h"
 #include "c_workshopmanager.h"
 #include "c_metaversemanager.h"
+#include "c_instancemanager.h"
 #include <vector>
 #include "vgui/ISystem.h"
 #include "vgui_controls/Controls.h"
@@ -61,7 +62,7 @@ public:
 
 	// helpers
 	std::string GenerateUniqueId();
-	std::string ExtractLegacyId(std::string itemFile, KeyValues* item);
+	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);
 	const char* GenerateLegacyHash(const char* text);
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
@@ -73,6 +74,7 @@ public:
 	C_MountManager* GetMountManager() { return m_pMountManager; }
 	C_WorkshopManager* GetWorkshopManager() { return m_pWorkshopManager; }
 	C_MetaverseManager* GetMetaverseManager() { return m_pMetaverseManager; }
+	C_InstanceManager* GetInstanceManager() { return m_pInstanceManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
@@ -86,6 +88,7 @@ private:
 	C_MountManager* m_pMountManager;
 	C_WorkshopManager* m_pWorkshopManager;
 	C_MetaverseManager* m_pMetaverseManager;
+	C_InstanceManager* m_pInstanceManager;
 	C_BaseEntity* m_pSelectedEntity;
 };
 

@@ -1,0 +1,56 @@
+<html>
+	<head>
+	</head>
+	<body>
+		<center><h1>HELLO WORLD</h1></center>
+		<script>
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+function ExtractYouTubeId(trailerURL)
+{
+  if( typeof trailerURL === "undefined" )
+    return trailerURL;
+
+  var youtubeid;
+  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+  {
+    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+    var found = youtubeid.indexOf("&");
+    if( found > -1 )
+    {
+      youtubeid = youtubeid.substr(0, found);
+    }
+  }
+  else
+  {
+    var found = trailerURL.indexOf("youtu.be/");
+    if( found != -1 )
+    {
+      youtubeid = trailerURL.substr(found+9);
+
+      found = youtubeid.indexOf("&");
+      if( found != -1 )
+      {
+        youtubeid = youtubeid.substr(0, found);
+      }
+    }
+  }
+
+  return youtubeid;
+}
+
+			console.log("AUTO WHAT NOW LOADED!: " + getParameterByName("file"));
+			window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + ExtractYouTubeId(getParameterByName("file")) + "&autoplay=1";
+		</script>
+	</body>
+</html>

@@ -19,6 +19,15 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		engine->ClientCmd("quit");
 	}	
+	else if (method_name == WSLit("spawnItem"))
+	{
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+
+		std::string id = WebStringToCharString(args[0].ToString());
+		DevMsg("SPAWN THE SHIT! %s\n", id.c_str());
+
+		//g_pAnarchyManager->GetInstanceManager()->SpawnItem(id);
+	}
 	else if (method_name == WSLit("launchItem"))
 	{
 		DevMsg("LAUNCH THE SHIT!\n");
@@ -256,14 +265,78 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("requestActivateInputMode"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);	// FIXME This same code is somewhere else also.
 		if (!pWebTab)
 			return;
-
+		
 		std::vector<std::string> params;
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
+
+		std::string mapName = VarArgs("%s", g_pAnarchyManager->MapName());
+		params.push_back(VarArgs("%i", (mapName != "(null)")));
 		g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
+	}
+	else if (method_name == WSLit("simpleImageReady"))
+	{
+		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+		if (pWebTab->GetId() != "images")
+			return;// JSValue(false);
+
+		std::string channel = WebStringToCharString(args[0].ToString());
+		std::string itemId = WebStringToCharString(args[1].ToString());
+		std::string field = WebStringToCharString(args[2].ToString());
+
+		if (channel == "" && itemId == "" && field == "")
+		{
+			pWebTab->SetReadyForNextSimpleImage(true);
+		}
+		else if (channel != "" && itemId != "" && field != "")
+		{
+			DevMsg("Given: %s, %s, %s\n", field.c_str(), itemId.c_str(), channel.c_str());
+			KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+			if (item)
+			{
+				KeyValues* active = item->FindKey("current");
+				if (!active)
+					active = item->FindKey("local");
+
+				KeyValues* fieldKv = active->FindKey(field.c_str());
+				if (fieldKv)
+				{
+					std::string imageId = g_pAnarchyManager->GenerateLegacyHash(fieldKv->GetString());
+
+					// URLs that are already loaded would have been provided in the blacklist, so the rendered URL should always be fresh at this point.
+					std::string textureName = "image_";
+					textureName += imageId;
+
+					int iWidth = 512;
+					int iHeight = 512;
+
+					//ITexture* pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_MODEL, true, 1);
+					//if ( !pTexture )
+					ITexture* pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_MODEL, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+
+					if (!pTexture)
+						DevMsg("Failed to create texture!\n");
+
+					// get the regen and assign it
+					CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
+					pTexture->SetTextureRegenerator(pRegen);
+
+					pRegen->SetWebTab(pWebTab);
+					pTexture->Download();
+
+					pWebTab->OnSimpleImageReady(channel, itemId, field, pTexture);
+				}
+			}
+		}
+		else if (itemId != "")
+		{
+			pWebTab->OnSimpleImageReady(channel, itemId, field, null);
+		}
+
+		return;// JSValue(true);
 	}
 }
 

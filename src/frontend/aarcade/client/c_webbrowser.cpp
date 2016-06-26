@@ -87,12 +87,16 @@ void C_WebBrowser::Init()
 
 void C_WebBrowser::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 {
-	pWebView->Resize(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight());
+	if (id == "images")
+		pWebView->Resize(512, 512);
+	else
+		pWebView->Resize(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight());
+
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
 	pWebView->set_menu_listener(m_pMenuListener);
 
-	if (id == "hud")
+	if (id == "hud" || id == "images")
 	{
 		pWebView->set_js_method_handler(m_pJSHandler);
 		CreateAaApi(pWebView);
@@ -114,6 +118,10 @@ void C_WebBrowser::ReleaseWebView(C_WebTab* pWebTab)
 
 	pWebView->Unfocus();
 	pWebView->Destroy();
+
+	std::map<C_WebTab*, WebView*>::iterator it = m_webViews.find(pWebTab);
+	if (it != m_webViews.end())
+		m_webViews.erase(it);
 }
 
 void C_WebBrowser::CreateWebView(C_WebTab* pWebTab)
@@ -167,7 +175,7 @@ void C_WebBrowser::OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY)
 	// translate the mouse position to actual pixel values
 	int iMouseX = fMouseX * g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
 	int iMouseY = fMouseY * g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
-
+	
 	WebView* pWebView = FindWebView(pWebTab);
 	if ( pWebView )
 		pWebView->InjectMouseMove(iMouseX, iMouseY);
@@ -900,6 +908,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	JSObject& systemObject = result.ToObject();
 	systemObject.SetCustomMethod(WSLit("quit"), false);
 	systemObject.SetCustomMethod(WSLit("launchItem"), false);
+	systemObject.SetCustomMethod(WSLit("spawnItem"), false);
 	systemObject.SetCustomMethod(WSLit("didSelectPopupMenuItem"), true);
 	systemObject.SetCustomMethod(WSLit("didCancelPopupMenu"), true);
 	systemObject.SetCustomMethod(WSLit("loadFirstLocalApp"), false);
@@ -915,6 +924,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("hudMouseUp"), false);
 	systemObject.SetCustomMethod(WSLit("getSelectedWebTab"), true);
 	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
+	systemObject.SetCustomMethod(WSLit("simpleImageReady"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -954,8 +964,11 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 
 void C_WebBrowser::RemoveWebView(C_WebTab* pWebTab)
 {
-	// FIXME: Blindly unfocusing because the web tab doesn't remember if its focused or not!!
-	g_pAnarchyManager->GetWebManager()->DeselectWebTab(pWebTab);
+	C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+	if (pSelectedWebTab && pSelectedWebTab == pWebTab)
+		g_pAnarchyManager->GetWebManager()->DeselectWebTab(pWebTab);
+
+	// FIXME: Blindly unfocusing because the web tab doesn't remember if its focused or not!! // obsolete concern????
 	g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
 
 	std::map<C_WebTab*, WebView*>::iterator it = m_webViews.find(pWebTab);
@@ -990,11 +1003,14 @@ void C_WebBrowser::OnCreateWebViewDocumentReady(WebView* pWebView, std::string i
 
 		//g_pAnarchyManager->GetMetaverseManager()->OnWebTabCreated(pWebTab);
 
-		if (pWebTab->GetTexture()->GetImageFormat() == IMAGE_FORMAT_BGRA8888)
+		ITexture* pTexture = pWebTab->GetTexture();
+		if ( pTexture && pTexture->GetImageFormat() == IMAGE_FORMAT_BGRA8888)
 			pWebView->SetTransparent(true);
 
-		pWebView->LoadURL(WebURL(WSLit(pWebTab->GetInitialUrl().c_str())));
-		DevMsg("Loading initial URL: %s\n", pWebTab->GetInitialUrl().c_str());
+		std::string uri = (id == "images") ? "asset://ui/imageLoader.html" : pWebTab->GetInitialUrl();
+
+		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
+		DevMsg("Loading initial URL: %s\n", uri.c_str());
 	}
 }
 
@@ -1133,5 +1149,7 @@ void C_WebBrowser::RegenerateTextureBits(C_WebTab* pWebTab, ITexture *pTexture, 
 		BitmapSurface* surface = static_cast<BitmapSurface*>(pWebView->surface());
 		if (surface != 0)
 			surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
+			//surface->Paint(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, Awesomium::Rect(0, 0, pSubRect->width, pSubRect->height), Awesomium::Rect(0, 0, pSubRect->width, pSubRect->height));
+			//surface->CopyTo(pVTFTexture->ImageData(0, 0, 0), pSubRect->width * 4, 4, false, false);
 	}
 }

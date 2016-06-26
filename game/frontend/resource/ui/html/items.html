@@ -8,40 +8,61 @@
 	</head>
 	<body>
 		<div class="hudHeaderContainer">
-			<div class="hudHeaderRow">
-				<div class="hudHeaderCell" style="text-align: right;">
-					<div class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Hide the main menu." onclick="window.location='asset://ui/blank.html';">
-							&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
+			<div class="hudHeaderNavigationContainer">
+				helloo world
+			</div>
+			<div class="hudHeaderContainerTable">
+				<div class="hudHeaderContainerRow">
+					<div class="hudHeaderContainerCell">
+					</div>
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Expand the address bar." onclick="arcadeHud.expandAddressMenu();">
+								AArcade
+							</div>
 						</div>
 					</div>
-					<div id="pinHudButton" class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Enable menu input." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
-							Pin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Hide the main menu." onclick="window.location='asset://ui/blank.html';">
+								&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
+							</div>
 						</div>
-					</div>
-					<div id="returnHudButton"class="hudHeaderButtonContainer">
-						<div class="hudHeaderButton helpNote" help="Return to Anarchy Arcade." onclick="aaapi.system.deactivateInputMode();">
-							Unpin&nbsp;&nbsp;<img src="asset://ui/pinicon.png" />
+						<div id="returnHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Unpin & close the HUD." onclick="aaapi.system.deactivateInputMode();">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
+						</div>
+						<div id="pinHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton helpNote" help="Pin the HUD to stay open." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class="hudContent" style="height: 75%; position: fixed; top: 60px; width: 80%; left: 0; right: 0;">
+		<div class="hudContent" style="height: 65%; position: fixed; top: 15%; width: 80%; left: 0; right: 0;">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell hudContentHeaderButton helpNote" onclick="window.location='asset://ui/library.html';" help="Go back to the previous menu.">
-						<img src="asset://ui/backarrow.png" />
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/library.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Library / Items
+						Libray / Items
 					</div>
-					<div class="hudContentHeaderCell hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open."><img src="asset://ui/xicon.png" /></div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
 				</div>
 			</div>
-			<div style="display: table; height: 500px; width: 100%; border-collapse: separate; table-layout: fixed;">
+
+			<div style="display: table; height: 100%; width: 100%; border-collapse: separate; table-layout: fixed;">
 				<div style="display: table-row;">
 					<div style="display: table-cell;">
 						<div class="librarySearchContainer">
@@ -101,7 +122,7 @@
 											<div class="button disabledButton">Inspect</div>
 										</td>
 										<td>
-											<div class="button disabledButton">Use</div>
+											<div class="button" onclick="spawnSelected();">Use</div>
 										</td>
 									</tr></table>
 								</td>
@@ -225,6 +246,11 @@
 
 				return false;
 			}, true);
+
+			function spawnSelected()
+			{
+				aaapi.system.spawnItem(libraryContainer.selectedItem.item.info.id);
+			}
 
 			function editSelected()
 			{

@@ -4,11 +4,13 @@ function ArcadeHud()
 	this.selectedWebTab = null;
 	this.pinHudButtonElem;
 	this.returnHudButtonElem;
+	this.closeContentButtonElem;
 	this.clickThruElem;
 	this.cursorElem;
 	this.cursorPreviewImageElem;
 	this.cursorImageElem;
 	this.helpElem;
+	this.startupLoadingMessagesContainer;
 	this.hudLoadingMessagesContainer;
 	this.hudLoadingMessages = {};
 	this.DOMReady = false;
@@ -16,13 +18,17 @@ function ArcadeHud()
 	{
 		this.DOMReady = true;
 
+		this.startupLoadingMessagesContainer = document.body.querySelector("#startupLoadingMessagesContainer");	// usually undefined
+
 		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
 		this.returnHudButtonElem = document.body.querySelector("#returnHudButton");
+		this.closeContentButtonElem = document.body.querySelector(".hudContentHeaderCell:nth-of-type(3) .hudContentHeaderButton");
 		
 		aaapi.system.requestActivateInputMode();
 
 		this.helpElem = document.createElement("div");
 		this.helpElem.className = "helpContainer";
+
 		this.hudLoadingMessagesContainer = document.createElement("div");
 		this.hudLoadingMessagesContainer.className = "hudLoadingMessagesContainer";
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
@@ -135,20 +141,52 @@ ArcadeHud.prototype.expandAddressMenu = function()
 		elem.style.top = "-65px";
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned)
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded)
 {
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
+	isMapLoaded = parseInt(isMapLoaded);
 
-	if( isHudPinned )
+	if( isMapLoaded )
 	{
-		this.pinHudButtonElem.style.display = "none";
-		this.returnHudButtonElem.style.display = "inline-block";
+		if( isHudPinned )
+		{
+			if( !!this.pinHudButtonElem )
+				this.pinHudButtonElem.style.display = "none";
+
+			if( !!this.returnHudButtonElem )
+				this.returnHudButtonElem.style.display = "inline-block";
+		}
+		else
+		{
+			if( !!this.returnHudButtonElem )
+				this.returnHudButtonElem.style.display = "none";
+			
+			if( isMapLoaded )
+			{
+				if( !!this.pinHudButtonElem )
+					this.pinHudButtonElem.style.display = "inline-block";
+			}
+			else
+			{
+				if( !!this.pinHudButtonElem )
+					this.pinHudButtonElem.style.display = "none";
+			}
+		}
+
+		//if( !!this.closeContentButtonElem )
+		//	this.closeContentButtonElem.style.display = "block";
 	}
 	else
 	{
-		this.pinHudButtonElem.style.display = "inline-block";
-		this.returnHudButtonElem.style.display = "none";
+		if( !!this.pinHudButtonElem )
+			this.pinHudButtonElem.style.display = "none";
+
+		if( !!this.returnHudButtonElem )
+			this.returnHudButtonElem.style.display = "none";
+
+		//if( !!this.closeContentButtonElem )
+		//	this.closeContentButtonElem.style.display = "none";
 	}
 
 	if( isFullscreen )
@@ -206,7 +244,16 @@ ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, 
 		};
 	}
 	else
-		this.hudLoadingMessages[id].message = message;
+	{
+		if( !!!this.hudLoadingMessages[id].message )
+			this.hudLoadingMessages[id].message = {};
+
+		var x;
+		for( x in message )
+		{
+			this.hudLoadingMessages[id].message[x] = message[x];
+		}
+	}
 
 	if( this.DOMReady )
 		this.dispatchHudLoadingMessages();
@@ -214,18 +261,42 @@ ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, 
 
 ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 {
+	var startupIds = [
+		"locallibrarytypes",
+		"locallibrarymodels",
+		"locallibraryapps",
+		"mounts",
+		"workfetch",
+		"detectmaps",
+		"workshoplibrarymodels",
+		"workshoplibraryitems",
+		"skiplegacyworkshops",
+		"mountworkshops"
+		];
+
+	var bStartupHandled = false;
+
 	var isNewMsg = false;
 	var empty = true;
 	var x, message, messageObject, className, progressText, percent;
 	for( x in this.hudLoadingMessages )
 	{
 		messageObject = this.hudLoadingMessages[x];
+		//console.log(messageObject.message);
+
+		if( !!messageObject.message && !!this.startupLoadingMessagesContainer && startupIds.indexOf(messageObject.message.id) >= 0 )
+			bStartupHandled = true;
 
 		if( !!!messageObject.container )
 		{
 			isNewMsg = true;
+
 			messageObject.container = document.createElement("div");
-			this.hudLoadingMessagesContainer.appendChild(messageObject.container);
+
+			if( bStartupHandled )
+				this.startupLoadingMessagesContainer.appendChild(messageObject.container);
+			else
+				this.hudLoadingMessagesContainer.appendChild(messageObject.container);
 		}
 		else
 		{
@@ -320,10 +391,18 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 
 	if( !empty )
 	{
-		if( isNewMsg )
-			this.hudLoadingMessagesContainer.scrollTop = this.hudLoadingMessagesContainer.scrollHeight;
+		if( !bStartupHandled )
+		{
+			if( isNewMsg )
+				this.hudLoadingMessagesContainer.scrollTop = this.hudLoadingMessagesContainer.scrollHeight;
 
-		this.helpElem.style.display = "block";
+			this.helpElem.style.display = "block";
+		}
+		else
+		{
+			if( isNewMsg )
+				this.startupLoadingMessagesContainer.scrollTop = this.startupLoadingMessagesContainer.scrollHeight;
+		}
 	}
 };
 

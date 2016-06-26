@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 50%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell"></div>
+					<div class="hudContentHeaderCell">
+						Starting up...
+					</div>
+					<div class="hudContentHeaderCell"></div>
+				</div>
+			</div>
+
+			<div id="startupLoadingMessagesContainer"></div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<script>
+		/*
+			setInterval(function()
+			{
+				arcadeHud.addHudLoadingMessage("progress", "", "Load User Library", "locallibraryapps", "", "", "+", "");
+			}, 100);
+		*/
+		</script>
+	</body>
+</html>

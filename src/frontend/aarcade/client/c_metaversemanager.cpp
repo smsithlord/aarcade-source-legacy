@@ -130,11 +130,13 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			size_t foundExt = modelFile.find(".mdl");
 			if (foundExt == modelFile.length() - 4)
 			{
-				/*
-				pItem->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId().c_str());
-				//DevMsg("Unique ID: %s\n", pItem->GetString("local/info/id"));
-
-				// build a generation 3 model
+				bIsModel = true;
+				std::string itemId = g_pAnarchyManager->ExtractLegacyId(file, pItem).c_str();
+		//		std::string itemId = g_pAnarchyManager->ExtractLegacyId(std::string(pItem->GetString("filelocation")));
+	//			if (itemId == "")
+//					itemId = g_pAnarchyManager->ExtractLegacyId(std::string(pItem->GetString("lastmodel")));
+				
+				pItem->SetString("local/info/id", itemId.c_str());
 				std::string goodTitle = pItem->GetString("title");
 				if (Q_strcmp(pItem->GetString("group"), ""))
 					goodTitle = VarArgs("%s - %s", pItem->GetString("group"), goodTitle.c_str());
@@ -149,31 +151,9 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				pItem->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), workshopIds.c_str());
 				pItem->SetString(VarArgs("local/platforms/%s/mountId", AA_PLATFORM_ID), mountIds.c_str());
 
-				// remove everything not in local or current or generation
-				std::vector<KeyValues*> victims;
-				for (KeyValues *sub = pItem->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-				{
-					if (Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "local") && Q_strcmp(sub->GetName(), "generation"))
-						victims.push_back(sub);
-						//sub->SetString(null, "");
-				}
-
-				for (unsigned int i = 0; i < victims.size(); i++)
-					pItem->RemoveSubKey(victims[i]);
-				*/
-
-				/*
-				std::string max = VarArgs("%u", 50000);
-				std::string min = "0";
-				std::string current = VarArgs("%u", 50000);
-				g_pAnarchyManager->GetLoadingManager()->AddMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", min, current, max);
-				*/
-
-				// TODO: Generate an ID and add this to the library!!
-				bIsModel = true;
-	//			pItem->deleteThis();
-//				pItem = null;
-			//	return null;
+				// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
+				DevMsg("Loading model with ID %s and model %s\n", itemId.c_str(), modelFile.c_str());
+				m_models[itemId] = pItem;
 			}
 			else
 			{
@@ -1024,6 +1004,102 @@ KeyValues* C_MetaverseManager::GetLibraryItem(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_items.find(id);
 	if (it != m_items.end())
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::GetLibraryModel(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_models.find(id);
+	if (it != m_models.end())
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	unsigned int i, numTokens;
+	bool bFoundMatch;
+	std::map<std::string, KeyValues*>::iterator it = m_models.begin();
+	char slashBuffer[AA_MAX_STRING];
+	while (it != m_models.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = potential->FindKey("current");
+		if (!active)
+			active = potential->FindKey("local");
+		if (active)
+		{
+			// active has the potential model data
+			// pSearchInfo has the search criteria
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "lastmodel")
+				{
+					if (!bExactOnly)
+					{
+						potentialBuf = searchField->GetString();
+						std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+						searchBuf = pSearchInfo->GetString(fieldName.c_str());
+						searchTokens.clear();
+						g_pAnarchyManager->Tokenize(searchBuf, searchTokens, ", ");
+						numTokens = searchTokens.size();
+
+						for (i = 0; i < numTokens; i++)
+						{
+							if (searchTokens[i].length() < 2)
+								continue;
+
+							if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+							{
+								bFoundMatch = true;
+								break;
+							}
+						}
+					}
+					else
+					{
+						// fix slashes to reduce duplicates
+						Q_strcpy(slashBuffer, searchField->GetString());
+						V_FixSlashes(slashBuffer);
+						potentialBuf = slashBuffer;
+
+						Q_strcpy(slashBuffer, pSearchInfo->GetString(fieldName.c_str()));
+						V_FixSlashes(slashBuffer);
+						searchBuf = slashBuffer;
+
+						if (potentialBuf == searchBuf)
+							bFoundMatch = true;
+					}
+
+					if (bFoundMatch)
+						break;
+
+				}
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	// Do this here because we MUST handle the deletion for findNext and findFirst, so this usage should match!!
+	pSearchInfo->deleteThis();
+
+	if (bFoundMatch)
 		return it->second;
 	else
 		return null;

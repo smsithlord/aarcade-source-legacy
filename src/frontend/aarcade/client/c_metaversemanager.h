@@ -44,6 +44,9 @@ public:
 	KeyValues* GetNextLibraryItem();
 	KeyValues* GetLibraryItem(std::string id);
 
+	KeyValues* GetLibraryModel(std::string id);
+	KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
+
 	KeyValues* FindFirstLibraryItem(KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryItem();
 	KeyValues* FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
