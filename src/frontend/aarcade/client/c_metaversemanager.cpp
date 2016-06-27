@@ -70,12 +70,14 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 {
 	// FIXME this junction should take place in the anarchy manager!!
 
-	/*
+//	/*
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
 	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
-	*/
+//	*/
+
+	this->DetectAllLegacyCabinets();
 
 	g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
 //	g_pAnarchyManager->OnMountAllWorkshopsComplete();
@@ -131,7 +133,8 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			if (foundExt == modelFile.length() - 4)
 			{
 				bIsModel = true;
-				std::string itemId = g_pAnarchyManager->ExtractLegacyId(file, pItem).c_str();
+				//std::string itemId = g_pAnarchyManager->ExtractLegacyId(file, pItem).c_str();
+				std::string itemId = g_pAnarchyManager->GenerateLegacyHash(pItem->GetString("filelocation"));
 		//		std::string itemId = g_pAnarchyManager->ExtractLegacyId(std::string(pItem->GetString("filelocation")));
 	//			if (itemId == "")
 //					itemId = g_pAnarchyManager->ExtractLegacyId(std::string(pItem->GetString("lastmodel")));
@@ -639,6 +642,8 @@ void C_MetaverseManager::LoadLocalItemLegacyClose()
 
 void C_MetaverseManager::ResolveLoadLocalItemLegacyBuffer()
 {
+	// FIXME This is a huge bottleneck
+
 	// This usually gets done after all  workshop mounts are done, but since this is an after-the-fact one, gotta do it again manually here
 	unsigned int numResponses = m_previousLoadLocalItemsLegacyBuffer.size();
 	unsigned int i;
@@ -647,18 +652,24 @@ void C_MetaverseManager::ResolveLoadLocalItemLegacyBuffer()
 	KeyValues* active;
 	unsigned int numVictims;
 	std::vector<KeyValues*> victims;
+	//KeyValues* model;
+	//KeyValues* modelActive;
 	for (i = 0; i < numResponses; i++)
 	{
 		pItem = m_previousLoadLocalItemsLegacyBuffer[i];
 
 		// now actually resolve the models and add the items!
-		// NEEDS RESOLVING!!
-		std::string resolvedModel = this->ResolveLegacyModel(pItem->GetString("lastmodel"));
-
 		active = pItem->FindKey("current");
 		if (!active)
 			active = pItem->FindKey("local", true);
 
+		/*
+		// NEEDS RESOLVING!!
+		std::string resolvedModel = this->ResolveLegacyModel(pItem->GetString("lastmodel"));
+		active->SetString("model", resolvedModel.c_str());
+		*/
+
+		std::string resolvedModel = g_pAnarchyManager->GenerateLegacyHash(pItem->GetString("lastmodel"));
 		active->SetString("model", resolvedModel.c_str());
 
 		// remove everything not in local or current or generation
@@ -1343,6 +1354,63 @@ KeyValues* C_MetaverseManager::GetMap(std::string mapId)
 	if (it != m_maps.end())
 		return it->second;
 	return null;
+}
+
+void C_MetaverseManager::DetectAllLegacyCabinets()
+{
+	std::string goodTitle;
+	std::string modelId;
+	KeyValues* pModel;
+	KeyValues* cat = new KeyValues("cat");
+	FileFindHandle_t handle;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx("resource\\models\\*.cat", "GAME", &handle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(handle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(handle);
+			continue;
+		}
+
+		// load up the cat
+		cat->Clear();
+		if (cat->LoadFromFile(g_pFullFileSystem, VarArgs("resource\\models\\%s", pFilename), "GAME"))
+		{
+			pModel = new KeyValues("model");
+
+			// update us to 3rd generation
+			pModel->SetInt("generation", 3);
+
+			// add standard info (except for id)
+			pModel->SetInt("local/info/created", 0);
+			pModel->SetString("local/info/owner", "local");
+			pModel->SetInt("local/info/removed", 0);
+			pModel->SetString("local/info/remover", "");
+			pModel->SetString("local/info/alias", "");
+
+			modelId = g_pAnarchyManager->GenerateLegacyHash(cat->GetString("model"));
+			pModel->SetString("local/info/id", modelId.c_str());
+
+			pModel->SetString("local/title", pModel->GetString("name"));
+			pModel->SetString("local/keywords", "");
+			pModel->SetInt("local/dynamic", 0);
+			pModel->SetString(VarArgs("local/platforms/%s/id", AA_PLATFORM_ID), AA_PLATFORM_ID);
+			pModel->SetString(VarArgs("local/platforms/%s/file", AA_PLATFORM_ID), cat->GetString("model"));
+			pModel->SetString(VarArgs("local/platforms/%s/download", AA_PLATFORM_ID), "");
+
+			pModel->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), "");
+			pModel->SetString(VarArgs("local/platforms/%s/mountId", AA_PLATFORM_ID),"");
+
+			// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
+			DevMsg("Loading cabinet model with ID %s and model %s\n", modelId.c_str(), cat->GetString("model"));
+			m_models[modelId] = pModel;
+		}
+
+		pFilename = g_pFullFileSystem->FindNext(handle);
+	}
+
+	g_pFullFileSystem->FindClose(handle);
+	cat->deleteThis();
 }
 
 void C_MetaverseManager::DetectAllMaps()

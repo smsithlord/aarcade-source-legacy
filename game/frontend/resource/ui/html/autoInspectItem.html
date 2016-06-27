@@ -49,8 +49,28 @@ function ExtractYouTubeId(trailerURL)
   return youtubeid;
 }
 
-			console.log("AUTO WHAT NOW LOADED!: " + getParameterByName("file"));
-			window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + ExtractYouTubeId(getParameterByName("file")) + "&autoplay=1";
+			var preview = decodeURIComponent(getParameterByName("preview"));
+			var file = decodeURIComponent(getParameterByName("file"));
+			var screen = decodeURIComponent(getParameterByName("screen"));
+			var marquee = decodeURIComponent(getParameterByName("marquee"));
+
+			var youTubeId = ExtractYouTubeId(preview);
+			if( !!!youTubeId )
+				youTubeId = ExtractYouTubeId(file);
+
+			if( !!youTubeId )
+				window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeId + "&autoplay=1";
+			else
+			{
+				if( preview != "")
+					window.location = preview;
+				else if( file.indexOf("http") === 0 )
+					window.location = file;
+				else if( screen != "" )
+					window.location = screen;
+				else if( marquee != "" )
+					window.location = marquee;
+			}
 		</script>
 	</body>
 </html>

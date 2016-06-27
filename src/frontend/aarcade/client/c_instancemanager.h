@@ -10,6 +10,7 @@ struct object_t
 {
 	std::string itemId;
 	std::string modelId;
+	std::string objectId;
 	Vector origin;
 	Vector angles;
 	bool spawned;

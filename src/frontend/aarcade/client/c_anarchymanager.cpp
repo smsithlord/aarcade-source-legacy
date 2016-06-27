@@ -469,6 +469,34 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	}
 }
 
+// from http://www.zedwood.com/article/cpp-urlencode-function
+#include <iostream>
+#include <sstream>
+std::string encodeURIComponent(const std::string &s)
+{
+	static const char lookup[] = "0123456789abcdef";
+	std::stringstream e;
+	for (int i = 0, ix = s.length(); i<ix; i++)
+	{
+		const char& c = s[i];
+		if ((48 <= c && c <= 57) ||//0-9
+			(65 <= c && c <= 90) ||//abc...xyz
+			(97 <= c && c <= 122) || //ABC...XYZ
+			(c == '-' || c == '_' || c == '.' || c == '~')
+			)
+		{
+			e << c;
+		}
+		else
+		{
+			e << '%';
+			e << lookup[(c & 0xF0) >> 4];
+			e << lookup[(c & 0x0F)];
+		}
+	}
+	return e.str();
+}
+
 bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 {
 	if (m_pSelectedEntity)
@@ -529,7 +557,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 								if (!active)
 									active = item->FindKey("local", true);
 
-								std::string uri = "asset://ui/autoInspectItem.html?id=" + itemId + "&screen=" + std::string(active->GetString("screen")) + "&marquee=" + std::string(active->GetString("marquee")) + "&preview=" + std::string(active->GetString("preview")) + "&reference=" + std::string(active->GetString("reference")) + "&file=" + std::string(active->GetString("file"));
+								std::string uri = "asset://ui/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
 
 								WebURL url = WebURL(WSLit(uri.c_str()));
 //								DevMsg("Parsed is: %s\n", WebStringToCharString(url.spec()));

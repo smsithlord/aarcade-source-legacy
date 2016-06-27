@@ -25,6 +25,7 @@ void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std:
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
 
 	object_t* pObject = new object_t();
+	pObject->objectId = goodObjectId;
 	pObject->itemId = itemId;
 	pObject->modelId = modelId;
 	pObject->origin.Init(origin.x, origin.y, origin.z);
@@ -46,6 +47,7 @@ bool C_InstanceManager::SpawnNearestObject()
 	object_t* pTestObject = null;
 	float fMinDist = -1;
 	float fTestDist;
+	std::vector<object_t*>::iterator nearestIt;
 	std::vector<object_t*>::iterator it = m_unspawnedObjects.begin();
 	while (it != m_unspawnedObjects.end())
 	{
@@ -55,9 +57,7 @@ bool C_InstanceManager::SpawnNearestObject()
 		{
 			fMinDist = fTestDist;
 			pNearObject = pTestObject;
-
-			m_unspawnedObjects.erase(it);
-			break;
+			nearestIt = it;
 		}
 
 		it++;
@@ -79,12 +79,15 @@ bool C_InstanceManager::SpawnNearestObject()
 
 	if (pNearObject)
 	{
+		m_unspawnedObjects.erase(nearestIt);
+
 		pNearObject->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
 
-		DevMsg("Spawning an object...\n");
 		KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pNearObject->modelId);
 		if (model)
 		{
+			DevMsg("Spawning an object w/ %s\n", pNearObject->modelId.c_str());
+
 			KeyValues* active = model->FindKey("current");
 			if (!active)
 				active = model->FindKey("local", true);
@@ -92,6 +95,10 @@ bool C_InstanceManager::SpawnNearestObject()
 			std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
 			std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z);
 			engine->ServerCmd(msg.c_str(), false);
+		}
+		else
+		{
+			DevMsg("Could not spawn object because it's model was not found: %s\n", pNearObject->modelId.c_str());
 		}
 	}
 
@@ -193,61 +200,46 @@ void C_InstanceManager::LoadLegacyInstance()
 		std::string modelId;
 		KeyValues* model;
 		KeyValues* activeModel;
-		std::string modelFile;
+		//std::string modelFile;
 		std::string itemId;
 		std::string fileName = "maps/" + std::string(pInstanceFileName);
 		KeyValues* legacyKv = new KeyValues("instance");
+		std::string testBuf;
 		if (legacyKv->LoadFromFile(g_pFullFileSystem, fileName.c_str(), "GAME"))
 		{
 			for (KeyValues *sub = legacyKv->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 			{
 				itemId = g_pAnarchyManager->ExtractLegacyId(sub->GetString("itemfile"));
-				if (itemId == "")
-					itemId = g_pAnarchyManager->GenerateLegacyHash("filelocation");
 
+				if (itemId == "")
+				{
+					// don't generate item id's for legacy prop objects
+					testBuf = sub->GetString("itemfile");
+					size_t foundExt = testBuf.find(".mdl");
+					if (foundExt != testBuf.length() - 4)
+						itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));
+				}
+
+				modelId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("model"));
+				//DevMsg("Item title: %s w/ %s\n", activeItem->GetString("title"), modelId.c_str());
+
+				// alright, spawn this object
+				Vector origin;
+				UTIL_StringToVector(origin.Base(), sub->GetString("origin", "0 0 0"));
+
+				QAngle angles;
+				UTIL_StringToVector(angles.Base(), sub->GetString("angles", "0 0 0"));
+
+				this->AddObject("", itemId, modelId, origin, angles);
+				/*
 				item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 				if (item)
 				{
 					activeItem = item->FindKey("current");
 					if (!activeItem)
 						activeItem = item->FindKey("local", true);
-
-					modelId = activeItem->GetString("model");
-					if (modelId == "")
-					{
-						DevMsg("No model found for object entry.\n");
-					}
-					else
-					{
-						/*
-						model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(modelId);
-
-						activeModel = model->FindKey("current");
-						if (!activeModel)
-							activeModel = model->FindKey("local", true);
-
-						modelFile = activeModel->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-						DevMsg("Item title: %s w/ %s\n", activeItem->GetString("title"), modelFile.c_str());
-						*/
-
-						// alright, spawn this object
-						Vector origin;
-						UTIL_StringToVector(origin.Base(), sub->GetString("origin", "0 0 0"));
-
-						QAngle angles;
-						UTIL_StringToVector(angles.Base(), sub->GetString("angles", "0 0 0"));
-
-						this->AddObject("", itemId, modelId, origin, angles);
-						/*
-						if (!spawnedOne)
-						{
-							std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %s %s\n", itemId.c_str(), modelFile.c_str(), sub->GetString("origin", "0 0 0"), sub->GetString("angles", "0 0 0"));
-							engine->ServerCmd(msg.c_str(), false);
-							spawnedOne = true;
-						}
-						*/
-					}
 				}
+				*/
 			}
 		}
 		legacyKv->deleteThis();

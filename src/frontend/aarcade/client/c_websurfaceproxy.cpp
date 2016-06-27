@@ -116,10 +116,14 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 
 				//do work
 				pTexture = it2->second;
-				pTexture->SetTextureRegenerator(null);
 
-				pTexture->DecrementReferenceCount();
-				pTexture->DeleteIfUnreferenced();
+				if (pTexture)
+				{
+					pTexture->SetTextureRegenerator(null);
+
+					pTexture->DecrementReferenceCount();
+					pTexture->DeleteIfUnreferenced();
+				}
 			}
 
 			it2++;

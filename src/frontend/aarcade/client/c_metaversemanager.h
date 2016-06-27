@@ -64,6 +64,7 @@ public:
 
 	KeyValues* GetMap(std::string mapId);
 	std::map<std::string, KeyValues*>& GetAllMaps() { return m_maps; }
+	void DetectAllLegacyCabinets();
 	void DetectAllMaps();
 	KeyValues* DetectFirstMap(bool& bAlreadyExists);
 	KeyValues* DetectNextMap(bool& bAlreadyExists);
