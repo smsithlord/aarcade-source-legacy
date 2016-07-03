@@ -45,6 +45,11 @@ public:
 
 	// Called after rendering
 	virtual void PostRender();
+
+	bool HandleUiToggle();
+	void Pause();
+	void Unpause();
+	bool IsPaused() { return m_bPaused; }
 	
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void AnarchyBegin();
@@ -52,6 +57,7 @@ public:
 	void OnLoadAllLocalAppsComplete();
 	void OnWorkshopManagerReady();
 	void OnMountAllWorkshopsComplete();
+	void OnDetectAllMapsComplete();
 
 	//void OnLoadingManagerReady();
 	bool AttemptSelectEntity();
@@ -66,7 +72,11 @@ public:
 	const char* GenerateLegacyHash(const char* text);
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
+	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
+
 	// accessors
+	std::string GetInstanceId() { return m_instanceId; }
+	std::string GetNextInstanceId() { return m_nextInstanceId; }
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	C_WebManager* GetWebManager() { return m_pWebManager; }
 	//C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
@@ -78,6 +88,9 @@ public:
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	
 private:
+	bool m_bPaused;
+	std::string m_instanceId;
+	std::string m_nextInstanceId;
 	int m_iState;
 	double m_dLastGenerateIdTime;
 	std::string m_lastGeneratedChars;

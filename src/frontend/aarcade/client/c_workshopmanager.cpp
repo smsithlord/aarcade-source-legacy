@@ -211,6 +211,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 			}
 			*/
 
+			//g_pFullFileSystem->AddSearchPath(installFolder, "MOD", PATH_ADD_TO_TAIL);
 			g_pFullFileSystem->AddSearchPath(installFolder, "GAME", PATH_ADD_TO_TAIL);
 
 			std::string fullPath = VarArgs("%s\\", installFolder);
@@ -218,6 +219,60 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 			// FIXME: Actually check that this IS a legacy workshop item!! (generation < 3)
 			std::string id = VarArgs("%llu", details->m_nPublishedFileId);
 
+			// detect any .set files
+			std::string file;
+			KeyValues* kv = new KeyValues("instance");
+			FileFindHandle_t findHandle;
+			VarArgs("Tester folder: %s\\maps\\*.set", installFolder);
+			const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\maps\\*.set", installFolder), &findHandle);
+			while (pFilename != NULL)
+			{
+				if (g_pFullFileSystem->FindIsDirectory(findHandle))
+				{
+					pFilename = g_pFullFileSystem->FindNext(findHandle);
+					continue;
+				}
+
+				file = std::string(installFolder) + "\\maps\\" + std::string(pFilename);
+
+				// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
+				if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+				{
+					if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+					{
+						DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+						// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
+						// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
+
+						std::string title = kv->GetString("title");
+						if (title == "")
+						{
+							// attempt to load a .txt file from the legacy workshop addon that has the title
+							FileFindHandle_t infoFindHandle;
+							const char *pInfoFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\resource\\workshop\\*.txt", installFolder), &infoFindHandle);
+							if (pInfoFilename)
+							{
+								KeyValues* infoKv = new KeyValues("info");
+								if (infoKv->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\resource\\workshop\\%s", installFolder, pInfoFilename)))
+									title = infoKv->GetString("title");
+								infoKv->deleteThis();
+							}
+							g_pFullFileSystem->FindClose(infoFindHandle);
+						}
+
+						if (title == "")
+							title = "Unnamed";
+
+						g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
+					}
+				}
+
+				pFilename = g_pFullFileSystem->FindNext(findHandle);
+			}
+			g_pFullFileSystem->FindClose(findHandle);
+			kv->Clear();
+
+			// now start loading the items from it
 			g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, fullPath, id, "");
 			return;
 		}
@@ -249,7 +304,10 @@ void C_WorkshopManager::OnMountWorkshopSucceed()
 	{
 		//g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Importing Old AArcade Data", "importfolder", "0", "1", "1");
 //		g_pAnarchyManager->GetMetaverseManager()->ResolveLoadLocalItemLegacyBuffer();
-		g_pAnarchyManager->GetMetaverseManager()->DetectAllMaps();
+
+		g_pAnarchyManager->OnMountAllWorkshopsComplete();
+
+//		g_pAnarchyManager->GetMetaverseManager()->DetectAllMaps();
 //		g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
 //		g_pAnarchyManager->OnMountAllWorkshopsComplete();
 	}

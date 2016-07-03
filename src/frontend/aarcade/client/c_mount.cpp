@@ -10,12 +10,12 @@
 
 C_Mount::C_Mount()
 {
-	DevMsg("WebManager: Constructor\n");
+	DevMsg("Mount: Constructor\n");
 }
 
 C_Mount::~C_Mount()
 {
-	DevMsg("WebManager: Destructor\n");
+	DevMsg("Mount: Destructor\n");
 }
 
 void C_Mount::Init(std::string id, std::string base, std::vector<std::string> paths)

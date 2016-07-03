@@ -22,7 +22,7 @@ ConCommand removegloweffect("removegloweffect", RemoveGlowEffect, "Removes a glo
 
 void SpawnShortcut(const CCommand &args)
 {
-	DevMsg("yaarbelzzzzzzzzz\n");
+//	DevMsg("yaarbelzzzzzzzzz\n");
 
 	/*
 	// Figure out where to place it

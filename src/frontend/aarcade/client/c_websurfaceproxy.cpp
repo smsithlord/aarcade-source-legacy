@@ -236,6 +236,13 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		if (m_pWebTab->GetState() == 2)
 			m_iState = 2;
 
+		/*
+		if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
+			m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
+		else if (m_pMaterialDetailBlendFactorVar)
+			m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
+		*/
+
 		// a regular proxy will need to grab the web tab's texture before it binds
 		if (m_originalSimpleImageChannel == "")
 		{
@@ -245,7 +252,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 				m_pMaterialTextureVar->SetTextureValue(pTexture);
 				//			m_iState = 2;
 
-				if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
+				if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
 					m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 				else if (m_pMaterialDetailBlendFactorVar)
 					m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
@@ -255,12 +262,24 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		}
 		else
 		{
+		//	if (m_pMaterialDetailBlendFactorVar && pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity )
+			if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode()))
+				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
+			else if (m_pMaterialDetailBlendFactorVar)
+				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
+
 			C_BaseEntity* pSelectedEntity = g_pAnarchyManager->GetSelectedEntity();
 			C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
-			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen")
+			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen" && pSelectedWebTab)
 			{
 				ITexture* pTexture = pSelectedWebTab->GetTexture();
-				m_pMaterialTextureVar->SetTextureValue(pTexture);	// no need to increment reference, because the selected web tab is always priority
+				if (pTexture)
+					m_pMaterialTextureVar->SetTextureValue(pTexture);	// no need to increment reference, because the selected web tab is always priority
+				else
+				{
+					DevMsg("ERROR: Web tab has no texture!\n");
+					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+				}
 			}
 			else
 			{

@@ -169,6 +169,13 @@ void C_WebBrowser::UnfocusWebTab(C_WebTab* pWebTab)
 		pWebView->Unfocus();
 }
 
+void C_WebBrowser::OnMouseWheel(C_WebTab* pWebTab, int delta)
+{
+	WebView* pWebView = FindWebView(pWebTab);
+	if (pWebView)
+		pWebView->InjectMouseWheel(delta * 80, 0);
+}
+
 void C_WebBrowser::OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY)
 {
 	// the mouse position is between 0 and 1
@@ -925,6 +932,9 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getSelectedWebTab"), true);
 	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("simpleImageReady"), false);
+	systemObject.SetCustomMethod(WSLit("getMapInstances"), true);
+	systemObject.SetCustomMethod(WSLit("spawnNearestObject"), false);
+	systemObject.SetCustomMethod(WSLit("setNearestObjectDist"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -937,6 +947,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("getSelectedLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
@@ -951,6 +962,7 @@ void C_WebBrowser::CreateAaApi(WebView* pWebView)
 	callbacksObject.SetCustomMethod(WSLit("mountNextWorkshopCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("loadNextLocalItemLegacyCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("detectNextMapCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("spawnNextObjectCallback"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));

@@ -40,7 +40,7 @@ void CPropShortcutEntity::Precache(void)
 
 void CPropShortcutEntity::Spawn()
 {
-	DevMsg("Yaaaarrrr!!!!\n\n");
+//	DevMsg("Yaaaarrrr!!!!\n\n");
 	AddEffects(EF_NOSHADOW);
 	BaseClass::Spawn();
 

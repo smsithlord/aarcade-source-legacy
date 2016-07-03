@@ -3,7 +3,7 @@
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
 		<style>
-			#loadingImageContainer img
+			img
 			{
 				width: 512px;
 				height: 512px;
@@ -41,26 +41,104 @@
 
 		<br />
 
--->		<div id="loadingImageContainer"></div>
+-->
 
 		<script>
 			function ImageLoader()
 			{
+				this.imageRenderElem;
+				
+				this.waitingToRender = false;
+				this.imageRequests = [];
+
+/*
 				this.fields = ["marquee", "screen"];
 				this.usedFields = [];
-				this.imageContainerElem = document.body.querySelector("#loadingImageContainer");
-				this.imageElem;
 				
 				this.item;
 				this.channel = "";
 				this.itemId = "";
 				this.field = "";
+*/
 			}
+
+			ImageLoader.prototype.renderNextImage = function()
+			{
+				var i;
+				// don't do anything if another image is already waiting to render
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )
+						return;
+				}
+
+				var imageRequest;
+				// find the 1st image that is ready (there will be at least one)
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].ready )
+					{
+						imageRequest = this.imageRequests[i];
+						imageRequest.imageElem.style.display = "block";
+						imageRequest.rendering = true;
+						break;
+					}
+				}
+
+				if( !!imageRequest )
+				{
+					setTimeout(function()
+					{
+						aaapi.system.simpleImageReady(this.channel, this.itemId, this.field);
+					}.bind(imageRequest), 100);	// delay because the image doesn't appear instantly when it is done loading
+				}
+			};
+
+			ImageLoader.prototype.onImageRender = function()
+			{
+				var i;
+				var imageRequest;
+				// find the request that just got rendered
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )
+					{
+						imageRequest = this.imageRequests[i];
+						break;
+					}
+				}
+
+				if( !!!imageRequest )
+				{
+					console.log("ERROR: Could not find the most recent image request!");
+					return;
+				}
+
+				var index = this.imageRequests.indexOf(imageRequest);
+				if( index >= 0 )
+					this.imageRequests.splice(index, 1);
+
+				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+
+				if( this.imageRequests.length > 0 )
+					this.renderNextImage();
+			};
 
 			ImageLoader.prototype.loadImage = function(channel, itemId)
 			{
-				this.channel = channel;
-				this.itemId = itemId;
+				var imageRequest = {
+					"channel": channel,
+					"itemId": itemId,
+					"fields": new Array("marquee", "screen"),
+					"usedFields": new Array(channel),
+					"item": undefined,
+					"field": channel,
+					"imageElem": undefined,
+					"ready": false,
+					"rendering": false
+				};
+
+				this.imageRequests.push(imageRequest);
 
 				var item = aaapi.library.getLibraryItem(itemId);
 				if( !item )
@@ -69,53 +147,63 @@
 
 					setTimeout(function()
 					{
+						var index = imageLoader.imageRequests.indexOf(this);
+						if( index >= 0 )
+							imageLoader.imageRequests.splice(index, 1);
+
 						aaapi.system.simpleImageReady(this.channel, this.itemId, "");
-					}.bind(this), 100);
+					}.bind(imageRequest), 100);
 					
 					return;
 				}
-console.log(item);
-console.log(channel);
-console.log(item[channel]);
-				this.item = item;
-				this.field = this.channel;
-				this.usedFields = [this.field];
+				else
+					imageRequest.item = item;
 
-				if( this.item[this.field] == "" )
+//console.log(item);
+//console.log(channel);
+//console.log(item[channel]);
+
+				if( imageRequest.item[imageRequest.field] == "" || imageRequest.item[imageRequest.field].indexOf("file:///") === 0 || imageRequest.item[imageRequest.field].indexOf("\\") !== -1 )
 				{
-					var nextField = this.getNextField();
+					var nextField = this.getNextField(imageRequest);
 					if( !!nextField )
 					{
-						console.log("beta");
-						this.field = this.nextField;
-						this.usedFields.push(this.field);
+						imageRequest.field = nextField;
+						imageRequest.usedFields.push(nextField);
 					}
 					else
 					{
-						this.onCompleteFailure();
+						this.onCompleteFailure(imageRequest);
 						return;
 					}
 				}
 
-				if( !!this.imageElem )
-					this.imageContainerElem.removeChild(this.imageElem);
+				if( !!imageRequest.imageElem )
+					imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
 
-				this.imageElem = document.createElement("img");
-				this.imageContainerElem.appendChild(this.imageElem);
-				this.imageElem.addEventListener("load", this.onImageLoad.bind(this), true);
-				this.imageElem.addEventListener("error", this.onImageError.bind(this), true);
-				this.imageElem.src = this.item[this.field];
+				imageRequest.imageElem = document.createElement("img");
+				imageRequest.imageElem.style.display = "none";
+
+				document.body.appendChild(imageRequest.imageElem);
+				imageRequest.imageElem.addEventListener("load", this.onImageLoad.bind(imageRequest), true);
+				imageRequest.imageElem.addEventListener("error", this.onImageError.bind(imageRequest), true);
+				var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+				if( !!YouTubeId )
+					imageRequest.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
+				else
+					imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
+				//imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
 			};
 
-			ImageLoader.prototype.getNextField = function()
+			ImageLoader.prototype.getNextField = function(imageRequest)
 			{
 				var nextField;
 				var i;
-				for( i = 0; i < this.fields.length; i++ )
+				for( i = 0; i < imageRequest.fields.length; i++ )
 				{
-					if(this.usedFields.indexOf(this.fields[i]) < 0 && this.item[this.fields[i]] != "")
+					if(imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" && imageRequest.item[imageRequest.fields[i]].indexOf("file:///") !== 0 && imageRequest.item[imageRequest.fields[i]].indexOf("\\") === -1)
 					{
-						nextField = this.fields[i];
+						nextField = imageRequest.fields[i];
 						break;
 					}
 				}
@@ -125,26 +213,69 @@ console.log(item[channel]);
 
 			ImageLoader.prototype.onImageLoad = function(e)
 			{
-				setTimeout(function()
+				if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
 				{
-					aaapi.system.simpleImageReady(this.channel, this.itemId, this.field);
-				}.bind(this), 100);	// delay because the image doesn't appear instantly when it is done loading
+					imageLoader.onImageError().bind(this);
+				}
+				else
+				{
+					this.ready = true;
+					imageLoader.renderNextImage();
+				}
 			};
 
-			ImageLoader.prototype.onCompleteFailure = function()
+			ImageLoader.prototype.extractYouTubeId = function(trailerURL)
 			{
-				console.log("All images for item " + this.itemId + " failed.");
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+
+			  var youtubeid;
+			  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+			  {
+			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+			    var found = youtubeid.indexOf("&");
+			    if( found > -1 )
+			    {
+			      youtubeid = youtubeid.substr(0, found);
+			    }
+			  }
+			  else
+			  {
+			    var found = trailerURL.indexOf("youtu.be/");
+			    if( found != -1 )
+			    {
+			      youtubeid = trailerURL.substr(found+9);
+
+			      found = youtubeid.indexOf("&");
+			      if( found != -1 )
+			      {
+			        youtubeid = youtubeid.substr(0, found);
+			      }
+			    }
+			  }
+
+			  return youtubeid;
+			};
+
+			ImageLoader.prototype.onCompleteFailure = function(imageRequest)
+			{
+				console.log("All images for item " + imageRequest.itemId + " failed.");
 
 				// empty field means failed to load image
 				setTimeout(function()
 				{
+					var index = imageLoader.imageRequests.indexOf(this);
+					if( index >= 0 )
+						imageLoader.imageRequests.splice(index, 1);
+
 					aaapi.system.simpleImageReady(this.channel, this.itemId, "");
-				}.bind(this), 100);
+				}.bind(imageRequest), 100);
 			};
 
 			ImageLoader.prototype.onImageError = function(e)
 			{
-				var nextField = this.getNextField();
+				var nextField = imageLoader.getNextField(this);
 
 				if( !!nextField )
 				{
@@ -152,16 +283,21 @@ console.log(item[channel]);
 					this.usedFields.push(this.field);
 
 					if( !!this.imageElem )
-						this.imageContainerElem.removeChild(this.imageElem);
+						this.imageElem.parentNode.removeChild(this.imageElem);
 
 					this.imageElem = document.createElement("img");
-					this.imageContainerElem.appendChild(this.imageElem);
-					this.imageElem.addEventListener("load", this.onImageLoad.bind(this), true);
-					this.imageElem.addEventListener("error", this.onImageError.bind(this), true);
-					this.imageElem.src = this.item[this.field];
+					document.body.appendChild(this.imageElem);
+					this.imageElem.addEventListener("load", imageLoader.onImageLoad.bind(this), true);
+					this.imageElem.addEventListener("error", imageLoader.onImageError.bind(this), true);
+
+					var YouTubeId = imageLoader.extractYouTubeId(this.item[this.field]);
+					if( !!YouTubeId )
+						this.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
+					else
+						this.imageElem.src = this.item[this.field];
 				}
 				else
-					this.onCompleteFailure();
+					imageLoader.onCompleteFailure(this);
 			};
 
 			var imageLoader = new ImageLoader();

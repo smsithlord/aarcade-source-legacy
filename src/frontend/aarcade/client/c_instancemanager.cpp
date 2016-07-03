@@ -13,11 +13,13 @@
 C_InstanceManager::C_InstanceManager()
 {
 	DevMsg("WebManager: Constructor\n");
+	m_fNearestSpawnDist = 0;
 }
 
 C_InstanceManager::~C_InstanceManager()
 {
 	DevMsg("ShortcutManager: Destructor\n");
+	m_instances.clear();
 }
 
 void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles)
@@ -53,7 +55,7 @@ bool C_InstanceManager::SpawnNearestObject()
 	{
 		pTestObject = *it;
 		fTestDist = pTestObject->origin.DistTo(playerPos);
-		if (fMinDist == -1 || fTestDist < fMinDist)
+		if (fTestDist < m_fNearestSpawnDist && (fMinDist == -1 || fTestDist < fMinDist))
 		{
 			fMinDist = fTestDist;
 			pNearObject = pTestObject;
@@ -100,10 +102,74 @@ bool C_InstanceManager::SpawnNearestObject()
 		{
 			DevMsg("Could not spawn object because it's model was not found: %s\n", pNearObject->modelId.c_str());
 		}
+
+		return true;
 	}
 
-	return true;
+	return false;
 }
+
+void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds)
+{
+	instance_t* pInstance = new instance_t();
+	pInstance->id = instanceId;
+	pInstance->mapId = mapId;
+	pInstance->title = title;
+	pInstance->file = file;
+	pInstance->workshopIds = workshopIds;
+	pInstance->mountIds = mountIds;
+
+	m_instances[instanceId] = pInstance;
+}
+
+instance_t* C_InstanceManager::GetInstance(std::string id)
+{
+	std::map<std::string, instance_t*>::iterator it = m_instances.find(id);
+	if (it != m_instances.end())
+		return it->second;
+	
+	return null;
+}
+
+instance_t* C_InstanceManager::FindInstance(std::string mapId)
+{
+	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
+	while (it != m_instances.end())
+	{
+		if ( it->second->mapId == mapId )
+			return it->second;
+
+		it++;
+	}
+
+	return null;
+}
+
+void C_InstanceManager::FindAllInstances(std::string mapId, std::vector<instance_t*> &instances)
+{
+	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
+	while (it != m_instances.end())
+	{
+		if (it->second->mapId == mapId)
+			instances.push_back(it->second);
+
+		it++;
+	}
+}
+
+void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string mapId)
+{
+	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
+	while (it != m_instances.end())
+	{
+		if (it->second->mapId == legacyMapName)
+			it->second->mapId = mapId;
+
+		it++;
+	}
+}
+
+
 /*
 void C_InstanceManager::SpawnItem(std::string id)
 {
@@ -171,78 +237,61 @@ void C_InstanceManager::SpawnItem(std::string id)
 }
 */
 
-void C_InstanceManager::LoadLegacyInstance()
+void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
 {
 	DevMsg("Load the instance!!!\n");
 
-	FileFindHandle_t pFileFindHandle;
-	const char *pInstanceFileName = g_pFullFileSystem->FindFirstEx("maps\\dm_peachs_castle*.set", "GAME", &pFileFindHandle);
-	while (pInstanceFileName != NULL)
+	instance_t* pInstance = this->GetInstance(instanceId);
+	
+	bool spawnedOne = false;
+	KeyValues* item;
+	KeyValues* activeItem;
+	//KeyValues* modelSearchInfo = new KeyValues("search");
+	std::string modelId;
+	KeyValues* model;
+	KeyValues* activeModel;
+	//std::string modelFile;
+	std::string itemId;
+	std::string fileName = pInstance->file;
+	KeyValues* legacyKv = new KeyValues("instance");
+	std::string testBuf;
+	if (legacyKv->LoadFromFile(g_pFullFileSystem, fileName.c_str(), ""))
 	{
-		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
+		for (KeyValues *sub = legacyKv->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 		{
-			pInstanceFileName = g_pFullFileSystem->FindNext(pFileFindHandle);
-			continue;
-		}
+			itemId = g_pAnarchyManager->ExtractLegacyId(sub->GetString("itemfile"));
 
-		break;
-		
-//		pInstanceFileName = g_pFullFileSystem->FindNext(pFileFindHandle);
-	}
-	g_pFullFileSystem->FindClose(pFileFindHandle);
-
-	if (pInstanceFileName)
-	{
-		bool spawnedOne = false;
-		KeyValues* item;
-		KeyValues* activeItem;
-		//KeyValues* modelSearchInfo = new KeyValues("search");
-		std::string modelId;
-		KeyValues* model;
-		KeyValues* activeModel;
-		//std::string modelFile;
-		std::string itemId;
-		std::string fileName = "maps/" + std::string(pInstanceFileName);
-		KeyValues* legacyKv = new KeyValues("instance");
-		std::string testBuf;
-		if (legacyKv->LoadFromFile(g_pFullFileSystem, fileName.c_str(), "GAME"))
-		{
-			for (KeyValues *sub = legacyKv->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			if (itemId == "")
 			{
-				itemId = g_pAnarchyManager->ExtractLegacyId(sub->GetString("itemfile"));
-
-				if (itemId == "")
-				{
-					// don't generate item id's for legacy prop objects
-					testBuf = sub->GetString("itemfile");
-					size_t foundExt = testBuf.find(".mdl");
-					if (foundExt != testBuf.length() - 4)
-						itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));
-				}
-
-				modelId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("model"));
-				//DevMsg("Item title: %s w/ %s\n", activeItem->GetString("title"), modelId.c_str());
-
-				// alright, spawn this object
-				Vector origin;
-				UTIL_StringToVector(origin.Base(), sub->GetString("origin", "0 0 0"));
-
-				QAngle angles;
-				UTIL_StringToVector(angles.Base(), sub->GetString("angles", "0 0 0"));
-
-				this->AddObject("", itemId, modelId, origin, angles);
-				/*
-				item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
-				if (item)
-				{
-					activeItem = item->FindKey("current");
-					if (!activeItem)
-						activeItem = item->FindKey("local", true);
-				}
-				*/
+				// don't generate item id's for legacy prop objects
+				testBuf = sub->GetString("itemfile");
+				size_t foundExt = testBuf.find(".mdl");
+				if (foundExt != testBuf.length() - 4)
+					itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));
 			}
+
+			modelId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("model"));
+			//DevMsg("Item title: %s w/ %s\n", activeItem->GetString("title"), modelId.c_str());
+
+			// alright, spawn this object
+			Vector origin;
+			UTIL_StringToVector(origin.Base(), sub->GetString("origin", "0 0 0"));
+
+			QAngle angles;
+			UTIL_StringToVector(angles.Base(), sub->GetString("angles", "0 0 0"));
+
+			this->AddObject("", itemId, modelId, origin, angles);
+			/*
+			item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+			if (item)
+			{
+				activeItem = item->FindKey("current");
+				if (!activeItem)
+					activeItem = item->FindKey("local", true);
+			}
+			*/
 		}
-		legacyKv->deleteThis();
-		//modelSearchInfo->deleteThis();
 	}
+	legacyKv->deleteThis();
+	//modelSearchInfo->deleteThis();
 }

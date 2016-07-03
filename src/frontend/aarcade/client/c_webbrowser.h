@@ -28,6 +28,7 @@ public:
 	C_WebTab* FindWebTab(WebView* pWebView);
 	void FocusWebTab(C_WebTab* pWebTab);
 	void UnfocusWebTab(C_WebTab* pWebTab);
+	void OnMouseWheel(C_WebTab* pWebTab, int delta);
 	void OnMouseMove(C_WebTab* pWebTab, float fMouseX, float fMouseY);
 	void OnMousePress(C_WebTab* pWebTab, vgui::MouseCode code);
 	void OnMouseRelease(C_WebTab* pWebTab, vgui::MouseCode code);

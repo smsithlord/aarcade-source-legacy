@@ -1,10 +1,12 @@
 function ArcadeHud()
 {
+	//this.selectedItem;
 	this.platformId = "-KJvcne3IKMZQTaG7lPo";
 	this.selectedWebTab = null;
 	this.pinHudButtonElem;
 	this.returnHudButtonElem;
-	this.closeContentButtonElem;
+	//this.closeContentButtonElem;
+	this.hudHeaderContainerElem;
 	this.clickThruElem;
 	this.cursorElem;
 	this.cursorPreviewImageElem;
@@ -22,7 +24,9 @@ function ArcadeHud()
 
 		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
 		this.returnHudButtonElem = document.body.querySelector("#returnHudButton");
-		this.closeContentButtonElem = document.body.querySelector(".hudContentHeaderCell:nth-of-type(3) .hudContentHeaderButton");
+		this.addressTabElem = document.body.querySelector("#addressTab");
+		this.hudHeaderContainerElem = document.body.querySelector(".hudHeaderContainer");
+//		this.closeContentButtonElem = document.body.querySelector(".hudContentHeaderCell:nth-of-type(3) .hudContentHeaderButton");
 		
 		aaapi.system.requestActivateInputMode();
 
@@ -131,6 +135,20 @@ function ArcadeHud()
 	}.bind(this));
 }
 
+ArcadeHud.prototype.play = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	if( item )
+		window.location='asset://ui/launchItem.html?id=' + encodeURIComponent(item.info.id);
+}
+
+ArcadeHud.prototype.edit = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	if( item )
+		window.location='asset://ui/editItem.html?id=' + encodeURIComponent(item.info.id);
+}
+
 ArcadeHud.prototype.expandAddressMenu = function()
 {
 	var elem = document.body.querySelector(".hudHeaderContainer");
@@ -141,36 +159,69 @@ ArcadeHud.prototype.expandAddressMenu = function()
 		elem.style.top = "-65px";
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded)
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu)
 {
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
 	isMapLoaded = parseInt(isMapLoaded);
+	isObjectSelected = parseInt(isObjectSelected);
+	isItemSelected = parseInt(isItemSelected);
+	isMainMenu = parseInt(isMainMenu);
+
+//this.addressTabElem
+
+///*
+	if( isItemSelected )
+	{
+		var elems = document.body.querySelectorAll(".hudSideContainerButton");
+		var i;
+		for( i = 0; i < elems.length; i++ )
+		{
+			elems[i].style.display = "block";
+		}
+	}
+	//*/
+
+	if( isMainMenu )
+		this.hudHeaderContainerElem.style.display = "none";
+	else
+		this.hudHeaderContainerElem.style.display = "block";
 
 	if( isMapLoaded )
 	{
-		if( isHudPinned )
+		if( isFullscreen )
 		{
 			if( !!this.pinHudButtonElem )
 				this.pinHudButtonElem.style.display = "none";
 
 			if( !!this.returnHudButtonElem )
-				this.returnHudButtonElem.style.display = "inline-block";
+				this.returnHudButtonElem.style.display = "none";
 		}
 		else
 		{
-			if( !!this.returnHudButtonElem )
-				this.returnHudButtonElem.style.display = "none";
-			
-			if( isMapLoaded )
-			{
-				if( !!this.pinHudButtonElem )
-					this.pinHudButtonElem.style.display = "inline-block";
-			}
-			else
+			if( isHudPinned )
 			{
 				if( !!this.pinHudButtonElem )
 					this.pinHudButtonElem.style.display = "none";
+
+				if( !!this.returnHudButtonElem )
+					this.returnHudButtonElem.style.display = "inline-block";
+			}
+			else
+			{
+				if( !!this.returnHudButtonElem )
+					this.returnHudButtonElem.style.display = "none";
+				
+				if( isMapLoaded )
+				{
+					if( !!this.pinHudButtonElem )
+						this.pinHudButtonElem.style.display = "inline-block";
+				}
+				else
+				{
+					if( !!this.pinHudButtonElem )
+						this.pinHudButtonElem.style.display = "none";
+				}
 			}
 		}
 
@@ -271,7 +322,9 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 		"workshoplibrarymodels",
 		"workshoplibraryitems",
 		"skiplegacyworkshops",
-		"mountworkshops"
+		"mountworkshops",
+		"oldlibrarymodels",
+		"oldlibraryitems"
 		];
 
 	var bStartupHandled = false;
@@ -457,7 +510,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	var argIndex = 9;
 	var numArguments = arguments.length;
 	var popupItem;
-	while( argIndex < arguments.length - 8)
+	while( argIndex <= arguments.length - 8)
 	{
 		popupItem = {
 			"type": arguments[argIndex],

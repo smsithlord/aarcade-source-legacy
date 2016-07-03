@@ -18,6 +18,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 	m_iState = 0;
+	m_bPaused = false;
 	m_pWebManager = null;
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
@@ -80,11 +81,15 @@ void C_AnarchyManager::Shutdown()
 void C_AnarchyManager::LevelInitPreEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPreEntity\n");
+	m_instanceId = m_nextInstanceId;
 }
 
 void C_AnarchyManager::LevelInitPostEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPostEntity\n");
+
+	if (m_instanceId != "")
+		g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance(m_instanceId);
 }
 
 void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
@@ -109,6 +114,7 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 void C_AnarchyManager::LevelShutdownPostEntity()
 {
 	DevMsg("AnarchyManager: LevelShutdownPostEntity\n");
+	m_instanceId = "";
 }
 
 void C_AnarchyManager::OnSave()
@@ -138,6 +144,9 @@ void C_AnarchyManager::PreRender()
 
 void C_AnarchyManager::Update(float frametime)
 {
+	if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything.
+		return;
+
 	//DevMsg("Float: %f\n", frametime);	// deltatime
 	//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
 	if (m_pLibretroManager)
@@ -147,6 +156,55 @@ void C_AnarchyManager::Update(float frametime)
 		m_pWebManager->Update();
 
 	//DevMsg("AnarchyManager: Update\n");
+}
+
+#include "ienginevgui.h"
+bool C_AnarchyManager::HandleUiToggle()
+{
+	// handle escape if in pause mode (ignore it)
+	if (!engine->IsInGame())
+		return false;
+
+	if (m_bPaused)
+		return true;
+
+	if (m_pInputManager->GetInputMode())
+	{
+		// handle escape if in fullscreen input mode (drop out of fullscreen mode)
+		if ((!m_pInputManager->GetFullscreenMode() || !this->GetSelectedEntity() || m_pInputManager->GetWasForceInputMode()) || (this->GetSelectedEntity() && m_pInputManager->GetFullscreenMode()))
+			m_pInputManager->DeactivateInputMode(true);
+		else
+			m_pInputManager->SetFullscreenMode(false);
+
+		return true;
+	}
+	else if (!m_pInputManager->GetInputMode() && engine->IsInGame() )
+	{
+		// handle escape if not in input mode & map is loaded (display the main menu)
+		//engine->IsInGame()
+		//engine->IsPaused()
+		if (!enginevgui->IsGameUIVisible())
+		{
+			//DevMsg("DISPLAY MAIN MENU\n");
+			m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/welcome.html");
+			m_pInputManager->ActivateInputMode(true, true);
+			return false;
+		}
+	}
+
+	return false;
+}
+
+void C_AnarchyManager::Pause()
+{
+	m_bPaused = true;
+}
+
+void C_AnarchyManager::Unpause()
+{
+	m_bPaused = false;
+	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+	m_pInputManager->DeactivateInputMode(true);
 }
 
 void C_AnarchyManager::PostRender()
@@ -431,12 +489,16 @@ void C_AnarchyManager::OnWebManagerReady()
 
 void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 {
+	/*
 	m_pMountManager = new C_MountManager();
 	m_pMountManager->Init();
 	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
+	*/
 
-	m_pWorkshopManager = new C_WorkshopManager();
-	m_pWorkshopManager->Init();
+	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()
@@ -458,7 +520,14 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
 	{
 		pEntity = tr.m_pEnt;
-		return SelectEntity(pEntity);
+
+		if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
+		{
+			//m_pInputManager->SetFullscreenMode(true);
+			m_pInputManager->ActivateInputMode(true);
+		}
+		else
+			return SelectEntity(pEntity);
 	}
 	else
 	{
@@ -501,6 +570,8 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 {
 	if (m_pSelectedEntity)
 		DeselectEntity(m_pSelectedEntity);
+
+	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
 	m_pSelectedEntity = pEntity;
 	AddGlowEffect(pEntity);
@@ -602,7 +673,10 @@ bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity)
 {
 	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
 	if (pWebTab)
+	{
 		m_pWebManager->DeselectWebTab(pWebTab);
+		m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+	}
 
 	RemoveGlowEffect(m_pSelectedEntity);
 	m_pSelectedEntity = null;
@@ -630,6 +704,69 @@ void C_AnarchyManager::OnWorkshopManagerReady()
 }
 
 void C_AnarchyManager::OnMountAllWorkshopsComplete()
+{
+	if (!m_pMountManager)	// it is our first time here
+	{
+		std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+
+		// detect any .set files in the legacy folder too
+		std::string file;
+		KeyValues* kv = new KeyValues("instance");
+		FileFindHandle_t findHandle;
+		//DevMsg("Tester folder: %smaps\\*.set", path);
+		const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(findHandle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(findHandle);
+				continue;
+			}
+
+			file = std::string(path) + "maps\\" + std::string(pFilename);
+
+			// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
+			if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+			{
+				if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+				{
+					//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+					// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
+					// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
+
+					std::string title = kv->GetString("title");
+					if (title == "")
+					{
+						//title = "Unnamed";
+						title = file;
+						size_t found = title.find_last_of("/\\");
+						if (found != std::string::npos)
+							title = title.substr(found + 1);
+					}
+
+					g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
+					//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
+				}
+			}
+
+			kv->Clear();
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+		}
+		g_pFullFileSystem->FindClose(findHandle);
+
+		m_pMountManager = new C_MountManager();
+		m_pMountManager->Init();
+		m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
+
+		m_pWorkshopManager = new C_WorkshopManager();
+		m_pWorkshopManager->Init();
+	}
+	else
+		this->GetMetaverseManager()->DetectAllMaps();
+		//this->OnDetectAllMapsComplete();
+}
+
+void C_AnarchyManager::OnDetectAllMapsComplete()
 {
 	if (m_iState < 1)
 	{

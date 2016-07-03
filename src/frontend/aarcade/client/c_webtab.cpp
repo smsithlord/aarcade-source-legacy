@@ -12,7 +12,8 @@
 
 C_WebTab::C_WebTab(std::string url, std::string id, bool bAlpha)
 {
-	m_bReadyForNextSimpleImage = false;
+	m_iNumImagesLoading = -1;
+	m_iMaxImagesLoading = 10;
 
 	DevMsg("WebTab: Constructor\n");
 	m_iState = 0;
@@ -171,6 +172,11 @@ void C_WebTab::MouseMove(float fMouseX, float fMouseY)
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseMove(this, m_fMouseX, m_fMouseY);
 }
 
+void C_WebTab::MouseWheel(int delta)
+{
+	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMouseWheel(this, delta);
+}
+
 void C_WebTab::MousePress(vgui::MouseCode code)
 {
 	g_pAnarchyManager->GetWebManager()->GetWebBrowser()->OnMousePress(this, code);
@@ -202,7 +208,7 @@ void C_WebTab::SetUrl(std::string url)
 
 bool C_WebTab::RequestLoadSimpleImage(std::string channel, std::string itemId)
 {
-	if (m_id != "images" || !m_bReadyForNextSimpleImage)
+	if (m_id != "images" || m_iNumImagesLoading == -1 || m_iNumImagesLoading >= m_iMaxImagesLoading)
 		return false;
 
 	// check if we are ready to accept a new image request
@@ -210,7 +216,7 @@ bool C_WebTab::RequestLoadSimpleImage(std::string channel, std::string itemId)
 	args.push_back(channel);
 	args.push_back(itemId);	// these should also be remembered locally too, so we can load entire websites as images too.
 
-	m_bReadyForNextSimpleImage = false;
+	m_iNumImagesLoading++;
 	DispatchJavaScriptMethod("imageLoader", "loadImage", args);
 	return true;
 }
@@ -221,7 +227,14 @@ void C_WebTab::OnSimpleImageReady(std::string channel, std::string itemId, std::
 		return;
 
 	CWebSurfaceProxy::OnSimpleImageRendered(channel, itemId, field, pTexture);
-	m_bReadyForNextSimpleImage = true;
+	m_iNumImagesLoading--;
+
+	if (pTexture)
+	{
+		std::vector<std::string> args;
+		this->DispatchJavaScriptMethod("imageLoader", "onImageRender", args);
+	}
+	//m_bReadyForNextSimpleImage = true;
 }
 
 void C_WebTab::DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments)

@@ -41,6 +41,7 @@ namespace vgui
 		//void PaintBackground();
 
 		void OnCursorMoved(int x, int y);
+		void OnMouseWheeled(int delta);
 		void OnMousePressed(MouseCode code);
 		void OnMouseReleased(MouseCode code);
 		void OnMouseDoublePressed(MouseCode code);
@@ -50,7 +51,10 @@ namespace vgui
 		void OnKeyCodePressed(KeyCode code);
 		void OnKeyCodeReleased(KeyCode code);
 
+		void SetFullscreenMode(bool bFullscreenMode);
+
 	private:
+		bool m_bMainMenu;
 		bool m_bFullscreen;
 		static long m_fPreviousTime;
 

@@ -100,7 +100,7 @@ void Launch( const CCommand &args )
 
 
 
-	g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance();
+	//g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance();
 
 
 
@@ -154,9 +154,19 @@ void DetectAllMaps(const CCommand &args)
 }
 ConCommand detectallmaps("detectallmaps", DetectAllMaps, "Usage: aa_activated entindex");
 
-void SpawnNearestObject(const CCommand &args)
+void SpawnObjects(const CCommand &args)
 {
-	g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
+	std::string instanceId = g_pAnarchyManager->GetInstanceId();
+	if (instanceId != "")
+	{
+		std::string uri = "asset://ui/spawnItems.html?max=" + std::string(args[1]);
+		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+		g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
+		pHudWebTab->SetUrl(uri);
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+	}
+
+	//g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
 	//DevMsg("Detect all maps!\n");
 }
-ConCommand spawnnearestobject("spawnnearestobject", SpawnNearestObject, "Usage: ...");
+ConCommand spawnobjects("spawnobjects", SpawnObjects, "Usage: ...");

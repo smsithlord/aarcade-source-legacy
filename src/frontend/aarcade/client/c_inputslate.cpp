@@ -74,8 +74,13 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 
 		bool found;
 		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
+		if (!pMaterialVar)
+			DevMsg("ERROR: Material not found!!\n");
+
 		m_pOriginalTexture = pMaterialVar->GetTextureValue();
-		pMaterialVar->SetTextureValue(pTexture);
+
+		if (pTexture)
+			pMaterialVar->SetTextureValue(pTexture);
 
 		if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
 		{
@@ -122,6 +127,9 @@ void CInputSlate::OnTick()
 
 void CInputSlate::OnTick()
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	bool bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
 	if (!bFullscreen && !m_bCursorAlphaZero)
 	{
@@ -154,8 +162,19 @@ void CInputSlate::OnTick()
 		//ivgui()->RemoveTickSignal(this->GetVPanel());
 }
 
+void CInputSlate::OnMouseWheeled(int delta)
+{
+	if (g_pAnarchyManager->IsPaused())
+		return;
+	
+	g_pAnarchyManager->GetWebManager()->OnMouseWheel(delta);
+}
+
 void CInputSlate::OnCursorMoved(int x, int y)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	/*
 	int pX, pY;
 	int pWidth, pHeight;
@@ -178,27 +197,77 @@ void CInputSlate::OnCursorMoved(int x, int y)
 
 void CInputSlate::OnMouseDoublePressed(MouseCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 //	g_pAnarchyManager->GetInputManager()->MousePress(code);
 	g_pAnarchyManager->GetInputManager()->MousePress(code);
 }
 
 void CInputSlate::OnMousePressed(MouseCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
+	/*
+	if (g_pAnarchyManager->IsPaused())
+	{
+		g_pAnarchyManager->Unpause();
+		return;
+	}
+	*/
+
 	g_pAnarchyManager->GetInputManager()->MousePress(code);
 }
 
 void CInputSlate::OnMouseReleased(MouseCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	g_pAnarchyManager->GetInputManager()->MouseRelease(code);
 }
 
 void CInputSlate::OnKeyCodePressed(KeyCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	g_pAnarchyManager->GetInputManager()->KeyCodePressed(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
+}
+
+void CInputSlate::SetFullscreenMode(bool bFullscreenMode)
+{
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
+	DevMsg("Fullscreen transition canceled!\n");
+	return;
+
+	if (m_bFullscreen != bFullscreenMode)
+	{
+		if (bFullscreenMode)
+		{
+			// change us from non-fullscreen to fullscreen
+		}
+		else
+		{
+			// change us from fullscreen to non-fullscreen
+		}
+
+		m_bFullscreen = bFullscreenMode;
+	}
+
 }
 
 void CInputSlate::OnKeyCodeReleased(KeyCode code)
 {
+	if (code == KEY_ESCAPE && g_pAnarchyManager->IsPaused())
+	{
+		g_pAnarchyManager->Unpause();
+		return;
+	}
+
 	g_pAnarchyManager->GetInputManager()->KeyCodeReleased(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
 	/*
 	using namespace Awesomium;
@@ -307,6 +376,11 @@ public:
 	void Create(vgui::VPANEL parent)
 	{
 		InputSlate = new CInputSlate(parent);
+	}
+
+	void SetFullscreenMode(bool bFullscreenMode)
+	{
+		InputSlate->SetFullscreenMode(bFullscreenMode);
 	}
 
 	void Destroy()

@@ -71,10 +71,9 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 	// FIXME this junction should take place in the anarchy manager!!
 
 //	/*
-	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+	
+
+
 //	*/
 
 	this->DetectAllLegacyCabinets();
@@ -1322,7 +1321,7 @@ std::map<std::string, std::string>& C_MetaverseManager::DetectAllMapScreenshots(
 
 	// GRAB A LIST OF THE LATEST SCREENSHOT FOR EACH FILE NAME BEFORE HAND, so screenshots can be bound to maps as they are added.
 	FileFindHandle_t pFileFindHandle;
-	const char *pScreenshotName = g_pFullFileSystem->FindFirstEx("screenshots\\*.jpg", "MOD", &pFileFindHandle);
+	const char *pScreenshotName = g_pFullFileSystem->FindFirstEx("screenshots\\*.jpg", "GAME", &pFileFindHandle);
 	while (pScreenshotName != NULL)
 	{
 		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
@@ -1432,7 +1431,7 @@ void C_MetaverseManager::OnDetectAllMapsCompleted()
 {
 	DevMsg("Done detecting maps!\n");
 	g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
-	g_pAnarchyManager->OnMountAllWorkshopsComplete();
+	g_pAnarchyManager->OnDetectAllMapsComplete();
 }
 
 KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
@@ -1440,6 +1439,7 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 	//if (m_previousDetectLocalMapFilePath != "")	// FIXME: need a way to detect if there is already a DetectFirst/Next query active.
 		//this->DetectLocalMapClose();
 
+	instance_t* pInstance;
 	const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.bsp", "GAME", &m_previousDetectLocalMapFileHandle);
 	while (pFilename != NULL)
 	{
@@ -1470,6 +1470,7 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 			if (!Q_strcmp(active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), foundName.c_str()))
 			{
 				//g_pFullFileSystem->FindClose(m_previousDetectLocalMapFileHandle);
+				bAlreadyExists = true;
 				return it->second;
 			}
 
@@ -1495,6 +1496,15 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 		map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/file", foundName.c_str());
 
 		m_maps[id.c_str()] = map;
+		bAlreadyExists = false;
+
+		// update any legacy instances that were detected that use this map
+		std::string legacyMapName = foundName.substr(0, foundName.length() - 4);
+		DevMsg("LEGACY MAP NAME: %s\n", legacyMapName.c_str());
+		g_pAnarchyManager->GetInstanceManager()->LegacyMapIdFix(legacyMapName, id);
+//		if (pInstance)
+	//		pInstance->mapId = id;
+
 		return map;
 	}
 
@@ -1504,6 +1514,7 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 
 KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
 {
+	instance_t* pInstance;
 	const char *pFilename = g_pFullFileSystem->FindNext(m_previousDetectLocalMapFileHandle);
 	while (pFilename != NULL)
 	{
@@ -1561,6 +1572,14 @@ KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
 
 		m_maps[id.c_str()] = map;
 		bAlreadyExists = false;
+
+		// update any legacy instances that were detected that use this map
+		std::string legacyMapName = foundName.substr(0, foundName.length() - 4);
+		g_pAnarchyManager->GetInstanceManager()->LegacyMapIdFix(legacyMapName, id);
+//		pInstance = g_pAnarchyManager->GetInstanceManager()->FindInstance(foundName.substr(0, foundName.length() - 4));
+	//	if (pInstance)
+		//	pInstance->mapId = id;
+
 		return map;
 	}
 

@@ -39,7 +39,7 @@ public:
 	void OnBrowserInitialized();
 	void OnHudWebTabReady();
 	//void OnLoadingWebTabReady();
-	void OnActivateInputMode(bool bFullscreenMode);
+	void OnActivateInputMode();
 	void RemoveWebTab(C_WebTab* pWebTab);
 	C_WebTab* CreateHudWebTab();
 	C_WebTab* CreateWebTab(std::string url, std::string id = "", bool bAlpha = false);
@@ -59,6 +59,7 @@ public:
 
 	bool ShouldRender(C_WebTab* pWebTab);
 	void OnMouseMove(float fXAmount, float fYAmount);
+	void OnMouseWheel(int delta);
 	void OnMousePress(vgui::MouseCode code);
 	void OnMouseRelease(vgui::MouseCode code);
 	void OnKeyCodePressed(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);

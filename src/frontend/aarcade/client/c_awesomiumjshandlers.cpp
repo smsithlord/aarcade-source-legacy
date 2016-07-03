@@ -26,7 +26,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string id = WebStringToCharString(args[0].ToString());
 		DevMsg("SPAWN THE SHIT! %s\n", id.c_str());
 
-		//g_pAnarchyManager->GetInstanceManager()->SpawnItem(id);
+		/*
+		std::string modelFile = "";
+		std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z);
+		engine->ServerCmd(msg.c_str(), false);
+		*/
+		//g_pAnarchyManager->GetInstanceManager()->Spaw>SpawnItem(id);
 	}
 	else if (method_name == WSLit("launchItem"))
 	{
@@ -93,11 +98,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				if (executable == "")
 					executable = active->GetString("file");
 
+				if (!Q_strcmp(VarArgs("%i", Q_atoi(executable.c_str())), executable.c_str()))
+				{
+					// we are just an integer!! (probably a Steam game)
+					executable = "steam://run/" + executable;
+				}
+
 				DevMsg("Item to launch: %s %s\n", executable.c_str(), params.c_str());
 				//vgui::system()->ShellExecuteA("open", executable.c_str());
 				vgui::system()->ShellExecuteEx("open", executable.c_str(), params.c_str());
 			}
 		}
+
+		g_pAnarchyManager->Pause();
 	}
 	else if (method_name == WSLit("loadNextLocalAppCallback"))
 	{
@@ -177,6 +190,9 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 
 		std::string mapId = WebStringToCharString(args[0].ToString());
+		std::string instanceId = WebStringToCharString(args[1].ToString());
+		g_pAnarchyManager->SetNextInstanceId(instanceId);
+
 		KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->GetMap(mapId);
 		KeyValues* active = map->FindKey("current");
 		if (!active)
@@ -184,7 +200,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		std::string mapName = active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
 		mapName = mapName.substr(0, mapName.length() - 4);
-		engine->ClientCmd(VarArgs("map %s\n", mapName.c_str()));
+		engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
 	}
 	else if (method_name == WSLit("deactivateInputMode"))
 	{
@@ -272,10 +288,45 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::vector<std::string> params;
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
+		params.push_back(VarArgs("%i", engine->IsInGame()));
+		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetSelectedEntity() != null)));
 
-		std::string mapName = VarArgs("%s", g_pAnarchyManager->MapName());
-		params.push_back(VarArgs("%i", (mapName != "(null)")));
+		int isItemSelected = 0;
+		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+		if (pEntity)
+		{
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+			if (pShortcut && pShortcut->GetItemId() != "")
+				isItemSelected = 1;
+		}
+		params.push_back(VarArgs("%i", isItemSelected));
+
+		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())));
+
 		g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
+	}
+	else if (method_name == WSLit("spawnNearestObject"))
+	{
+		g_pAnarchyManager->GetInstanceManager()->SetNearestSpawnDist(args[0].ToDouble());
+		bool bSpawned = g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
+		if ( bSpawned )
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
+	}
+	else if (method_name == WSLit("setNearestObjectDist"))
+	{
+		g_pAnarchyManager->GetInstanceManager()->SetNearestSpawnDist(args[0].ToDouble());
+	}
+	else if (method_name == WSLit("spawnNextObjectCallback"))
+	{
+		bool bSpawned = g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
+		if (bSpawned)
+			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
+		else
+		{
+			g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()->SetUrl("asset://ui/blank.html");
+			//g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		}
 	}
 	else if (method_name == WSLit("simpleImageReady"))
 	{
@@ -289,11 +340,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		if (channel == "" && itemId == "" && field == "")
 		{
-			pWebTab->SetReadyForNextSimpleImage(true);
+			pWebTab->SetNumImagesLoading(0);
+			//pWebTab->DecrementNumImagesLoading();
 		}
 		else if (channel != "" && itemId != "" && field != "")
 		{
-			DevMsg("Given: %s, %s, %s\n", field.c_str(), itemId.c_str(), channel.c_str());
+		//	DevMsg("Given: %s, %s, %s\n", field.c_str(), itemId.c_str(), channel.c_str());
 			KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 			if (item)
 			{
@@ -323,10 +375,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					// get the regen and assign it
 					CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
 					pTexture->SetTextureRegenerator(pRegen);
-
+					
 					pRegen->SetWebTab(pWebTab);
 					pTexture->Download();
-
+					
 					pWebTab->OnSimpleImageReady(channel, itemId, field, pTexture);
 				}
 			}
@@ -476,6 +528,36 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		else
 			return JSValue(0);
+	}
+	else if (method_name == WSLit("getSelectedLibraryItem"))
+	{
+		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+		if (pEntity)
+		{
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+			if (pShortcut)
+			{
+				std::string id = pShortcut->GetItemId();
+				if (id != "")
+				{
+					KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+					if (pItem)
+					{
+						KeyValues* active = pItem->FindKey("current");
+						if (!active)
+							active = pItem->FindKey("local", true);
+						if (active)
+						{
+							JSObject item;
+							AddSubKeys(active, item);
+							return item;
+						}
+					}
+				}
+			}
+		}
+
+		return JSValue(0);
 	}
 	else if (method_name == WSLit("getLibraryItem"))
 	{
@@ -648,6 +730,39 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		
 		return JSValue(null);
 	}
+	else if (method_name == WSLit("getMapInstances"))
+	{
+		std::string mapId = WebStringToCharString(args[0].ToString());
+
+		std::vector<instance_t*> instances;
+		g_pAnarchyManager->GetInstanceManager()->FindAllInstances(mapId, instances);
+		
+		if (instances.size() == 0)
+			return JSValue(null);
+
+		//JSObject response;
+		JSArray instancesArray;
+		unsigned int numInstances = instances.size();
+		unsigned int i;
+		instance_t* pInstance;
+		for (i = 0; i < numInstances; i++)
+		{
+			pInstance = instances[i];
+
+			JSObject instanceObject;
+			instanceObject.SetProperty(WSLit("id"), WSLit(pInstance->id.c_str()));
+			instanceObject.SetProperty(WSLit("mapId"), WSLit(pInstance->mapId.c_str()));
+			instanceObject.SetProperty(WSLit("title"), WSLit(pInstance->title.c_str()));
+			instanceObject.SetProperty(WSLit("file"), WSLit(pInstance->file.c_str()));
+			instanceObject.SetProperty(WSLit("workshopIds"), WSLit(pInstance->workshopIds.c_str()));
+			instanceObject.SetProperty(WSLit("mountIds"), WSLit(pInstance->mountIds.c_str()));
+
+			instancesArray.Push(instanceObject);
+		}
+		//response.SetProperty(WSLit("instances"), instancesArray);
+
+		return instancesArray;
+	}
 	else
-		return WSLit("0");
+		return JSValue(null);
 }

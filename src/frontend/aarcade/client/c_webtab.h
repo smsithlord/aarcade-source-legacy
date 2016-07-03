@@ -30,13 +30,16 @@ public:
 
 	// mutators
 	void SetState(int state) { m_iState = state; }
-	void SetReadyForNextSimpleImage(bool state) { m_bReadyForNextSimpleImage = state; }
+	//void SetReadyForNextSimpleImage(bool state) { m_iNumImagesLoading = state; }
+	void DecrementNumImagesLoading() { m_iNumImagesLoading--; };
+	void SetNumImagesLoading(int num) { m_iNumImagesLoading = num; }
 
 	void OnProxyBind(C_BaseEntity* pBaseEntity = null);
 	void Render();
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 	void GetMousePos(float &fMouseX, float &fMouseY);
 	void MouseMove(float fMouseX, float fMouseY);
+	void MouseWheel(int delta);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
 	void KeyCodePress(vgui::MouseCode code, bool bShiftState, bool bCtrlState, bool bAltState);
@@ -59,7 +62,9 @@ public:
 	std::vector<JavaScriptMethodCall_t*> GetJavaScriptMethodCalls() { return m_javaScriptMethodCalls; }
 
 private:
-	bool m_bReadyForNextSimpleImage;
+//	bool m_bReadyForNextSimpleImage;
+	int m_iNumImagesLoading;
+	int m_iMaxImagesLoading;
 	std::vector<JavaScriptMethodCall_t*> m_javaScriptMethodCalls;
 	float m_fMouseX;
 	float m_fMouseY;

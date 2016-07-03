@@ -221,6 +221,31 @@ body
 }
 */
 
+.hudSideContainer
+{
+	position: fixed;
+	left: 0;
+	top: 50%;
+	-webkit-transform: translate(0, -50%);
+}
+
+.hudSideContainerButton
+{
+	display: none;
+	background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+	border-radius: 0 10px 10px 0;
+	border: 2px solid #ccc;
+	padding-right: 5px;
+	padding-left: 5px;
+	font-family: Arial;
+	font-weight: 900;
+}
+
+.hudSideContainerButton:hover
+{
+	background-color: rgba(250, 50, 50, 0.9);
+}
+
 .hudContent
 {
 	-webkit-box-shadow: 3px 5px 8px #000;
@@ -508,7 +533,7 @@ body
 
 #itemContainer
 {
-	width: 60%;
+	width: 90%;
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -545,8 +570,10 @@ body
 {
 	border-radius: 10px;
 	text-align: left;
+	/*
 	padding-left: 10px;
-	padding-right: 10px;
+	padding-right: 0px;
+	*/
 	margin-left: 4px;
 	font-family: Arial;
 	width: 80%;

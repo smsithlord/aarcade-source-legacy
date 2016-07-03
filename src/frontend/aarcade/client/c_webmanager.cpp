@@ -261,15 +261,26 @@ void C_WebManager::OnHudWebTabReady()// Created()
 	g_pAnarchyManager->OnWebManagerReady();
 }
 
-void C_WebManager::OnActivateInputMode(bool bFullscreenMode)
+void C_WebManager::OnActivateInputMode()
 {
 	// notify the HUD that input mode has been activated (so it can update its "input lock/pin" button mostly)
 	std::vector<std::string> args;
-	args.push_back(VarArgs("%i", (bFullscreenMode)));
-	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));	// FIXME: There will probably be other ways for the HUD to be pinned, such as pressing ESC to bring it up.
+	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
+	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
+	args.push_back(VarArgs("%i", engine->IsInGame()));
+	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetSelectedEntity() != null)));
 	
-	std::string mapName = VarArgs("%s", g_pAnarchyManager->MapName());
-	args.push_back(VarArgs("%i", (mapName != "(null)")));
+	int isItemSelected = 0;
+	C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+	if (pEntity)
+	{
+		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+		if (pShortcut && pShortcut->GetItemId() != "")
+			isItemSelected = 1;
+	}
+	args.push_back(VarArgs("%i", isItemSelected));
+
+	args.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())));
 
 	this->DispatchJavaScriptMethod(m_pHudWebTab, "arcadeHud", "onActivateInputMode", args);
 }
@@ -412,6 +423,11 @@ void C_WebManager::OnMouseMove(float fXAmount, float fYAmount)
 {
 	// these events are always for the selected web tab
 	m_pSelectedWebTab->MouseMove(fXAmount, fYAmount);
+}
+
+void C_WebManager::OnMouseWheel(int delta)
+{
+	m_pHudWebTab->MouseWheel(delta);
 }
 
 void C_WebManager::OnMousePress(vgui::MouseCode code)

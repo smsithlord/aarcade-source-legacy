@@ -8,7 +8,7 @@
 		"active" 0
 		"paths"
 		{
-			"path" "custom"
+			//"path" "custom"
 			"path" "."
 			"path" "cstrike_pak_dir.vpk"
 			"path" "download"
@@ -22,13 +22,359 @@
 		"active" 0
 		"paths"
 		{
-			"path" "custom"
+			//"path" "custom"
 			"path" "."
 			"path" "tf2_misc_dir.vpk"
 			"path" "tf2_sound_misc_dir.vpk"
 			"path" "tf2_sound_vo_english_dir.vpk"
 			"path" "tf2_textures_dir.vpk"
 			"path" "download"
+		}
+	}
+	"mount"
+	{
+		"id" "400"
+		"base" "Portal/portal"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "portal_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "320"
+		"base" "Half-Life 2 Deathmatch/hl2mp"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "hl2mp_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "420"
+		"base" "Half-Life 2/ep2"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "ep2_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "380"
+		"base" "Half-Life 2/episodic"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "ep1_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "220"
+		"base" "Half-Life 2/hl2"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "hl2_misc_dir.vpk"
+			"path" "hl2_pak_dir.vpk"
+			"path" "hl2_sound_misc_dir.vpk"
+			"path" "hl2_voice_vo_english_dir.vpk"
+			"path" "hl2_textures_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "340"
+		"base" "Half-Life 2/lostcoast"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "lostcoast_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "4000"
+		"base" "GarrysMod/garrysmod"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "garrysmod_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "317360"
+		"base" "Double Action/dab"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "224260"
+		"base" "nmrih/nmrih"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "nmrih_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "300"
+		"base" "Day of Defeat Source/dod"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "dod_pak_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "17570"
+		"base" "pirates, vikings and knights ii/pvkii"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "pvkii_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "17510"
+		"base" "Source SDK Base 2007/ageofchivalry"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "17530"
+		"base" "Source SDK Base 2007/diprip"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "17580"
+		"base" "Dystopia/dystopia"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "dystopia_sound_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "17740"
+		"base" "Empires/empires"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "17550"
+		"base" "Source SDK Base/esmod"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "265630"
+		"base" "Fistful of Frags/fof"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+			"path" "fof_dir.vpk"
+		}
+	}
+	"mount"
+	{
+		"id" "244630"
+		"base" "NEOTOKYO/NeotokyoSource"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "235780"
+		"base" "MINERVA/metastasis"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "bg2"
+		"base" "bg2/bg2"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "jurassic"
+		"base" "jurassic"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "gesource"
+		"base" "gesource"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "blackmesa"
+		"base" "blackmesa"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "pdark"
+		"base" "pdark"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "Halloween"
+		"base" "Halloween"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "WeekdayWarrior"
+		"base" "WeekdayWarrior"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "hidden"
+		"base" "hidden"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "Korsakovia"
+		"base" "Korsakovia"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "DearEsther"
+		"base" "Dear Esther"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
+		}
+	}
+	"mount"
+	{
+		"id" "17700"
+		"base" "Source SDK Base/insurgency"
+		"installed" 0
+		"active" 0
+		"paths"
+		{
+			"path" "."
 		}
 	}
 }

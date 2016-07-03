@@ -1,17 +1,19 @@
 <html>
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
-		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div id="messageContainer">
-			<div class="mainTitle"><div class="backButton" onclick="window.location='asset://ui/items.html';">Back</div>Library / Items / Launch</div>
-			<div class="mainButton disabledButton">Nodes</div>
+		<div style="margin-left: auto; margin-right: auto; background-color: rgba(0, 0, 0, 0.9); font-size: 50px; font-weight: 900; font-family: Arial; top: 50%; position: fixed; width: 100%; text-shadow: 5px 5px 2px #000;">
+			<center>
+				<i style="color: #999;">PAUSED</i><br />
+				PRESS ESCAPE TO RESUME
+			</center>
 		</div>
 
 <!--		<div class="backButton">Back</div> -->
-		<a href="javascript:location.reload();" class="devReload">Reload</a>
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
 		<script>
+		//PRESS ESCAPE TO RESUME
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
 function getParameterByName(name, url) {
     if (!url) url = window.location.href;
@@ -22,10 +24,12 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
-
-			var id = getParameterByName("id");
-			aaapi.system.launchItem(id);
-			//loadingManager.init();
+ 			aaapi.system.forceInputMode();
+			setTimeout(function()
+			{
+				var id = getParameterByName("id");
+				aaapi.system.launchItem(id);
+			}, 1000);
 		</script>
 	</body>
 </html>

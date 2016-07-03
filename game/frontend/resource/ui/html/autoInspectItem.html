@@ -1,8 +1,7 @@
 <html>
 	<head>
 	</head>
-	<body>
-		<center><h1>HELLO WORLD</h1></center>
+	<body style="background-color: #fff;">
 		<script>
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
 function getParameterByName(name, url) {
@@ -62,14 +61,43 @@ function ExtractYouTubeId(trailerURL)
 				window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeId + "&autoplay=1";
 			else
 			{
+        var imageEndings = ["jpg", "jpeg", "gif", "png"];
+
+        var fieldValue = "";
 				if( preview != "")
-					window.location = preview;
+          fieldValue = preview;
 				else if( file.indexOf("http") === 0 )
-					window.location = file;
+          fieldValue = file;
 				else if( screen != "" )
-					window.location = screen;
+          fieldValue = screen;
 				else if( marquee != "" )
-					window.location = marquee;
+          fieldValue = marquee;
+
+        var extension = fieldValue;
+        var found = extension.lastIndexOf("/");
+        if( found >= 0 )
+          extension = extension.substring(found+1);
+
+        found = extension.indexOf("?");
+        if( found >= 0)
+          extension = extension.substring(0, found);
+
+        found = extension.indexOf("#");
+        if( found >= 0)
+          extension = extension.substring(0, found);
+
+        found = extension.indexOf(":");
+        if( found >= 0 )
+          extension = extension.substring(0, found);
+
+        found = extension.lastIndexOf(".");
+        if( found >= 0 )
+          extension = extension.substring(found+1);
+
+        if( imageEndings.indexOf(extension) >= 0 )
+          window.location = "asset://ui/showImage.html?uri=" + encodeURIComponent(fieldValue);
+        else
+				  window.location = fieldValue;
 			}
 		</script>
 	</body>

@@ -40,16 +40,16 @@
 			</div>
 		</div>
 
-		<div class="hudContent" style="width: 80%; height: 70%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/play.html';" help="Go back to the previous menu.">
 							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
 						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Play
+						Play / Instance
 					</div>
 					<div class="hudContentHeaderCell">
 						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
@@ -59,52 +59,65 @@
 				</div>
 			</div>
 
-			<div style="height: 90%;">
-				<div id="mapsContainer"></div>
-			</div>
+			<div id="mapTitle"></div>
+
+			<select id="instanceSelect" style="width: 100%;"></select>
+
+			<div class="mainButton" onclick="play();">Play</div>
 		</div>
 
+
+
+<!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;</a>
-
 		<script>
-			var mapsContainer = document.querySelector("#mapsContainer");
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
 
-			var screenshots = aaapi.system.detectAllMapScreenshots();
-			var maps = aaapi.system.getAllMaps();
+			var titleElem = document.body.querySelector("#mapTitle");
+			var mapId = getParameterByName("id");
+			//var map = aaapi.metaverse.getMap(mapId);
+			//titleElem.innerText = map.title;
 
-			var count = 0;
-			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
-			for( x in maps )
+			var instances = aaapi.system.getMapInstances(mapId);
+			var selectElem = document.body.querySelector("#instanceSelect");
+
+			var instance;
+			var elem;
+			var i;
+			for( i = 0; i < instances.length; i++)
 			{
-				mapName = maps[x].platforms[arcadeHud.platformId].file;
-				mapName = mapName.substring(0, mapName.length-4);
+				instance = instances[i];
 
-				mapContainer = document.createElement("div");
-				mapContainer.className = "mapThumbContainer";
-				mapContainer.map = maps[x];
-				mapContainer.addEventListener("click", function(e)
-				{
-					window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
-					//aaapi.system.deactivateInputMode();
-					//aaapi.system.loadMap(this.map.info.id);
-				}.bind(mapContainer), true);
+				elem = document.createElement("option");
+				elem.value = instance.id;
+				elem.text = instance.title;
+				//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
 
-				mapImage = document.createElement("img");
-				if( !!screenshots[mapName] )
-					mapImage.src = "asset://screenshots/" + screenshots[mapName];
-				else
-					mapImage.src = "asset://ui/map.jpg";
+				selectElem.appendChild(elem);
+			}
 
-				mapContainer.appendChild(mapImage);
+			elem = document.createElement("option");
+			elem.value = "";
+			elem.text = "<Create New Instance>";
+			//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
 
-				mapTitle = document.createElement("div");
-				mapTitleNode = document.createTextNode(maps[x].title);
+			selectElem.appendChild(elem);
 
-				mapTitle.appendChild(mapTitleNode);
-				mapContainer.appendChild(mapTitle);
+			//loadingManager.init();
 
-				mapsContainer.appendChild(mapContainer);
-				count++;
+			function play()
+			{
+				aaapi.system.deactivateInputMode();
+				aaapi.system.loadMap(mapId, selectElem.options[selectElem.selectedIndex].value);
 			}
 		</script>
 	</body>
