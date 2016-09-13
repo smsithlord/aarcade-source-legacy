@@ -4,10 +4,18 @@
 #include <Awesomium/WebCore.h>
 #include <Awesomium/STLHelpers.h>
 #include <string>
+#include <vector>
 #include <map>
 //#include "vgui_controls/Controls.h"
 
 using namespace Awesomium;
+
+struct JavaScriptMethodCall_t
+{
+	std::string objectName;
+	std::string methodName;
+	std::vector<std::string> methodArguments;
+};
 
 class JSHandler : public JSMethodHandler
 {

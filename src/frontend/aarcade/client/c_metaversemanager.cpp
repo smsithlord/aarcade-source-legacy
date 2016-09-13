@@ -154,7 +154,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				pItem->SetString(VarArgs("local/platforms/%s/mountId", AA_PLATFORM_ID), mountIds.c_str());
 
 				// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
-				DevMsg("Loading model with ID %s and model %s\n", itemId.c_str(), modelFile.c_str());
+				//DevMsg("Loading model with ID %s and model %s\n", itemId.c_str(), modelFile.c_str());
 				m_models[itemId] = pItem;
 			}
 			else

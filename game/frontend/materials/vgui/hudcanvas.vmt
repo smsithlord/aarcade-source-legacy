@@ -1,0 +1,7 @@
+//"WorldTwoTextureBlend"
+//"VertexLitGeneric"
+"UnlitGeneric"
+{
+	"$basetexture" "canvas_hud"
+	"$translucent" 1
+}

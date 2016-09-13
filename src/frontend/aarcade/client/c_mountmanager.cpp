@@ -10,12 +10,12 @@
 
 C_MountManager::C_MountManager()
 {
-	DevMsg("WebManager: Constructor\n");
+	DevMsg("MountManager: Constructor\n");
 }
 
 C_MountManager::~C_MountManager()
 {
-	DevMsg("WebManager: Destructor\n");
+	DevMsg("MountManager: Destructor\n");
 }
 
 void C_MountManager::Init()

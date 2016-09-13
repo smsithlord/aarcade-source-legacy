@@ -31,8 +31,32 @@ void TestFunction( const CCommand &args )
 	//webviewinput->Create();
 	DevMsg("Planel created.\n");
 }
-
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
+
+void RunEmbeddedLibretro(const CCommand &args)
+{
+	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
+	if ( pLibretroManager )
+		pLibretroManager->RunEmbeddedLibretro();
+}
+ConCommand run_embedded_libretro("run_embedded_libretro", RunEmbeddedLibretro, "Usage: runs embedded apps");
+
+void RunEmbeddedSteamBrowser(const CCommand &args)
+{
+	C_SteamBrowserManager* pSteamBrowserManager = g_pAnarchyManager->GetSteamBrowserManager();
+	if (pSteamBrowserManager)
+		pSteamBrowserManager->RunEmbeddedSteamBrowser();
+}
+ConCommand run_embedded_steam_browser("run_embedded_steam_browser", RunEmbeddedSteamBrowser, "Usage: runs embedded apps");
+
+void RunEmbeddedAwesomiumBrowser(const CCommand &args)
+{
+	C_AwesomiumBrowserManager* pAwesomiumBrowserManager = g_pAnarchyManager->GetAwesomiumBrowserManager();
+	if (pAwesomiumBrowserManager)
+		pAwesomiumBrowserManager->RunEmbeddedAwesomiumBrowser();
+}
+ConCommand run_embedded_awesomium_browser("run_embedded_awesomium_browser", RunEmbeddedAwesomiumBrowser, "Usage: runs embedded apps");
+
 /*
 void TestFunction2( const CCommand &args )
 {
@@ -61,7 +85,7 @@ ConCommand test_function2( "testfunc2", TestFunction2, "Usage: executes an arbit
 void AnarchyManager(const CCommand &args)
 {
 	DevMsg("Start the anarchy manager NOW!\n");
-	g_pAnarchyManager->AnarchyBegin();
+	g_pAnarchyManager->AnarchyStartup();
 }
 
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
@@ -87,7 +111,7 @@ ConCommand attemptselectobject("focus", AttemptSelectObject, "Attempts to select
 
 void Launch( const CCommand &args )
 {
-	//g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();
+	g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();
 
 	//g_pFullFileSystem->AddSearchPath(installFolder, "GAME", PATH_ADD_TO_TAIL);
 

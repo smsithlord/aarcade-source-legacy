@@ -205,6 +205,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	else if (method_name == WSLit("deactivateInputMode"))
 	{
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		// unpause us if we are paused at main menu
 	}
 	else if (method_name == WSLit("forceInputMode"))
 	{
@@ -281,9 +283,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("requestActivateInputMode"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);	// FIXME This same code is somewhere else also.
-		if (!pWebTab)
-			return;
+//		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);	// FIXME This same code is somewhere else also.
+//		if (!pWebTab)
+//			return;
+
+		//C_AwesomiumBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(caller);
 		
 		std::vector<std::string> params;
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
@@ -303,7 +307,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())));
 
-		g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
+		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pBrowserInstance, "arcadeHud", "onActivateInputMode", params);
+
+
+
+
+
+		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
 	}
 	else if (method_name == WSLit("spawnNearestObject"))
 	{

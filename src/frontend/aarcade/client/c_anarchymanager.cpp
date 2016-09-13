@@ -17,11 +17,15 @@ extern C_AnarchyManager* g_pAnarchyManager(&g_AnarchyManager);
 C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager")
 {
 	DevMsg("AnarchyManager: Constructor\n");
+	m_state = AASTATE_NONE;
 	m_iState = 0;
+	m_bIncrementState = false;
 	m_bPaused = false;
+	m_pCanvasManager = null;
 	m_pWebManager = null;
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
+	m_pSteamBrowserManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
 	m_pMountManager = null;
@@ -50,30 +54,65 @@ void C_AnarchyManager::Shutdown()
 {
 	DevMsg("AnarchyManager: Shutdown\n");
 
-	m_pInputManager->DeactivateInputMode();
-	delete m_pInputManager;
-	m_pInputManager = null;
-
-	delete m_pWebManager;
-	m_pWebManager = null;
+	if (m_pWebManager)
+	{
+		delete m_pWebManager;
+		m_pWebManager = null;
+	}
 
 //	delete m_pLoadingManager;
 	//m_pLoadingManager = null;
 
-	delete m_pLibretroManager;
-	m_pLibretroManager = null;
+	if (m_pLibretroManager)
+	{
+		delete m_pLibretroManager;
+		m_pLibretroManager = null;
+	}
 
-	delete m_pMountManager;
-	m_pMountManager = null;
+	if (m_pSteamBrowserManager)
+	{
+		delete m_pSteamBrowserManager;
+		m_pSteamBrowserManager = null;
+	}
 
-	delete m_pWorkshopManager;
-	m_pWorkshopManager = null;
+	if (m_pMountManager)
+	{
+		delete m_pMountManager;
+		m_pMountManager = null;
+	}
 
-	delete m_pMetaverseManager;
-	m_pMetaverseManager = null;
+	if (m_pWorkshopManager)
+	{
+		delete m_pWorkshopManager;
+		m_pWorkshopManager = null;
+	}
 
-	delete m_pInstanceManager;
-	m_pInstanceManager = null;
+	if (m_pMetaverseManager)
+	{
+		delete m_pMetaverseManager;
+		m_pMetaverseManager = null;
+	}
+
+	if (m_pInstanceManager)
+	{
+		delete m_pInstanceManager;
+		m_pInstanceManager = null;
+	}
+
+	if (m_pAwesomiumBrowserManager)
+	{
+		delete m_pAwesomiumBrowserManager;
+		m_pAwesomiumBrowserManager = null;
+	}
+
+	if (m_pInputManager)
+	{
+		m_pInputManager->DeactivateInputMode(true);
+		delete m_pInputManager;
+		m_pInputManager = null;
+	}
+
+	DevMsg("AnarchyManager: Finished Shutdown\n");
 
 	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
 }
@@ -142,25 +181,221 @@ void C_AnarchyManager::PreRender()
 	//DevMsg("AnarchyManager: PreRender\n");
 }
 
+void C_AnarchyManager::IncrementState()
+{
+	m_bIncrementState = true;
+}
+
 void C_AnarchyManager::Update(float frametime)
 {
-	if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything.
-		return;
+	if (m_bIncrementState)
+	{
+		m_bIncrementState = false;
 
-	//DevMsg("Float: %f\n", frametime);	// deltatime
-	//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
-	if (m_pLibretroManager)
-		m_pLibretroManager->Update();
+		switch (m_state)
+		{
+			case AASTATE_NONE:
+				m_state = AASTATE_INPUTMANAGER;
+				break;
 
-	if (m_pWebManager)
-		m_pWebManager->Update();
+			case AASTATE_INPUTMANAGER:
+				m_state = AASTATE_CANVASMANAGER;
+				break;
 
-	//DevMsg("AnarchyManager: Update\n");
+			case AASTATE_CANVASMANAGER:
+				m_state = AASTATE_LIBRETROMANAGER;
+				//m_state = AASTATE_STEAMBROWSERMANAGER;
+				break;
+
+			case AASTATE_LIBRETROMANAGER:
+			{
+				// TEST: AUTO-CREATE AN INSTANCE, LOAD THE FFMPEG CORE, AND PLAY A MOVIE
+				/*
+				C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();//>GetSelectedLibretroInstance();// 
+				pLibretroInstance->Init();
+
+				// load a core
+				pLibretroInstance->LoadCore();
+
+				// load a file
+				pLibretroInstance->LoadGame();
+
+				// tell the input manager that the libretro instance is active
+				C_InputListenerLibretro* pListener = m_pLibretroManager->GetInputListener();
+				m_pInputManager->SetInputCanvasTexture(pLibretroInstance->GetTexture());
+				m_pInputManager->ActivateInputMode(true, true, (C_InputListener*)pListener);
+				*/
+
+				m_state = AASTATE_STEAMBROWSERMANAGER;
+				break;
+			}
+
+			case AASTATE_STEAMBROWSERMANAGER:
+			{
+				// TEST: AUTO-CREATE AN INSTANCE, LOAD A WEBSITE
+				/*
+				C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
+				pSteamBrowserInstance->Init("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", null);//https://www.youtube.com/html5
+				*/
+
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGER;
+				//m_state = AASTATE_RUN;
+				break;
+			}
+
+			case AASTATE_AWESOMIUMBROWSERMANAGER:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERWAIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERWAIT:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUD;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERHUD:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
+				m_state = AASTATE_RUN;
+				break;
+		}
+	}
+
+	switch (m_state)
+	{
+		case AASTATE_RUN:
+			if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything.
+				return;
+
+			//DevMsg("Float: %f\n", frametime);	// deltatime
+			//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
+			if (m_pLibretroManager)
+				m_pLibretroManager->Update();
+
+			if (m_pSteamBrowserManager)
+				m_pSteamBrowserManager->Update();
+
+			if (m_pAwesomiumBrowserManager)
+				m_pAwesomiumBrowserManager->Update();
+			/*
+			if (m_pWebManager)
+				m_pWebManager->Update();
+			*/
+
+			//DevMsg("AnarchyManager: Update\n");
+			break;
+
+		case AASTATE_INPUTMANAGER:
+			m_pInputManager = new C_InputManager();	// then wait for state change
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_CANVASMANAGER:
+			m_pCanvasManager = new C_CanvasManager();	// then wait for state change
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_LIBRETROMANAGER:
+			m_pLibretroManager = new C_LibretroManager();
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_STEAMBROWSERMANAGER:
+			m_pSteamBrowserManager = new C_SteamBrowserManager();
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGER:
+			m_pAwesomiumBrowserManager = new C_AwesomiumBrowserManager();
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERWAIT:
+			m_pAwesomiumBrowserManager->Update();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERHUD:
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/welcome.html", true);	// defaults to asset://ui/blank.html
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT:
+			m_pAwesomiumBrowserManager->Update();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
+			DevMsg("Finished initing HUD.\n");
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		//case AASTATE_WEBMANAGER:
+			/*
+			// create a libretro instance
+			C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();//>GetSelectedLibretroInstance();// 
+			pLibretroInstance->Init();
+
+			// load a core
+			pLibretroInstance->LoadCore();
+
+			// load a file
+			pLibretroInstance->LoadGame();
+
+			// tell the input manager that the libretro instance is active
+			C_InputListenerLibretro* pListener = m_pLibretroManager->GetInputListener();
+			m_pInputManager->SetInputCanvasTexture(pLibretroInstance->GetTexture());
+			m_pInputManager->ActivateInputMode(true, true, (C_InputListener*)pListener);
+
+			steamapicontext->SteamHTMLSurface()->Init();
+			SteamAPICall_t hAPICall = steamapicontext->SteamHTMLSurface()->CreateBrowser("", "");
+			C_SteamworksBrowser* pSteamworksBrowser = new C_SteamworksBrowser();
+			pSteamworksBrowser->Init(hAPICall);
+
+			this->SetState(AASTATE_RUN);
+			*/
+		//	break;
+	}
 }
 
 #include "ienginevgui.h"
 bool C_AnarchyManager::HandleUiToggle()
 {
+	if (m_pSteamBrowserManager)
+	{
+		C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->GetSelectedSteamBrowserInstance();
+		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+		{
+			m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
+			return true;
+		}
+	}
+
+	if (m_pLibretroManager)
+	{
+		C_LibretroInstance* pInstance = m_pLibretroManager->GetSelectedLibretroInstance();
+		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+		{
+			m_pLibretroManager->DestroyLibretroInstance(pInstance);
+			return true;
+		}
+	}
+
+	if (m_pAwesomiumBrowserManager)
+	{
+		C_AwesomiumBrowserInstance* pInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
+		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+		{
+			m_pAwesomiumBrowserManager->DestroyAwesomiumBrowserInstance(pInstance);
+			return true;
+		}
+	}
+	/*
 	// handle escape if in pause mode (ignore it)
 	if (!engine->IsInGame())
 		return false;
@@ -186,11 +421,16 @@ bool C_AnarchyManager::HandleUiToggle()
 		if (!enginevgui->IsGameUIVisible())
 		{
 			//DevMsg("DISPLAY MAIN MENU\n");
-			m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/welcome.html");
+			if (m_pSelectedEntity)
+				this->DeselectEntity(m_pSelectedEntity, "asset://ui/welcome.html");
+			else
+				m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/welcome.html");
+
 			m_pInputManager->ActivateInputMode(true, true);
 			return false;
 		}
 	}
+	*/
 
 	return false;
 }
@@ -443,15 +683,19 @@ if(id.length != 20) throw new Error('Length should be 20.');
 
 return id;
 */
-void C_AnarchyManager::AnarchyBegin()
-{
-	DevMsg("AnarchyManager: AnarchyBegin\n");
 
+void C_AnarchyManager::AnarchyStartup()
+{
+	DevMsg("AnarchyManager: AnarchyStartup\n");
+	m_bIncrementState = true;
+	//m_state = AASTATE_INPUTMANAGER;
+	/*
 	m_pInstanceManager = new C_InstanceManager();
 	m_pMetaverseManager = new C_MetaverseManager();
 	m_pInputManager = new C_InputManager();
 	m_pWebManager = new C_WebManager();
 	m_pWebManager->Init();
+	*/
 }
 
 void C_AnarchyManager::OnWebManagerReady()
@@ -669,13 +913,17 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	return true;
 }
 
-bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity)
+bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl)
 {
 	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
 	if (pWebTab)
 	{
 		m_pWebManager->DeselectWebTab(pWebTab);
-		m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+
+		if (nextUrl != "")
+			m_pWebManager->GetHudWebTab()->SetUrl(nextUrl);
+		else
+			m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 	}
 
 	RemoveGlowEffect(m_pSelectedEntity);
@@ -768,6 +1016,8 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 
 void C_AnarchyManager::OnDetectAllMapsComplete()
 {
+	m_pLibretroManager = new C_LibretroManager();
+
 	if (m_iState < 1)
 	{
 		m_iState = 1;

@@ -4,16 +4,19 @@
 #include <Awesomium/WebCore.h>
 #include <Awesomium/STLHelpers.h>
 #include "vgui/MouseCode.h"
+#include "c_awesomiumjshandlers.h"
 //#include "vgui_controls/Controls.h"
 #include <vector>
 //#include "c_webmanager.h"
 
+/*
 struct JavaScriptMethodCall_t
 {
 	std::string objectName;
 	std::string methodName;
 	std::vector<std::string> methodArguments;
 };
+*/
 
 class C_WebTab
 {

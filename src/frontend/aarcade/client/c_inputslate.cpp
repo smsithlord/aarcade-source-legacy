@@ -41,6 +41,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	SetMouseInputEnabled( true );
 
 	m_bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
+	m_pCanvasTexture = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetTexture();//g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture();
 
 	SetProportional( false );
 	SetTitleBarVisible( false );
@@ -63,8 +64,50 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pPanel->SetVisible(false);
 	}
 
+	if (m_pCanvasTexture)
+	{
+		m_pMaterial = g_pMaterialSystem->FindMaterial("vgui/activecanvas", TEXTURE_GROUP_VGUI);
+
+		bool found;
+		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
+		if (!pMaterialVar)
+			DevMsg("ERROR: Material not found!!\n");
+		
+		m_pOriginalTexture = pMaterialVar->GetTextureValue();
+
+		pMaterialVar->SetTextureValue(m_pCanvasTexture);
+
+		ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");
+		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+		pImagePanel->SetShouldScaleImage(true);
+		pImagePanel->SetSize(GetWide(), GetTall());
+		//pImagePanel->SetAutoResize() //pin
+		pImagePanel->SetImage("activecanvas");
+		
+		ITexture* pTexture = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->GetTexture();
+		ImagePanel* pHudImagePanel = new ImagePanel(this, "hud_canvas_panel");
+		pHudImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+		pHudImagePanel->SetShouldScaleImage(true);
+		pHudImagePanel->SetSize(GetWide(), GetTall());
+		//pImagePanel->SetAutoResize() //pin
+		pHudImagePanel->SetImage("hudcanvas");
+
+		/*
+		ITexture* pTexture = g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture();
+		if (!pTexture)
+		DevMsg("Texture is not ready yet!!\n");
+
+		ImagePanel* pImagePanel = new ImagePanel(this, "canvas_panel");
+		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+		pImagePanel->SetShouldScaleImage(true);
+		pImagePanel->SetSize(GetWide(), GetTall());
+		pImagePanel->SetImage("activecanvas");
+		*/
+	}
+
 	//if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() && g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
 	//if (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())
+	/*
 	if (g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() )//&& g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())//&& m_bFullscreen)
 	{
 		m_pMaterial = g_pMaterialSystem->FindMaterial("vgui/selectedwebtab", TEXTURE_GROUP_VGUI);
@@ -100,8 +143,8 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pImagePanel->SetImage("hudwebtab");
 	}
 //	else
-
-	if ( !m_bFullscreen)
+*/
+	if ( !m_bFullscreen )
 	{
 		m_bCursorHidden = true;
 		ShowCursor(false);
@@ -110,9 +153,10 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	// for opacity
 	ivgui()->AddTickSignal(this->GetVPanel());
 
-	//ShowCursor(false);
 	SetVisible(true);
 	Activate();
+
+	//ShowCursor(true);
 }
 
 /*

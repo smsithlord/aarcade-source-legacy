@@ -77,7 +77,7 @@ private:
 
 	// JS Handlers next...
 };
-
+/*
 inline const char* WebStringToCharString(WebString web_string)
 {
 	int len = web_string.ToUTF8(null, 0);
@@ -90,5 +90,6 @@ inline const char* WebStringToCharString(WebString web_string)
 
 	return VarArgs("%s", title.c_str());
 }
+*/
 
 #endif

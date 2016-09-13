@@ -85,13 +85,29 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	fileExtension = fileExtension.substr(foundLastDot + 1);
 	std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), tolower);
 
+	bool bIsFontTFF = false;
+	bool bIsFontWOFF = false;
+	bool bIsImage = false;
 	std::string binaryExtensions = "jpg, jpeg, tbn, png, gif, tbn, tga";
 	
 	std::vector<std::string> tokens;
 	g_pAnarchyManager->Tokenize(binaryExtensions, tokens, ", ");
 	std::vector<std::string>::iterator foundToken = std::find(tokens.begin(), tokens.end(), fileExtension);
-	if (foundToken != tokens.end())
+	if (fileExtension == "ttf")
+	{
+		bIsFontTFF = true;
 		datatype = RESOURCE_BINARY;
+	}
+	else if (fileExtension == "woff")
+	{
+		bIsFontWOFF = true;
+		datatype = RESOURCE_BINARY;
+	}
+	else if (foundToken != tokens.end())
+	{
+		bIsImage = true;
+		datatype = RESOURCE_BINARY;
+	}
 	else
 		datatype = RESOURCE_TEXT;
 
@@ -204,7 +220,12 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 
 			filesystem->Close(fileHandle);
 
-			SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+			if ( bIsImage )
+				SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+			else if (bIsFontTFF)
+				SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("application/x-font-ttf"));
+			else if (bIsFontWOFF)
+				SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("application/x-font-woff"));
 
 			delete[] responseBuffer;
 		}

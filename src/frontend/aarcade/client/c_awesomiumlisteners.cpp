@@ -31,11 +31,11 @@ void MasterLoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 	DevMsg("MasterLoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
 
 	// IT IS NOW SAFE TO CREATE GLOBAL JAVASCRIPT OBJECTS
-	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
+//	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
 //	int iState = pWebBrowser->GetState();
 	//if (iState == 1)
 	//{
-		pWebBrowser->OnMasterWebViewDocumentReady();
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->OnMasterWebViewDocumentReady();
 		//caller->ExecuteJavascript(WSLit("window.open('data:text/html,<html><body></body></html>', '', 'width=200,height=100');"), WSLit(""));
 		/*
 	}
@@ -72,7 +72,7 @@ void MasterViewListener::OnShowCreatedWebView(WebView *caller, WebView *new_view
 {
 	DevMsg("MasterViewListener: OnShowCreatedWebView: %s\n", WebStringToCharString(target_url.spec()));
 
-	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
+	//C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
 
 	std::string urlSpec = WebStringToCharString(target_url.spec());
 	size_t foundPrefix = urlSpec.find("asset://newwindow/");
@@ -81,7 +81,7 @@ void MasterViewListener::OnShowCreatedWebView(WebView *caller, WebView *new_view
 		// extract a web tab id
 		std::string id = urlSpec.substr(18);
 		DevMsg("ID here is: %s\n", id.c_str());
-		pWebBrowser->PrepareWebView(new_view, id);
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->PrepareWebView(new_view, id);
 	}
 	else
 	{
@@ -99,7 +99,7 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 {
 	DevMsg("LoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
 
-	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
+	//C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
 
 	std::string urlSpec = WebStringToCharString(url.spec());
 	size_t foundPrefix = urlSpec.find("asset://newwindow/");
@@ -107,13 +107,24 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 	{
 		// extract a web tab id
 		std::string id = urlSpec.substr(18);
-		pWebBrowser->OnCreateWebViewDocumentReady(caller, id);
+		DevMsg("Sally: %s\n", urlSpec.c_str());
+
+		if (id == "hud" && g_pAnarchyManager->GetState() == AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT )// || bHudReady
+			g_pAnarchyManager->GetAwesomiumBrowserManager()->OnHudWebViewDocumentReady(caller, id);
+		else
+			g_pAnarchyManager->GetAwesomiumBrowserManager()->OnCreateWebViewDocumentReady(caller, id);
 	}
 	else
 	{
 		DevMsg("hariy: %s\n", urlSpec.c_str());
-		if (!g_pAnarchyManager->GetWebManager()->GetHudReady())
-			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+		//g_pAnarchyManager->GetAwesomiumBrowserManager()->OnHudWebViewDocumentReady(caller, "hud");
+	//	if (!g_pAnarchyManager->GetWebManager()->GetHudReady())
+//			pWebBrowser->OnHudWebViewDocumentReady(caller, g_pAnarchyManager->GetWebManager()->GetHudWebTab()->GetId());
+
+
+
+
+
 		//{
 			//foundPrefix = urlSpec.find("asset://ui/loading.html");
 			//if (foundPrefix == 0)

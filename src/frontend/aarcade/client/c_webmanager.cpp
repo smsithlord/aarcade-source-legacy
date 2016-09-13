@@ -41,6 +41,7 @@ C_WebManager::~C_WebManager()
 	// iterate over all web tabs and call their destructors
 	for (std::map<std::string, C_WebTab*>::iterator it = m_webTabs.begin(); it != m_webTabs.end(); ++it)
 	{
+		DevMsg("WebManager: Destroying %s\n", it->second->GetId().c_str());
 		delete it->second;
 		it->second = null;
 	}
@@ -174,7 +175,9 @@ void C_WebManager::UnfocusWebTab(C_WebTab* pWebTab)
 
 void C_WebManager::SelectWebTab(C_WebTab* pWebTab)
 {
+	/*
 	g_pAnarchyManager->GetInputManager()->SetInputListener(g_pAnarchyManager->GetWebManager(), LISTENER_WEB_MANAGER);
+	*/
 
 	m_pSelectedWebTab = pWebTab;
 
@@ -210,7 +213,12 @@ void C_WebManager::DeselectWebTab(C_WebTab* pWebTab)
 	this->UnfocusWebTab(pWebTab);
 	//m_pWebBrowser->OnDeselectWebTab(pWebTab);
 
+	/*
 	g_pAnarchyManager->GetInputManager()->SetInputListener(null, LISTENER_NONE);
+	*/
+
+	//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
+	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
 
 	if (pWebTab->GetId().find("auto") == 0)
 		this->RemoveWebTab(pWebTab);

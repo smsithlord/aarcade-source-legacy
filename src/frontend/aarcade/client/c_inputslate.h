@@ -63,6 +63,7 @@ namespace vgui
 		//virtual void PaintBackground();
 
 	private:
+		ITexture* m_pCanvasTexture;
 		bool m_bCursorAlphaZero;	// different than actually hiding the cursor
 		bool m_bCursorHidden;
 		ITexture* m_pOriginalTexture;

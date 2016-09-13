@@ -4,12 +4,16 @@
 #include "vgui/MouseCode.h"
 #include "vgui/KeyCode.h"
 
+#include "c_inputlistener.h"
+#include "c_embeddedinstance.h"
+/*
 enum listener_t
 {
 	LISTENER_NONE = 0,
 	LISTENER_WEB_MANAGER = 1,
 	LISTENER_LIBRETRO_MANAGER = 2
 };
+*/
 
 class C_InputManager
 {
@@ -18,6 +22,8 @@ public:
 	~C_InputManager();
 
 	// accessors
+	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
+	//ITexture* GetInputCanvasTexture() { return m_pInputCanvasTexture; }
 	bool GetInputMode() { return m_bInputMode; }
 	bool GetFullscreenMode() { return m_bFullscreenMode; }
 	bool GetMainMenuMode() { return m_bMainMenuMode; }
@@ -25,8 +31,7 @@ public:
 	bool GetWasForceInputMode() { return m_bWasForcedInputMode; }
 
 	void SetFullscreenMode(bool value);
-	void SetInputListener(void* pInputListener, listener_t type);
-	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false);
+	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false, C_EmbeddedInstance* pEmbeddedInstance = null);
 	void ForceInputMode();
 	void DeactivateInputMode(bool bForce = false);
 	void MouseMove(float x, float y);
@@ -34,8 +39,14 @@ public:
 	void MouseRelease(vgui::MouseCode code);
 	void KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+
+	// mutators
+	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
+	//void SetInputListener(C_InputListener* pListener) { m_pInputListener = pListener; }
+	//void SetInputCanvasTexture(ITexture* pTexture) { m_pInputCanvasTexture = pTexture; }
 	
 private:
+	C_EmbeddedInstance* m_pEmbeddedInstance;
 	bool m_bWasForcedInputMode;
 	bool m_bForcedInputMode;
 	bool m_bInputMode;
@@ -43,8 +54,9 @@ private:
 	bool m_bMainMenuMode;
 	//float m_fMouseX;
 	//float m_fMouseY;
-	void* m_pInputListener;
-	listener_t m_inputListenerType;
+	//C_InputListener* m_pInputListener;
+	//ITexture* m_pInputCanvasTexture;
+	//listener_t m_inputListenerType;
 };
 
 #endif

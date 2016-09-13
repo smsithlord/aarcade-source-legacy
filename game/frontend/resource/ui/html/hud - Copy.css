@@ -118,7 +118,7 @@ body
 	width: 90%;
 	background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
 	border-radius: 0 0 10px 10px;
-	border: 2px solid #000;
+	border: 2px solid #ccc;
 	border-top: 0;
 	margin-bottom: -2px;
 	margin-left: auto;
@@ -179,7 +179,7 @@ body
 	white-space: nowrap;
 	background-color: rgba(150, 150, 150, 0.5);
 	border-radius: 0 0 10px 10px;
-	border: 2px solid #000;
+	border: 2px solid #ccc;
 	text-align: center;
 	padding-left: 15px;
 	padding-right: 15px;
@@ -231,11 +231,10 @@ body
 
 .hudSideContainerButton
 {
-	font-size: 40px;
 	display: none;
 	background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
 	border-radius: 0 10px 10px 0;
-	border: 2px solid #000;
+	border: 2px solid #ccc;
 	padding-right: 5px;
 	padding-left: 5px;
 	font-family: Arial;
@@ -442,7 +441,7 @@ body
 	font-weight: bold;
 	font-family: Arial;
 	padding: 6px;
-	background-color: rgba(50, 50, 50, 0.95);
+	background-color: rgba(50, 50, 50, 0.7);
 	padding-bottom: 30px;
 	/*background-color: rgba(255, 255, 255, 0.8);*/
 }

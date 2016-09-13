@@ -1,3 +1,5 @@
+// ;..\..\portaudio\lib\portaudio_x86.lib
+
 #include "cbase.h"
 #include "aa_globals.h"
 
@@ -6,6 +8,8 @@
 #include "c_anarchymanager.h"
 #include "../../../public/vgui_controls/Controls.h"
 #include "vgui/IInput.h"
+#include "c_canvasregen.h"
+#include "c_embeddedinstance.h"
 #include <mutex>
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -14,15 +18,56 @@
 C_LibretroInstance::C_LibretroInstance()
 {
 	DevMsg("LibretroInstance: Constructor\n");
+	m_pTexture = null;
+	m_iLastRenderedFrame = -1;
 }
 
 C_LibretroInstance::~C_LibretroInstance()
 {
 	DevMsg("LibretroInstance: Destructor\n");
+
+	if (m_pTexture)
+		m_pTexture->SetTextureRegenerator(null);
 }
 
-void C_LibretroInstance::Init()
+void C_LibretroInstance::SelfDestruct()
 {
+	DevMsg("LibretroInstance: SelfDestruct\n");
+
+	m_info->close = true;
+	/*
+	if (m_pLastFrameData)
+		free(m_pLastFrameData);
+
+	if (m_pPostData)
+		free(m_pPostData);
+	*/
+
+	delete this;
+}
+
+void C_LibretroInstance::Init(std::string id)
+{
+	m_id = id;
+	if (m_id == "")
+		m_id = g_pAnarchyManager->GenerateUniqueId();
+
+	// create the texture (each instance has its own texture)
+	std::string textureName = "canvas_";
+	textureName += m_id;
+
+	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	//int iWidth = 1920;
+	//int iHeight = 1080;
+
+	m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+
+	// get the regen and assign it
+	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
+	//pRegen->SetEmbeddedInstance(this);
+	m_pTexture->SetTextureRegenerator(pRegen);
+	
 	m_corePath = engine->GetGameDirectory();
 	m_corePath += "/cores";
 
@@ -33,10 +78,19 @@ void C_LibretroInstance::Update()
 {
 	if (m_info->state == 2)
 		OnCoreLoaded();
+	else if (m_info->state == 5)
+	{
+		this->OnProxyBind(null);
 
-	//DevMsg("LibretroInstance: Update\n");
-//	if ( m_raw )
-//		m_raw->run();
+		/*
+		if (m_raw)
+		{
+			DevMsg("LibretroInstance: Update\n");
+			//m_raw->run();
+			DevMsg("after\n");
+		}
+		*/
+	}
 }
 
 bool C_LibretroInstance::LoadCore()
@@ -125,9 +179,14 @@ bool C_LibretroInstance::LoadGame()
 
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
+
+	if (!pLibretroInstance)
+		return false;
+
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
 	std::string filename = info->game;
+	//DevMsg("filename: %s\n", filename.c_str());
 
 //	DevMsg("Load the damn game, son!\n");
 //	return false;
@@ -180,8 +239,11 @@ bool C_LibretroInstance::LoadGame()
 		game.size = 0;
 		game.meta = NULL;
 
+		DevMsg("loading game\n");
 		info->raw->load_game(&game);
-		info->state = 5;
+		DevMsg("done loading game\n");
+		info->state = 5;		
+
 		//pLibretroInstance->OnGameLoaded();
 		//bDidItWork = s_raw->load_game(&game);
 		/*
@@ -297,7 +359,9 @@ void C_LibretroInstance::OnCoreLoaded()
 	m_info->coreloaded = true;
 	m_info->state = 3;
 
-	m_info->game = "V:/Movies/Jay and silent Bob Strike Back (2001).avi";
+	// automatically load a game right away...
+	m_info->game = "V:/Movies/Flash Gordon (1980).avi";
+	//m_info->game = "V:/Movies/Jay and silent Bob Strike Back (2001).avi";
 	//"V:\\Movies\\Judge Dredd (1995).mp4";
 }
 
@@ -336,7 +400,6 @@ bool C_LibretroInstance::BuildInterface(libretro_raw* raw, void* pLib)
 	return true;
 }
 
-
 //float lastAudioFrame = 0;
 typedef float SAMPLE;
 static int audiocallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
@@ -345,55 +408,55 @@ static int audiocallback(const void *inputBuffer, void *outputBuffer, unsigned l
 	//DevMsg("Audio Thread ID: %u\n", uId);
 
 	LibretroInstanceInfo_t* info = (LibretroInstanceInfo_t*)userData;
-//	DevMsg("Pos: %i\n", info->audiobufferpos);
+	//	DevMsg("Pos: %i\n", info->audiobufferpos);
 	if (info->audiobufferpos < info->audiobuffersize)
 	{
 		info->processingaudio = false;
 		return paContinue;
 	}
 	//if (info->processingaudio)
-//		return paContinue;
+	//		return paContinue;
 
-//	if (!inputBuffer)
+	//	if (!inputBuffer)
 	//	return paContinue;
 
-//	if (lastAudioFrame != gpGlobals->framecount)
+	//	if (lastAudioFrame != gpGlobals->framecount)
 	//{
-//		lastAudioFrame = gpGlobals->framecount;
-		//		lastFrameNumber = gpGlobals->framecount;
+	//		lastAudioFrame = gpGlobals->framecount;
+	//		lastFrameNumber = gpGlobals->framecount;
 
 	//Q_memcpy(outputBuffer, info->audiobuffer, info->audiobufferframes * 2 * sizeof(int16_t));
 
 	//int16_t* copyBuffer = new int16_t[info->audiobufferpos * 2];
-//	Q_memcpy(copyBuffer, info->audiobuffer, info->audiobufferpos * 2 * sizeof(int16_t));
+	//	Q_memcpy(copyBuffer, info->audiobuffer, info->audiobufferpos * 2 * sizeof(int16_t));
 
 	Q_memcpy(outputBuffer, info->audiobuffer, info->audiobufferpos * 2 * sizeof(int16_t));
 	info->audiobufferpos = 0;
 	info->processingaudio = false;
-//	}
+	//	}
 
 	return paContinue;
 	//Q_memcpy(outputBuffer, inputBuffer, framesPerBuffer * 2 * sizeof(int16_t));
 
-		/*
+	/*
 	unsigned int i;
 	SAMPLE *out = (SAMPLE*)outputBuffer;
 	if (!inputBuffer)
 	{
-		for (i = 0; i < framesPerBuffer; i++)
-		{
-			*out++ = 0;
-			*out++ = 0;
-		}
+	for (i = 0; i < framesPerBuffer; i++)
+	{
+	*out++ = 0;
+	*out++ = 0;
+	}
 	}
 	else
 	{
-		const SAMPLE *in = (const SAMPLE*)inputBuffer;
-		for (int i = 0; i < framesPerBuffer; i++)
-		{
-			*out++ = *in++;
-			*out++ = *in++;
-		}
+	const SAMPLE *in = (const SAMPLE*)inputBuffer;
+	for (int i = 0; i < framesPerBuffer; i++)
+	{
+	*out++ = *in++;
+	*out++ = *in++;
+	}
 	}
 
 	return paContinue;
@@ -425,19 +488,19 @@ void C_LibretroInstance::CreateAudioStream()
 		info->samplerate,
 		paFramesPerBufferUnspecified,
 		paNoFlag,//paClipOff,      // we won't output out of range samples so don't bother clipping them
-		audiocallback, // no callback, use blocking API
+		null, //audiocallback no callback, use blocking API
 		info); // no callback, so no callback userData
 
 	info->audiostream = stream;
 
-	info->audiobuffersize = 800;
+	info->audiobuffersize = 1024;
 	info->audiobuffer = new int16_t[info->audiobuffersize];
 	info->audiobufferpos = 0;
 
-//	info->safebuffersize = info->audiobuffersize;
-//	info->safebuffer = new int16_t[info->safebuffersize];
-//	info->safebufferpos = 0;
-	
+	//	info->safebuffersize = info->audiobuffersize;
+	//	info->safebuffer = new int16_t[info->safebuffersize];
+	//	info->safebufferpos = 0;
+
 
 	if (err != paNoError)
 		DevMsg("Failed to open stream.\n");
@@ -474,19 +537,19 @@ void C_LibretroInstance::DestroyAudioStream()
 		DevMsg("Closed PA stream!\n");
 
 	info->samplerate = 0;
-//	info->audiobufferpos = 0;
+	//	info->audiobufferpos = 0;
 }
 
 unsigned MyThread(void *params)
 {
 	LibretroInstanceInfo_t* info = (LibretroInstanceInfo_t*)params; // always use a struct!
 
-	DevMsg("Cannot print to console from this threaded function\n");
+	//DevMsg("Cannot print to console from this threaded function\n");
 
 	CSysModule* pModule = Sys_LoadModule(info->core.c_str());
 	if (!pModule)
 	{
-		Msg("Failed to load %s\n", info->core.c_str());
+	//	Msg("Failed to load %s\n", info->core.c_str());
 		// FIXME FIX ME Probably need to clean up!
 		return 0;
 	}
@@ -494,7 +557,7 @@ unsigned MyThread(void *params)
 	HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
 	if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
 	{
-		DevMsg("libretro: Failed to build interface!\n");
+		//DevMsg("libretro: Failed to build interface!\n");
 		return 0;
 	}
 
@@ -516,7 +579,6 @@ unsigned MyThread(void *params)
 
 		if (state == 1)
 		{
-//			info->audiobuffer = new int16_t[info->audiobuffersize * 2];
 			CSysModule* myModule = Sys_LoadModule(VarArgs("%s\\bin\\portaudio_x86.dll", engine->GetGameDirectory()));
 			if (myModule)
 			{
@@ -555,9 +617,10 @@ unsigned MyThread(void *params)
 			// load a game if we have one
 			if (info->game != "")
 			{
-				DevMsg("Load the game next!!\n");
-				info->state = 4;
+			//	DevMsg("Load the game next!!\n");
+			//	info->state = 4;
 				C_LibretroInstance::LoadGame();
+			//	DevMsg("cuatro\n");
 			}
 		}
 		else if (state == 5)
@@ -580,7 +643,7 @@ unsigned MyThread(void *params)
 				else
 				{
 					float dif = 1 / (info->framerate * 1.0);
-					if (gpGlobals->curtime - info->lastrendered >= dif)
+					if (gpGlobals->curtime - info->lastrendered >= dif * 1.5 || true)	// sense the blocking audio API is being used, we should render every chance we get to be synced to audio.
 						bShouldRender = true;
 				}
 
@@ -595,6 +658,11 @@ unsigned MyThread(void *params)
 	}
 
 	// clean up the memory
+	Sys_UnloadModule(info->module);
+
+	if (info->lastframedata)
+		free(info->lastframedata);
+
 	delete info;
 
 	return 0;
@@ -627,6 +695,8 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->id = "";
 	m_info->ready = false;
 	m_info->readyfornextframe = true;
+	m_info->copyingframe = false;
+	m_info->readytocopyframe = false;
 	m_info->coreloaded = false;
 	m_info->gameloaded = false;
 	m_info->raw = m_raw;
@@ -778,6 +848,10 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 {
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
+
+	if (!pLibretroInstance)
+		return false;
+
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
 	//	DevMsg("libretro: Environment called %u.\n", (unsigned int)cmd);
@@ -952,7 +1026,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 			// Initialize to 0 index for this variable's value
 			info->optionscurrentvalues.push_back(0);
 
-			DevMsg("libretro: Setting up environment variable %s with definition %s\n", variables[i].key, variables[i].value);
+			DevMsg("libretro: Setting up environment variable %s with definition %s of %u\n", variables[i].key, variables[i].value, i);
 
 			libretro_core_option* pOption = new libretro_core_option();
 			pOption->name_internal = variables[i].key;
@@ -1069,20 +1143,17 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 
-	//DevMsg("Child Lock\n");
-	//pLibretroInstance->m_mutex.lock();
+	if (!pLibretroInstance)
+		return;
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 	info->lastrendered = gpGlobals->curtime;
 
-	if (!info->readyfornextframe )//|| info->processingaudio)
-	{
-		//pLibretroInstance->m_mutex.unlock();
-		//DevMsg("Child Unlock\n");
+	if (!info->readyfornextframe || info->copyingframe )
 		return;
-	}
-	else
-		info->readyfornextframe = false;
+
+	info->readyfornextframe = false;
+	info->readytocopyframe = false;
 
 	if (info->samplerate == 0)
 	{
@@ -1116,6 +1187,8 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 	info->lastframeheight = height;
 	info->lastframepitch = pitch;
 
+	info->readytocopyframe = true;
+
 	//pLibretroInstance->m_mutex.unlock();
 	//DevMsg("Child Unlock\n");
 }
@@ -1128,42 +1201,39 @@ void C_LibretroInstance::cbAudioSample(int16_t left, int16_t right)
 	/*
 	if (info->audiobufferpos < 512)
 	{
-		double leftRegular = (int)left * 1.0;// pLibretroVolumeScaleConVar->GetFloat();
-		if (left > 32767)
-			leftRegular = 32767.0;
-		if (left < -32768.0)
-			leftRegular = -32768.0;
+	double leftRegular = (int)left * 1.0;// pLibretroVolumeScaleConVar->GetFloat();
+	if (left > 32767)
+	leftRegular = 32767.0;
+	if (left < -32768.0)
+	leftRegular = -32768.0;
 
-		double rightRegular = (int)right * 1.0;// s_pLibretroVolumeScaleConVar->GetFloat();
-		if (right > 32767)
-			rightRegular = 32767.0;
-		if (right < -32768.0)
-			rightRegular = -32768.0;
+	double rightRegular = (int)right * 1.0;// s_pLibretroVolumeScaleConVar->GetFloat();
+	if (right > 32767)
+	rightRegular = 32767.0;
+	if (right < -32768.0)
+	rightRegular = -32768.0;
 
-		info->audiobuffer[info->audiobufferpos++] = (int16_t)leftRegular;
-		info->audiobuffer[info->audiobufferpos++] = (int16_t)rightRegular;
+	info->audiobuffer[info->audiobufferpos++] = (int16_t)leftRegular;
+	info->audiobuffer[info->audiobufferpos++] = (int16_t)rightRegular;
 	}
 	*/
 }
 
 size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frames)
 {
-	//int16_t* dataCopy = new int16_t[frames * 2];
-	//Q_memcpy((void*)dataCopy, data, sizeof(int16_t) * frames * 2);
-
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
-	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
-	if (true || info->processingaudio)
+	if (!pLibretroInstance)
+		return 0;
+
+	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+	/*
+	if ( info->processingaudio)
 		return 0;
 	else
 		info->processingaudio = true;
-
-	//if (info->processingaudio)
-		//return 0;
-
-//	info->processingaudio = true;
+		*/
 
 	if (info->samplerate == 0)
 	{
@@ -1181,51 +1251,8 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 	if (info->samplerate <= 0 || frames <= 0) // || s_threadAudioParams.frames
 		return 0;
 
-
-	//PaStream *stream = static_cast<PaStream*>(info->audiostream);
-	/*
-	// AMPLIFY THE AUDIO HERE!
-	int16_t sample[2];
-	double leftRegular, rightRegular;
-	int16_t left, right;
-	for (int i = 0; i < frames * 2; i = i + 2)
-	{
-		left = data[i];
-		right = data[i + 1];
-
-		leftRegular = (double)left * 1.0;// s_pLibretroVolumeScaleConVar->GetFloat();
-		if (left > 32767)
-			leftRegular = 32767.0;
-		if (left < -32768.0)
-			leftRegular = -32768.0;
-
-		rightRegular = (double)right * 1.0;// s_pLibretroVolumeScaleConVar->GetFloat();
-		if (right > 32767)
-			rightRegular = 32767.0;
-		if (right < -32768.0)
-			rightRegular = -32768.0;
-
-		sample[0] = (int16_t)leftRegular;
-		sample[1] = (int16_t)rightRegular;
-
-		DevMsg("Left: %i Right: %i Stream: %u\n");
-		PaError err = Pa_WriteStream(info->audiostream, sample, 1);// paFramesPerBufferUnspecified);
-		//DevMsg("b\n");
-	}
-	*/
-
-	//DevMsg("Left: %i Right: %i Stream: %u\n");
-
-
-
-
-	//PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
-
-	//int16_t* dataCopy = new int16_t[frames * 2];
-	//Q_memcpy((void*)dataCopy, data, sizeof(int16_t) * frames * 2);
-
-	//info->audiobuffer = dataCopy;
-	//info->audiobufferframes = frames;
+	PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
+	return frames;
 
 	int16_t* buffer = info->audiobuffer;
 	unsigned int size = info->audiobuffersize;
@@ -1235,44 +1262,12 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 	if (processedCount > frames)
 		processedCount = frames;
 
-	//DevMsg("Frames: %i\n", processedCount);
 	if (processedCount > 0)
 	{
-	//	info->safebuffer = new int16_t[info->safebuffersize];
 		Q_memcpy(buffer + (pos * 2), data, sizeof(int16_t) * processedCount * 2);
 		info->audiobufferpos += processedCount;
 	}
-	//DevMsg("Frames processed.\n");
-	//DevMsg("Here: %i\n", info->audiobufferpos);
 	return processedCount;
-
-
-
-
-	//DevMsg("Error: %s\n", Pa_GetErrorText(err));
-	//delete dataCopy;
-	//Pa_GetErrorText(err);
-
-	//info->processingaudio = false;
-//	PaError err = Pa_WriteStream(stream, data, frames);
-	/*
-	int count = info->audiobuffersize - info->audiobufferpos;
-	if (count > frames)
-		count = frames;
-
-	//	DevMsg("Count is: %i\n", count);
-
-	if (count > 0)
-	{
-		Q_memcpy(info->audiobuffer + info->audiobufferpos, data, count - 1);
-		info->audiobufferpos += count;
-	}
-	*/
-	//DevMsg("libretro: Audio Sample Batch called w/ frames %i.\n", frames);
-	//return count;
-
-	//info->processingaudio = false;
-	//return frames;
 }
 
 void C_LibretroInstance::cbInputPoll(void)
@@ -1303,7 +1298,7 @@ int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigne
 	//DevMsg("libretro: Input State called.\n");
 	//DevMsg("libretro: Input State called with port %u, device %u, index %u, and ID %u.\n", port, device, index, id);
 
-	if (port != 0 || device != 1 || index != 0)
+	if (port != 0 || device != 1 || index != 0 || true)
 		return (int16_t)0;
 
 	if (id == RETRO_DEVICE_ID_JOYPAD_B)
@@ -1565,6 +1560,11 @@ void C_LibretroInstance::ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, u
 
 void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth)
 {
+	if (m_info->copyingframe || !m_info->readytocopyframe)
+		return;
+
+	m_info->copyingframe = true;
+	m_info->readytocopyframe = false;
 	//DevMsg("Render: Do it!\n");
 	//RETRO_PIXEL_FORMAT_0RGB1555
 
@@ -1578,4 +1578,57 @@ void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, 
 		this->ResizeFrameFromXRGB8888(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 4, width, height, pitch, depth);
 	else
 		this->ResizeFrameFromRGB1555(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
+
+	m_info->copyingframe = false;
+}
+
+void C_LibretroInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
+{
+//	if (m_id == "images")
+//		return;
+
+	/*
+	if ( pBaseEntity )
+	DevMsg("WebTab: OnProxyBind: %i\n", pBaseEntity->entindex());
+	else
+	DevMsg("WebTab: OnProxyBind\n");
+	*/
+
+	if (m_iLastRenderedFrame < gpGlobals->framecount)
+	{
+		//if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityCanvas(this))
+		//g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
+
+		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this))
+			Render();
+	}
+}
+
+void C_LibretroInstance::Render()
+{
+//	if (m_id == "images")
+	//	return;
+	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
+	//	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
+	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
+	m_pTexture->Download();
+
+	m_iLastRenderedFrame = gpGlobals->framecount;
+
+//	if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+//		g_pAnarchyManager->GetCanvasManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
+//	else
+		g_pAnarchyManager->GetCanvasManager()->SetLastRenderedFrame(gpGlobals->framecount);
+}
+
+void C_LibretroInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
+{
+	if (m_info->state == 5)
+		this->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
+}
+
+C_InputListener* C_LibretroInstance::GetInputListener()
+{
+	return g_pAnarchyManager->GetLibretroManager()->GetInputListener();
 }

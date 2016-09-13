@@ -1,0 +1,16 @@
+"UnlitGeneric"
+{
+	"$basetexture" "vgui/canvas"
+}
+
+//"WorldTwoTextureBlend"
+//"VertexLitGeneric"
+//"UnlitGeneric"
+//{
+//	"$basetexture" "vgui/websurface"
+//	"$detail" "websurface_hud"
+//	"$detailblendmode" 2
+//	"$detailscale" 1
+//	"$detailblendfactor" 1
+	//	"$translucent" 1
+//}

@@ -1,8 +1,10 @@
 #ifndef C_LIBRETRO_INSTANCE_H
 #define C_LIBRETRO_INSTANCE_H
 
+#include "c_embeddedinstance.h"
 #include "libretro.h"
 #include "portaudio.h"
+#include "c_inputlistenerlibretro.h"
 #include <string>
 #include <vector>
 //#include <mutex>
@@ -61,6 +63,8 @@ struct LibretroInstanceInfo_t
 	std::string id;
 	bool ready;
 	bool readyfornextframe;
+	bool copyingframe;
+	bool readytocopyframe;
 	bool coreloaded;
 	bool gameloaded;
 	libretro_raw* raw;
@@ -95,13 +99,14 @@ struct LibretroInstanceInfo_t
 	bool processingaudio;
 };
 
-class C_LibretroInstance
+class C_LibretroInstance : public C_EmbeddedInstance
 {
 public:
 	C_LibretroInstance();
 	~C_LibretroInstance();
+	void SelfDestruct();
 
-	void Init();
+	void Init(std::string id = "");
 	bool CreateWorkerThread(std::string core);
 	void Update();
 	bool LoadCore();
@@ -129,14 +134,24 @@ public:
 	void ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth);
 
+	void OnProxyBind(C_BaseEntity* pBaseEntity);
+	void Render();
+	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
+
 	// accessors
 	libretro_raw* GetRaw() { return m_raw; }
 	LibretroInstanceInfo_t* GetInfo() { return m_info; }
+	ITexture* GetTexture() { return m_pTexture; }
+	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
+	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;
 
 	// mutators	
 
 private:
+	ITexture* m_pTexture;
+	int m_iLastRenderedFrame;
+	std::string m_id;
 	libretro_raw* m_raw;
 	std::string m_corePath;
 	LibretroInstanceInfo_t* m_info;

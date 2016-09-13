@@ -198,6 +198,9 @@
 			ImageLoader.prototype.getNextField = function(imageRequest)
 			{
 				var nextField;
+				if( !!!imageRequest.fields )
+					return nextField;
+
 				var i;
 				for( i = 0; i < imageRequest.fields.length; i++ )
 				{

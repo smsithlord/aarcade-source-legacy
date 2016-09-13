@@ -1,0 +1,141 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+			var itemContainer;
+		</script>
+	</head>
+	<body>
+		<div class="hudHeaderContainer">
+			<div class="hudHeaderNavigationContainer">
+				helloo world
+			</div>
+			<div class="hudHeaderContainerTable">
+				<div class="hudHeaderContainerRow">
+					<div class="hudHeaderContainerCell">
+					</div>
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Expand the address bar." onclick="arcadeHud.expandAddressMenu();">
+								AArcade
+							</div>
+						</div>
+					</div>
+					<div class="hudHeaderContainerCell">
+						<div class="hudHeaderButtonContainer">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Hide the main menu." onclick="window.location='asset://ui/blank.html';">
+								&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
+							</div>
+						</div>
+						<div id="returnHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Unpin & close the HUD." onclick="aaapi.system.deactivateInputMode();">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
+						</div>
+						<div id="pinHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
+							<div class="hudHeaderButton helpNote" help="Pin the HUD to stay open." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
+								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<br />
+
+		<div id="itemContainer"></div>
+		<a href="javascript:location.reload();" class="devReload">Reload</a>
+
+		<script>
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+			var id = getParameterByName("id");
+			itemContainer = document.querySelector("#itemContainer");
+
+			var fieldHelp = {
+				"app": "(OPTIONAL) Apps are useful when Windows can't launch a particular shortcut by itself. They are similar to using \"Open With\" when launching a regular desktop shortcut, but far more powerful.",
+				"description": "(OPTIONAL) A brief description of the shortcut. Not really shown anywhere, but useful for searching.",
+				"download": "(OPTIONAL) An internet URI where the local file that this shortcut launches can be downloaded, if applicable.",
+				"file": "The local file location or internet URI that this shortcut launches.",
+				"marquee": "(OPTIONAL) A local file location or internet URI of the image to use as the marquee on this shortcut's 3D model.",
+				"model": "(OPTIONAL) The recommended 3D model to use when first spawning this shortcut.",
+				"preview": "(OPTIONAL) An internet URI to show on the shortcut's screen as a preview for when it gets selected.",
+				"reference": "(OPTIONAL) The internet URI to a unique wiki or reference page describing this shortcut, if applicable.",
+				"screen": "(OPTIONAL) A local file location or internet URI of the image to use as the screen on this shortcut's 3D model.",
+				"stream": "(OPTIONAL) An internet URI where a version of this shortcut's item can be streamed, rather than launching the shortcut to the local file version, if applicable.",
+				"title": "A short, unique, & descriptive title.",
+				"type": "(OPTIONAL) The type of this shortcut. Useful for searching, and especially useful for shortcuts that require \"Open With\" apps to launch."
+			};
+
+			var x, help, fieldContainer, fieldKey, fieldKeyNode, fieldValue, fieldValueInput;
+			var item = aaapi.library.getLibraryItem(id);
+			for( var x in item )
+			{
+				if( x === "info" )
+					continue;
+
+				fieldContainer = document.createElement("div");
+				fieldContainer.className = "fieldContainer";
+
+				fieldKey = document.createElement("div");
+				fieldKeyNode = document.createTextNode(x);
+				fieldKey.appendChild(fieldKeyNode);
+				fieldContainer.appendChild(fieldKey);
+
+				fieldValue = document.createElement("div");
+
+				if( x === "type" )
+				{
+					var fieldValueSelect = document.createElement("select");
+/*
+					var type = aaapi.library.getLibraryType(item[x]);
+					if(item[x] != 0)
+					{
+						*/
+
+					var types = aaapi.library.getAllLibraryTypes();
+					var x;
+					for( y in types )
+					{
+						var type = types[y];
+						var fieldValueOption = document.createElement("option");
+						fieldValueOption.value = type.info.id;
+						fieldValueOption.text = type.title;
+						fieldValueSelect.appendChild(fieldValueOption);
+					}
+
+					fieldValueSelect.value = item[x];
+					fieldValue.appendChild(fieldValueSelect);
+				}
+				else
+				{
+					fieldValueInput = document.createElement("input");
+					fieldValueInput.type = "text";
+					fieldValueInput.value = item[x];
+					fieldValue.appendChild(fieldValueInput);
+				}
+
+				fieldContainer.appendChild(fieldValue);
+				itemContainer.appendChild(fieldContainer);
+
+				help = fieldHelp[x];
+				if( !!help )
+				{
+					fieldContainer.setAttribute("help", help);
+					arcadeHud.assignHelp(fieldContainer);
+				}
+			}
+		</script>
+	</body>
+</html>

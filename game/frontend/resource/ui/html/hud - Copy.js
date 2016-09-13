@@ -21,115 +21,8 @@ function ArcadeHud()
 		this.DOMReady = true;
 
 		// inject the browser menu
-		//var bodyElem = document.body;
+		this.injectBrowserMenu();
 
-		// top-level container for the browser menu
-		//var browserMenuElem = document.createElement("div");
-		//browserMenuElem.className = "hudHeaderContainer";
-
-		var browserMenuElem = document.querySelector(".hudHeaderContainer");
-		if( browserMenuElem )
-		{
-			// navigation container
-			var navigationElem = document.createElement("div");
-			navigationElem.className = "hudHeaderNavigationContainer";
-			navigationElem.innerHTML = "helloo world";
-
-			// browser tabs container table
-			var topTabsTableElem = document.createElement("div");
-			topTabsTableElem.className = "hudHeaderContainerTable";
-
-			// browser tabs container row
-			var topTabsRowElem = document.createElement("tr");
-			topTabsRowElem.className = "hudHeaderContainerRow";
-
-			// blank browser tab container cell
-			var blankBrowserTabsCell = document.createElement("div");
-			blankBrowserTabsCell.className = "hudHeaderContainerCell";
-
-			// aarcade browser tab container cell
-			var aarcadeBrowserTabsCell = document.createElement("div");
-			aarcadeBrowserTabsCell.className = "hudHeaderContainerCell";
-
-			// aarcade browser tab
-			var aarcadeBrowserTabElem = document.createElement("div");
-			aarcadeBrowserTabElem.className = "hudHeaderButtonContainer";
-
-			// aarcade tab label
-			var aarcadeTabLabelElem = document.createElement("div");
-			aarcadeTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
-			aarcadeTabLabelElem.setAttribute("help", "Expand the address bar.");
-			aarcadeTabLabelElem.innerHTML = "Internet";
-			aarcadeTabLabelElem.addEventListener("click", function()
-			{
-				this.expandAddressMenu();
-			}.bind(this), true);
-
-			// other browser tab container cell
-			var otherBrowserTabsCell = document.createElement("div");
-			otherBrowserTabsCell.className = "hudHeaderContainerCell";
-
-			// pin browser tab container cell
-			//var pinBrowserTabsCell = document.createElement("div");
-			//pinBrowserTabsCell.className = "hudHeaderContainerCell";
-
-			// unpin browser tab
-			var unpinBrowserTabElem = document.createElement("div");
-			unpinBrowserTabElem.className = "hudHeaderButtonContainer";
-			unpinBrowserTabElem.style.right = "20%";
-			unpinBrowserTabElem.id = "returnHudButton";
-
-			// unpin tab label
-			var unpinTabLabelElem = document.createElement("div");
-			unpinTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
-			unpinTabLabelElem.setAttribute("help", "Unpin the HUD.");
-			unpinTabLabelElem.innerHTML = "&nbsp;<img src=\"asset://ui/pinicon.png\" />&nbsp;";
-			unpinTabLabelElem.addEventListener("click", function()
-			{
-				aaapi.system.deactivateInputMode();
-			}.bind(this), true);
-
-			// pin browser tab
-			var pinBrowserTabElem = document.createElement("div");
-			pinBrowserTabElem.className = "hudHeaderButtonContainer";
-			pinBrowserTabElem.style.right = "20%";
-			pinBrowserTabElem.id = "pinHudButton";
-
-			// pin tab label
-			var pinTabLabelElem = document.createElement("div");
-			pinTabLabelElem.className = "hudHeaderButton helpNote";
-			pinTabLabelElem.setAttribute("help", "Pin the HUD to stay open.");
-			pinTabLabelElem.innerHTML = "&nbsp;<img src=\"asset://ui/pinicon.png\" />&nbsp;";
-			pinTabLabelElem.addEventListener("click", function()
-			{
-				aaapi.system.forceInputMode();
-				this.pinHudButtonElem.style.display = 'none';
-				this.returnHudButtonElem.style.display = 'inline-block';
-			}.bind(this), true);
-
-			// compose
-			aarcadeBrowserTabsCell.appendChild(aarcadeBrowserTabElem);
-			aarcadeBrowserTabElem.appendChild(aarcadeTabLabelElem);
-
-			unpinBrowserTabElem.appendChild(unpinTabLabelElem);
-			pinBrowserTabElem.appendChild(pinTabLabelElem);
-			otherBrowserTabsCell.appendChild(unpinBrowserTabElem);
-			otherBrowserTabsCell.appendChild(pinBrowserTabElem);
-
-			topTabsRowElem.appendChild(blankBrowserTabsCell);
-			topTabsRowElem.appendChild(aarcadeBrowserTabsCell);
-			topTabsRowElem.appendChild(otherBrowserTabsCell);
-
-			topTabsTableElem.appendChild(topTabsRowElem);
-
-			browserMenuElem.appendChild(navigationElem);
-			browserMenuElem.appendChild(topTabsTableElem);
-		}
-
-		////bodyElem.appendChild(browserMenuElem);
-		//bodyElem.insertBefore(browserMenuElem, bodyElem.firstChild);
-
-		//var startupLoadingContainer = 
 		this.startupLoadingMessagesContainer = document.body.querySelector("#startupLoadingMessagesContainer");	// usually undefined
 
 		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
@@ -291,12 +184,11 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 		}
 	}
 	//*/
-/*
+
 	if( isMainMenu )
 		this.hudHeaderContainerElem.style.display = "none";
 	else
 		this.hudHeaderContainerElem.style.display = "block";
-	*/
 
 	if( isMapLoaded )
 	{
