@@ -2,6 +2,6 @@
 //"VertexLitGeneric"
 "UnlitGeneric"
 {
-	"$basetexture" "websurface_hud"
+	"$basetexture" "canvas_hud"
 	"$translucent" 1
 }

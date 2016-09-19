@@ -28,7 +28,7 @@ void CWebSurfaceRegen::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pV
 {
 //	DevMsg("Tab ID: %s\n", m_pWebTab->GetId().c_str());
 	//DevMsg("WebSurfaceRege: RegenerateTextureBits\n");
-	m_pWebTab->RegenerateTextureBits(pTexture, pVTFTexture, pSubRect);
+	m_pEmbeddedInstance->RegenerateTextureBits(pTexture, pVTFTexture, pSubRect);
 
 	//return;
 	/*

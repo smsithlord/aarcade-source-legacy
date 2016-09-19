@@ -33,3 +33,13 @@ void C_InputListenerSteamBrowser::OnMouseReleased(vgui::MouseCode code)
 {
 	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnMouseReleased(code);// OnMouseMove(x, y);
 }
+
+void C_InputListenerSteamBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+}
+
+void C_InputListenerSteamBrowser::OnKeyCodeReleased(vgui::KeyCode code)
+{
+	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnKeyCodeReleased(code);
+}

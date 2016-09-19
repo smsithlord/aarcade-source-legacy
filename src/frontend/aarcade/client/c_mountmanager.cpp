@@ -104,7 +104,8 @@ bool C_MountManager::LoadMountsFromKeyValues(std::string filename)
 	pKv->deleteThis();
 
 	std::string num = VarArgs("%u", mountCount);
-	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Source Engine Games", "mounts", "0", num, num);
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Source Engine Games", "mounts", "0", num, num);
 
 	return false;
 }

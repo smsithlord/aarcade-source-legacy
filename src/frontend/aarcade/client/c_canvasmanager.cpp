@@ -16,6 +16,8 @@ C_CanvasManager::C_CanvasManager()
 	//m_iCanvasHeight = 720;
 	//m_iCanvasWidth = 1920;
 	//m_iCanvasHeight = 1080;
+	m_iLastAllowedRenderedFrame = -1;
+	m_iLastAllowedPriorityRenderedFrame = -1;
 	m_iVisibleCanvasesLastFrame = -1;
 	m_iVisiblePriorityCanvasesLastFrame = -1;
 	m_iVisibleCanvasesCurrentFrame = 0;
@@ -55,6 +57,16 @@ C_CanvasManager::~C_CanvasManager()
 	DevMsg("CanvasManager: Destructor\n");
 }
 
+void C_CanvasManager::Update()
+{
+	// Update the visible web tab estimates
+	m_iVisibleCanvasesLastFrame = m_iVisibleCanvasesCurrentFrame;
+	m_iVisibleCanvasesCurrentFrame = 0;
+
+	m_iVisiblePriorityCanvasesLastFrame = m_iVisiblePriorityCanvasesCurrentFrame;
+	m_iVisiblePriorityCanvasesCurrentFrame = 0;
+}
+
 CCanvasRegen* C_CanvasManager::GetOrCreateRegen()
 {
 	if (!m_pCanvasRegen)
@@ -63,17 +75,31 @@ CCanvasRegen* C_CanvasManager::GetOrCreateRegen()
 	return m_pCanvasRegen;
 }
 
+bool C_CanvasManager::IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	//if (pEmbeddedInstance == (C_EmbeddedInstance*)g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") || pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+	if (pEmbeddedInstance->GetId() == "hud" && g_pAnarchyManager->GetInputManager()->GetInputMode())
+		return true;
+
+	///*
+	if( pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() && pEmbeddedInstance->GetId() != "hud" &&  (g_pAnarchyManager->GetSelectedEntity() || g_pAnarchyManager->GetInputManager()->GetFullscreenMode()))
+		return true;
+	//*/
+	
+	return false;
+}
+
+/*
 bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 {
 	// don't render more than 1 web tab per frame
 	if (m_iLastRenderedFrame == gpGlobals->framecount || m_iLastPriorityRenderedFrame == gpGlobals->framecount)
 		return false;
 
-	/*
-	bool bIsPriorityCanvas = this->IsPriorityCanvas(pEmbeddedInstance->);
-	if (bIsPriorityWebTab)
+	bool bIsPriorityEmbeddedInstance = this->IsPriorityEmbeddedInstance(pEmbeddedInstance);
+	if (bIsPriorityEmbeddedInstance)
 	{
-		int iLastRenderedFrame = pWebTab->GetLastRenderedFrame();
+		int iLastRenderedFrame = pEmbeddedInstance->GetLastRenderedFrame();
 
 		// always render the 1st time
 		if (iLastRenderedFrame <= 0)
@@ -87,15 +113,14 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 
 		// Need to wait an extra tick if there are any non-priority web tabs waiting.
 		int iExtraOne = 0;
-		if (m_iVisibleWebTabsLastFrame > 0)
+		if (m_iVisibleCanvasesLastFrame > 0)
 			iExtraOne = 1;
 
-		if (gpGlobals->framecount - iLastRenderedFrame >= m_iVisiblePriorityWebTabsLastFrame + iExtraOne)
+		if (gpGlobals->framecount - iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + iExtraOne)
 			return true;
 	}
 	else
 	{
-	*/
 		//DevMsg("num priority web views: %i\n", m_iVisiblePriorityWebTabsLastFrame);
 		int iLastRenderedFrame = pEmbeddedInstance->GetLastRenderedFrame();
 
@@ -116,14 +141,256 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 
 		// render if we've waited long enough for all other (regular) web views to render
 		//if (frameCount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)
-		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + m_iVisibleCanvasesLastFrame - 1)
+
+		// Need to wait an extra tick if there are any priority web tabs waiting.
+		//int iExtraOne = 0;
+		bool bExtraOne = false;
+		if (m_iVisiblePriorityCanvasesLastFrame > 0)
+			bExtraOne = true;
+		//iExtraOne = 1;
+
+		//if (bExtraOne && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + m_iVisibleCanvasesLastFrame - 1)
+		if (bExtraOne && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= 1 + m_iVisibleCanvasesLastFrame - 1)
 			return true;
-		else if (m_iVisiblePriorityCanvasesLastFrame <= 0 && gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleCanvasesLastFrame)
+		else if (!bExtraOne && gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleCanvasesLastFrame - 1)
 			return true;
-	//}
+	}
 
 	//	if (m_iLastRenderedFrame != gpGlobals->framecount && (iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || ((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || (((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)))
 	//		return true;
 
 	return false;
+}
+*/
+
+bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	bool bIsPriorityEmbeddedInstance = this->IsPriorityEmbeddedInstance(pEmbeddedInstance);
+
+//	DevMsg("Rendering: %i %s %s\n", bIsPriorityEmbeddedInstance, pEmbeddedInstance->GetId().c_str(), pEmbeddedInstance->GetTexture()->GetName());
+
+	// don't render more than 1 web tab per frame
+//	if (m_iLastRenderedFrame == gpGlobals->framecount || m_iLastPriorityRenderedFrame == gpGlobals->framecount)
+//		return false;
+
+	if (m_iLastPriorityRenderedFrame == gpGlobals->framecount)
+		return false;
+	else if (m_iLastRenderedFrame == gpGlobals->framecount)
+	{
+//		if (bIsPriorityEmbeddedInstance)
+//		{
+//			if (pEmbeddedInstance->GetId() == "hud")
+//				DevMsg("WARNING: HUD webview aborted due to non-priority web view stealing its spot in the render queue.\n");
+//			else
+//				DevMsg("WARNING: Priority webview aborted due to non-priority web view stealing its spot in the render queue.\n");
+//		}
+
+		return false;
+	}
+
+	// if this is NOT a priority web view, and the last PRIORITY web view was NOT render in the PREVIOUS frame, and there IS a priority web view THIS frame, BORT
+
+	// FIXME: m_iLastPriorityRenderedFrame should be last time the hud was ALLOWED to render, not the last time it ACTUALLY rendered.
+	/*
+	if (!bIsPriorityEmbeddedInstance && m_iLastPriorityRenderedFrame < gpGlobals->framecount - 1 && m_iVisiblePriorityCanvasesLastFrame > 0)
+	{
+		DevMsg("Abort A: %s %s\n", pEmbeddedInstance->GetId().c_str(), pEmbeddedInstance->GetTexture()->GetName());
+		return false;
+	}
+	*/
+
+//	/*
+	
+//	DevMsg("INFOS: %i %i\n", m_iVisibleCanvasesLastFrame, m_iVisiblePriorityCanvasesLastFrame);
+
+	if (bIsPriorityEmbeddedInstance)
+	{
+		int iLastRenderedFrame = pEmbeddedInstance->GetLastRenderedFrame();
+
+		// always render the 1st time
+		if (m_iLastPriorityRenderedFrame <= 0)
+		{
+			m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
+//			if (m_iVisibleCanvasesLastFrame > 0 && m_iLastAllowedRenderedFrame < gpGlobals->framecount - 1)
+//				return false;
+//			else
+				return true;
+		}
+
+		// Need to wait an extra tick if there are any non-priority web tabs waiting.
+		int factor = 1;
+		if (m_iVisibleCanvasesLastFrame > 0)
+		{
+			factor = 2;
+	//		DevMsg("Extra one: %i\n", iExtraOne);
+		}
+
+//		if (gpGlobals->framecount - m_iLastPriorityRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + iExtraOne)
+		if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisiblePriorityCanvasesLastFrame * factor) - 1)
+		{
+			m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
+		//	if (m_iVisibleCanvasesLastFrame > 0 && m_iLastAllowedRenderedFrame < gpGlobals->framecount - 1)
+	//			return false;
+//			else
+				return true;
+		}
+
+		/*
+		// render if we're the only visible (priority) web tab
+		//	if (m_iVisiblePriorityWebTabsLastFrame <= 1)
+		//		return true;
+
+		// render if we've waited long enough for all other (priority) web views to render
+
+		// Need to wait an extra tick if there are any non-priority web tabs waiting.
+		int iExtraOne = 0;
+		if (m_iVisibleCanvasesLastFrame > 0)
+			iExtraOne = 1;
+
+		int iFactor = 1;
+		if (m_iVisiblePriorityCanvasesLastFrame > 0)
+			iFactor = m_iVisiblePriorityCanvasesLastFrame;
+
+		if (gpGlobals->framecount - m_iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + (iExtraOne * iFactor))
+			return true;
+		*/
+
+	//	DevMsg("Abort B: %s %s out of %i\n", pEmbeddedInstance->GetId().c_str(), pEmbeddedInstance->GetTexture()->GetName(), m_iVisiblePriorityCanvasesLastFrame);
+		//return true;
+	}
+	else
+	{
+//	*/
+		//DevMsg("num priority web views: %i\n", m_iVisiblePriorityWebTabsLastFrame);
+		int iLastRenderedFrame = pEmbeddedInstance->GetLastRenderedFrame();
+
+		//	int frameCount = m_iLastPriorityRenderedFrame;// gpGlobals->framecount - m_iLastPriorityRenderedFrame;
+		// we are a regular web tab
+
+		// don't render if there are still priority web tabs waiting to render
+		//	if (m_iVisiblePriorityWebTabsLastFrame > 0 && frameCount - m_iLastPriorityRenderedFrame >= m_iVisiblePriorityWebTabsLastFrame)
+		//	return false;
+
+		// always render the 1st time
+		if (m_iLastRenderedFrame <= 0)
+		{
+			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastAllowedPriorityRenderedFrame < gpGlobals->framecount - 1)
+				return false;
+			else
+				return true;
+		}
+
+		// render if we're the only visible (regular) web tab
+		//	if (m_iVisibleWebTabsLastFrame <= 1)
+		//		return true;
+
+		// render if we've waited long enough for all other (regular) web views to render
+		//if (frameCount - m_iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)
+		/*
+		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastPriorityRenderedFrame - m_iLastRenderedFrame >= m_iVisibleCanvasesLastFrame - 1)// + this->GetNumPriorityEmbeddedInstances())//1)
+			return true;
+		else if (m_iVisiblePriorityCanvasesLastFrame <= 0 && gpGlobals->framecount - m_iLastRenderedFrame >= m_iVisibleCanvasesLastFrame)
+			return true;
+		*/
+
+		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastAllowedPriorityRenderedFrame < gpGlobals->framecount - 1)//m_iLastAllowedPriorityRenderedFrame != gpGlobals->framecount - 1)
+		{
+			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			return false;
+		}
+
+
+		int factor = 1;
+		if (m_iVisiblePriorityCanvasesLastFrame > 0)
+			factor = 2;// m_iVisiblePriorityCanvasesLastFrame;
+
+		/*
+		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + m_iVisibleCanvasesLastFrame - 1) //iExtraOne + m_iVisibleCanvasesLastFrame - 1)
+			return true;
+		else 
+		*/
+
+
+
+
+		//if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisibleCanvasesLastFrame * factor) - 1)
+		if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisibleCanvasesLastFrame * factor) - 1)
+		{
+			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			return true;
+		}
+
+
+
+
+
+		/*
+		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastPriorityRenderedFrame - iLastRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + m_iVisibleCanvasesLastFrame - 1) //iExtraOne + m_iVisibleCanvasesLastFrame - 1)
+			return true;
+		else if (m_iVisiblePriorityCanvasesLastFrame <= 0 && gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleCanvasesLastFrame)
+			return true;
+		*/
+	}
+
+	//	if (m_iLastRenderedFrame != gpGlobals->framecount && (m_iLastRenderedFrame <= 0 || m_iVisibleWebTabsLastFrame <= 1 || ((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || (((pWebTab == m_pHudWebTab || pWebTab == m_pSelectedWebTab) && m_iVisiblePriorityWebTabsLastFrame <= 1) || gpGlobals->framecount - iLastRenderedFrame >= m_iVisibleWebTabsLastFrame)))
+	//		return true;
+
+	//DevMsg("Abort C: %s %s\n", pEmbeddedInstance->GetId().c_str(), pEmbeddedInstance->GetTexture()->GetName());
+	return false;
+}
+
+void C_CanvasManager::RegisterProxy(CWebSurfaceProxy* pProxy)
+{
+	m_webSurfaceProxies.push_back(pProxy);
+}
+
+void C_CanvasManager::SetMaterialEmbeddedInstanceId(IMaterial* pMaterial, std::string id)
+{
+	m_materialEmbeddedInstanceIds[pMaterial] = id;
+}
+
+C_EmbeddedInstance* C_CanvasManager::FindEmbeddedInstance(IMaterial* pMaterial)
+{
+	C_EmbeddedInstance* pEmbeddedInstance = null;
+	auto foundId = m_materialEmbeddedInstanceIds.find(pMaterial);
+	if (foundId != m_materialEmbeddedInstanceIds.end())
+	{
+		std::string id = foundId->second;
+
+		pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(id);
+		if (!pEmbeddedInstance)
+			pEmbeddedInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(id);
+
+		if (!pEmbeddedInstance)
+			pEmbeddedInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(id);
+
+		if (pEmbeddedInstance)
+			return pEmbeddedInstance;
+	}
+
+	return null;
+}
+
+C_EmbeddedInstance* C_CanvasManager::FindEmbeddedInstance(std::string id)
+{
+	C_EmbeddedInstance* pEmbeddedInstance = null;
+
+	auto foundInstance = m_materialEmbeddedInstanceIds.begin();
+	while (foundInstance != m_materialEmbeddedInstanceIds.end())
+	{
+		pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(id);
+		if (!pEmbeddedInstance)
+			pEmbeddedInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(id);
+
+		if (!pEmbeddedInstance)
+			pEmbeddedInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(id);
+
+		if (pEmbeddedInstance)
+			return pEmbeddedInstance;
+		else
+			foundInstance++;
+	}
+
+	return null;
 }

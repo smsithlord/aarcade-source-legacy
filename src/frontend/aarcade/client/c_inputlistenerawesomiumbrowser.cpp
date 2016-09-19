@@ -17,6 +17,12 @@ C_InputListenerAwesomiumBrowser::~C_InputListenerAwesomiumBrowser()
 	DevMsg("InputListenerAwesomiumBrowser: Destructor\n");
 }
 
+// this version accepts a target, instead of always using the "selected" instance
+void C_InputListenerAwesomiumBrowser::OnMouseMove(float x, float y, C_AwesomiumBrowserInstance* pBrowserInstance)
+{
+	pBrowserInstance->OnMouseMove(x, y);
+}
+
 void C_InputListenerAwesomiumBrowser::OnMouseMove(float x, float y)
 {
 //	int iMouseX = x * 1280;
@@ -53,10 +59,12 @@ void C_InputListenerAwesomiumBrowser::OnMouseMove(float x, float y)
 
 void C_InputListenerAwesomiumBrowser::OnMousePressed(vgui::MouseCode code)
 {
-	//g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnMousePressed(code);// OnMouseMove(x, y);
+//	g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnMousePressed(code);
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->OnMousePressed(code);
 }
 
 void C_InputListenerAwesomiumBrowser::OnMouseReleased(vgui::MouseCode code)
 {
 	//g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnMouseReleased(code);// OnMouseMove(x, y);
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->OnMouseReleased(code);
 }

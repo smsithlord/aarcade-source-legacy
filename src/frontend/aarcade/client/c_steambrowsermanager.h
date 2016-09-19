@@ -15,10 +15,13 @@ public:
 	void Update();
 
 	C_SteamBrowserInstance* CreateSteamBrowserInstance();
+	bool FocusSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);
 	bool SelectSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);
+	void AddFreshSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);
 	void OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance);
-	//C_SteamBrowserInstance* FindSteamBrowserInstance(CSysModule* pModule);
+	C_SteamBrowserInstance* FindSteamBrowserInstance(unsigned int unHandle);
 	C_SteamBrowserInstance* FindSteamBrowserInstance(std::string id);
+	C_SteamBrowserInstance* GetPendingSteamBrowserInstance();
 
 	void RunEmbeddedSteamBrowser();
 	void DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance);
@@ -34,7 +37,7 @@ private:
 	C_InputListenerSteamBrowser* m_pInputListener;
 	C_SteamBrowserInstance* m_pSelectedSteamBrowserInstance;
 	std::map<std::string, C_SteamBrowserInstance*> m_steamBrowserInstances;
-	//std::map<uint, CSysModule*> m_steamBrowserInstancesModules;
+	//std::map<unsigned int, std::string> m_steamBrowserInstanceIds;
 
 };
 

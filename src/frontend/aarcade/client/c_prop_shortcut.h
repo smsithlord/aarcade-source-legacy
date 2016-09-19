@@ -3,8 +3,9 @@
 
 #include "aa_globals.h"
 #include "c_props.h"
+#include "c_embeddedinstance.h"
 //#include "DynamicArtworkRegen.h"
-//#include <vector>
+#include <vector>
 #include <string>
 
 class C_PropShortcutEntity : public C_BaseAnimating
@@ -24,6 +25,8 @@ public:
 	void Precache();
 
 	std::string GetItemId();
+	void GetEmbeddedInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
+	//void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
 	// accessors
 

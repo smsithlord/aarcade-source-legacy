@@ -23,6 +23,7 @@ public:
 
 	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", bool alpha = false);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(std::string id);
+	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(Awesomium::WebView* pWebView);
 	//C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(IMaterial* pMaterial);
 
 	void RunEmbeddedAwesomiumBrowser();
@@ -54,7 +55,7 @@ public:
 
 	void DispatchJavaScriptMethod(C_AwesomiumBrowserInstance* pBrowserInstance, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	void DispatchJavaScriptMethods(C_AwesomiumBrowserInstance* pBrowserInstance);
-
+	
 	// accessors
 	C_AwesomiumBrowserInstance* GetSelectedAwesomiumBrowserInstance() { return m_pSelectedAwesomiumBrowserInstance; }
 	C_InputListenerAwesomiumBrowser* GetInputListener() { return m_pInputListener; }
@@ -80,6 +81,7 @@ private:
 	C_AwesomiumBrowserInstance* m_pSelectedAwesomiumBrowserInstance;
 	//std::map<C_AwesomiumBrowserInstance*, Awesomium::WebView*> m_webViews;
 	std::map<std::string, C_AwesomiumBrowserInstance*> m_awesomiumBrowserInstances;
+
 	/*
 	bool m_bSoundEnabled;
 	C_InputListenerSteamBrowser* m_pInputListener;

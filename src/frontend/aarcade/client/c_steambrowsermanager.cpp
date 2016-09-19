@@ -13,8 +13,9 @@ C_SteamBrowserManager::C_SteamBrowserManager()
 	DevMsg("SteamBrowserManager: Constructor\n");
 	m_bSoundEnabled = true;
 	m_pSelectedSteamBrowserInstance = null;
-
+	//surface()->GetWebkitHTMLUserAgentString()
 	steamapicontext->SteamHTMLSurface()->Init();
+//	steamapicontext->SteamHTMLSurface()->
 
 	m_pInputListener = new C_InputListenerSteamBrowser();
 }
@@ -57,16 +58,34 @@ C_SteamBrowserManager::~C_SteamBrowserManager()
 
 void C_SteamBrowserManager::Update()
 {
+	/*
 	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
 	{
 		C_SteamBrowserInstance* pSteamBrowserInstance = it->second;
 		pSteamBrowserInstance->Update();
 	}
+	*/
 
 	//DevMsg("SteamBrowserManager: Update\n");
 	//info->state = state;
-//	if (m_pSelectedSteamBrowserInstance)
-//		m_pSelectedSteamBrowserInstance->Update();
+	//if (m_pSelectedSteamBrowserInstance)
+		//m_pSelectedSteamBrowserInstance->Update();
+
+	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
+	{
+		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(it->second))
+			it->second->Update();
+	}
+
+
+	/*
+	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = it->second;
+		if (pSteamBrowserInstance != m_pSelectedSteamBrowserInstance)
+			pSteamBrowserInstance->Update();
+	}
+	*/
 }
 
 C_SteamBrowserInstance* C_SteamBrowserManager::CreateSteamBrowserInstance()
@@ -76,32 +95,58 @@ C_SteamBrowserInstance* C_SteamBrowserManager::CreateSteamBrowserInstance()
 	return pSteamBrowserInstance;
 }
 
+bool C_SteamBrowserManager::FocusSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
+{
+	steamapicontext->SteamHTMLSurface()->SetKeyFocus(pSteamBrowserInstance->GetHandle(), true);
+	return true;
+}
+
 bool C_SteamBrowserManager::SelectSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
 {
 	m_pSelectedSteamBrowserInstance = pSteamBrowserInstance;
 	return true;
 }
 
-void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance)
+void C_SteamBrowserManager::AddFreshSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
 {
 	std::string id = pSteamBrowserInstance->GetId();
 	m_steamBrowserInstances[id] = pSteamBrowserInstance;
+}
 
+void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance)
+{
+	//std::string id = pSteamBrowserInstance->GetId();
+	//m_steamBrowserInstances[id] = pSteamBrowserInstance;
+
+
+
+
+
+
+
+
+
+
+
+
+	// old unknown shit
+	//m_steamBrowserInstanceIds[pSteamBrowserInstance->GetHandle()] = pSteamBrowserInstance->GetId();
 	//pSteamBrowserInstance->GetInfo()->state = 1;
 }
 
-/*
-C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(CSysModule* pModule)
+C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(unsigned int unHandle)
 {
-	auto foundSteamBrowserInstance = m_steamBrowserInstances.find(pModule);
-	if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+	auto foundSteamBrowserInstance = m_steamBrowserInstances.begin();
+	while (foundSteamBrowserInstance != m_steamBrowserInstances.end())
 	{
-		return m_steamBrowserInstances[pModule];
+		if (foundSteamBrowserInstance->second->GetHandle() == unHandle)
+			return foundSteamBrowserInstance->second;
+		else
+			foundSteamBrowserInstance++;
 	}
-	else
-		return null;
+
+	return null;
 }
-*/
 
 C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(std::string id)
 {
@@ -115,11 +160,30 @@ C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(std::str
 		return null;
 }
 
+C_SteamBrowserInstance* C_SteamBrowserManager::GetPendingSteamBrowserInstance()
+{
+	auto foundSteamBrowserInstance = m_steamBrowserInstances.begin();
+	while (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+	{
+		if (foundSteamBrowserInstance->second->GetHandle() == 0)
+			return foundSteamBrowserInstance->second;
+		else
+			foundSteamBrowserInstance++;
+	}
+
+	return null;
+}
 
 void C_SteamBrowserManager::RunEmbeddedSteamBrowser()
 {
 	C_SteamBrowserInstance* pSteamBrowserInstance = this->CreateSteamBrowserInstance();
-	pSteamBrowserInstance->Init("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", null);
+
+	pSteamBrowserInstance->Init("", "https://www.netflix.com/watch/217258", null);
+
+//	pSteamBrowserInstance->Init("", "file:///C:/Users/Owner/Desktop/wowvr/index.html", null);
+	pSteamBrowserInstance->Focus();
+	//g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSteamBrowserInstance);
 
 	// http://anarchyarcade.com/press.html
 	// https://www.youtube.com/html5
@@ -129,15 +193,15 @@ void C_SteamBrowserManager::RunEmbeddedSteamBrowser()
 void C_SteamBrowserManager::DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance)
 {
 	if (pInstance == m_pSelectedSteamBrowserInstance)
-	{
 		this->SelectSteamBrowserInstance(null);
-		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-	}
 
 	//if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
 	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
 	{
 		g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+
+		if (g_pAnarchyManager->GetInputManager()->GetInputMode())
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 		//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
 		//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
 	}

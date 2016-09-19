@@ -25,18 +25,28 @@ public:
 	std::string GetId() { return m_id; }
 	void Update();
 
+	void SetUrl(std::string url);
+	bool HasFocus();
+	bool Focus();
+	bool Select();
+	bool Deselect();
+
+	void Close();
+
 	void ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void ResizeFrameFromRGB1555(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth);
 
-	void OnProxyBind(C_BaseEntity* pBaseEntity);
+	void OnProxyBind(C_BaseEntity* pBaseEntity = null);
 	void Render();
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
+	//void OnKeyPressed(vgui::KeyCode code);
+	//void OnKeyReleased(vgui::KeyCode code);
 
 	void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	void DispatchJavaScriptMethodCalls();
@@ -48,6 +58,14 @@ public:
 	void SetHudTitle(std::string title);
 	void AddHudLoadingMessage(std::string type, std::string text, std::string title = "", std::string id = "", std::string min = "", std::string max = "", std::string current = "", std::string callbackMethod = "");
 	//std::vector<JavaScriptMethodCall_t*> GetJavaScriptMethodCalls() { return m_javaScriptMethodCalls; }
+
+	// images webtab only
+	void DecrementNumImagesLoading() { m_iNumImagesLoading--; };
+	void SetNumImagesLoading(int num) { m_iNumImagesLoading = num; }
+	bool RequestLoadSimpleImage(std::string channel, std::string itemId);	// images web-views only!
+	void OnSimpleImageReady(std::string channel, std::string itemId, std::string field, ITexture* pTexture);	// images web-views only!
+
+	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
 	// accessors
 	ITexture* GetTexture() { return m_pTexture; }
@@ -64,8 +82,12 @@ public:
 	void SetWebView(Awesomium::WebView* pWebView) { m_pWebView = pWebView; }
 
 private:
+	int m_iNumImagesLoading;
+	int m_iMaxImagesLoading;
+
 	std::vector<JavaScriptMethodCall_t*> m_javaScriptMethodCalls;
 
+	int m_iLastVisibleFrame;
 	int m_iState;
 	void* m_pLastFrameData;
 	bool m_bReadyForNextFrame;

@@ -116,11 +116,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		// FIXME: This should be done outside of the awesomeium-specific classes!!
 		C_MetaverseManager* pMetaverseManager = g_pAnarchyManager->GetMetaverseManager();
-		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		//C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
 
 		KeyValues* app = pMetaverseManager->LoadNextLocalApp();
 		if (app)
-			pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
 		else
 		{
 			pMetaverseManager->LoadLocalAppClose();
@@ -159,7 +161,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		// FIXME: This should be done outside of the awesomeium-specific classes!!
 		C_WorkshopManager* pWorkshopManager = g_pAnarchyManager->GetWorkshopManager();
 		C_MetaverseManager* pMetaverseManager = g_pAnarchyManager->GetMetaverseManager();
-		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+		//C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
 
 		g_pAnarchyManager->GetMetaverseManager()->LoadNextLocalItemLegacy();
 //		{
@@ -169,14 +171,16 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("detectNextMapCallback"))
 	{
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
 		bool bAlreadyExists = false;
 		KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->DetectNextMap(bAlreadyExists);
 		if (map)
 		{
 			if( bAlreadyExists )
-				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+0", "detectNextMapCallback");
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+0", "detectNextMapCallback");
 			else
-				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+", "detectNextMapCallback");
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Detecting Maps", "detectmaps", "", "", "+", "detectNextMapCallback");
 		}
 		else
 			g_pAnarchyManager->GetMetaverseManager()->OnDetectAllMapsCompleted();
@@ -214,8 +218,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("hudMouseUp"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
-		if (!pWebTab)
+		//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (!pEmbeddedInstance)
 			return;
 
 		int code = args[0].ToInteger();
@@ -239,13 +245,16 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		}
 
 
-		if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
-			pWebTab->MouseRelease(button);
+		//if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+		if (bPassThru && pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
+			pEmbeddedInstance->GetInputListener()->OnMouseReleased(button);
 	}
 	else if (method_name == WSLit("hudMouseDown"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
-		if (!pWebTab)
+		//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (!pEmbeddedInstance)
 			return;
 
 		int code = args[0].ToInteger();
@@ -268,17 +277,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			break;
 		}
 
-		if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+		if (bPassThru && pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
 		{
-			if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != pWebTab)
-				g_pAnarchyManager->GetWebManager()->FocusWebTab(pWebTab);
+			//if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != pWebTab)
+			if (!pEmbeddedInstance->HasFocus())
+				pEmbeddedInstance->Focus();
 
-			pWebTab->MousePress(button);
+			pEmbeddedInstance->GetInputListener()->OnMousePressed(button);
 		}
 		else if (!bPassThru)
 		{
-			if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
-				g_pAnarchyManager->GetWebManager()->FocusWebTab(g_pAnarchyManager->GetWebManager()->GetHudWebTab());
+			//if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
+			if (pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
+				pHudBrowserInstance->Focus();
 		}
 	}
 	else if (method_name == WSLit("requestActivateInputMode"))
@@ -317,10 +328,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("spawnNearestObject"))
 	{
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
 		g_pAnarchyManager->GetInstanceManager()->SetNearestSpawnDist(args[0].ToDouble());
 		bool bSpawned = g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
 		if ( bSpawned )
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
 	}
 	else if (method_name == WSLit("setNearestObjectDist"))
 	{
@@ -328,20 +341,30 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("spawnNextObjectCallback"))
 	{
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+
 		bool bSpawned = g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
 		if (bSpawned)
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "", "", "+", "spawnNextObjectCallback");
 		else
 		{
-			g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()->SetUrl("asset://ui/blank.html");
+			//pEmbeddedInstance->SetUrl("asset://ui/blank.html");
+			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
 			//g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 		}
 	}
 	else if (method_name == WSLit("simpleImageReady"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
-		if (pWebTab->GetId() != "images")
+	//	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+
+		C_AwesomiumBrowserInstance* pImagesBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("images");
+
+//		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+		//if (pWebTab->GetId() != "images")
+		if (pImagesBrowserInstance->GetWebView() != caller)
 			return;// JSValue(false);
 
 		std::string channel = WebStringToCharString(args[0].ToString());
@@ -350,7 +373,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		if (channel == "" && itemId == "" && field == "")
 		{
-			pWebTab->SetNumImagesLoading(0);
+			pImagesBrowserInstance->SetNumImagesLoading(0);
 			//pWebTab->DecrementNumImagesLoading();
 		}
 		else if (channel != "" && itemId != "" && field != "")
@@ -383,19 +406,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 						DevMsg("Failed to create texture!\n");
 
 					// get the regen and assign it
-					CWebSurfaceRegen* pRegen = g_pAnarchyManager->GetWebManager()->GetOrCreateWebSurfaceRegen();
+					CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
 					pTexture->SetTextureRegenerator(pRegen);
 					
-					pRegen->SetWebTab(pWebTab);
+					pRegen->SetEmbeddedInstance(pImagesBrowserInstance);
 					pTexture->Download();
 					
-					pWebTab->OnSimpleImageReady(channel, itemId, field, pTexture);
+					pImagesBrowserInstance->OnSimpleImageReady(channel, itemId, field, pTexture);
 				}
 			}
 		}
 		else if (itemId != "")
 		{
-			pWebTab->OnSimpleImageReady(channel, itemId, field, null);
+			pImagesBrowserInstance->OnSimpleImageReady(channel, itemId, field, null);
 		}
 
 		return;// JSValue(true);
@@ -447,33 +470,42 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	}
 	else if (method_name == WSLit("didCancelPopupMenu"))
 	{
+		//DevMsg("Disabled for testing\n");
 		std::string id = WebStringToCharString(args[0].ToString());
 
-		C_WebTab* pWebTab;
+		//C_WebTab* pWebTab;
+		C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = null;
 		if (id == "hud")
-			pWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+			pAwesomiumBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");//g_pAnarchyManager->GetWebManager()->GetHudWebTab();
 		else
-			pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+			pAwesomiumBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(id);
+			//pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
 
-		WebView* pWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pWebTab);
-		pWebView->DidCancelPopupMenu();
-
+		//WebView* pWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pWebTab);
+		//pWebView->DidCancelPopupMenu();
+		pAwesomiumBrowserInstance->GetWebView()->DidCancelPopupMenu();
 		return JSValue(true);
 	}
 	else if (method_name == WSLit("didSelectPopupMenuItem"))
 	{
+		//DevMsg("Disabled for testing\n");
+
 		std::string id = WebStringToCharString(args[0].ToString());
 		int itemIndex = args[1].ToInteger();
 
-		C_WebTab* pWebTab;
+		C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = null;
+		//C_WebTab* pWebTab;
 		if (id == "hud")
-			pWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+			pAwesomiumBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");//g_pAnarchyManager->GetWebManager()->GetHudWebTab();
 		else
-			pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
+			pAwesomiumBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(id);
+			//pWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+		//else
+		//	pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(id);
 
-		WebView* pWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pWebTab);
-		pWebView->DidSelectPopupMenuItem(itemIndex);
-
+	//	WebView* pWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pWebTab);
+	//	pWebView->DidSelectPopupMenuItem(itemIndex);
+		pAwesomiumBrowserInstance->GetWebView()->DidSelectPopupMenuItem(itemIndex);
 		return JSValue(true);
 	}
 	else if (method_name == WSLit("getLibraryType"))
@@ -729,12 +761,13 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	}
 	else if (method_name == WSLit("getSelectedWebTab"))
 	{
-		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		C_AwesomiumBrowserInstance* pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance();
 
-		if (pWebTab)
+		if (pEmbeddedInstance)
 		{
 			JSObject response;
-			response.SetProperty(WSLit("id"), WSLit(pWebTab->GetId().c_str()));
+			response.SetProperty(WSLit("id"), WSLit(pEmbeddedInstance->GetId().c_str()));
 			return response;
 		}
 		

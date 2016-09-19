@@ -55,11 +55,19 @@ C_LibretroManager::~C_LibretroManager()
 
 void C_LibretroManager::Update()
 {
+	/*
 	for (auto it = m_libretroInstances.begin(); it != m_libretroInstances.end(); ++it)
 	{
 		C_LibretroInstance* pLibretroInstance = it->second;
 		pLibretroInstance->Update();
 
+	}
+	*/
+
+	for (auto it = m_libretroInstances.begin(); it != m_libretroInstances.end(); ++it)
+	{
+		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(it->second))
+			it->second->Update();
 	}
 
 	//DevMsg("LibretroManager: Update\n");
@@ -141,6 +149,21 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(uint uId)
 	return null;
 }
 
+C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
+{
+	//typedef std::map<std::string, std::map<std::string, std::string>>::iterator it_type;
+	auto foundLibretroInstance = m_libretroInstances.begin();
+	while (foundLibretroInstance != m_libretroInstances.end())
+	{
+		if (foundLibretroInstance->second->GetId() == id)
+			return foundLibretroInstance->second;
+		else
+			foundLibretroInstance++;
+	}
+
+	return null;
+}
+
 void C_LibretroManager::RunEmbeddedLibretro()
 {
 	// TEST: AUTO-CREATE AN INSTANCE, LOAD THE FFMPEG CORE, AND PLAY A MOVIE
@@ -156,5 +179,6 @@ void C_LibretroManager::RunEmbeddedLibretro()
 	// tell the input manager that the libretro instance is active
 	//C_InputListenerLibretro* pListener = this->GetInputListener();
 	//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(pLibretroInstance->GetTexture());
+	pLibretroInstance->Select();
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pLibretroInstance);
 }

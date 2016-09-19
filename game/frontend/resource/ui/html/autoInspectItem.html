@@ -95,7 +95,7 @@ function ExtractYouTubeId(trailerURL)
           extension = extension.substring(found+1);
 
         if( imageEndings.indexOf(extension) >= 0 )
-          window.location = "asset://ui/showImage.html?uri=" + encodeURIComponent(fieldValue);
+          window.location = "showImage.html?uri=" + encodeURIComponent(fieldValue);//window.location = "asset://ui/showImage.html?uri=" + encodeURIComponent(fieldValue);
         else
 				  window.location = fieldValue;
 			}

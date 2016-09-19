@@ -106,6 +106,8 @@ public:
 	~C_LibretroInstance();
 	void SelfDestruct();
 
+	std::string GetId() { return m_id; }
+
 	void Init(std::string id = "");
 	bool CreateWorkerThread(std::string core);
 	void Update();
@@ -116,6 +118,13 @@ public:
 	static bool BuildInterface(libretro_raw* raw, void* pLib);
 	static void CreateAudioStream();
 	static void DestroyAudioStream();
+
+	bool HasFocus();
+	bool Focus();
+	bool Select();
+	bool Deselect();
+
+	void Close();
 
 	// threaded
 	//unsigned Worker(void *params);
@@ -137,6 +146,7 @@ public:
 	void OnProxyBind(C_BaseEntity* pBaseEntity);
 	void Render();
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
+	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
 	// accessors
 	libretro_raw* GetRaw() { return m_raw; }
@@ -149,6 +159,7 @@ public:
 	// mutators	
 
 private:
+	int m_iLastVisibleFrame;
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;
 	std::string m_id;

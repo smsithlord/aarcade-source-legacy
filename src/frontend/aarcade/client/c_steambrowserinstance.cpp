@@ -7,18 +7,67 @@
 //#include "c_steambrowserinstance.h"
 #include "c_inputlistenersteambrowser.h"
 #include "c_anarchymanager.h"
-#include "../../../public/vgui_controls/Controls.h"  
+//#include "../../../public/vgui_controls/Controls.h"  
 #include "vgui/IInput.h"
+//#include "vgui/VGUI.h"
 #include "c_canvasregen.h"
 #include "c_embeddedinstance.h"
-#include <mutex>
+#include "inputsystem/iinputsystem.h"
+
+//#include <mutex>
+#include "../../../public/vgui_controls/HTML.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+vgui::KeyCode KeyCode_VirtualKeyToVGUI(int key)
+{
+	// Some tools load vgui for localization and never use input
+	if (!g_pInputSystem)
+		return KEY_NONE;
+	return g_pInputSystem->VirtualKeyToButtonCode(key);
+}
+
+int KeyCode_VGUIToVirtualKey(vgui::KeyCode code)
+{
+	// Some tools load vgui for localization and never use input
+	if (!g_pInputSystem)
+		return VK_RETURN;
+
+	return g_pInputSystem->ButtonCodeToVirtualKey(code);
+}
+
+///*
+//-----------------------------------------------------------------------------
+// Purpose: return the bitmask of any modifier keys that are currently down
+//-----------------------------------------------------------------------------
+int GetKeyModifiersAlt()
+{
+	// Any time a key is pressed reset modifier list as well
+	int nModifierCodes = 0;
+	if (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL))
+		nModifierCodes |= ISteamHTMLSurface::k_eHTMLKeyModifier_CtrlDown;
+
+	if (vgui::input()->IsKeyDown(KEY_LALT) || vgui::input()->IsKeyDown(KEY_RALT))
+		nModifierCodes |= ISteamHTMLSurface::k_eHTMLKeyModifier_AltDown;
+
+	if (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT))
+		nModifierCodes |= ISteamHTMLSurface::k_eHTMLKeyModifier_ShiftDown;
+
+#ifdef OSX
+	// for now pipe through the cmd-key to be like the control key so we get copy/paste
+	if (vgui::input()->IsKeyDown(KEY_LWIN) || vgui::input()->IsKeyDown(KEY_RWIN))
+		nModifierCodes |= ISteamHTMLSurface::k_eHTMLKeyModifier_CtrlDown;
+#endif
+
+	return nModifierCodes;
+}
+//*/
+
 C_SteamBrowserInstance::C_SteamBrowserInstance() : m_StartRequest(this, &C_SteamBrowserInstance::BrowserInstanceStartRequest),
 m_FinishedRequest(this, &C_SteamBrowserInstance::BrowserInstanceFinishedRequest),
-m_NeedsPaint(this, &C_SteamBrowserInstance::BrowserInstanceNeedsPaint)
+m_NeedsPaint(this, &C_SteamBrowserInstance::BrowserInstanceNeedsPaint),
+m_NewWindow(this, &C_SteamBrowserInstance::BrowserPopupHTMLWindow)
 {
 	DevMsg("SteamBrowserInstance: Constructor\n");
 	m_pTexture = null;
@@ -30,6 +79,8 @@ m_NeedsPaint(this, &C_SteamBrowserInstance::BrowserInstanceNeedsPaint)
 	m_pPostData = null;
 	m_initialURL = "";
 	m_bIsDirty = false;
+	m_unHandle = 0;
+	m_iLastVisibleFrame = -1;
 }
 
 C_SteamBrowserInstance::~C_SteamBrowserInstance()
@@ -39,15 +90,17 @@ C_SteamBrowserInstance::~C_SteamBrowserInstance()
 	if (m_pTexture)
 	{
 		m_pTexture->SetTextureRegenerator(null);
-//		m_pTexture->DecrementReferenceCount();
-//		m_pTexture->DeleteIfUnreferenced();
+
+		m_pTexture->DecrementReferenceCount();
+		m_pTexture->DeleteIfUnreferenced();
+		m_pTexture = null;
 	}
 }
 
 void C_SteamBrowserInstance::SelfDestruct()
 {
 	DevMsg("SteamBrowserInstance: SelfDestruct\n");
-	steamapicontext->SteamHTMLSurface()->RemoveBrowser(m_unBrowserHandle);
+	steamapicontext->SteamHTMLSurface()->RemoveBrowser(m_unHandle);// m_unBrowserHandle);
 
 	if (m_pLastFrameData)
 		free(m_pLastFrameData);
@@ -61,58 +114,156 @@ void C_SteamBrowserInstance::SelfDestruct()
 void C_SteamBrowserInstance::Init(std::string id, std::string url, const char* pchPostData)
 {
 	m_id = id;
+
 	if (m_id == "")
 		m_id = g_pAnarchyManager->GenerateUniqueId();
 
 	m_initialURL = url;
 	m_pPostData = (void*)pchPostData;
 
+	g_pAnarchyManager->GetSteamBrowserManager()->AddFreshSteamBrowserInstance(this);
+
 	SteamAPICall_t hAPICall = steamapicontext->SteamHTMLSurface()->CreateBrowser("", "");
 	m_CreateBrowserInstance.Set(hAPICall, this, &C_SteamBrowserInstance::OnBrowserInstanceCreated);
-}
-
-void C_SteamBrowserInstance::OnBrowserInstanceCreated(HTML_BrowserReady_t *pResult, bool bIOFailure)
-{
-	DevMsg("SteamworksBrowser: OnBrowserCreated - %s\n", pResult->GetCallbackName());
 
 	// create the texture (each instance has its own texture)
 	std::string textureName = "canvas_";
-	textureName += m_id;
+	textureName += m_id;// pSelf->GetId();// m_id;
 
 	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
 	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
 	//int iWidth = 1920;
 	//int iHeight = 1080;
 
-	m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+	//m_pTexture 
+
+	//m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+
+	if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
+		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+	else
+		m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+
+	//m_pTexture = pTexture;
+	//pSelf->SetTexture(pTexture);
 
 	// get the regen and assign it
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
 	//pRegen->SetEmbeddedInstance(this);
 	m_pTexture->SetTextureRegenerator(pRegen);
+}
 
+void C_SteamBrowserInstance::OnBrowserInstanceCreated(HTML_BrowserReady_t *pResult, bool bIOFailure)
+{
+	if (m_unHandle)
+		return;
+	/*
+	C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pResult->unBrowserHandle);
+	
+	if (!pSelf)
+		pSelf = g_pAnarchyManager->GetSteamBrowserManager()->GetPendingSteamBrowserInstance();
+
+	if (!pSelf)
+	{
+		DevMsg("Error: New Steam Browser instances created with no pending slots waiting for it!\n");
+		return;
+	}
+	*/
+
+	DevMsg("SteamworksBrowser: OnBrowserCreated - %s for %s\n", pResult->GetCallbackName(), m_id.c_str());
+
+	/*
+	// create the texture (each instance has its own texture)
+	std::string textureName = "canvas_";
+	textureName += m_id;// pSelf->GetId();// m_id;
+
+	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	//int iWidth = 1920;
+	//int iHeight = 1080;
+
+	//m_pTexture 
+	ITexture* pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+	m_pTexture = pTexture;
+	//pSelf->SetTexture(pTexture);
+
+	// get the regen and assign it
+	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
+	//pRegen->SetEmbeddedInstance(this);
+	pTexture->SetTextureRegenerator(pRegen);
+	*/
 
 
 	// tell the input manager that the steam browser instance is active
 	//C_InputListenerSteamBrowser* pListener = g_pAnarchyManager->GetSteamBrowserManager()->GetInputListener();
 	//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(m_pTexture);
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, this);// (C_InputListener*)pListener);
 
 
+	//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, this);// (C_InputListener*)pListener);
+	
+	//m_unBrowserHandle = pResult->unBrowserHandle;
+	m_unHandle = pResult->unBrowserHandle;
+	//pSelf->SetHandle(pResult->unBrowserHandle);
+	
+	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	steamapicontext->SteamHTMLSurface()->SetSize(m_unHandle, iWidth, iHeight);
 
-	m_unBrowserHandle = pResult->unBrowserHandle;
+	g_pAnarchyManager->GetSteamBrowserManager()->OnSteamBrowserInstanceCreated(this);// pSelf);
+	steamapicontext->SteamHTMLSurface()->LoadURL(m_unHandle, m_initialURL.c_str(), "");
+}
 
-	steamapicontext->SteamHTMLSurface()->SetSize(m_unBrowserHandle, iWidth, iHeight);
+bool C_SteamBrowserInstance::HasFocus()
+{
+	return (this == g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance());
+}
 
-	g_pAnarchyManager->GetSteamBrowserManager()->OnSteamBrowserInstanceCreated(this);
-	steamapicontext->SteamHTMLSurface()->LoadURL(m_unBrowserHandle, m_initialURL.c_str(), "");
+bool C_SteamBrowserInstance::Focus()
+{
+	//return g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
+	g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
+	g_pAnarchyManager->GetSteamBrowserManager()->FocusSteamBrowserInstance(this);
+	return true;
+}
+
+bool C_SteamBrowserInstance::Select()
+{
+	return g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
+}
+
+bool C_SteamBrowserInstance::Deselect()
+{
+	return g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(null);
+}
+
+void C_SteamBrowserInstance::Close()
+{
+	g_pAnarchyManager->GetSteamBrowserManager()->DestroySteamBrowserInstance(this);
+}
+
+void C_SteamBrowserInstance::SetUrl(std::string url)
+{
+	steamapicontext->SteamHTMLSurface()->LoadURL(m_unHandle, url.c_str(), "");
 }
 
 void C_SteamBrowserInstance::BrowserInstanceStartRequest(HTML_StartRequest_t *pCmd)
 {
+//	if (m_unHandle != pCmd->unBrowserHandle)
+	//{
+		//C_SteamBrowserInstance* pExists = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
+	//	if ( !pExists )
+//		{
+//		steamapicontext->SteamHTMLSurface()->AllowStartRequest(pCmd->unBrowserHandle, false);
+		//steamapicontext->SteamHTMLSurface()->RemoveBrowser(pCmd->unBrowserHandle);
+//		return;
+//	}
+
+	//DevMsg("Start Request Detected By %s\n", m_id.c_str());
+	//C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
+
 	bool bRes = OnStartRequest(pCmd->pchURL, pCmd->pchTarget, pCmd->pchPostData, pCmd->bIsRedirect);
 
-	steamapicontext->SteamHTMLSurface()->AllowStartRequest(m_unBrowserHandle, bRes);
+	steamapicontext->SteamHTMLSurface()->AllowStartRequest(pCmd->unBrowserHandle, bRes);
 }
 
 //-----------------------------------------------------------------------------
@@ -120,8 +271,10 @@ void C_SteamBrowserInstance::BrowserInstanceStartRequest(HTML_StartRequest_t *pC
 //-----------------------------------------------------------------------------
 bool C_SteamBrowserInstance::OnStartRequest(const char *url, const char *target, const char *pchPostData, bool bIsRedirect)
 {
-	if (!url || !Q_stricmp(url, "about:blank"))
-		return true; // this is just webkit loading a new frames contents inside an existing page
+	return true;
+
+//	if (!url || !Q_stricmp(url, "about:blank"))
+//		return true; // this is just webkit loading a new frames contents inside an existing page
 
 	//HideFindDialog();
 	// see if we have a custom handler for this
@@ -172,9 +325,10 @@ bool C_SteamBrowserInstance::OnStartRequest(const char *url, const char *target,
 	}
 	*/
 
-	DevMsg("SteamworksBrowser: OnStartRequest - %s\n", url);
+//	DevMsg("SteamworksBrowser: OnStartRequest - %s\n", url);
+	
 
-	return true;
+	//return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -182,6 +336,11 @@ bool C_SteamBrowserInstance::OnStartRequest(const char *url, const char *target,
 //-----------------------------------------------------------------------------
 void C_SteamBrowserInstance::BrowserInstanceFinishedRequest(HTML_FinishedRequest_t *pCmd)
 {
+	if (m_unHandle != pCmd->unBrowserHandle)
+		return;
+
+	//C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
+
 	/*
 	PostActionSignal(new KeyValues("OnFinishRequest", "url", pCmd->pchURL));
 	if (pCmd->pchPageTitle && pCmd->pchPageTitle[0])
@@ -199,7 +358,7 @@ void C_SteamBrowserInstance::OnFinishRequest(const char *url, const char *pageTi
 	if (!url || !Q_stricmp(url, "about:blank"))
 		return;
 
-	DevMsg("Request finished!!\n");
+	//DevMsg("Request finished!!\n");
 	//	steamapicontext->SteamHTMLSurface()->
 	//	m_unBrowserHandle
 }
@@ -209,6 +368,9 @@ void C_SteamBrowserInstance::OnFinishRequest(const char *url, const char *pageTi
 //-----------------------------------------------------------------------------
 void C_SteamBrowserInstance::BrowserInstanceNeedsPaint(HTML_NeedsPaint_t *pCallback)
 {
+	if (m_unHandle != pCallback->unBrowserHandle)
+		return;
+
 	/*
 	int tw = 0, tt = 0;
 	if ( m_iHTMLTextureID != 0 )
@@ -250,7 +412,7 @@ void C_SteamBrowserInstance::BrowserInstanceNeedsPaint(HTML_NeedsPaint_t *pCallb
 	// need a paint next time
 	Repaint();
 	*/
-
+	//C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCallback->unBrowserHandle);
 	OnNeedsPaint(pCallback->pBGRA, pCallback->unWide, pCallback->unTall, 4);
 }
 
@@ -258,10 +420,10 @@ void C_SteamBrowserInstance::OnNeedsPaint(const void* data, unsigned int width, 
 {
 	//DevMsg("Needs paint bra\n");
 	
-	m_bIsDirty = true;
-
 	if (!m_bReadyForNextFrame || m_bCopyingFrame)
 		return;
+
+	m_bIsDirty = true;
 
 	m_bReadyForNextFrame = false;
 	m_bReadyToCopyFrame = false;
@@ -292,11 +454,117 @@ void C_SteamBrowserInstance::OnNeedsPaint(const void* data, unsigned int width, 
 	//this->CopyLastFrame()
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: container class for any external popup windows the browser requests
+//-----------------------------------------------------------------------------
+class HTMLPopup : public vgui::Frame
+{
+	DECLARE_CLASS_SIMPLE(HTMLPopup, vgui::Frame);
+	class PopupHTML : public vgui::HTML
+	{
+		DECLARE_CLASS_SIMPLE(PopupHTML, vgui::HTML);
+	public:
+		PopupHTML(Frame *parent, const char *pchName, bool allowJavaScript, bool bPopupWindow) : HTML(parent, pchName, allowJavaScript, bPopupWindow) { m_pParent = parent; }
+
+		virtual void OnSetHTMLTitle(const char *pchTitle)
+		{
+			BaseClass::OnSetHTMLTitle(pchTitle);
+			m_pParent->SetTitle(pchTitle, true);
+		}
+
+	private:
+		Frame *m_pParent;
+	};
+public:
+	HTMLPopup(Panel *parent, const char *pchURL, const char *pchTitle) : Frame(NULL, "HtmlPopup", true)
+	{
+		m_pHTML = new PopupHTML(this, "htmlpopupchild", true, true);
+		m_pHTML->OpenURL(pchURL, NULL, false);
+		SetTitle(pchTitle, true);
+	}
+
+	~HTMLPopup()
+	{
+	}
+
+	enum
+	{
+		vert_inset = 40,
+		horiz_inset = 6
+	};
+
+	void PerformLayout()
+	{
+		BaseClass::PerformLayout();
+		int wide, tall;
+		GetSize(wide, tall);
+		m_pHTML->SetPos(horiz_inset, vert_inset);
+		m_pHTML->SetSize(wide - horiz_inset * 2, tall - vert_inset * 2);
+	}
+
+	void SetBounds(int x, int y, int wide, int tall)
+	{
+		BaseClass::SetBounds(x, y, wide + horiz_inset * 2, tall + vert_inset * 2);
+	}
+
+	MESSAGE_FUNC(OnCloseWindow, "OnCloseWindow")
+	{
+		Close();
+	}
+private:
+	PopupHTML *m_pHTML;
+};
+
+//#include "ienginevgui.h"
+//#include "c_inputslate.h"
+void C_SteamBrowserInstance::BrowserPopupHTMLWindow(HTML_NewWindow_t *pCmd)
+{
+	if (pCmd->unBrowserHandle != m_unHandle)
+		return;
+
+	std::string uri = pCmd->pchURL;
+	this->SetUrl(uri);
+	steamapicontext->SteamHTMLSurface()->RemoveBrowser(pCmd->unNewWindow_BrowserHandle);
+
+
+	// if this URL is allowed, just change US to it (as long as we are not the HUD)
+
+	//DevMsg("flag for: \n");
+	return;
+//	if (pCmd->unBrowserHandle != m_unHandle)
+	//	return;
+	
+	/*
+	vgui::Panel* panel = InputSlate->GetPanel();
+	HTMLPopup *p = new HTMLPopup(panel, pCmd->pchURL, "");
+
+	//HTMLPopup(Panel *parent, const char *pchURL, const char *pchTitle)
+	//HTMLPopup *p = new HTMLPopup(enginevgui->GetPanel(PANEL_ROOT), pCmd->pchURL, "");
+
+	int wide = pCmd->unWide;
+	int tall = pCmd->unTall;
+	if (wide == 0 || tall == 0)
+	{
+		wide = 640;// MAX(640, panel->GetWide());
+		tall = 480;// MAX(480, panel->GetTall());
+	}
+
+	p->SetBounds(pCmd->unX, pCmd->unY, wide, tall);
+	p->SetDeleteSelfOnClose(true);
+	if (pCmd->unX == 0 || pCmd->unY == 0)
+		p->MoveToCenterOfScreen();
+	p->Activate();
+	*/
+}
+
 void C_SteamBrowserInstance::OnMouseMove(float x, float y)
 {
+	if (g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance() != this)
+		return;
+
 	int goodX = (1280 * x) / 1;
 	int goodY = (720 * y) / 1;
-	steamapicontext->SteamHTMLSurface()->MouseMove(m_unBrowserHandle, goodX, goodY);
+	steamapicontext->SteamHTMLSurface()->MouseMove(m_unHandle, goodX, goodY);
 }
 
 void C_SteamBrowserInstance::OnMousePressed(vgui::MouseCode code)
@@ -318,7 +586,7 @@ void C_SteamBrowserInstance::OnMousePressed(vgui::MouseCode code)
 			break;
 	}
 
-	steamapicontext->SteamHTMLSurface()->MouseDown(m_unBrowserHandle, goodButton);
+	steamapicontext->SteamHTMLSurface()->MouseDown(m_unHandle, goodButton);
 }
 
 void C_SteamBrowserInstance::OnMouseReleased(vgui::MouseCode code)
@@ -340,12 +608,16 @@ void C_SteamBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 		break;
 	}
 
-	steamapicontext->SteamHTMLSurface()->MouseUp(m_unBrowserHandle, goodButton);
+	steamapicontext->SteamHTMLSurface()->MouseUp(m_unHandle, goodButton);
 }
 
 void C_SteamBrowserInstance::Update()
 {
+	if (!m_unHandle)
+		return;
+
 	//if (m_info->state == 1)
+	//if (m_pLastFrameData)
 		this->OnProxyBind(null);
 }
 
@@ -355,7 +627,7 @@ void C_SteamBrowserInstance::ResizeFrameFromRGB565(const void* pSrc, void* pDst,
 //	C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(uId);
 //	SteamBrowserInstanceInfo_t* info = pSteamBrowserInstance->GetInfo();
 
-	if (!m_pLastFrameData)
+	if (!m_pLastFrameData)	// should be checking psrc or pdest, not the member variable.
 		return;
 	
 	m_bReadyForNextFrame = false;
@@ -568,6 +840,9 @@ void C_SteamBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int wid
 
 void C_SteamBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (!m_unHandle)
+		return;
+
 //	if (m_id == "images")
 //		return;
 
@@ -578,13 +853,31 @@ void C_SteamBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 	DevMsg("WebTab: OnProxyBind\n");
 	*/
 
+	// visiblity test
+	if (m_iLastVisibleFrame < gpGlobals->framecount)
+	{
+		if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
+		else
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisiblePriorityCanvasesCurrentFrame();
+	}
+	m_iLastVisibleFrame = gpGlobals->framecount;
+
 	if (m_iLastRenderedFrame < gpGlobals->framecount)
 	{
-		//if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityCanvas(this))
-		//g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
-
-		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this) && m_bIsDirty)
+		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this) && m_bIsDirty && m_bReadyToCopyFrame)
+		{
+			if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+				DevMsg("Render PRIORITY (STEAM)!\n");
+			else
+				DevMsg("Render STEAM\n");
 			Render();
+		}
+		else
+		{
+			
+			//DevMsg("Don't render STEAM!\n");
+		}
 	}
 }
 
@@ -595,14 +888,18 @@ void C_SteamBrowserInstance::Render()
 	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
 	//	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
 	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
-	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
-	m_pTexture->Download();
+
+	//if (m_bIsDirty && m_bReadyToCopyFrame)	// THIS IS THE ABSOLUTE LATEST THAT A RENDER CALL CAN BE ABORTED WITHOUT FLICKER SIDE-EFFECTS!@@@@@@
+	//{
+		g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
+		m_pTexture->Download();
+	//}
 
 	m_iLastRenderedFrame = gpGlobals->framecount;
 
-//	if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
-//		g_pAnarchyManager->GetCanvasManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
-//	else
+	if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+		g_pAnarchyManager->GetCanvasManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
+	else
 		g_pAnarchyManager->GetCanvasManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 
@@ -616,3 +913,41 @@ C_InputListener* C_SteamBrowserInstance::GetInputListener()
 {
 	return g_pAnarchyManager->GetSteamBrowserManager()->GetInputListener();
 }
+
+C_EmbeddedInstance* C_SteamBrowserInstance::GetParentSelectedEmbeddedInstance()
+{
+	return g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance();
+}
+
+void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	steamapicontext->SteamHTMLSurface()->KeyDown(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
+
+	std::string s_output = this->GetCharTyped(code, bShiftState, bCtrlState, bAltState);
+	if (s_output != "")
+	{
+		char a = s_output.at(0);
+		const char *b = &a;
+
+		wchar_t value;
+		mbtowc(&value, b, 1);
+		steamapicontext->SteamHTMLSurface()->KeyChar(m_unHandle, value, (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
+	}
+}
+
+void C_SteamBrowserInstance::OnKeyCodeReleased(vgui::KeyCode code)
+{
+	steamapicontext->SteamHTMLSurface()->KeyUp(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
+}
+
+/*
+wchar_t C_SteamBrowserInstance::GetTypedChar(vgui::KeyCode code)
+{
+	//wchar_t unichar = L'';
+	//wchar_t wc = g_pInputSystem->ButtonCodeToString(code)[0];
+	//wchar_t unichar = g_pInputSystem->ButtonCodeToString(code);
+	//steamapicontext->SteamHTMLSurface()->KeyChar(m_unHandle, wc, (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
+	//g_pInputSystem->ButtonCodeToVirtualKey(code);
+
+}
+*/

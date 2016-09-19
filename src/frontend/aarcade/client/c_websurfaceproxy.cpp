@@ -1,6 +1,5 @@
 #include "cbase.h"
 #include "c_websurfaceproxy.h"
-#include "c_websurfaceregen.h"
 
 #include <string>
 #include "Filesystem.h"
@@ -14,7 +13,7 @@
 std::map<std::string, std::map<std::string, ITexture*>> CWebSurfaceProxy::s_simpleImages;
 
 //int CWebSurfaceProxy::s_textureCount = 0;
-CWebSurfaceRegen* CWebSurfaceProxy::s_pWebSurfaceRegen = null;
+CCanvasRegen* CWebSurfaceProxy::s_pCanvasRegen = null;
 
 void CWebSurfaceProxy::OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
 {
@@ -30,13 +29,13 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 	DevMsg("WebSurfaceProxy: Constructor\n");
 	m_iState = 0;
 	m_id = "";
-	m_pCurrentWebTab = null;
+	m_pCurrentEmbeddedInstance = null;
 	m_pMaterial = null;
 	m_pCurrentTexture = null;
 	m_pOriginalTexture = null;
 	m_pMaterialTextureVar = null;
 	m_pMaterialDetailBlendFactorVar = null;
-	m_pWebTab = null;
+	m_pEmbeddedInstance = null;
 	m_originalId = "";
 	m_iOriginalAutoCreate = 1;
 	m_originalUrl = "";
@@ -70,7 +69,8 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 		return false;
 	}
 
-	g_pAnarchyManager->GetWebManager()->RegisterProxy(this);
+	//g_pAnarchyManager->GetWebManager()->RegisterProxy(this);
+	g_pAnarchyManager->GetCanvasManager()->RegisterProxy(this);
 
 	m_pMaterialTextureVar = pMaterialVar;
 	m_pOriginalTexture = pMaterialVar->GetTextureValue();
@@ -197,43 +197,60 @@ void CWebSurfaceProxy::Release()
 
 void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 {
+	//C_EmbeddedInstance* pSelectedEmebeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+	C_EmbeddedInstance* pSelectedEmebeddedInstance = null;
+	
+	if (m_pEmbeddedInstance)
+		pSelectedEmebeddedInstance = m_pEmbeddedInstance->GetParentSelectedEmbeddedInstance();
+
+	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(m_pEmbeddedInstance);
+
 	bool bShouldBind = false;
-	if (!m_pWebTab )
+	if (!m_pEmbeddedInstance)
 	{
 		if (m_iState == 0)
 		{
 			if (m_originalId != "")
 			{
 				// does a web tab for this id already exist?
-				C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(m_originalId);
-				if (pWebTab)
+				//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(m_originalId);
+				//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(m_originalId);
+				if (pEmbeddedInstance)
 				{
-					m_pWebTab = pWebTab;
-					m_pCurrentWebTab = m_pWebTab;
+					m_pEmbeddedInstance = pEmbeddedInstance;
+					m_pCurrentEmbeddedInstance = pEmbeddedInstance;
+					g_pAnarchyManager->GetCanvasManager()->SetMaterialEmbeddedInstanceId(m_pMaterial, pEmbeddedInstance->GetId());
 					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 				}
 			}
 
-			if (!m_pWebTab)
+			if (!m_pEmbeddedInstance)
 			{
 				// check if we should create a web tab
 				if (m_iOriginalAutoCreate == 1 && m_iState == 0)
 				{
 					// create a web tab
-					m_pWebTab = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
-					m_pCurrentWebTab = m_pWebTab;
+					//m_pEmbeddedInstance = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
+				//	m_pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->CreateAwesomiumBrowserInstance(m_originalId, m_originalUrl, false);
+					C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+					pSteamBrowserInstance->Init(m_originalId, m_originalUrl);
+
+					m_pEmbeddedInstance = pSteamBrowserInstance;
+					m_pCurrentEmbeddedInstance = m_pEmbeddedInstance;
 					//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
 					m_iState = 1;	// initializing
-				}
+				}  
 			}
 
-			if ( m_pWebTab)
-				g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pWebTab->GetId());
+			if (m_pEmbeddedInstance)
+				g_pAnarchyManager->GetCanvasManager()->SetMaterialEmbeddedInstanceId(m_pMaterial, m_pEmbeddedInstance->GetId());
+				//g_pAnarchyManager->GetWebManager()->SetMaterialWebTabId(m_pMaterial, m_pEmbeddedInstance->GetId());
 		}
 	}
 	else
 	{
-		if (m_pWebTab->GetState() == 2)
+		if (pAwesomiumBrowserInstance && pAwesomiumBrowserInstance->GetState() == 2)
 			m_iState = 2;
 
 		/*
@@ -246,33 +263,32 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		// a regular proxy will need to grab the web tab's texture before it binds
 		if (m_originalSimpleImageChannel == "")
 		{
-			ITexture* pTexture = m_pWebTab->GetTexture();
+			ITexture* pTexture = m_pEmbeddedInstance->GetTexture();
 			if (pTexture)
 			{
 				m_pMaterialTextureVar->SetTextureValue(pTexture);
 				//			m_iState = 2;
 
-				if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pWebTab != g_pAnarchyManager->GetWebManager()->GetSelectedWebTab()))
+				if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !pSelectedEmebeddedInstance || !g_pAnarchyManager->GetInputManager()->GetInputMode() || m_pEmbeddedInstance != pSelectedEmebeddedInstance))
 					m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 				else if (m_pMaterialDetailBlendFactorVar)
 					m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
 
-				m_pWebTab->OnProxyBind(pC_BaseEntity);
+				m_pEmbeddedInstance->OnProxyBind(pC_BaseEntity);
 			}
 		}
 		else
 		{
 		//	if (m_pMaterialDetailBlendFactorVar && pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity )
-			if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !g_pAnarchyManager->GetWebManager()->GetSelectedWebTab() || !g_pAnarchyManager->GetInputManager()->GetInputMode()))
+			if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !pSelectedEmebeddedInstance || !g_pAnarchyManager->GetInputManager()->GetInputMode()))
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 			else if (m_pMaterialDetailBlendFactorVar)
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
-
+			/*
 			C_BaseEntity* pSelectedEntity = g_pAnarchyManager->GetSelectedEntity();
-			C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
-			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen" && pSelectedWebTab)
+			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen" && pSelectedEmebeddedInstance)
 			{
-				ITexture* pTexture = pSelectedWebTab->GetTexture();
+				ITexture* pTexture = pSelectedEmebeddedInstance->GetTexture();
 				if (pTexture)
 					m_pMaterialTextureVar->SetTextureValue(pTexture);	// no need to increment reference, because the selected web tab is always priority
 				else
@@ -280,8 +296,8 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					DevMsg("ERROR: Web tab has no texture!\n");
 					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 				}
-			}
-			else
+			}else*/
+			if(true)
 			{
 				// if a texture exists for this shortcut's item's id for this channel, then we're done already.
 				// otherwise, we have to request the web tab to render us, which will be ignored 90% of the time, but thats OK.
@@ -301,7 +317,21 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 							{
 								// we have found our texture.  swap it in and we're done.
 								if (it2->second)	// only use it if it's non-null
-									m_pMaterialTextureVar->SetTextureValue(it2->second);
+								{
+									if (m_originalSimpleImageChannel == "screen")
+									{
+										C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
+										if (testerInstance && testerInstance->GetTexture())
+										{
+											m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
+											testerInstance->Update();
+										}
+										else
+											m_pMaterialTextureVar->SetTextureValue(it2->second);
+									}
+									else
+										m_pMaterialTextureVar->SetTextureValue(it2->second);
+								}
 								else
 									m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 
@@ -311,7 +341,10 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 
 						if (!bTextureExists)
 						{
-							if (m_pWebTab->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
+							C_AwesomiumBrowserInstance* pImagesBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("images");
+							//if (m_pEmbeddedInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
+							//if (pAwesomiumBrowserInstance && pAwesomiumBrowserInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
+							if (pImagesBrowserInstance && pImagesBrowserInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
 							{
 								// If the request was accepted, then we need to get rdy to get the result.
 								s_simpleImages[m_originalSimpleImageChannel][itemId] = null;
@@ -326,20 +359,20 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		}
 	}
 
-	if (!m_pWebTab)
+	if (!m_pEmbeddedInstance)
 	{
-		C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
-		if (pSelectedWebTab)
+		//C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
+		if (pSelectedEmebeddedInstance)
 		{
-			ITexture* pSelectedTexture = pSelectedWebTab->GetTexture();
+			ITexture* pSelectedTexture = pSelectedEmebeddedInstance->GetTexture();
 			m_pMaterialTextureVar->SetTextureValue(pSelectedTexture);
 		}
 	}
-
+	
 	// even if we didn't find a new web tab this bind, continue acting as if the old one is still active.
-	if (m_pCurrentWebTab && m_pCurrentWebTab != m_pWebTab)
+	if (m_pCurrentEmbeddedInstance && m_pCurrentEmbeddedInstance != m_pEmbeddedInstance)
 	{
-		m_pCurrentWebTab->OnProxyBind(pC_BaseEntity);
+		m_pCurrentEmbeddedInstance->OnProxyBind(pC_BaseEntity);
 	}
 }
 	//DevMsg("WebSurfaceProxy: OnBind\n");

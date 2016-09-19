@@ -3,6 +3,7 @@ class IInputSlate
 	public:
 		virtual void		Create(vgui::VPANEL parent) = 0;
 		virtual void		Destroy( void ) = 0;
+		virtual vgui::Panel*		GetPanel() = 0;
 };
  
 extern IInputSlate* InputSlate;
@@ -38,6 +39,7 @@ namespace vgui
 	//	static IMaterial* s_pMaterial;
 
 		void OnTick();
+		void SelfDestruct();
 		//void PaintBackground();
 
 		void OnCursorMoved(int x, int y);
@@ -52,6 +54,8 @@ namespace vgui
 		void OnKeyCodeReleased(KeyCode code);
 
 		void SetFullscreenMode(bool bFullscreenMode);
+
+		vgui::Panel* GetPanel();
 
 	private:
 		bool m_bMainMenu;

@@ -3,7 +3,7 @@
 
 #include <KeyValues.h>
 #include "c_canvasmanager.h"
-#include "c_webmanager.h"
+//#include "c_webmanager.h"
 //#include "c_loadingmanager.h"
 #include "c_libretromanager.h"
 #include "c_steambrowsermanager.h"
@@ -29,11 +29,14 @@ enum aaState
 	AASTATE_AWESOMIUMBROWSERMANAGERHUD = 7,
 	AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT = 8,
 	AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT = 9,
-	AASTATE_LIBRARYMANAGER = 10,
-	AASTATE_MOUNTMANAGER = 11,
-	AASTATE_WORKSHOPMANAGER = 12,
-	AASTATE_INSTANCEMANAGER = 13,
-	AASTATE_RUN = 14
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGES = 10,
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT = 11,
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT = 12,
+	AASTATE_LIBRARYMANAGER = 13,
+	AASTATE_MOUNTMANAGER = 14,
+	AASTATE_WORKSHOPMANAGER = 15,
+	AASTATE_INSTANCEMANAGER = 16,
+	AASTATE_RUN = 17
 };
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
@@ -74,6 +77,7 @@ public:
 	bool IsPaused() { return m_bPaused; }
 	
 	//void Run();
+	void RunAArcade();	// initializes AArcade's loading of libraries and stuff.
 
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void AnarchyStartup();
@@ -86,7 +90,7 @@ public:
 	//void OnLoadingManagerReady();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
-	bool DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl = "");
+	bool DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl = "", bool bCloseInstance = true);
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
 
@@ -99,11 +103,12 @@ public:
 	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 
 	// accessors
+	bool IsInitialized() { return m_bInitialized; }
 	aaState GetState() { return m_state; }
 	std::string GetInstanceId() { return m_instanceId; }
 	std::string GetNextInstanceId() { return m_nextInstanceId; }
 	C_InputManager* GetInputManager() { return m_pInputManager; }
-	C_WebManager* GetWebManager() { return m_pWebManager; }
+	//C_WebManager* GetWebManager() { return m_pWebManager; }
 	//C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
 	C_CanvasManager* GetCanvasManager() { return m_pCanvasManager; }
 	C_SteamBrowserManager* GetSteamBrowserManager() { return m_pSteamBrowserManager; }
@@ -117,10 +122,12 @@ public:
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 
 	// mutators
+	void SetInitialized(bool bValue) { m_bInitialized = bValue; }
 	void SetState(aaState state) { m_state = state; }
 	void IncrementState();
 	
 private:
+	bool m_bInitialized;
 	bool m_bIncrementState;
 	aaState m_state;
 	bool m_bPaused;
@@ -131,7 +138,7 @@ private:
 	std::string m_lastGeneratedChars;
 
 	C_CanvasManager* m_pCanvasManager;
-	C_WebManager* m_pWebManager;
+	//C_WebManager* m_pWebManager;
 	//C_LoadingManager* m_pLoadingManager;
 	C_LibretroManager* m_pLibretroManager;
 	C_SteamBrowserManager* m_pSteamBrowserManager;

@@ -23,7 +23,6 @@ long CInputSlate::m_fPreviousTime = 0;
 CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
 	SetParent( parent );
-
 	// automatically pin the input slate open if it was just opened a moment ago
 	long currentTime = system()->GetTimeMillis();
 	if (m_fPreviousTime > 0 && currentTime - m_fPreviousTime < 200)
@@ -40,8 +39,10 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	SetKeyBoardInputEnabled( true );
 	SetMouseInputEnabled( true );
 
+	m_pCanvasTexture = null;
 	m_bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
-	m_pCanvasTexture = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetTexture();//g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture();
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+		m_pCanvasTexture = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetTexture();//g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture();
 
 	SetProportional( false );
 	SetTitleBarVisible( false );
@@ -64,25 +65,32 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pPanel->SetVisible(false);
 	}
 
-	if (m_pCanvasTexture)
+	//if (m_pCanvasTexture)
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
 	{
 		m_pMaterial = g_pMaterialSystem->FindMaterial("vgui/activecanvas", TEXTURE_GROUP_VGUI);
+		DevMsg("Found 1: %i\n", m_pMaterial->IsErrorMaterial());
 
 		bool found;
 		IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
-		if (!pMaterialVar)
+		if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
 			DevMsg("ERROR: Material not found!!\n");
+
 		
 		m_pOriginalTexture = pMaterialVar->GetTextureValue();
 
-		pMaterialVar->SetTextureValue(m_pCanvasTexture);
+		if (m_pCanvasTexture )
+			pMaterialVar->SetTextureValue(m_pCanvasTexture);
 
-		ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");
-		pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
-		pImagePanel->SetShouldScaleImage(true);
-		pImagePanel->SetSize(GetWide(), GetTall());
-		//pImagePanel->SetAutoResize() //pin
-		pImagePanel->SetImage("activecanvas");
+		if (g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") != g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+		{
+			ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");
+			pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+			pImagePanel->SetShouldScaleImage(true);
+			pImagePanel->SetSize(GetWide(), GetTall());
+			//pImagePanel->SetAutoResize() //pin
+			pImagePanel->SetImage("activecanvas");
+		}
 		
 		ITexture* pTexture = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->GetTexture();
 		ImagePanel* pHudImagePanel = new ImagePanel(this, "hud_canvas_panel");
@@ -169,6 +177,21 @@ void CInputSlate::OnTick()
 }
 */
 
+void CInputSlate::SelfDestruct()
+{
+	bool found;
+	IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
+	if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
+		DevMsg("ERROR: Material not found 22!!\n");
+	else
+		pMaterialVar->SetTextureValue(m_pOriginalTexture);
+}
+
+vgui::Panel* CInputSlate::GetPanel()
+{
+	return this;
+}
+
 void CInputSlate::OnTick()
 {
 	if (g_pAnarchyManager->IsPaused())
@@ -210,8 +233,10 @@ void CInputSlate::OnMouseWheeled(int delta)
 {
 	if (g_pAnarchyManager->IsPaused())
 		return;
-	
-	g_pAnarchyManager->GetWebManager()->OnMouseWheel(delta);
+
+	DevMsg("Disbaled for testing!\n");
+	return;
+//	g_pAnarchyManager->GetWebManager()->OnMouseWheel(delta);
 }
 
 void CInputSlate::OnCursorMoved(int x, int y)
@@ -422,6 +447,11 @@ public:
 		InputSlate = new CInputSlate(parent);
 	}
 
+	vgui::Panel* GetPanel()
+	{
+		return InputSlate->GetPanel();
+	}
+
 	void SetFullscreenMode(bool bFullscreenMode)
 	{
 		InputSlate->SetFullscreenMode(bFullscreenMode);
@@ -432,6 +462,7 @@ public:
 		if (InputSlate)
 		{
 			InputSlate->SetParent((vgui::Panel *)NULL);
+			InputSlate->SelfDestruct();
 			delete InputSlate;
 		}
 	}

@@ -33,7 +33,7 @@ class LoadListener : public WebViewListener::Load
 {
 	void OnBeginLoadingFrame(WebView* caller, int64 frame_id, bool is_main_frame, const WebURL& url, bool is_error_page) {};
 	void OnFailLoadingFrame(WebView* caller, int64 frame_id, bool is_main_frame, const WebURL& url, int error_code, const WebString& error_desc) {};
-	void OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is_main_frame, const WebURL& url) {};
+	void OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is_main_frame, const WebURL& url);
 	void OnDocumentReady(WebView* caller, const WebURL& url);
 };
 

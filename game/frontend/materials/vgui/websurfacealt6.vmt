@@ -1,7 +1,7 @@
 "VertexLitGeneric"
 {
-	"$basetexture" "vgui/websurface"
-	"$detail" "websurface_hud"
+	"$basetexture" "vgui/canvas"
+	"$detail" "canvas_hud"
 	"$detailblendmode" 2
 	"$detailscale" 1
 	"$detailblendfactor" 1

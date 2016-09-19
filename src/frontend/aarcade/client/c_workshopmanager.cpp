@@ -65,6 +65,8 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 		
 //		m_details
 
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
 		unsigned int previousNum = (m_uPageNum - 1) * 50;
 
 		unsigned int i;
@@ -82,7 +84,7 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 				///*
 				std::string num = VarArgs("%u", i + previousNum + 1);
 				std::string max = VarArgs("%u", pResult->m_unTotalMatchingResults);
-				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "0", max, num);
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "0", max, num);
 //				g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Fetching Workshop Subscriptions", "workfetch", "", "", "");
 				//*/
 				
@@ -174,9 +176,10 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 
 		if ((iStateFlags & k_EItemStateLegacyItem))
 		{
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 			bIsLegacy = true;
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "+");
-			g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "+");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+");
 			// mount legacy
 			//this->MountNextWorkshop();
 			//return;
@@ -298,7 +301,8 @@ void C_WorkshopManager::OnMountWorkshopSucceed()
 	{
 		// DON'T CALL THIS UNTIL AFTER MAPS ARE LOADED TOO!! (only items have been loaded so far)
 		// wellll, maybe its OK to to call it now.  maps should be loaded LAST, after everything else is already in.
-		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+", "mountNextWorkshopCallback");
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+", "mountNextWorkshopCallback");
 	}
 	else
 	{

@@ -139,9 +139,9 @@ void C_AwesomiumBrowserManager::RunEmbeddedAwesomiumBrowser()
 	DevMsg("Run embedded awesomium test!\n");
 
 	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", false);
-
+	pAwesomiumBrowserInstance->Focus();
 	// tell the input manager that the steam browser instance is active
-	//g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pAwesomiumBrowserInstance);	// including an embedded instance in the activate input mode call overrides this
+	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pAwesomiumBrowserInstance);	// including an embedded instance in the activate input mode call overrides this
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pAwesomiumBrowserInstance);
 
 //	C_InputListenerAwesomiumBrowser* pListener = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetInputListener();
@@ -212,13 +212,28 @@ C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInsta
 		return null;
 }
 
+C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInstance(Awesomium::WebView* pWebView)
+{
+	// iterate over all web tabs and call their destructors
+	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
+	{
+		if (it->second->GetWebView() == pWebView)
+			return it->second;
+	}
+
+	return null;
+}
+
 void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 {
 	unsigned int width = 1280;
 	unsigned int height = 720;
-//	if (id == "images")
-//		pWebView->Resize(512, 512);
-//	else
+
+	unsigned int imageWidth = 512;
+	unsigned int imageHeight = 512;
+	if (id == "images")
+		pWebView->Resize(imageWidth, imageHeight);
+	else
 		pWebView->Resize(width, height);
 
 	pWebView->set_load_listener(m_pLoadListener);
@@ -388,7 +403,9 @@ void C_AwesomiumBrowserManager::OnCreateWebViewDocumentReady(WebView* pWebView, 
 		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
 		DevMsg("Loading initial URL: %s\n", uri.c_str());
 
-		if (id == "hud")
+		if (id == "hud" )	// is this too early??
+			g_pAnarchyManager->IncrementState();
+		else if (id == "images" && AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT)
 			g_pAnarchyManager->IncrementState();
 	}
 }
@@ -412,6 +429,7 @@ void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std
 
 		//	if (g_pAnarchyManager->GetWebManager()->GetHudWebTab() == pWebTab)	// FIXME: THIS IS POSSIBLY A RACE CONDITION.  IF AWESOMIUM WORKS SUPER FAST, THEN THIS WILL ALWAYS BE FALSE. This is what causes the web tab on the main menu to be blank?????
 		//g_pAnarchyManager->GetWebManager()->OnHudWebTabReady();
+//		g_pAnarchyManager->IncrementState();
 
 		std::string initialURL = pBrowserInstance->GetInitialURL();
 		std::string uri = (initialURL == "") ? "asset://ui/blank.html" : initialURL;
@@ -459,14 +477,27 @@ void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std
 
 void C_AwesomiumBrowserManager::Update()
 {
-	if (m_pWebCore )
+	if (m_pWebCore)
 		m_pWebCore->Update();
-
+	/*
 	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
 	{
 		C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = it->second;
 		pAwesomiumBrowserInstance->Update();
 	}
+	*/
+
+	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
+	{
+		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(it->second))
+			it->second->Update();
+	}
+
+//	if (m_pSelectedAwesomiumBrowserInstance)	// don't need
+	//	m_pSelectedAwesomiumBrowserInstance->Update();
+
+
+	
 
 	//DevMsg("SteamBrowserManager: Update\n");
 	//info->state = state;

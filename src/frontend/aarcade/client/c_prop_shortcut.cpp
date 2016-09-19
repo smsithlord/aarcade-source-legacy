@@ -11,6 +11,8 @@
 //#include <cassert>
 //#include <string>
 
+#include "c_anarchymanager.h"
+
 #include <KeyValues.h>
 #include "Filesystem.h"
 
@@ -76,4 +78,42 @@ void C_PropShortcutEntity::Spawn()
 std::string C_PropShortcutEntity::GetItemId()
 {
 	return std::string(m_itemId);
+}
+
+void C_PropShortcutEntity::GetEmbeddedInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
+{
+	// DETECT DYNAMIC TEXTURES
+	const model_t* model = this->GetModel();
+
+	IMaterial* pMaterials[1024];
+	for (int x = 0; x < 1024; x++)
+		pMaterials[x] = NULL;
+
+	modelinfo->GetModelMaterials(model, 1024, &pMaterials[0]);
+
+	//auto it;
+	std::vector<C_EmbeddedInstance*>::iterator it;
+	IMaterial* pMaterial;
+	C_EmbeddedInstance* pEmbeddedInstance;
+	for (int x = 0; x < 1024; x++)
+	{
+		if (pMaterials[x] && pMaterials[x]->HasProxy())
+		{
+			pMaterial = pMaterials[x];
+			pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(pMaterial);
+
+			if (pEmbeddedInstance)
+			{
+				// make sure it isn't already on the list
+				it = std::find(embeddedInstances.begin(), embeddedInstances.end(), pEmbeddedInstance);
+				if (it == embeddedInstances.end())
+					embeddedInstances.push_back(pEmbeddedInstance);
+			}
+		}
+		//	Material: vgui/websurfacealt2
+		//	Material: vgui/websurfacealt
+		//	Material: vgui/websurfacealt5
+		//	Material: vgui/websurfacealt5
+		//	Material: vgui/websurfacealt7
+	}
 }

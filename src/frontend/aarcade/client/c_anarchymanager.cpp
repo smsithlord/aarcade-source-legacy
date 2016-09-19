@@ -22,7 +22,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_bIncrementState = false;
 	m_bPaused = false;
 	m_pCanvasManager = null;
-	m_pWebManager = null;
+	//m_pWebManager = null;
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
 	m_pSteamBrowserManager = null;
@@ -54,11 +54,13 @@ void C_AnarchyManager::Shutdown()
 {
 	DevMsg("AnarchyManager: Shutdown\n");
 
+	/*
 	if (m_pWebManager)
 	{
 		delete m_pWebManager;
 		m_pWebManager = null;
 	}
+	*/
 
 //	delete m_pLoadingManager;
 	//m_pLoadingManager = null;
@@ -143,11 +145,13 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 	if (pEntity)
 		this->DeselectEntity(pEntity);
 
+	/*
 	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
 	if (pWebTab)
 		m_pWebManager->DeselectWebTab(pWebTab);
 
 	m_pWebManager->LevelShutdownPreEntity();
+	*/
 }
 
 void C_AnarchyManager::LevelShutdownPostEntity()
@@ -260,6 +264,18 @@ void C_AnarchyManager::Update(float frametime)
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGES;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT:
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT:
 				m_state = AASTATE_RUN;
 				break;
 		}
@@ -273,6 +289,10 @@ void C_AnarchyManager::Update(float frametime)
 
 			//DevMsg("Float: %f\n", frametime);	// deltatime
 			//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
+
+			if (m_pCanvasManager)
+				m_pCanvasManager->Update();
+
 			if (m_pLibretroManager)
 				m_pLibretroManager->Update();
 
@@ -315,21 +335,87 @@ void C_AnarchyManager::Update(float frametime)
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERWAIT:
+			if (m_pCanvasManager)
+				m_pCanvasManager->Update();
+
 			m_pAwesomiumBrowserManager->Update();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUD:
-			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/welcome.html", true);	// defaults to asset://ui/blank.html
+			//m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/startup.html", true);	// defaults to asset://ui/blank.html
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/blank.html", true);
 			g_pAnarchyManager->IncrementState();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT:
+			if (m_pCanvasManager)
+				m_pCanvasManager->Update();
+
 			m_pAwesomiumBrowserManager->Update();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
 			DevMsg("Finished initing HUD.\n");
 			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("images", "asset://ui/imageLoader.html", true);	// defaults to asset://ui/blank.html
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT:
+			if (m_pCanvasManager)
+				m_pCanvasManager->Update();
+
+			m_pAwesomiumBrowserManager->Update();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT:
+			DevMsg("Finished initing IMAGES.\n");
+			m_pInstanceManager = new C_InstanceManager();
+			m_pMetaverseManager = new C_MetaverseManager();
+			m_pInputManager = new C_InputManager();
+
+			/*
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+			//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
+			
+
+			// Now start loading stuff in...
+			//C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
+			//C_EmbeddedInstance* pEmbeddedInstance = m_p
+			m_pAwesomiumBrowserManager->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+			m_pInputManager->ActivateInputMode(true, true, pHudBrowserInstance);
+			//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+
+			unsigned int uCount;
+			std::string num;
+
+			// And continue starting up
+			uCount = m_pMetaverseManager->LoadAllLocalTypes();
+			num = VarArgs("%u", uCount);
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+
+			//= m_pMetaverseManager->LoadAllLocalTypes();
+			//std::string num = VarArgs("%u", uItemCount);
+			//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+
+			uCount = m_pMetaverseManager->LoadAllLocalModels();
+			num = VarArgs("%u", uCount);
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
+
+			//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
+
+			// load ALL local apps
+			KeyValues* app = m_pMetaverseManager->LoadFirstLocalApp("MOD");
+			if (app)
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
+			else
+				this->OnLoadAllLocalAppsComplete();
+			*/
+
+			this->IncrementState();
 			break;
 
 		//case AASTATE_WEBMANAGER:
@@ -363,42 +449,49 @@ void C_AnarchyManager::Update(float frametime)
 #include "ienginevgui.h"
 bool C_AnarchyManager::HandleUiToggle()
 {
-	if (m_pSteamBrowserManager)
-	{
-		C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->GetSelectedSteamBrowserInstance();
-		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
-		{
-			m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
-			return true;
-		}
-	}
-
-	if (m_pLibretroManager)
-	{
-		C_LibretroInstance* pInstance = m_pLibretroManager->GetSelectedLibretroInstance();
-		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
-		{
-			m_pLibretroManager->DestroyLibretroInstance(pInstance);
-			return true;
-		}
-	}
-
-	if (m_pAwesomiumBrowserManager)
-	{
-		C_AwesomiumBrowserInstance* pInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
-		//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
-		{
-			m_pAwesomiumBrowserManager->DestroyAwesomiumBrowserInstance(pInstance);
-			return true;
-		}
-	}
-	/*
 	// handle escape if in pause mode (ignore it)
 	if (!engine->IsInGame())
+	{
+		// GOOD MAIN MENU EMBEDDED APP ESCAPE BINDS AS OF 9/13/2016
+
+		if (m_pSteamBrowserManager)
+		{
+			C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->GetSelectedSteamBrowserInstance();
+			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			{
+				m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
+				m_pInputManager->SetEmbeddedInstance(null);
+				return true;
+			}
+		}
+
+		if (m_pLibretroManager)
+		{
+			C_LibretroInstance* pInstance = m_pLibretroManager->GetSelectedLibretroInstance();
+			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			{
+				m_pLibretroManager->DestroyLibretroInstance(pInstance);
+				m_pInputManager->SetEmbeddedInstance(null);
+				return true;
+			}
+		}
+
+		if (m_pAwesomiumBrowserManager)
+		{
+			C_AwesomiumBrowserInstance* pInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
+			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			{
+				m_pAwesomiumBrowserManager->DestroyAwesomiumBrowserInstance(pInstance);
+				m_pInputManager->SetEmbeddedInstance(null);
+				return true;
+			}
+		}
+
 		return false;
+	}
 
 	if (m_bPaused)
 		return true;
@@ -420,17 +513,18 @@ bool C_AnarchyManager::HandleUiToggle()
 		//engine->IsPaused()
 		if (!enginevgui->IsGameUIVisible())
 		{
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+
 			//DevMsg("DISPLAY MAIN MENU\n");
 			if (m_pSelectedEntity)
 				this->DeselectEntity(m_pSelectedEntity, "asset://ui/welcome.html");
 			else
-				m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/welcome.html");
+				pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 
 			m_pInputManager->ActivateInputMode(true, true);
 			return false;
 		}
 	}
-	*/
 
 	return false;
 }
@@ -443,8 +537,16 @@ void C_AnarchyManager::Pause()
 void C_AnarchyManager::Unpause()
 {
 	m_bPaused = false;
-	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+	m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
+//	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 	m_pInputManager->DeactivateInputMode(true);
+}
+
+void C_AnarchyManager::RunAArcade()
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
+	pHudBrowserInstance->SetUrl("asset://ui/startup.html");
 }
 
 void C_AnarchyManager::PostRender()
@@ -698,6 +800,7 @@ void C_AnarchyManager::AnarchyStartup()
 	*/
 }
 
+/*
 void C_AnarchyManager::OnWebManagerReady()
 {
 	C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
@@ -730,6 +833,7 @@ void C_AnarchyManager::OnWebManagerReady()
 		this->OnLoadAllLocalAppsComplete();
 
 }
+*/
 
 void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 {
@@ -812,24 +916,20 @@ std::string encodeURIComponent(const std::string &s)
 
 bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 {
+//	DevMsg("DISABLED FOR TESTING!\n");
+//	return true;
+//	/*
 	if (m_pSelectedEntity)
 		DeselectEntity(m_pSelectedEntity);
 
-	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+//	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
 	m_pSelectedEntity = pEntity;
 	AddGlowEffect(pEntity);
 
-	// DETECT DYNAMIC TEXTURES
-	const model_t* model = pEntity->GetModel();//modelinfo->FindOrLoadModel(model);
+	
 
-	IMaterial* pMaterials[1024];
-	for (int x = 0; x < 1024; x++)
-		pMaterials[x] = NULL;
-
-	modelinfo->GetModelMaterials(model, 1024, &pMaterials[0]);
-
-	//pMaterials[x]->ColorModulate(255, 0, 0);
+		//pMaterials[x]->ColorModulate(255, 0, 0);
 	//pMaterials[x]->GetPreviewImage
 
 	std::string itemId;
@@ -837,93 +937,117 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	std::string uri;
 	KeyValues* item;
 	KeyValues* active;
-	C_PropShortcutEntity* pShortcut;
-	C_WebTab* pWebTab;
-	C_WebTab* pSelectedWebTab;
-	IMaterial* pMaterial;
-	for (int x = 0; x < 1024; x++)
+	//C_PropShortcutEntity* pShortcut;
+	//C_WebTab* pWebTab;
+	//C_WebTab* pSelectedWebTab;
+	C_EmbeddedInstance* pEmbeddedInstance;
+	C_EmbeddedInstance* pSelectedEmbeddedInstance;
+
+	C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+	std::vector<C_EmbeddedInstance*> embeddedInstances;
+	pShortcut->GetEmbeddedInstances(embeddedInstances);
+
+	unsigned int i;
+	unsigned int size = embeddedInstances.size();
+	for (i = 0; i < size; i++)
 	{
-		if (pMaterials[x] && pMaterials[x]->HasProxy())
+		pEmbeddedInstance = embeddedInstances[i];
+		bool bImagesAndHandled = false;
+		if (pEmbeddedInstance->GetId() == "images")
 		{
-			pMaterial = pMaterials[x];
-//			bool found;
-	//		IMaterialVar* pMaterialVar = pMaterial->FindVar("simpleimagechannel", &found);
-		//	if (found && !Q_strcmp(pMaterialVar->GetStringValue(), 
-			// FIXME: Add some kind of material variable that could allow us to be skipped? We'll need something like that when WebImages are added.
-			pWebTab = m_pWebManager->FindWebTab(pMaterial);
-			if (pWebTab)
+			pShortcut = dynamic_cast<C_PropShortcutEntity*>(m_pSelectedEntity);
+			if (pShortcut)
 			{
-				// if this is the "images" web tab, we should create a NEW web tab for it (usually) because we don't actually show the iamges web tab.
-				bool bImagesAndHandled = false;
-				if (pWebTab->GetId() == "images")
+				tabTitle = "auto" + pShortcut->GetItemId();
+				pEmbeddedInstance = m_pCanvasManager->FindEmbeddedInstance(tabTitle);// this->GetWebManager()->FindWebTab(tabTitle);
+				if (!pEmbeddedInstance)
 				{
-					pShortcut = dynamic_cast<C_PropShortcutEntity*>(m_pSelectedEntity);
-					if (pShortcut)
+					itemId = pShortcut->GetItemId();
+					item = m_pMetaverseManager->GetLibraryItem(itemId);
+					if (item)
 					{
-						tabTitle = "auto" + pShortcut->GetItemId();
-						pWebTab = this->GetWebManager()->FindWebTab(tabTitle);
-						if (!pWebTab)
-						{
-							itemId = pShortcut->GetItemId();
-							item = m_pMetaverseManager->GetLibraryItem(itemId);
-							if (item)
-							{
-								active = item->FindKey("current");
-								if (!active)
-									active = item->FindKey("local", true);
+						active = item->FindKey("current");
+						if (!active)
+							active = item->FindKey("local", true);
 
-								std::string uri = "asset://ui/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+						/*
+						std::string uri = "asset://ui/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+						WebURL url = WebURL(WSLit(uri.c_str()));
+						*/
 
-								WebURL url = WebURL(WSLit(uri.c_str()));
-//								DevMsg("Parsed is: %s\n", WebStringToCharString(url.spec()));
-								pWebTab = m_pWebManager->CreateWebTab(WebStringToCharString(url.spec()), tabTitle);
-							}
-						}
+						//std::string dumbUrl = "http://smarcade.net/dlcv2/view_youtube.php?id=";
+						//std::string dumbUrl = active->GetString("file");
+						std::string uri = "file://";
+						uri += engine->GetGameDirectory();
+						uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+
+						DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
+
+						C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
+						pSteamBrowserInstance->Init(tabTitle, uri);
+						pEmbeddedInstance = pSteamBrowserInstance;
 					}
 				}
-				else
-				{
-					pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
-					if (pSelectedWebTab)
-						m_pWebManager->DeselectWebTab(pSelectedWebTab);
-				}
-
-				pSelectedWebTab = m_pWebManager->GetSelectedWebTab();
-				if (pSelectedWebTab && pSelectedWebTab != pWebTab)
-				{
-					m_pWebManager->DeselectWebTab(pSelectedWebTab);
-					m_pWebManager->SelectWebTab(pWebTab);
-				}
-				else if ( !pSelectedWebTab )
-					m_pWebManager->SelectWebTab(pWebTab);
-
-				break;
 			}
 		}
-			/*
-			Material: vgui/websurfacealt2
-			Material: vgui/websurfacealt
-			Material: vgui/websurfacealt5
-			Material: vgui/websurfacealt5
-			Material: vgui/websurfacealt7
-			*/
+		else
+		{
+			pSelectedEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();// m_pWebManager->GetSelectedWebTab();
+			if (pSelectedEmbeddedInstance)
+			{
+				pSelectedEmbeddedInstance->Deselect();
+				m_pInputManager->SetEmbeddedInstance(null);
+				//m_pWebManager->DeselectWebTab(pSelectedEmbeddedInstance);
+			}
+		}
+
+		pSelectedEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+		if (pSelectedEmbeddedInstance && pSelectedEmbeddedInstance != pEmbeddedInstance)
+		{
+			//m_pWebManager->DeselectWebTab(pSelectedEmbeddedInstance);
+			pSelectedEmbeddedInstance->Deselect();
+			m_pInputManager->SetEmbeddedInstance(null);
+
+			//m_pWebManager->SelectWebTab(pWebTab);
+			pEmbeddedInstance->Select();
+			m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
+		}
+		else if (!pSelectedEmbeddedInstance)
+		{
+			pEmbeddedInstance->Select();
+			m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
+
+
+
+		}
+		//m_pWebManager->SelectWebTab(pWebTab);
+
+		//break;
 	}
 
-
 	return true;
+	//*/
 }
 
-bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl)
+bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl, bool bCloseInstance)
 {
-	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
-	if (pWebTab)
-	{
-		m_pWebManager->DeselectWebTab(pWebTab);
+	C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	//C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
+	if (pEmbeddedInstance)
+	{	
+		pEmbeddedInstance->Deselect();
+		m_pInputManager->SetEmbeddedInstance(null);
+		//m_pWebManager->DeselectWebTab(pWebTab);
 
 		if (nextUrl != "")
-			m_pWebManager->GetHudWebTab()->SetUrl(nextUrl);
+			pHudBrowserInstance->SetUrl(nextUrl);
 		else
-			m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+
+		// ALWAYS close the selected web tab when de-selecting entities. (this has to be accounted for or changed when the continous play button gets re-enabled!)
+		if ( bCloseInstance)
+			pEmbeddedInstance->Close();
 	}
 
 	RemoveGlowEffect(m_pSelectedEntity);
@@ -943,12 +1067,18 @@ void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 
 void C_AnarchyManager::OnWorkshopManagerReady()
 {
+//	DevMsg("DISABLED FOR TESTING!\n");
+//	return;
+	///*
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	// mount ALL workshops
-	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
-	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
-	m_pWebManager->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
 
 	m_pWorkshopManager->MountFirstWorkshop();
+	//*/
 }
 
 void C_AnarchyManager::OnMountAllWorkshopsComplete()
@@ -1016,17 +1146,23 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 
 void C_AnarchyManager::OnDetectAllMapsComplete()
 {
+	//DevMsg("DISABLED FOR TESTING!\n");
+	//return;
+	///*
 	m_pLibretroManager = new C_LibretroManager();
 
 	if (m_iState < 1)
 	{
 		m_iState = 1;
-		m_pWebManager->GetSelectedWebTab()->SetUrl("asset://ui/welcome.html");
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
+		pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 	}
 	else
 	{
 		DevMsg("Done again!!\n");
 	}
+	//*/
 }
 
 void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters)

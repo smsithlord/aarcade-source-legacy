@@ -95,6 +95,49 @@ void MasterViewListener::OnChangeTargetURL(WebView* caller, const WebURL &url)
 }
 
 // REGULAR
+void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is_main_frame, const WebURL& url)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	std::string urlSpec = WebStringToCharString(url.spec());
+	size_t found = urlSpec.find("startup.html");
+	if (caller == pHudBrowserInstance->GetWebView() && !g_pAnarchyManager->IsInitialized() && found == urlSpec.length() - 12)
+	{
+		// Now start loading stuff in...
+		//C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
+		//C_EmbeddedInstance* pEmbeddedInstance = m_p
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
+		//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+
+		unsigned int uCount;
+		std::string num;
+
+		// And continue starting up
+		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalTypes();
+		num = VarArgs("%u", uCount);
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+
+		//= m_pMetaverseManager->LoadAllLocalTypes();
+		//std::string num = VarArgs("%u", uItemCount);
+		//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
+
+		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalModels();
+		num = VarArgs("%u", uCount);
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
+
+		//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
+
+		// load ALL local apps
+		KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalApp("MOD");
+		if (app)
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
+		else
+			g_pAnarchyManager->OnLoadAllLocalAppsComplete();
+
+		g_pAnarchyManager->SetInitialized(true);
+	}
+}
+
 void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 {
 	DevMsg("LoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
@@ -172,14 +215,21 @@ void ViewListener::OnChangeTargetURL(WebView* caller, const WebURL &url)
 
 void MenuListener::OnShowPopupMenu(WebView *caller, const WebPopupMenuInfo &menu_info)
 {
-	C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
-	C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
-	WebView* pHudWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pHudWebTab);
+//	DevMsg("DISABLED FOR TESTING!\n");
+//	return;
+
+	//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
+	//C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
+	//WebView* pHudWebView = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebView(pHudWebTab);
+
+	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(caller);	// FIXME: This should be a general EmbeddedInstance of any type.
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	WebView* pHudWebView = pHudBrowserInstance->GetWebView();
 
 	DevMsg("Pop menu detected!\n");
 
 	std::vector<std::string> methodArguments;
-	methodArguments.push_back(pWebTab->GetId());
+	methodArguments.push_back(pAwesomiumBrowserInstance->GetId());
 	methodArguments.push_back(VarArgs("%i", menu_info.bounds.x));
 	methodArguments.push_back(VarArgs("%i", menu_info.bounds.y));
 	methodArguments.push_back(VarArgs("%i", menu_info.bounds.width));

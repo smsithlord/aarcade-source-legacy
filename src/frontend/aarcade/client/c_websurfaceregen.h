@@ -4,7 +4,7 @@
 //#include "aa_globals.h"
 #include <string>
 #include "materialsystem/ITexture.h"
-#include "c_webtab.h"
+#include "c_embeddedinstance.h"
 
 class CWebSurfaceRegen : public ITextureRegenerator
 {
@@ -14,10 +14,10 @@ public:
 	void Release();
 
 	// mutators
-	void SetWebTab(C_WebTab* pWebTab) { m_pWebTab = pWebTab; }
+	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
 
 private:
-	C_WebTab* m_pWebTab;
+	C_EmbeddedInstance* m_pEmbeddedInstance;
 };
 
 #endif //WEB_SURFACE_REGEN_H

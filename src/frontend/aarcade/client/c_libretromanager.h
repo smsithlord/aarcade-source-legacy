@@ -21,6 +21,7 @@ public:
 	void OnLibretroInstanceCreated(C_LibretroInstance* pLibretroInstance);
 	C_LibretroInstance* FindLibretroInstance(CSysModule* pModule);
 	C_LibretroInstance* FindLibretroInstance(uint uId);
+	C_LibretroInstance* FindLibretroInstance(std::string id);
 
 	void RunEmbeddedLibretro();
 

@@ -57,6 +57,49 @@ void RunEmbeddedAwesomiumBrowser(const CCommand &args)
 }
 ConCommand run_embedded_awesomium_browser("run_embedded_awesomium_browser", RunEmbeddedAwesomiumBrowser, "Usage: runs embedded apps");
 
+void SetContinuous(const CCommand &args)
+{
+	C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+	if (pEntity)
+	{
+		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+		std::vector<C_EmbeddedInstance*> embeddedInstances;
+		pShortcut->GetEmbeddedInstances(embeddedInstances);
+
+		C_EmbeddedInstance* pEmbeddedInstance;
+		C_EmbeddedInstance* testerInstance;
+		unsigned int i;
+		unsigned int size = embeddedInstances.size();
+		for (i = 0; i < size; i++)
+		{
+			pEmbeddedInstance = embeddedInstances[i];
+			if (pEmbeddedInstance->GetId() == "images")
+			{
+				testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
+				if (testerInstance && testerInstance->GetTexture())
+				{
+					g_pAnarchyManager->DeselectEntity(pEntity, "", false);
+					break; // only put the 1st embedded instance on continous play
+				}
+			}
+		}
+	}
+}
+ConCommand setcontinuous("setcontinuous", SetContinuous, "Usage: sets the selected entity as continuous play.");
+
+void RememberWrapper(const CCommand &args)
+{
+	engine->ClientCmd("setcontinuous\n");
+}
+ConCommand rememberwrapper("-remember", RememberWrapper, "Usage: wrapper for the remember button to mean setcontinous now.");
+
+void RunAArcade(const CCommand &args)
+{
+	g_pAnarchyManager->RunAArcade();
+}
+ConCommand run_aarcade("run_aarcade", RunAArcade, "Usage: runs AArcade");
+
 /*
 void TestFunction2( const CCommand &args )
 {
@@ -93,7 +136,9 @@ ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy 
 void ActivateInputMode(const CCommand &args)
 {
 	//bool fullscreen = (args.ArgC() > 1);
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode();// fullscreen);
+	C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+	if (pSelectedEmbeddedInstance)
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
 }
 ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 
@@ -184,10 +229,19 @@ void SpawnObjects(const CCommand &args)
 	if (instanceId != "")
 	{
 		std::string uri = "asset://ui/spawnItems.html?max=" + std::string(args[1]);
+		/*
 		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
 		g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
 		pHudWebTab->SetUrl(uri);
 		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
+		*/
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+//		g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
+//		pHudWebTab->SetUrl(uri);
+		pHudBrowserInstance->SetUrl(uri);
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
 	}
 
 	//g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();

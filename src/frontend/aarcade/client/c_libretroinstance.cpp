@@ -20,6 +20,7 @@ C_LibretroInstance::C_LibretroInstance()
 	DevMsg("LibretroInstance: Constructor\n");
 	m_pTexture = null;
 	m_iLastRenderedFrame = -1;
+	m_iLastVisibleFrame = -1;
 }
 
 C_LibretroInstance::~C_LibretroInstance()
@@ -27,7 +28,13 @@ C_LibretroInstance::~C_LibretroInstance()
 	DevMsg("LibretroInstance: Destructor\n");
 
 	if (m_pTexture)
+	{
 		m_pTexture->SetTextureRegenerator(null);
+
+		m_pTexture->DecrementReferenceCount();
+		m_pTexture->DeleteIfUnreferenced();
+		m_pTexture = null;
+	}
 }
 
 void C_LibretroInstance::SelfDestruct()
@@ -61,7 +68,14 @@ void C_LibretroInstance::Init(std::string id)
 	//int iWidth = 1920;
 	//int iHeight = 1080;
 
-	m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+	//m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+
+	//if (!m_pTexture)
+
+	if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
+		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+	else
+		m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
 
 	// get the regen and assign it
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
@@ -666,6 +680,31 @@ unsigned MyThread(void *params)
 	delete info;
 
 	return 0;
+}
+
+bool C_LibretroInstance::HasFocus()
+{
+	return (this == g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance());
+}
+
+bool C_LibretroInstance::Focus()
+{
+	return g_pAnarchyManager->GetLibretroManager()->SelectLibretroInstance(this);
+}
+
+bool C_LibretroInstance::Select()
+{
+	return g_pAnarchyManager->GetLibretroManager()->SelectLibretroInstance(this);
+}
+
+bool C_LibretroInstance::Deselect()
+{
+	return g_pAnarchyManager->GetLibretroManager()->SelectLibretroInstance(null);
+}
+
+void C_LibretroInstance::Close()
+{
+	g_pAnarchyManager->GetLibretroManager()->DestroyLibretroInstance(this);
 }
 
 bool C_LibretroInstance::CreateWorkerThread(std::string core)
@@ -1594,12 +1633,26 @@ void C_LibretroInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 	DevMsg("WebTab: OnProxyBind\n");
 	*/
 
+	// visiblity test
+	if (m_iLastVisibleFrame < gpGlobals->framecount)
+	{
+		if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
+		else
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisiblePriorityCanvasesCurrentFrame();
+	}
+	m_iLastVisibleFrame = gpGlobals->framecount;
+
 	if (m_iLastRenderedFrame < gpGlobals->framecount)
 	{
-		//if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityCanvas(this))
-		//g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
+		/*
+		if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
+		else
+			g_pAnarchyManager->GetCanvasManager()->IncrementVisiblePriorityCanvasesCurrentFrame();
+		*/
 
-		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this))
+		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this) && m_info->readytocopyframe)
 			Render();
 	}
 }
@@ -1616,9 +1669,9 @@ void C_LibretroInstance::Render()
 
 	m_iLastRenderedFrame = gpGlobals->framecount;
 
-//	if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
-//		g_pAnarchyManager->GetCanvasManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
-//	else
+	if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+		g_pAnarchyManager->GetCanvasManager()->SetLastPriorityRenderedFrame(gpGlobals->framecount);
+	else
 		g_pAnarchyManager->GetCanvasManager()->SetLastRenderedFrame(gpGlobals->framecount);
 }
 
@@ -1631,4 +1684,9 @@ void C_LibretroInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *
 C_InputListener* C_LibretroInstance::GetInputListener()
 {
 	return g_pAnarchyManager->GetLibretroManager()->GetInputListener();
+}
+
+C_EmbeddedInstance* C_LibretroInstance::GetParentSelectedEmbeddedInstance()
+{
+	return g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
 }

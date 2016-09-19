@@ -1,6 +1,6 @@
 "UnlitGeneric"
 {
-	"$basetexture" "vgui/websurface"
+	"$basetexture" "vgui/canvas"
 }
 
 //"WorldTwoTextureBlend"
