@@ -105,7 +105,9 @@ void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is
 		// Now start loading stuff in...
 		//C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
 		//C_EmbeddedInstance* pEmbeddedInstance = m_p
-		g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+		//g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+		pHudBrowserInstance->Select();
+		pHudBrowserInstance->Focus();
 		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
 		//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
 

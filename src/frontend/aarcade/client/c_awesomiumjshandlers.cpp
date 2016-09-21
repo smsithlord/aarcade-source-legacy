@@ -307,6 +307,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			}
 			else
 			{
+				pHudBrowserInstance->Blur();
+
 				if (!pEmbeddedInstance->HasFocus())
 				{
 					//pEmbeddedInstance->Select();

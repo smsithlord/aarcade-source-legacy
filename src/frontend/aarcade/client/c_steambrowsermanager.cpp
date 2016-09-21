@@ -180,7 +180,8 @@ void C_SteamBrowserManager::RunEmbeddedSteamBrowser()
 {
 	C_SteamBrowserInstance* pSteamBrowserInstance = this->CreateSteamBrowserInstance();
 
-	pSteamBrowserInstance->Init("", "https://www.netflix.com/watch/217258", null);
+//	pSteamBrowserInstance->Init("", "https://www.netflix.com/watch/217258", null);
+	pSteamBrowserInstance->Init("", "http://www.youtube.com/", null);
 
 //	pSteamBrowserInstance->Init("", "file:///C:/Users/Owner/Desktop/wowvr/index.html", null);
 	pSteamBrowserInstance->Focus();

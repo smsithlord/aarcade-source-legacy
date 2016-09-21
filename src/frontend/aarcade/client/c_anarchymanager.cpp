@@ -546,6 +546,7 @@ void C_AnarchyManager::RunAArcade()
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
+//	pHudBrowserInstance->A
 	pHudBrowserInstance->SetUrl("asset://ui/startup.html");
 }
 
@@ -872,7 +873,8 @@ bool C_AnarchyManager::AttemptSelectEntity()
 		if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
 		{
 			//m_pInputManager->SetFullscreenMode(true);
-			m_pInputManager->ActivateInputMode(true);
+			C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+			m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
 		}
 		else
 			return SelectEntity(pEntity);
@@ -952,6 +954,10 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	for (i = 0; i < size; i++)
 	{
 		pEmbeddedInstance = embeddedInstances[i];
+
+		if (pEmbeddedInstance->GetId() == "hud")
+			continue;
+
 		bool bImagesAndHandled = false;
 		if (pEmbeddedInstance->GetId() == "images")
 		{
@@ -1058,6 +1064,7 @@ bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl
 	if (pEmbeddedInstance)
 	{	
 		pEmbeddedInstance->Deselect();
+		//pEmbeddedInstance->Blur();
 		m_pInputManager->SetEmbeddedInstance(null);
 		//m_pWebManager->DeselectWebTab(pWebTab);
 

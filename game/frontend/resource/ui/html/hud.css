@@ -16,6 +16,8 @@ body
 	color: #fff;
 	overflow: hidden;
 	font-size: 20px;
+	/*opacity: 0;*/
+	/*display: hidden;*/
 }
 
 #cursor
@@ -109,6 +111,7 @@ body
 	width: 100%;
 	position: relative;
 	top: -65px;
+	pointer-events: none;
 	-webkit-transition: top 0.3s ease-in-out;
 }
 
@@ -124,6 +127,7 @@ body
 	margin-left: auto;
 	margin-right: auto;
 	height: 60px;
+	pointer-events: all;
 }
 
 .hudHeaderContainerTable
@@ -151,6 +155,7 @@ body
 .hudHeaderContainerRow
 {
 	display: table-row;
+	pointer-events: none;
 }
 
 .hudHeaderContainerCell
@@ -158,6 +163,7 @@ body
 	display: table-cell;
 	vertical-align: top;
 	width: 33%;
+	pointer-events: none;
 }
 
 .hudHeaderButtonContainer
@@ -596,6 +602,11 @@ body
 	/*padding-top: 4px;
 	padding-bottom: 4px;*/
 	text-shadow: 2px 2px 2px #000;
+}
+
+#itemContainer .fieldContainer div:nth-of-type(2) div
+{
+	width: 5%;
 }
 
 #itemContainer .fieldContainer div:nth-of-type(2) select

@@ -47,6 +47,9 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 {
 	DevMsg("AwesomiumBrowserInstance: Destructor\n");
 	
+	if (m_id == "hud")
+		DevMsg("Hud destroyed!\n");
+
 	if (m_pTexture)
 	{
 		m_pTexture->SetTextureRegenerator(null);
@@ -232,8 +235,13 @@ void C_AwesomiumBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 	m_pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
 
-void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
+void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
+	if (m_id == "hud" && !this->HasFocus())
+	{
+		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+		return;
+	}
 	//	DevMsg("Code is %i\n", code);
 	//input()->GetKeyCodeText();
 
@@ -298,17 +306,23 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 	if (IsJoystickCode(code) || !IsKeyCode(code)) return;
 
 	using namespace Awesomium;
-
+	DevMsg("Checkpoint Uno %s\n", m_id.c_str());
 	WebView* pWebView = m_pWebView;
+	DevMsg("Checkpoint Dos\n");
 
 	WebKeyboardEvent pWebKeyboardEvent;
+	DevMsg("Checkpoint Tres\n");
 	pWebKeyboardEvent.type = WebKeyboardEvent::kTypeKeyDown;
-
+	DevMsg("Checkpoint Cuatro\n");
 	pWebKeyboardEvent.modifiers = 0;
 
-	bool shift = (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT));
-	bool ctrl = (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL));
-	bool alt = (vgui::input()->IsKeyDown(KEY_LALT) || vgui::input()->IsKeyDown(KEY_RALT));
+//	bool shift = (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT));
+	//bool ctrl = (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL));
+	//bool alt = (vgui::input()->IsKeyDown(KEY_LALT) || vgui::input()->IsKeyDown(KEY_RALT));
+
+	bool shift = bShiftState;
+	bool ctrl = bCtrlState;
+	bool alt = bAltState;
 
 	/*
 	if (shift)
@@ -942,7 +956,12 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 
 void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code)
 {
-
+	if (m_id == "hud" && !this->HasFocus())
+	{
+		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodeReleased(code);
+		return;
+	}
+	// FIXME: Dont' we need to send a keyup msg to awesomium?? (check the pressed msg to confirm)
 }
 
 void C_AwesomiumBrowserInstance::Update()

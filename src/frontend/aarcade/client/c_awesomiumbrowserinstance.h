@@ -47,7 +47,7 @@ public:
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
-	void OnKeyPressed(vgui::KeyCode code);
+	void OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	void OnKeyReleased(vgui::KeyCode code);
 
 	void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);

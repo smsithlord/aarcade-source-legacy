@@ -93,6 +93,7 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 	if (!m_pEmbeddedInstance)
 	{
 		pHudBrowserInstance->Select();
+		pHudBrowserInstance->Focus();
 		this->SetEmbeddedInstance(pHudBrowserInstance);
 	}
 
@@ -163,7 +164,10 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 	//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
 		//if (pWebManager->GetSelectedWebTab() && !g_pAnarchyManager->GetSelectedEntity())
 		if (m_pEmbeddedInstance && !g_pAnarchyManager->GetSelectedEntity())
+		{
 			m_pEmbeddedInstance->Deselect();
+			m_pEmbeddedInstance->Blur();
+		}
 			//pWebManager->DeselectWebTab(pWebManager->GetSelectedWebTab());
 		
 		if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
@@ -261,7 +265,13 @@ void C_InputManager::MouseRelease(vgui::MouseCode code)
 
 void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
-	if (m_pEmbeddedInstance)
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (pHudBrowserInstance->HasFocus())
+	{
+		C_InputListener* pInputListener = pHudBrowserInstance->GetInputListener();
+		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+	}
+	else if (m_pEmbeddedInstance)
 	{
 		C_InputListener* pInputListener = m_pEmbeddedInstance->GetInputListener();
 		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
@@ -285,6 +295,17 @@ void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool b
 
 void C_InputManager::KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (pHudBrowserInstance->HasFocus())
+	{
+		C_InputListener* pInputListener = pHudBrowserInstance->GetInputListener();
+		pInputListener->OnKeyCodeReleased(code);
+	}
+	else if (m_pEmbeddedInstance)
+	{
+		C_InputListener* pInputListener = m_pEmbeddedInstance->GetInputListener();
+		pInputListener->OnKeyCodeReleased(code);
+	}
 	/*
 	// forward this info to any listeners
 	if (m_pInputListener)

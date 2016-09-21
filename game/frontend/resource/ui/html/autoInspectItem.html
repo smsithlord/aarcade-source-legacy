@@ -53,9 +53,18 @@ function ExtractYouTubeId(trailerURL)
 			var screen = decodeURIComponent(getParameterByName("screen"));
 			var marquee = decodeURIComponent(getParameterByName("marquee"));
 
-			var youTubeId = ExtractYouTubeId(preview);
-			if( !!!youTubeId )
-				youTubeId = ExtractYouTubeId(file);
+      // FIXME: This needs to pass the php all of its known YouTubeIds, so the player can try them all until it finds one that actually works.
+
+			var youTubeIds = [];
+      var youTubeId = ExtractYouTubeId(preview);
+      if( !!youTubeId )
+        youTubeIds.push(youTubeId);
+
+      youTubeId = ExtractYouTubeId(file);
+			if( !!youTubeId )
+				youTubeId = youTubeIds.push(youTubeId);
+
+      youTubeId = youTubeIds[0];  // legacy
 
 			if( !!youTubeId )
 				window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeId + "&autoplay=1";

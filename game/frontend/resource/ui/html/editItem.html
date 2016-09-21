@@ -113,6 +113,46 @@ function getParameterByName(name, url) {
 				fieldContainer.appendChild(fieldValue);
 				itemContainer.appendChild(fieldContainer);
 
+				if( x == "file" || x == "marquee" || x == "screen" )
+				{
+					fieldValue.style.width = "63%";
+
+					var buttonBrowseContainer = document.createElement("div");
+					buttonBrowseContainer.className = "button";
+					buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
+					buttonBrowseContainer.innerHTML = "<center>&#8230;</center>";
+					fieldContainer.appendChild(buttonBrowseContainer);
+
+					var buttonGlobeContainer = document.createElement("div");
+					buttonGlobeContainer.className = "button";
+					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px; padding-top: 0;";
+					buttonGlobeContainer.innerHTML = "<center>&#9818;</center>";
+					fieldContainer.appendChild(buttonGlobeContainer);
+
+					var buttonCurrentContainer = document.createElement("div");
+					buttonCurrentContainer.className = "button";
+					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
+					buttonCurrentContainer.innerHTML = "<center>&#10030;</center>";
+					fieldContainer.appendChild(buttonCurrentContainer);
+				}
+
+				if( x == "preview" || x == "stream" || x == "download" || x == "reference" )
+				{
+					fieldValue.style.width = "69%";
+
+					var buttonGlobeContainer = document.createElement("div");
+					buttonGlobeContainer.className = "button";
+					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
+					buttonGlobeContainer.innerHTML = "<center>&#9818;</center>";
+					fieldContainer.appendChild(buttonGlobeContainer);
+
+					var buttonCurrentContainer = document.createElement("div");
+					buttonCurrentContainer.className = "button";
+					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
+					buttonCurrentContainer.innerHTML = "<center>&#10030;</center>";
+					fieldContainer.appendChild(buttonCurrentContainer);
+				}
+
 				help = fieldHelp[x];
 				if( !!help )
 				{

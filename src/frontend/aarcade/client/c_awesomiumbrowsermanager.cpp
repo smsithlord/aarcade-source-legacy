@@ -140,7 +140,8 @@ void C_AwesomiumBrowserManager::RunEmbeddedAwesomiumBrowser()
 {
 	DevMsg("Run embedded awesomium test!\n");
 
-	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", false);
+//	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", false);
+	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://www.youtube.com/", false);
 	pAwesomiumBrowserInstance->Select();
 	//pAwesomiumBrowserInstance->Focus();
 	// tell the input manager that the steam browser instance is active

@@ -59,7 +59,7 @@ function ArcadeHud()
 			var aarcadeTabLabelElem = document.createElement("div");
 			aarcadeTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
 			aarcadeTabLabelElem.setAttribute("help", "Expand the address bar.");
-			aarcadeTabLabelElem.innerHTML = "Internet";
+			aarcadeTabLabelElem.innerHTML = "AArcade";
 			aarcadeTabLabelElem.addEventListener("click", function()
 			{
 				this.expandAddressMenu();
