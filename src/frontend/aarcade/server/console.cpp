@@ -104,6 +104,8 @@ void SpawnShortcut(const CCommand &args)
 
 	pShortcut->SetSolid(SOLID_VPHYSICS);
 
+	pShortcut->SetModelScale(Q_atof(args[9]), 0);
+
 	IPhysicsObject* pPhysics = pShortcut->VPhysicsGetObject();
 	if (!pPhysics && pShortcut->CreateVPhysics())
 		pPhysics = pShortcut->VPhysicsGetObject();
@@ -115,6 +117,19 @@ void SpawnShortcut(const CCommand &args)
 		else
 			pPhysics->EnableMotion(true);
 	}
+
+//	pShortcut->SetModelScale(Q_atof(args[9]), 0);
+	/*	// from server-side code...
+	float flScale = Q_atof(args[2]);
+	float flMin = Q_atof(args[3]);
+	float flMax = Q_atof(args[4]);
+
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+	{
+		C_PropHotlinkEntity* pHotlink = dynamic_cast<CPropHotlinkEntity*>(pEntity);
+		pHotlink->SetModelScale(flScale, 0.0f);
+		*/
 }
 ConCommand spawnshortcut("spawnshortcut", SpawnShortcut, "Spawns a shortcut.", FCVAR_NONE);
 

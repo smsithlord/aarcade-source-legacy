@@ -119,8 +119,10 @@ public:
 	static void CreateAudioStream();
 	static void DestroyAudioStream();
 
+	bool IsSelected();
 	bool HasFocus();
 	bool Focus();
+	bool Blur();
 	bool Select();
 	bool Deselect();
 
@@ -156,7 +158,8 @@ public:
 	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;
 
-	// mutators	
+	// mutators
+	bool SetGame(std::string file);
 
 private:
 	int m_iLastVisibleFrame;

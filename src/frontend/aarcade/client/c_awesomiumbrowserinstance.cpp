@@ -231,7 +231,7 @@ void C_AwesomiumBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 	
 	m_pWebView->InjectMouseUp((MouseButton)iButtonId);
 }
-/*
+
 void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 {
 	//	DevMsg("Code is %i\n", code);
@@ -310,6 +310,7 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 	bool ctrl = (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL));
 	bool alt = (vgui::input()->IsKeyDown(KEY_LALT) || vgui::input()->IsKeyDown(KEY_RALT));
 
+	/*
 	if (shift)
 		pWebKeyboardEvent.modifiers |= vgui::MODIFIER_SHIFT;
 
@@ -318,6 +319,7 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 
 	if (alt)
 		pWebKeyboardEvent.modifiers |= vgui::MODIFIER_ALT;
+	*/
 
 	int virtualKeyCode = KeyCodes::AK_UNKNOWN;
 	std::string actualCharOutput = "";
@@ -937,7 +939,11 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code)
 		pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
 	}
 }
-*/
+
+void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code)
+{
+
+}
 
 void C_AwesomiumBrowserInstance::Update()
 {
@@ -1168,14 +1174,34 @@ void C_AwesomiumBrowserInstance::SetUrl(std::string url)
 		m_pWebView->LoadURL(WebURL(WSLit(url.c_str())));
 }
 
-bool C_AwesomiumBrowserInstance::HasFocus()
+bool C_AwesomiumBrowserInstance::IsSelected()
 {
 	return (this == g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance());
 }
 
-bool C_AwesomiumBrowserInstance::Focus()
+bool C_AwesomiumBrowserInstance::HasFocus()
 {
-	return g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(this);
+	return (this == g_pAnarchyManager->GetAwesomiumBrowserManager()->GetFocusedAwesomiumBrowserInstance());
+}
+
+bool C_AwesomiumBrowserInstance::Focus()	// FIXME: Change this to a void???
+{
+	//return g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(this);
+	if (!m_pWebView)
+		return false;
+
+	m_pWebView->Focus();
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->FocusAwesomiumBrowserInstance(this);
+	//return g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(this);
+	return true;
+}
+
+bool C_AwesomiumBrowserInstance::Blur()
+{
+	if (g_pAnarchyManager->GetAwesomiumBrowserManager()->GetFocusedAwesomiumBrowserInstance() == this)
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->FocusAwesomiumBrowserInstance(null);
+
+	return true;
 }
 
 bool C_AwesomiumBrowserInstance::Select()

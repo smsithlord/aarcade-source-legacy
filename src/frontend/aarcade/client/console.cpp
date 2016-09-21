@@ -37,7 +37,7 @@ void RunEmbeddedLibretro(const CCommand &args)
 {
 	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
 	if ( pLibretroManager )
-		pLibretroManager->RunEmbeddedLibretro();
+		pLibretroManager->RunEmbeddedLibretro("V:/Movies/Jay and silent Bob Strike Back (2001).avi");
 }
 ConCommand run_embedded_libretro("run_embedded_libretro", RunEmbeddedLibretro, "Usage: runs embedded apps");
 

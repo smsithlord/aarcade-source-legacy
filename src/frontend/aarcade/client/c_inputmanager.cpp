@@ -217,6 +217,8 @@ void C_InputManager::MouseMove(float x, float y)
 void C_InputManager::MousePress(vgui::MouseCode code)
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	//pHudBrowserInstance->Select();
+	pHudBrowserInstance->Focus();
 	if (pHudBrowserInstance)
 		pHudBrowserInstance->GetInputListener()->OnMousePressed(code);
 //	if (m_pInputListener)

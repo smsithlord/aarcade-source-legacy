@@ -199,6 +199,17 @@ bool C_LibretroInstance::LoadGame()
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
+	/*
+	if (file == "")
+	{
+		info->game = "V:\\Movies\\Teenage Mutant Ninja Turtles(1990).avi";
+		//file = info->game;
+	}
+	else
+		info->game = file;
+	*/
+
+
 	std::string filename = info->game;
 	//DevMsg("filename: %s\n", filename.c_str());
 
@@ -374,7 +385,7 @@ void C_LibretroInstance::OnCoreLoaded()
 	m_info->state = 3;
 
 	// automatically load a game right away...
-	m_info->game = "V:/Movies/Flash Gordon (1980).avi";
+//	m_info->game = "V:/Movies/Flash Gordon (1980).avi";//file
 	//m_info->game = "V:/Movies/Jay and silent Bob Strike Back (2001).avi";
 	//"V:\\Movies\\Judge Dredd (1995).mp4";
 }
@@ -647,6 +658,9 @@ unsigned MyThread(void *params)
 			}
 			*/
 
+			info->raw->run();
+
+			/*
 			bool bShouldRender = false;
 			if (lastFrameNumber != gpGlobals->framecount)
 			{
@@ -668,6 +682,7 @@ unsigned MyThread(void *params)
 					info->raw->run();
 				}
 			}
+			*/
 		}
 	}
 
@@ -682,19 +697,32 @@ unsigned MyThread(void *params)
 	return 0;
 }
 
-bool C_LibretroInstance::HasFocus()
+bool C_LibretroInstance::IsSelected()
 {
 	return (this == g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance());
 }
 
+bool C_LibretroInstance::HasFocus()
+{
+	return (this == g_pAnarchyManager->GetLibretroManager()->GetFocusedLibretroInstance());
+}
+
 bool C_LibretroInstance::Focus()
 {
-	return g_pAnarchyManager->GetLibretroManager()->SelectLibretroInstance(this);
+	return g_pAnarchyManager->GetLibretroManager()->FocusLibretroInstance(this);
 }
 
 bool C_LibretroInstance::Select()
 {
 	return g_pAnarchyManager->GetLibretroManager()->SelectLibretroInstance(this);
+}
+
+bool C_LibretroInstance::Blur()
+{
+	if (g_pAnarchyManager->GetLibretroManager()->GetFocusedLibretroInstance())
+		g_pAnarchyManager->GetLibretroManager()->FocusLibretroInstance(null);
+
+	return true;
 }
 
 bool C_LibretroInstance::Deselect()
@@ -1684,6 +1712,15 @@ void C_LibretroInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *
 C_InputListener* C_LibretroInstance::GetInputListener()
 {
 	return g_pAnarchyManager->GetLibretroManager()->GetInputListener();
+}
+
+bool C_LibretroInstance::SetGame(std::string file)
+{
+	if (!m_info || m_info->gameloaded)
+		return false;
+
+	m_info->game = file;
+	return true;
 }
 
 C_EmbeddedInstance* C_LibretroInstance::GetParentSelectedEmbeddedInstance()

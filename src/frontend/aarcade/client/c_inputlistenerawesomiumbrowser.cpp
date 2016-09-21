@@ -68,3 +68,13 @@ void C_InputListenerAwesomiumBrowser::OnMouseReleased(vgui::MouseCode code)
 	//g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnMouseReleased(code);// OnMouseMove(x, y);
 	g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->OnMouseReleased(code);
 }
+
+void C_InputListenerAwesomiumBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+{
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnKeyPressed(code);
+}
+
+void C_InputListenerAwesomiumBrowser::OnKeyCodeReleased(vgui::KeyCode code)
+{
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance()->OnKeyReleased(code);
+}

@@ -27,6 +27,7 @@ public:
 	void DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance);
 
 	// accessors
+	C_SteamBrowserInstance* GetFocusedSteamBrowserInstance() { return m_pFocusedSteamBrowserInstance; }
 	C_SteamBrowserInstance* GetSelectedSteamBrowserInstance() { return m_pSelectedSteamBrowserInstance; }
 	C_InputListenerSteamBrowser* GetInputListener() { return m_pInputListener; }
 
@@ -36,6 +37,7 @@ private:
 	bool m_bSoundEnabled;
 	C_InputListenerSteamBrowser* m_pInputListener;
 	C_SteamBrowserInstance* m_pSelectedSteamBrowserInstance;
+	C_SteamBrowserInstance* m_pFocusedSteamBrowserInstance;
 	std::map<std::string, C_SteamBrowserInstance*> m_steamBrowserInstances;
 	//std::map<unsigned int, std::string> m_steamBrowserInstanceIds;
 

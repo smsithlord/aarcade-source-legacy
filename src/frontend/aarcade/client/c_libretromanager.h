@@ -17,15 +17,17 @@ public:
 	C_LibretroInstance* CreateLibretroInstance();
 	void DestroyLibretroInstance(C_LibretroInstance* pInstance);
 
+	bool FocusLibretroInstance(C_LibretroInstance* pLibretroInstance);
 	bool SelectLibretroInstance(C_LibretroInstance* pLibretroInstance);
 	void OnLibretroInstanceCreated(C_LibretroInstance* pLibretroInstance);
 	C_LibretroInstance* FindLibretroInstance(CSysModule* pModule);
 	C_LibretroInstance* FindLibretroInstance(uint uId);
 	C_LibretroInstance* FindLibretroInstance(std::string id);
 
-	void RunEmbeddedLibretro();
+	void RunEmbeddedLibretro(std::string file);
 
 	// accessors
+	C_LibretroInstance* GetFocusedLibretroInstance() { return m_pFocusedLibretroInstance; }
 	C_LibretroInstance* GetSelectedLibretroInstance() { return m_pSelectedLibretroInstance; }
 	C_InputListenerLibretro* GetInputListener() { return m_pInputListener; }
 
@@ -35,6 +37,7 @@ private:
 	bool m_bSoundEnabled;
 	C_InputListenerLibretro* m_pInputListener;
 	C_LibretroInstance* m_pSelectedLibretroInstance;
+	C_LibretroInstance* m_pFocusedLibretroInstance;
 	std::map<CSysModule*, C_LibretroInstance*> m_libretroInstances;
 	std::map<uint, CSysModule*> m_libretroInstancesModules;
 

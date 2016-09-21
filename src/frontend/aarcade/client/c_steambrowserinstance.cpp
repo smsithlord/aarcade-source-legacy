@@ -213,16 +213,28 @@ void C_SteamBrowserInstance::OnBrowserInstanceCreated(HTML_BrowserReady_t *pResu
 	steamapicontext->SteamHTMLSurface()->LoadURL(m_unHandle, m_initialURL.c_str(), "");
 }
 
-bool C_SteamBrowserInstance::HasFocus()
+bool C_SteamBrowserInstance::IsSelected()
 {
 	return (this == g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance());
+}
+
+bool C_SteamBrowserInstance::HasFocus()
+{
+	return (this == g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance());
 }
 
 bool C_SteamBrowserInstance::Focus()
 {
 	//return g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
-	g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
+	//g_pAnarchyManager->GetSteamBrowserManager()->SelectSteamBrowserInstance(this);
 	g_pAnarchyManager->GetSteamBrowserManager()->FocusSteamBrowserInstance(this);
+	return true;
+}
+
+bool C_SteamBrowserInstance::Blur()
+{
+	if (this == g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance())
+		g_pAnarchyManager->GetSteamBrowserManager()->FocusSteamBrowserInstance(null);
 	return true;
 }
 

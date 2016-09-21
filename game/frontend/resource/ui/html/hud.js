@@ -283,6 +283,7 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 ///*
 	if( isItemSelected )
 	{
+		console.log("yar");
 		var elems = document.body.querySelectorAll(".hudSideContainerButton");
 		var i;
 		for( i = 0; i < elems.length; i++ )

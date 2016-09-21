@@ -26,8 +26,10 @@ public:
 	void Update();
 
 	void SetUrl(std::string url);
+	bool IsSelected();
 	bool HasFocus();
 	bool Focus();
+	bool Blur();
 	bool Select();
 	bool Deselect();
 
@@ -45,8 +47,8 @@ public:
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
-	//void OnKeyPressed(vgui::KeyCode code);
-	//void OnKeyReleased(vgui::KeyCode code);
+	void OnKeyPressed(vgui::KeyCode code);
+	void OnKeyReleased(vgui::KeyCode code);
 
 	void DispatchJavaScriptMethod(std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	void DispatchJavaScriptMethodCalls();

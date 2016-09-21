@@ -22,7 +22,7 @@ C_InstanceManager::~C_InstanceManager()
 	m_instances.clear();
 }
 
-void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles)
+void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
 
@@ -33,6 +33,7 @@ void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std:
 	pObject->origin.Init(origin.x, origin.y, origin.z);
 	pObject->angles.Init(angles.x, angles.y, angles.z);
 	pObject->spawned = false;
+	pObject->scale = scale;
 
 	m_objects[goodObjectId] = pObject;
 
@@ -95,7 +96,7 @@ bool C_InstanceManager::SpawnNearestObject()
 				active = model->FindKey("local", true);
 
 			std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-			std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z);
+			std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z, pNearObject->scale);
 			engine->ServerCmd(msg.c_str(), false);
 		}
 		else
@@ -280,7 +281,9 @@ void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
 			QAngle angles;
 			UTIL_StringToVector(angles.Base(), sub->GetString("angles", "0 0 0"));
 
-			this->AddObject("", itemId, modelId, origin, angles);
+			float scale = sub->GetFloat("scale", 1.0f);
+
+			this->AddObject("", itemId, modelId, origin, angles, scale);
 			/*
 			item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 			if (item)

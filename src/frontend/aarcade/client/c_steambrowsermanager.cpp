@@ -13,6 +13,7 @@ C_SteamBrowserManager::C_SteamBrowserManager()
 	DevMsg("SteamBrowserManager: Constructor\n");
 	m_bSoundEnabled = true;
 	m_pSelectedSteamBrowserInstance = null;
+	m_pFocusedSteamBrowserInstance = null;
 	//surface()->GetWebkitHTMLUserAgentString()
 	steamapicontext->SteamHTMLSurface()->Init();
 //	steamapicontext->SteamHTMLSurface()->
@@ -98,6 +99,7 @@ C_SteamBrowserInstance* C_SteamBrowserManager::CreateSteamBrowserInstance()
 bool C_SteamBrowserManager::FocusSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
 {
 	steamapicontext->SteamHTMLSurface()->SetKeyFocus(pSteamBrowserInstance->GetHandle(), true);
+	m_pFocusedSteamBrowserInstance = pSteamBrowserInstance;
 	return true;
 }
 

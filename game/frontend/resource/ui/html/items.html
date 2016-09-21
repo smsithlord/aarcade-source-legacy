@@ -7,41 +7,7 @@
 		</script>
 	</head>
 	<body>
-		<div class="hudHeaderContainer">
-			<div class="hudHeaderNavigationContainer">
-				helloo world
-			</div>
-			<div class="hudHeaderContainerTable">
-				<div class="hudHeaderContainerRow">
-					<div class="hudHeaderContainerCell">
-					</div>
-					<div class="hudHeaderContainerCell">
-						<div class="hudHeaderButtonContainer">
-							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Expand the address bar." onclick="arcadeHud.expandAddressMenu();">
-								AArcade
-							</div>
-						</div>
-					</div>
-					<div class="hudHeaderContainerCell">
-						<div class="hudHeaderButtonContainer">
-							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Hide the main menu." onclick="window.location='asset://ui/blank.html';">
-								&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
-							</div>
-						</div>
-						<div id="returnHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
-							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Unpin & close the HUD." onclick="aaapi.system.deactivateInputMode();">
-								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
-							</div>
-						</div>
-						<div id="pinHudButton" class="hudHeaderButtonContainer" style="right: 20%;">
-							<div class="hudHeaderButton helpNote" help="Pin the HUD to stay open." onclick="aaapi.system.forceInputMode(); arcadeHud.pinHudButtonElem.style.display = 'none'; arcadeHud.returnHudButtonElem.style.display = 'inline-block';">
-								&nbsp;<img src="asset://ui/pinicon.png" />&nbsp;
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+		<div class="hudHeaderContainer"></div>
 
 		<div class="hudContent" style="height: 65%; position: fixed; top: 15%; width: 80%; left: 0; right: 0;">
 			<div class="hudContentHeader">

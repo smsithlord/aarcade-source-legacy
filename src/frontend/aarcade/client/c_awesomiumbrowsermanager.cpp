@@ -26,6 +26,7 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	m_pJSHandler = null;
 
 	m_pInputListener = new C_InputListenerAwesomiumBrowser();
+	m_pFocusedAwesomiumBrowserInstance = null;
 
 	/*
 	m_bSoundEnabled = true;
@@ -40,6 +41,7 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 
 //	DevMsg("WebBrowser: Init\n");
 	//m_iState = 1;	// initializing
+
 
 	using namespace Awesomium;
 
@@ -139,7 +141,8 @@ void C_AwesomiumBrowserManager::RunEmbeddedAwesomiumBrowser()
 	DevMsg("Run embedded awesomium test!\n");
 
 	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", false);
-	pAwesomiumBrowserInstance->Focus();
+	pAwesomiumBrowserInstance->Select();
+	//pAwesomiumBrowserInstance->Focus();
 	// tell the input manager that the steam browser instance is active
 	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pAwesomiumBrowserInstance);	// including an embedded instance in the activate input mode call overrides this
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pAwesomiumBrowserInstance);
@@ -512,6 +515,12 @@ C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::CreateAwesomiumBrowserIns
 	return pSteamBrowserInstance;
 }
 */
+bool C_AwesomiumBrowserManager::FocusAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance)
+{
+	m_pFocusedAwesomiumBrowserInstance = pAwesomiumBrowserInstance;
+	return true;
+}
+
 bool C_AwesomiumBrowserManager::SelectAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance)
 {
 	m_pSelectedAwesomiumBrowserInstance = pAwesomiumBrowserInstance;

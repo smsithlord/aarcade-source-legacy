@@ -19,6 +19,9 @@ public:
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
 
+	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void OnKeyCodeReleased(vgui::KeyCode code);
+
 	// accessors
 	// mutators
 	

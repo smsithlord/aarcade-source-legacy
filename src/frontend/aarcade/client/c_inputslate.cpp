@@ -76,12 +76,13 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
 			DevMsg("ERROR: Material not found!!\n");
 
-		
+		DevMsg("Check point A\n");
 		m_pOriginalTexture = pMaterialVar->GetTextureValue();
 
+		DevMsg("Check point B\n");
 		if (m_pCanvasTexture )
 			pMaterialVar->SetTextureValue(m_pCanvasTexture);
-
+		DevMsg("Check point C\n");
 		if (g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") != g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
 		{
 			ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");

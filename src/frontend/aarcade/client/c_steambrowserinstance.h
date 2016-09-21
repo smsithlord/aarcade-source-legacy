@@ -21,7 +21,9 @@ public:
 	CCallResult<C_SteamBrowserInstance, HTML_BrowserReady_t> m_CreateBrowserInstance;
 	void OnBrowserInstanceCreated(HTML_BrowserReady_t *pResult, bool bIOFailure);
 
+	bool IsSelected();
 	bool HasFocus();
+	bool Blur();
 	bool Focus();
 	bool Select();
 	bool Deselect();

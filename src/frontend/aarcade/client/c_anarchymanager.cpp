@@ -977,15 +977,36 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 
 						//std::string dumbUrl = "http://smarcade.net/dlcv2/view_youtube.php?id=";
 						//std::string dumbUrl = active->GetString("file");
-						std::string uri = "file://";
-						uri += engine->GetGameDirectory();
-						uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
 
-						DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
+						// If this is a video file, play it in libretro instead of the browser
+						std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
+						std::string fileExt = active->GetString("file");
+						
+						size_t found = fileExt.find_last_of(".");
+						if (found != std::string::npos)
+							fileExt = fileExt.substr(found + 1);
 
-						C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
-						pSteamBrowserInstance->Init(tabTitle, uri);
-						pEmbeddedInstance = pSteamBrowserInstance;
+						found = exts.find("::" + fileExt + "::");
+						if (found != std::string::npos && g_pFullFileSystem->FileExists(active->GetString("file")))
+						{
+							C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
+							pLibretroInstance->Init(tabTitle);
+							pLibretroInstance->LoadCore();
+							pLibretroInstance->SetGame(active->GetString("file"));
+							pEmbeddedInstance = pLibretroInstance;
+						}
+						else
+						{
+							std::string uri = "file://";
+							uri += engine->GetGameDirectory();
+							uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+
+							DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
+
+							C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
+							pSteamBrowserInstance->Init(tabTitle, uri);
+							pEmbeddedInstance = pSteamBrowserInstance;
+						}
 					}
 				}
 			}

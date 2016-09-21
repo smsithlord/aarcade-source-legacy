@@ -13,6 +13,7 @@ C_LibretroManager::C_LibretroManager()
 	DevMsg("LibretroManager: Constructor\n");
 	m_bSoundEnabled = true;
 	m_pSelectedLibretroInstance = null;
+	m_pFocusedLibretroInstance = null;
 
 	m_pInputListener = new C_InputListenerLibretro();
 }
@@ -70,6 +71,9 @@ void C_LibretroManager::Update()
 			it->second->Update();
 	}
 
+//	if (m_pSelectedLibretroInstance)
+	//	m_pSelectedLibretroInstance->Update();
+
 	//DevMsg("LibretroManager: Update\n");
 	//info->state = state;
 //	if (m_pSelectedLibretroInstance)
@@ -104,6 +108,12 @@ void C_LibretroManager::DestroyLibretroInstance(C_LibretroInstance* pInstance)
 		m_libretroInstances.erase(foundLibretroInstance);
 
 	pInstance->SelfDestruct();
+}
+
+bool C_LibretroManager::FocusLibretroInstance(C_LibretroInstance* pLibretroInstance)
+{
+	m_pFocusedLibretroInstance = pLibretroInstance;
+	return true;
 }
 
 bool C_LibretroManager::SelectLibretroInstance(C_LibretroInstance* pLibretroInstance)
@@ -164,7 +174,7 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
 	return null;
 }
 
-void C_LibretroManager::RunEmbeddedLibretro()
+void C_LibretroManager::RunEmbeddedLibretro(std::string file)
 {
 	// TEST: AUTO-CREATE AN INSTANCE, LOAD THE FFMPEG CORE, AND PLAY A MOVIE
 	C_LibretroInstance* pLibretroInstance = this->CreateLibretroInstance();
@@ -173,12 +183,16 @@ void C_LibretroManager::RunEmbeddedLibretro()
 	// load a core
 	pLibretroInstance->LoadCore();
 
-	// load a file
-	pLibretroInstance->LoadGame();
-
 	// tell the input manager that the libretro instance is active
 	//C_InputListenerLibretro* pListener = this->GetInputListener();
 	//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(pLibretroInstance->GetTexture());
-	pLibretroInstance->Select();
+	//pLibretroInstance->Select();
+	//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pLibretroInstance);
+
+	pLibretroInstance->Focus();
+	//g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pLibretroInstance);
+
+	// load a file
+	pLibretroInstance->SetGame(file);
 }

@@ -247,7 +247,26 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		//if (bPassThru && pWebTab != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
 		if (bPassThru && pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
-			pEmbeddedInstance->GetInputListener()->OnMouseReleased(button);
+		{
+			C_AwesomiumBrowserInstance* pOtherAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(pEmbeddedInstance);
+			if (pOtherAwesomiumBrowserInstance)
+			{
+			//	pOtherAwesomiumBrowserInstance->Select();
+				pOtherAwesomiumBrowserInstance->Focus();
+				pOtherAwesomiumBrowserInstance->OnMouseReleased(button);
+
+			}
+			else
+			{
+				if (!pEmbeddedInstance->HasFocus())
+				{
+				//	pEmbeddedInstance->Select();
+					pEmbeddedInstance->Focus();
+				}
+
+				pEmbeddedInstance->GetInputListener()->OnMouseReleased(button);
+			}
+		}
 	}
 	else if (method_name == WSLit("hudMouseDown"))
 	{
@@ -279,17 +298,33 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		if (bPassThru && pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
 		{
-			//if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != pWebTab)
-			if (!pEmbeddedInstance->HasFocus())
-				pEmbeddedInstance->Focus();
+			C_AwesomiumBrowserInstance* pOtherAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(pEmbeddedInstance);
+			if (pOtherAwesomiumBrowserInstance)
+			{
+			//	pOtherAwesomiumBrowserInstance->Select();
+				pOtherAwesomiumBrowserInstance->Focus();
+				pOtherAwesomiumBrowserInstance->OnMousePressed(button);
+			}
+			else
+			{
+				if (!pEmbeddedInstance->HasFocus())
+				{
+					//pEmbeddedInstance->Select();
+					pEmbeddedInstance->Focus();
+				}
 
-			pEmbeddedInstance->GetInputListener()->OnMousePressed(button);
+				pEmbeddedInstance->GetInputListener()->OnMousePressed(button);
+			}
 		}
 		else if (!bPassThru)
 		{
+			//pHudBrowserInstance->Focus();
 			//if (g_pAnarchyManager->GetWebManager()->GetFocusedWebTab() != g_pAnarchyManager->GetWebManager()->GetHudWebTab())
-			if (pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
-				pHudBrowserInstance->Focus();
+			//if (pEmbeddedInstance != (C_EmbeddedInstance*)pHudBrowserInstance)
+		//	{
+				//pEmbeddedInstance->Select();
+			//	pHudBrowserInstance->Focus();
+			//}
 		}
 	}
 	else if (method_name == WSLit("requestActivateInputMode"))

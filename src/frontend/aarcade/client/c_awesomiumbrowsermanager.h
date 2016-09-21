@@ -29,6 +29,7 @@ public:
 	void RunEmbeddedAwesomiumBrowser();
 	void DestroyAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pInstance);
 
+	bool FocusAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance);
 	bool SelectAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance);
 
 	// master
@@ -57,6 +58,7 @@ public:
 	void DispatchJavaScriptMethods(C_AwesomiumBrowserInstance* pBrowserInstance);
 	
 	// accessors
+	C_AwesomiumBrowserInstance* GetFocusedAwesomiumBrowserInstance() { return m_pFocusedAwesomiumBrowserInstance; }
 	C_AwesomiumBrowserInstance* GetSelectedAwesomiumBrowserInstance() { return m_pSelectedAwesomiumBrowserInstance; }
 	C_InputListenerAwesomiumBrowser* GetInputListener() { return m_pInputListener; }
 
@@ -78,6 +80,7 @@ private:
 
 	JSHandler* m_pJSHandler;
 
+	C_AwesomiumBrowserInstance* m_pFocusedAwesomiumBrowserInstance;
 	C_AwesomiumBrowserInstance* m_pSelectedAwesomiumBrowserInstance;
 	//std::map<C_AwesomiumBrowserInstance*, Awesomium::WebView*> m_webViews;
 	std::map<std::string, C_AwesomiumBrowserInstance*> m_awesomiumBrowserInstances;

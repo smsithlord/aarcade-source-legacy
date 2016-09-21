@@ -14,6 +14,7 @@ struct object_t
 	Vector origin;
 	Vector angles;
 	bool spawned;
+	float scale;
 };
 
 struct instance_t
@@ -34,7 +35,7 @@ public:
 
 	void LoadLegacyInstance(std::string instanceId);
 
-	void AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles);
+	void AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale);
 	bool SpawnNearestObject();
 	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 
