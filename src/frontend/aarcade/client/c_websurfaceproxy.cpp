@@ -40,11 +40,13 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 	m_iOriginalAutoCreate = 1;
 	m_originalUrl = "";
 	m_originalSimpleImageChannel = "";
+
+	//g_pAnarchyManager->GetCanvasManager()->RegisterProxy(this);
 }
 
 CWebSurfaceProxy::~CWebSurfaceProxy()
 {
-	//DevMsg("WebSurfaceProxy: Destructor\n");
+	DevMsg("WebSurfaceProxy: Destructor\n");
 //	if( m_pOriginalTexture != null )	// FIXME When would this ever not exist for this type of proxy?
 	//{
 //		m_pOriginalTexture->SetTextureRegenerator(null);
@@ -110,6 +112,14 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 		it2 = it->second.begin();
 		while (it2 != it->second.end())
 		{
+			pTexture = it2->second;
+			if (pTexture)
+			{
+				usedTextures[pTexture] = true;
+				pTexture->DecrementReferenceCount();
+			}
+
+			/*
 			if (usedTextures.find(it2->second) == usedTextures.end())
 			{
 				usedTextures[it2->second] = true;
@@ -119,16 +129,48 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 
 				if (pTexture)
 				{
-					pTexture->SetTextureRegenerator(null);
-
+					//pTexture->SetTextureRegenerator(null);
 					pTexture->DecrementReferenceCount();
-					pTexture->DeleteIfUnreferenced();
+					//pTexture->DeleteIfUnreferenced();
 				}
 			}
+			else
+			{
+				//do work
+				pTexture = it2->second;
+
+				if (pTexture)
+				{
+					//pTexture->SetTextureRegenerator(null);
+					pTexture->DecrementReferenceCount();
+					//pTexture->DeleteIfUnreferenced();
+				}
+			}
+			*/
 
 			it2++;
 		}
 
+		//it->second.clear();
+		it++;
+	}
+
+	auto usedIt = usedTextures.begin();
+	while (usedIt != usedTextures.end())
+	{
+		pTexture = usedIt->first;
+		if (pTexture)
+		{
+			pTexture->SetTextureRegenerator(null);
+			pTexture->DeleteIfUnreferenced();
+		}
+
+		usedIt++;
+	}
+
+	it = simpleImages.begin();
+	while (it != simpleImages.end())
+	{
 		it->second.clear();
 		it++;
 	}
@@ -137,14 +179,39 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 	usedTextures.clear();
 }
 
+void CWebSurfaceProxy::StaticLevelShutdownPreEntity()
+{
+	// THIS SHOULD ONLY BE CALLED ONCE!!!!
+	ReleaseSimpleImages(s_simpleImages);
+}
+
 void CWebSurfaceProxy::LevelShutdownPreEntity()
 {
-	ReleaseSimpleImages(s_simpleImages);
+}
+
+void CWebSurfaceProxy::ReleaseCurrent()
+{
+	if (m_pCurrentTexture && m_pCurrentTexture != m_pOriginalTexture)
+		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 }
 
 void CWebSurfaceProxy::Release()
 {
 	DevMsg("WebSurfaceProxy: Release\n");
+
+	m_iState = 0;
+	m_id = "";
+	m_pCurrentEmbeddedInstance = null;
+	m_pMaterial = null;
+	m_pCurrentTexture = null;
+	m_pOriginalTexture = null;
+	m_pMaterialTextureVar = null;
+	m_pMaterialDetailBlendFactorVar = null;
+	m_pEmbeddedInstance = null;
+	m_originalId = "";
+	m_iOriginalAutoCreate = 1;
+	m_originalUrl = "";
+	m_originalSimpleImageChannel = "";
 
 	/*
 	// Iterate through all our SimpleImages
@@ -201,7 +268,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 	C_EmbeddedInstance* pSelectedEmebeddedInstance = null;
 	
 	if (m_pEmbeddedInstance)
-		pSelectedEmebeddedInstance = m_pEmbeddedInstance->GetParentSelectedEmbeddedInstance();
+		pSelectedEmebeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();// m_pEmbeddedInstance->GetParentSelectedEmbeddedInstance();
 
 	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(m_pEmbeddedInstance);
 

@@ -27,7 +27,9 @@ public:
 	virtual void OnBind(C_BaseEntity *pC_BaseEntity = null);
 	virtual void Release();
 
+	void StaticLevelShutdownPreEntity();
 	void LevelShutdownPreEntity();
+	void ReleaseCurrent();
 
 	// mutators
 	//void SetId(std::string id) { m_id = id; }

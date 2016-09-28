@@ -15,7 +15,7 @@ ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);
 void TestFunction( const CCommand &args )
 {
 	// WORKING SEND/RECIEVE FILE CALLS
-	#include "inetchannel.h"
+	//#include "inetchannel.h"
 //	INetChannel* pINetChannel = static_cast<INetChannel*>(engine->GetNetChannelInfo());
 //	pINetChannel->RequestFile("downloads/<hash>.vtf", false);
 //	pINetChannel->SendFile("stuff/test.jpg", 0, false);
@@ -29,7 +29,9 @@ void TestFunction( const CCommand &args )
 	// NEW TEST
 
 	//webviewinput->Create();
-	DevMsg("Planel created.\n");
+	//DevMsg("Planel created.\n");
+
+	g_pAnarchyManager->TestSQLite();
 }
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
 

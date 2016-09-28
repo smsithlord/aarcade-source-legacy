@@ -94,6 +94,9 @@ public:
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
 
+	void ShowFileBrowseMenu();// const char* keyFieldName, KeyValues* itemKV);
+	//void ReleaseFileBrowseParams();
+
 	// helpers
 	std::string GenerateUniqueId();
 	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);
@@ -101,6 +104,8 @@ public:
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 
 	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
+
+	void TestSQLite();
 
 	// accessors
 	bool IsInitialized() { return m_bInitialized; }
@@ -120,6 +125,7 @@ public:
 	C_MetaverseManager* GetMetaverseManager() { return m_pMetaverseManager; }
 	C_InstanceManager* GetInstanceManager() { return m_pInstanceManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
+	//ThreadedFileBrowseParams_t* GetFileBrowseParams() { return m_pFileParams; }
 
 	// mutators
 	void SetInitialized(bool bValue) { m_bInitialized = bValue; }
@@ -127,6 +133,9 @@ public:
 	void IncrementState();
 	
 private:
+	//ThreadedFileBrowseParams_t* m_pFileParams;
+	//ThreadedFolderBrowseParams_t* m_pFolderParams;
+
 	bool m_bInitialized;
 	bool m_bIncrementState;
 	aaState m_state;

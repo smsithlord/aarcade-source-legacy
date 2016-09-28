@@ -17,8 +17,8 @@
 							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
 						</div>
 					</div>
-					<div class="hudContentHeaderCell">
-						Libray / Items / Edit
+					<div class="hudContentHeaderCell" id="itemHeader">
+						Edit Item
 					</div>
 					<div class="hudContentHeaderCell">
 						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
@@ -73,23 +73,39 @@ function getParameterByName(name, url) {
 				fieldContainer.className = "fieldContainer";
 
 				fieldKey = document.createElement("div");
+				//var simpleLabel = x;
+				//if( simpleLabel === "app" )
+					//simpleLabel = "open with";
+
 				fieldKeyNode = document.createTextNode(x);
 				fieldKey.appendChild(fieldKeyNode);
 				fieldContainer.appendChild(fieldKey);
 
-				fieldValue = document.createElement("div");
+				fieldValue = document.createElement("form");
+				fieldValue.addEventListener('submit', function(e)
+				{
+					var elem = document.activeElement;
+					e.preventDefault();
+
+					var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
+
+					if( success )
+					{
+						item[elem.field] = elem.value;
+						console.log("Item updated!");
+					}
+					else
+						console.log("Item update rejected!");
+
+					elem.blur();
+				}, true);
 
 				if( x === "type" )
 				{
 					var fieldValueSelect = document.createElement("select");
-/*
-					var type = aaapi.library.getLibraryType(item[x]);
-					if(item[x] != 0)
-					{
-						*/
 
 					var types = aaapi.library.getAllLibraryTypes();
-					var x;
+					var y;
 					for( y in types )
 					{
 						var type = types[y];
@@ -100,56 +116,219 @@ function getParameterByName(name, url) {
 					}
 
 					fieldValueSelect.value = item[x];
+					fieldValueSelect.field = x;
+					fieldValueSelect.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						
+						var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
+						if( success )
+						{
+							item[elem.field] = elem.value;
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+					}, true);
+
 					fieldValue.appendChild(fieldValueSelect);
+				}
+				else if( x === "app" )
+				{
+				///*
+					var fieldValueSelect = document.createElement("select");
+					var fieldValueOption = document.createElement("option");
+					fieldValueOption.value = "";
+					fieldValueOption.text = "Windows";
+					fieldValueSelect.appendChild(fieldValueOption);
+
+					var apps = aaapi.library.getAllLibraryApps();
+					var app;
+					var y;
+					for( y in apps )
+					{
+						app =apps[y];
+						fieldValueOption = document.createElement("option");
+						fieldValueOption.value = app.info.id;
+						fieldValueOption.text = app.title;
+						fieldValueSelect.appendChild(fieldValueOption);
+					}
+
+					fieldValueSelect.value = item[x];
+					fieldValueSelect.field = x;
+					fieldValueSelect.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						
+						var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
+						if( success )
+						{
+							item[elem.field] = elem.value;
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+					}, true);
+
+					fieldValue.appendChild(fieldValueSelect);
+					//*/
 				}
 				else
 				{
+					//var formElem = document.createElement("form");
+					//formElem.className = "fieldForm";
+
 					fieldValueInput = document.createElement("input");
 					fieldValueInput.type = "text";
 					fieldValueInput.value = item[x];
+					fieldValueInput.field = x;
+					fieldValueInput.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						if( elem.value != item[elem.field] )
+							elem.value = item[elem.field];
+					}, true);
 					fieldValue.appendChild(fieldValueInput);
+
+					//formElem.appendChild(fieldValueInput);.
+					//fieldValue.appendChild(formElem);
 				}
 
 				fieldContainer.appendChild(fieldValue);
 				itemContainer.appendChild(fieldContainer);
 
-				if( x == "file" || x == "marquee" || x == "screen" )
+				if( x == "file" || x == "marquee" || x == "screen" || x == "preview" )
 				{
 					fieldValue.style.width = "63%";
 
 					var buttonBrowseContainer = document.createElement("div");
 					buttonBrowseContainer.className = "button";
-					buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
-					buttonBrowseContainer.innerHTML = "<center>&#8230;</center>";
+					buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+					buttonBrowseContainer.addEventListener("click", function(e)
+					{
+						aaapi.system.fileBrowse();
+					}, true);
+					buttonBrowseContainer.innerHTML = "<img src='browseicon.png' style='width: 20px;' />";
 					fieldContainer.appendChild(buttonBrowseContainer);
 
 					var buttonGlobeContainer = document.createElement("div");
 					buttonGlobeContainer.className = "button";
-					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px; padding-top: 0;";
-					buttonGlobeContainer.innerHTML = "<center>&#9818;</center>";
+					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+					buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
+					buttonGlobeContainer.field = x;
+					buttonGlobeContainer.addEventListener("click", function(e)
+					{
+						var elem = e.target;
+
+						var queryTitle = item["title"];
+						var dateCull = queryTitle.indexOf(" (");
+						if( dateCull >= 0 )
+							queryTitle = queryTitle.substring(0, dateCull);
+
+						var query = "https://www.netflix.com/search/" + encodeURIComponent(queryTitle);
+
+						aaapi.system.metaSearch(id, elem.field, query);
+
+						document.location = "asset://ui/blank.html";
+					}, true);
 					fieldContainer.appendChild(buttonGlobeContainer);
 
 					var buttonCurrentContainer = document.createElement("div");
 					buttonCurrentContainer.className = "button";
-					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
-					buttonCurrentContainer.innerHTML = "<center>&#10030;</center>";
+					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+
+					var buttonCurrentImage = document.createElement("img");
+					buttonCurrentImage.style.cssText = "width: 20px;";
+					buttonCurrentImage.src = "linkicon.png";
+					buttonCurrentImage.field = x;				
+					buttonCurrentImage.addEventListener("click", function(e)
+					{
+						arcadeHud.metaScrape("currenturi", function(scrapedData)
+						{
+							//console.log(this.field + " : " + scrapedData);
+
+							if( !!scrapedData[this.field] && scrapedData[this.field] !== "" )
+							{
+								var inputs = document.querySelectorAll("input");
+								var i;
+								for( i = 0; i < inputs.length; i++ )
+								{
+									//console.log(inputs[i].value);
+									if( inputs[i].field === this.field )
+									{
+										inputs[i].focus();
+										inputs[i].value = "xxx" + scrapedData.reference;//arcadeHud.getURL();
+										break;
+									}
+								}
+							}
+						}.bind(this));					
+					}.bind(buttonCurrentImage), true);
+					
+					buttonCurrentContainer.appendChild(buttonCurrentImage);
 					fieldContainer.appendChild(buttonCurrentContainer);
 				}
 
-				if( x == "preview" || x == "stream" || x == "download" || x == "reference" )
+				if( x == "stream" || x == "download" || x == "reference" )
 				{
 					fieldValue.style.width = "69%";
 
 					var buttonGlobeContainer = document.createElement("div");
 					buttonGlobeContainer.className = "button";
-					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
-					buttonGlobeContainer.innerHTML = "<center>&#9818;</center>";
+					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+					buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
+					buttonGlobeContainer.field = x;
+					buttonGlobeContainer.addEventListener("click", function(e)
+					{
+						var elem = e.target;
+
+						var queryTitle = item["title"];
+						var dateCull = queryTitle.indexOf(" (");
+						if( dateCull >= 0 )
+							queryTitle = queryTitle.substring(0, dateCull);
+
+						//var query = "https://www.netflix.com/search/" + encodeURIComponent(queryTitle);
+						var query = "http://www.themoviedb.org/search?query=" + encodeURIComponent(queryTitle);
+
+						aaapi.system.metaSearch(id, elem.field, query);
+
+						document.location = "asset://ui/blank.html";
+					}, true);
 					fieldContainer.appendChild(buttonGlobeContainer);
 
 					var buttonCurrentContainer = document.createElement("div");
 					buttonCurrentContainer.className = "button";
-					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 0; padding-left: 2px; padding-right: 2px;";
-					buttonCurrentContainer.innerHTML = "<center>&#10030;</center>";
+					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+
+					var buttonCurrentImage = document.createElement("img");
+					buttonCurrentImage.style.cssText = "width: 20px;";
+					buttonCurrentImage.src = "linkicon.png";
+					buttonCurrentImage.field = x;				
+					buttonCurrentImage.addEventListener("click", function(e)
+					{
+						arcadeHud.metaScrape("currenturi", function(scrapedData)
+						{
+							//console.log(this.field + " : " + scrapedData);
+
+							if( !!scrapedData[this.field] && scrapedData[this.field] !== "" )
+							{
+								var inputs = document.querySelectorAll("input");
+								var i;
+								for( i = 0; i < inputs.length; i++ )
+								{
+									//console.log(inputs[i].value);
+									if( inputs[i].field === this.field )
+									{
+										inputs[i].focus();
+										inputs[i].value = "xxx" + scrapedData.reference;//arcadeHud.getURL();
+										break;
+									}
+								}
+							}
+						}.bind(this));					
+					}.bind(buttonCurrentImage), true);
+
+					buttonCurrentContainer.appendChild(buttonCurrentImage);	
 					fieldContainer.appendChild(buttonCurrentContainer);
 				}
 
@@ -160,6 +339,153 @@ function getParameterByName(name, url) {
 					arcadeHud.assignHelp(fieldContainer);
 				}
 			}
+
+			var metaScrapeContainer = document.querySelector("#itemHeader");
+			var buttonGlobeContainer = document.createElement("div");
+			buttonGlobeContainer.className = "button";
+			buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
+			buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
+			buttonGlobeContainer.field = x;
+			buttonGlobeContainer.addEventListener("click", function(e)
+			{
+				var elem = e.target;
+
+				var queryTitle = item["title"];
+				var dateCull = queryTitle.indexOf(" (");
+				if( dateCull >= 0 )
+					queryTitle = queryTitle.substring(0, dateCull);
+
+				var query = "http://www.themoviedb.org/search?query=" + encodeURIComponent(queryTitle);
+
+				aaapi.system.metaSearch(id, elem.field, query);
+
+				document.location = "asset://ui/blank.html";
+			}, true);
+			metaScrapeContainer.insertBefore(buttonGlobeContainer, metaScrapeContainer.firstChild);
+			//metaScrapeContainer.appendChild(buttonGlobeContainer);
+
+			var buttonCurrentContainer = document.createElement("div");
+			buttonCurrentContainer.className = "button";
+			buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
+
+			var buttonCurrentImage = document.createElement("img");
+			buttonCurrentImage.style.cssText = "width: 20px;";
+			buttonCurrentImage.src = "linkicon.png";
+			buttonCurrentImage.field = "all";				
+			buttonCurrentImage.addEventListener("click", function(e)
+			{
+				console.log("enterprise:");
+				console.log(e.target.tagName);
+
+				var elem = e.target;
+				while( elem.tagName != "DIV" )
+					elem = elem.parentNode;
+
+				var popupId = "genericId";
+				var rect = elem.getBoundingClientRect();
+				var x = rect.left;
+				var y = rect.top;
+				//var width = rect.right - rect.left;
+				var width = 220;
+				var height = rect.bottom - rect.top;
+				var itemHeight = height;
+				var fontSize = "16";
+				var selectedItem = "";
+				var rightAligned = "0";
+
+				var args = [popupId, x, y, width, height, height, fontSize, selectedItem, rightAligned];
+
+				// the callback
+				args.push(function(selectedOption)
+				{
+					console.log(selectedOption);
+					arcadeHud.metaScrape(selectedOption, function(scrapedData)
+					{
+						var args = [];
+						var x, field;
+						for( x in scrapedData)
+						{
+							field = scrapedData[x];
+							if( field === "" )
+								continue;
+
+							if( x === "type" )
+							{
+								var allTypes = aaapi.library.getAllLibraryTypes();
+								var y;
+								for( y in allTypes )
+								{
+									console.log(allTypes[y].title);
+									if( allTypes[y].title === field )
+									{
+										field = allTypes[y].info.id;
+										break;
+									}
+								}
+							}
+							
+							var inputs = document.querySelectorAll("input, select");
+							var i;
+							for( i = 0; i < inputs.length; i++ )
+							{
+								if( inputs[i].field === x )
+								{
+									//inputs[i].focus();
+									inputs[i].value = field;
+									break;
+								}
+							}
+
+							args.push(x);
+							args.push(field);
+						}
+
+						var success = aaapi.library.updateItem(id, args);
+
+						if( success )
+						{
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
+								item[args[i]] = args[i+1];
+
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+					}.bind(this));
+				}.bind(this));
+
+				// then add entries for each scraper...
+				var scraper;
+				var w;
+				for( w in arcadeHud.scrapers )
+				{
+					var scraper = arcadeHud.scrapers[w];
+
+					if( !!!scraper.fields.all )
+						continue;
+
+					var entry = {};
+					entry.popType = "Option";
+					entry.popLabel = scraper.title;
+					entry.popTooltip = "";
+					entry.popAction = w;
+					entry.popRightToLeft = "0";
+					entry.popHasDirectionalOverride = "0";
+					entry.popEnabled = "0";
+					entry.checked = "0";
+
+					var z;
+					for( z in entry )
+						args.push(entry[z]);
+				}
+
+				arcadeHud.showScraperPopupMenu.apply(arcadeHud, args);
+			}.bind(buttonCurrentImage), true);
+			
+			buttonCurrentContainer.appendChild(buttonCurrentImage);
+			metaScrapeContainer.appendChild(buttonCurrentContainer);
 		</script>
 	</body>
 </html>

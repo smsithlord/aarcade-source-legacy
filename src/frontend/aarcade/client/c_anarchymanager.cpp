@@ -5,6 +5,8 @@
 #include "WinBase.h"
 #include <cctype>
 #include <algorithm>
+#include "c_browseslate.h"
+#include "../../sqlite/include/sqlite/sqlite3.h"
 //#include "mathlib/mathlib.h"
 //#include <math.h>
 
@@ -145,6 +147,8 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 	if (pEntity)
 		this->DeselectEntity(pEntity);
 
+	m_pCanvasManager->LevelShutdownPreEntity();
+
 	/*
 	C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
 	if (pWebTab)
@@ -157,7 +161,9 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 void C_AnarchyManager::LevelShutdownPostEntity()
 {
 	DevMsg("AnarchyManager: LevelShutdownPostEntity\n");
-	m_instanceId = "";
+	m_instanceId = "";	// wtf is this??
+
+	// Clear out the simple images
 }
 
 void C_AnarchyManager::OnSave()
@@ -847,7 +853,35 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+	/* DISABLE MOUNTING OF LEGACY AARCADE CONTENT
+	std::string pathDownload = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\download\\";	// for resolving cached images
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
+	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
 	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
+	*/
+
+	// INSTEAD, do the following:
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	unsigned int uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItems();
+	std::string num = VarArgs("%u", uCount);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Items", "locallibraryitems", "0", num, num);
+
+	// AND THIS IS WHAT USUALLY GETS CALLED AFTER LOADFIRSTLOCALITEMLEGACY IS FINISHED:
+	//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, "", "", "");
+
+
+
+	//g_pAnarchyManager->GetMetaverseManager()->SetPreviousLocaLocalItemLegacyWorkshopIds("dummy");
+	//g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
+	this->OnMountAllWorkshopsComplete();	// the first time this is called initializes it all
+
+
+
+
+
+	//C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "0", "+", "mountNextWorkshopCallback");
 }
 
 bool C_AnarchyManager::AttemptSelectEntity()
@@ -865,8 +899,14 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	pPlayer->EyeVectors(&forward);
 	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
 
-	C_BaseEntity *pEntity;
-	if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+	C_BaseEntity *pEntity = tr.m_pEnt;
+	
+	// only allow prop shortcuts
+	C_PropShortcutEntity* pShortcut = null;
+	if ( pEntity )
+		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+	if (pShortcut && tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
 	{
 		pEntity = tr.m_pEnt;
 
@@ -1074,7 +1114,7 @@ bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl
 			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
 
 		// ALWAYS close the selected web tab when de-selecting entities. (this has to be accounted for or changed when the continous play button gets re-enabled!)
-		if ( bCloseInstance)
+		if (bCloseInstance && pEmbeddedInstance != pHudBrowserInstance)
 			pEmbeddedInstance->Close();
 	}
 
@@ -1091,6 +1131,11 @@ void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
 void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 {
 	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
+}
+
+void C_AnarchyManager::ShowFileBrowseMenu()
+{
+	BrowseSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
 }
 
 void C_AnarchyManager::OnWorkshopManagerReady()
@@ -1215,6 +1260,120 @@ void C_AnarchyManager::Tokenize(const std::string& str, std::vector<std::string>
 		// Find next "non-delimiter"
 		pos = safeStr.find_first_of(delimiters, lastPos);
 	}
+}
+
+/*
+void C_AnarchyManager::ReleaseFileBrowseParams()
+{
+	if (m_pFileParams)
+	{
+		delete m_pFileParams;
+		m_pFileParams = null;
+	}
+}
+*/
+
+void C_AnarchyManager::TestSQLite()
+{
+	int rc;
+	char *error;
+
+	// Open Database
+	DevMsg("Opening MyDb.db ...\n");
+
+	sqlite3 *db;
+	rc = sqlite3_open("MyDb.db", &db);
+	if (rc)
+	{
+		DevMsg("Error opening SQLite3 database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+		//return 1;
+	}
+	else
+	{
+		DevMsg("Opened MyDb.db.\n");
+	}
+
+	// Execute SQL
+	DevMsg("Creating MyTable ...\n");
+	const char *sqlCreateTable = "CREATE TABLE MyTable (id INTEGER PRIMARY KEY, value STRING);";
+	rc = sqlite3_exec(db, sqlCreateTable, NULL, NULL, &error);
+	if (rc)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+	else
+	{
+		DevMsg("Created MyTable.\n");
+	}
+
+	// Execute SQL
+	DevMsg("Inserting a value into MyTable ...\n");
+	const char *sqlInsert = "INSERT INTO MyTable VALUES(NULL, 'A Value');";
+	rc = sqlite3_exec(db, sqlInsert, NULL, NULL, &error);
+	if (rc)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+	else
+	{
+		DevMsg("Inserted a value into MyTable.\n");
+	}
+
+	// Display MyTable
+	DevMsg("Retrieving values in MyTable ...\n");
+	const char *sqlSelect = "SELECT * FROM MyTable;";
+	char **results = NULL;
+	int rows, columns;
+	sqlite3_get_table(db, sqlSelect, &results, &rows, &columns, &error);
+	if (rc)
+	{
+		DevMsg("Error executing SQLite3 query: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+	else
+	{
+		// Display Table
+		for (int rowCtr = 0; rowCtr <= rows; ++rowCtr)
+		{
+			for (int colCtr = 0; colCtr < columns; ++colCtr)
+			{
+				// Determine Cell Position
+				int cellPosition = (rowCtr * columns) + colCtr;
+
+				// Display Cell Value
+				DevMsg("%s\t", results[cellPosition]);
+				//cout.width(12);
+				//cout.setf(ios::left);
+				//cout << results[cellPosition] << " ";
+			}
+
+			// End Line
+			//cout << endl;
+			DevMsg("\n");
+
+			// Display Separator For Header
+			if (0 == rowCtr)
+			{
+				for (int colCtr = 0; colCtr < columns; ++colCtr)
+				{
+					//cout.width(12);
+					//cout.setf(ios::left);
+					DevMsg("~~~~~~~~~~~~");
+				}
+				DevMsg("\n");
+			}
+		}
+	}
+	sqlite3_free_table(results);
+
+	// Close Database
+	DevMsg("Closing MyDb.db ...\n");
+	sqlite3_close(db);
+	DevMsg("Closed MyDb.db\n");
 }
 
 /*

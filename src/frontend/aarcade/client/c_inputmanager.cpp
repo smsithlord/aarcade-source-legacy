@@ -96,6 +96,12 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 		pHudBrowserInstance->Focus();
 		this->SetEmbeddedInstance(pHudBrowserInstance);
 	}
+	else if (m_pEmbeddedInstance == pHudBrowserInstance)
+	{
+		pHudBrowserInstance->Select();
+		pHudBrowserInstance->Focus();
+		//this->SetEmbeddedInstance(pHudBrowserInstance);
+	}
 
 //	C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 //	if (pSelectedEmbeddedInstance && )

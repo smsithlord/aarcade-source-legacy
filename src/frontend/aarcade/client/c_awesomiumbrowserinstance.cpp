@@ -41,6 +41,7 @@ C_AwesomiumBrowserInstance::C_AwesomiumBrowserInstance()
 	m_pWebView = null;
 	m_iState = 1;	// initializing
 	m_iLastVisibleFrame = -1;
+	m_URL = "";
 }
 
 C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
@@ -50,7 +51,7 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 	if (m_id == "hud")
 		DevMsg("Hud destroyed!\n");
 
-	if (m_pTexture)
+	if (m_pTexture && m_id != "images" )
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
@@ -325,15 +326,19 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftSta
 	bool alt = bAltState;
 
 	/*
+	( 1 << 0 ),
+	MODIFIER_CONTROL	= ( 1 << 1 ),
+	MODIFIER_ALT		= ( 1 << 2 ),
+	};
+	*/
 	if (shift)
-		pWebKeyboardEvent.modifiers |= vgui::MODIFIER_SHIFT;
+		pWebKeyboardEvent.modifiers |= (1 << 0);
 
 	if (ctrl)
-		pWebKeyboardEvent.modifiers |= vgui::MODIFIER_CONTROL;
+		pWebKeyboardEvent.modifiers |= (1 << 1);
 
 	if (alt)
-		pWebKeyboardEvent.modifiers |= vgui::MODIFIER_ALT;
-	*/
+		pWebKeyboardEvent.modifiers |= (1 << 2);
 
 	int virtualKeyCode = KeyCodes::AK_UNKNOWN;
 	std::string actualCharOutput = "";
@@ -1319,6 +1324,9 @@ void C_AwesomiumBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFT
 {
 	if (!m_pWebView)
 		return;
+
+	if (m_id == "images")
+		DevMsg("Regenerating hud bits...\n");
 
 	Awesomium::BitmapSurface* surface = static_cast<Awesomium::BitmapSurface*>(m_pWebView->surface());
 	if (surface != 0)

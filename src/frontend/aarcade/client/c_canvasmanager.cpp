@@ -394,3 +394,20 @@ C_EmbeddedInstance* C_CanvasManager::FindEmbeddedInstance(std::string id)
 
 	return null;
 }
+
+void C_CanvasManager::LevelShutdownPreEntity()
+{
+	// empty out the static stuff
+	unsigned int max = m_webSurfaceProxies.size();
+
+	// revert all current textures to their original
+	for (unsigned int i = 0; i < max; i++)
+		m_webSurfaceProxies[i]->ReleaseCurrent();
+
+	// call the static cleanup method
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->StaticLevelShutdownPreEntity();
+		break;
+	}
+}

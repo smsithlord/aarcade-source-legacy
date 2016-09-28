@@ -98,7 +98,9 @@ C_SteamBrowserInstance* C_SteamBrowserManager::CreateSteamBrowserInstance()
 
 bool C_SteamBrowserManager::FocusSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
 {
-	steamapicontext->SteamHTMLSurface()->SetKeyFocus(pSteamBrowserInstance->GetHandle(), true);
+	if (pSteamBrowserInstance && pSteamBrowserInstance->GetHandle())
+		steamapicontext->SteamHTMLSurface()->SetKeyFocus(pSteamBrowserInstance->GetHandle(), true);
+
 	m_pFocusedSteamBrowserInstance = pSteamBrowserInstance;
 	return true;
 }
@@ -197,6 +199,9 @@ void C_SteamBrowserManager::DestroySteamBrowserInstance(C_SteamBrowserInstance* 
 {
 	if (pInstance == m_pSelectedSteamBrowserInstance)
 		this->SelectSteamBrowserInstance(null);
+
+	if (pInstance == m_pFocusedSteamBrowserInstance)
+		this->FocusSteamBrowserInstance(null);
 
 	//if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
 	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)

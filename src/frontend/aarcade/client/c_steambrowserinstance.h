@@ -59,7 +59,10 @@ public:
 	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	void OnKeyCodeReleased(vgui::KeyCode code);
 
+	void InjectJavaScript(std::string code);
+
 	// accessors
+	std::string GetURL() { return m_URL; }
 	ITexture* GetTexture() { return m_pTexture; }
 	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
 	C_InputListener* GetInputListener();
@@ -75,6 +78,10 @@ private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceNeedsPaint, HTML_NeedsPaint_t, m_NeedsPaint);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserPopupHTMLWindow, HTML_NewWindow_t, m_NewWindow);
+	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserStatusText, HTML_StatusText_t, m_StatusText);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserURLChanged, HTML_URLChanged_t, m_URLChanged);
+	std::string m_URL;
 	int m_iLastVisibleFrame;
 	unsigned int m_unHandle;
 	void* m_pLastFrameData;

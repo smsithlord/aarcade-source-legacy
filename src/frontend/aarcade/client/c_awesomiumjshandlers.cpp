@@ -352,16 +352,110 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				isItemSelected = 1;
 		}
 		params.push_back(VarArgs("%i", isItemSelected));
-
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())));
 
-		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pBrowserInstance, "arcadeHud", "onActivateInputMode", params);
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (pEmbeddedInstance && pEmbeddedInstance != pHudBrowserInstance)
+			params.push_back(pEmbeddedInstance->GetURL());
+		else
+			params.push_back("");
+
+		pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
 
 
 
 
 
 		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
+	}
+	else if (method_name == WSLit("getDOM"))
+	{
+		// get the embedded instance
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		
+		// if current instance is NOT Steamworks browser, throw error
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+		if (!pSteamBrowserInstance)
+		{
+			DevMsg("ERROR: Active browser is NOT a Steamworks browser.");
+			return;
+		}
+
+		// let 'er rip
+		/* bust due to title limit being 4096
+		std::string code = "document.title = \"AAAPICALL_";
+		code += WebStringToCharString(args[0].ToString());
+		code += ":\" + document.documentElement.innerHTML;";
+		pSteamBrowserInstance->InjectJavaScript(code.c_str());
+		*/
+
+		// bust due to xmlhttprequests having a callback in the Steamworks browser
+		//std::string code = "var xhr = new XMLHttpRequest(); xhr.open(\"POST\", \"http://www.aarcadeapicall.com.net.org/\", true); xhr.send(\"";
+		//code += WebStringToCharString(args[0].ToString());
+		//code += ":\" + document.documentElement.innerHTML); ";
+
+		//std::string code = "var aaapicallform = document.createElement('form'); aaapicallform.method = 'post'; aaapicallform.action = 'http://www.aarcadeapicall.com.net.org/'; var aaapicallinput = document.createElement('input'); aaapicallinput.type = 'text'; aaapicallinput.value = document.documentElement.innerHTML; aaapicallform.appendChild(aaapicallinput); document.body.appendChild(aaapicallform); aaapicallform.submit();";
+		//std::string code = "var aaapicallform = document.createElement('form'); aaapicallform.method = 'post'; aaapicallform.action = 'http://www.aarcadeapicall.com.net.org/'; var aaapicallinput = document.createElement('input'); aaapicallinput.name = 'doc'; aaapicallinput.type = 'text'; aaapicallinput.value = 'tester joint'; aaapicallform.appendChild(aaapicallinput); document.body.appendChild(aaapicallform); aaapicallform.submit();";
+		//pSteamBrowserInstance->InjectJavaScript(code.c_str());
+
+		std::string code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
+		code += WebStringToCharString(args[0].ToString());
+		code += "AAAPICALL' + encodeURIComponent(document.documentElement.innerHTML);";
+		pSteamBrowserInstance->InjectJavaScript(code.c_str());
+
+		//pSteamBrowserInstance->InjectJavaScript("document.title = 'tester joint';");
+		//pSteamBrowserInstance->InjectJavaScript("window.status = 'testerrrrrrrrr';");// document.location = 'http://jk.smsithlord.com/'; ");// window.status = document.documentElement.innerHTML; ");
+	}
+	else if (method_name == WSLit("metaSearch"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+		std::string field = WebStringToCharString(args[1].ToString());
+		std::string query = WebStringToCharString(args[2].ToString());
+
+		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+
+		KeyValues* active = pItem->FindKey("current");
+
+		if (!active)
+			active = pItem->FindKey("local", true);
+
+		if (active)
+		{
+			//std::string term = active->GetString(field.c_str());
+			//if (term != "")
+			//{
+				bool bIsEntityInstance = false;
+
+				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+				std::string oldId;
+				if (pEmbeddedInstance)
+				{
+					oldId = pEmbeddedInstance->GetId();
+
+					//if (pEmbeddedInstance == g_pAnarchyManager->GetSelectedEntity()->)
+
+					// close this instance
+					DevMsg("Embedded Instance ID: %s\n", oldId.c_str());
+
+					pEmbeddedInstance->Blur();
+					pEmbeddedInstance->Deselect();
+					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+					pEmbeddedInstance->Close();
+				}
+
+				C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+				//if (query != "")
+					pBrowserInstance->Init(oldId, query.c_str(), null);
+				//else
+					//pBrowserInstance->Init(oldId, VarArgs("https://www.google.com/search/%s", query.c_str()), "");
+				
+				pBrowserInstance->Select();
+				pBrowserInstance->Focus();
+
+				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+			//}
+		}
 	}
 	else if (method_name == WSLit("spawnNearestObject"))
 	{
@@ -391,6 +485,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			//g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 		}
+	}
+	else if (method_name == WSLit("fileBrowse"))
+	{
+		g_pAnarchyManager->ShowFileBrowseMenu();
 	}
 	else if (method_name == WSLit("simpleImageReady"))
 	{
@@ -447,7 +545,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					pTexture->SetTextureRegenerator(pRegen);
 					
 					pRegen->SetEmbeddedInstance(pImagesBrowserInstance);
+
+					DevMsg("Prepare\n");
 					pTexture->Download();
+					DevMsg("Download\n");
 					
 					pImagesBrowserInstance->OnSimpleImageReady(channel, itemId, field, pTexture);
 				}
@@ -505,6 +606,31 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		return types;
 	}
+	else if (method_name == WSLit("getAllLibraryApps"))
+	{
+		int count = 0;
+		//JSArray response;
+		JSObject apps;
+		KeyValues* active;
+		KeyValues* pApp = g_pAnarchyManager->GetMetaverseManager()->GetFirstLibraryApp();
+		while (pApp != null)	// for some reason, GetNextLibraryType was returning non-null even when there was nothing left to return!!  the non-null value was negative, so this line was adjusted.
+		{
+			count++;
+
+			active = pApp->FindKey("current");
+			if (!active)
+				active = pApp->FindKey("local", true);
+			if (active)
+			{
+				JSObject appObject;
+				AddSubKeys(active, appObject);
+				apps.SetProperty(WSLit(active->GetString("info/id")), appObject);
+			}
+
+			pApp = g_pAnarchyManager->GetMetaverseManager()->GetNextLibraryApp();
+		}
+		return apps;
+	}
 	else if (method_name == WSLit("didCancelPopupMenu"))
 	{
 		//DevMsg("Disabled for testing\n");
@@ -560,6 +686,28 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 				JSObject type;
 				AddSubKeys(active, type);
 				return type;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("getLibraryApp"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pApp = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(id);
+		if (pApp)
+		{
+			KeyValues* active = pApp->FindKey("current");
+			if (!active)
+				active = pApp->FindKey("local", true);
+			if (active)
+			{
+				JSObject app;
+				AddSubKeys(active, app);
+				return app;
 			}
 			else
 				return JSValue(0);
@@ -738,6 +886,45 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 				JSObject item;
 				AddSubKeys(active, item);
 				return item;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("updateItem"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+		if (pItem)
+		{
+			KeyValues* active = pItem->FindKey("current");
+			if (!active)
+				active = pItem->FindKey("local", true);
+
+			if (active)
+			{
+				// now loop through our updated fields
+				std::string field;
+				std::string value;
+				JSArray update = args[1].ToArray();
+				unsigned int max = update.size();
+				for (unsigned int i = 0; i < max; i += 2)
+				{
+					//JSObject object = update.At(i).ToObject();
+					//field = WebStringToCharString(object.GetProperty(WSLit("field")).ToString());
+					//value = WebStringToCharString(object.GetProperty(WSLit("value")).ToString());
+					field = WebStringToCharString(update.At(i).ToString());
+					value = WebStringToCharString(update.At(i+1).ToString());
+
+					// update field with value
+					active->SetString(field.c_str(), value.c_str());
+				}
+
+				// always return true (until there are update rules that could possibly return false)
+				return JSValue(true);
 			}
 			else
 				return JSValue(0);

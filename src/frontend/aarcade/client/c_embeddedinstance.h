@@ -24,6 +24,7 @@ public:
 	virtual std::string GetId();
 	virtual void Update() { DevMsg("ERROR: Base method called!\n"); };
 	virtual void Close() {};
+	virtual std::string GetURL() { return ""; }
 
 	std::string GetCharTyped(vgui::KeyCode code, bool bShift = false, bool bCtrl = false, bool bAlt = false);
 

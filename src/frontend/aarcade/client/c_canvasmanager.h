@@ -12,7 +12,7 @@ class C_CanvasManager
 public:
 	C_CanvasManager();
 	~C_CanvasManager();
-
+	
 	void Update();
 
 	CCanvasRegen* GetOrCreateRegen();
@@ -32,6 +32,8 @@ public:
 
 	void IncrementVisibleCanvasesCurrentFrame() { m_iVisibleCanvasesCurrentFrame++; }
 	void IncrementVisiblePriorityCanvasesCurrentFrame() { m_iVisiblePriorityCanvasesCurrentFrame++; }
+
+	void LevelShutdownPreEntity();
 
 	// accessors
 

@@ -72,7 +72,7 @@ void C_InputListenerAwesomiumBrowser::OnMouseReleased(vgui::MouseCode code)
 void C_InputListenerAwesomiumBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	if (pHudBrowserInstance->HasFocus() && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
+	if (pHudBrowserInstance->HasFocus() )//&& g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
 		pHudBrowserInstance->OnKeyPressed(code, bShiftState, bCtrlState, bAltState);
 	else if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
 	{

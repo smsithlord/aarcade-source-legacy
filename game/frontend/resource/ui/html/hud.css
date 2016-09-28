@@ -13,11 +13,11 @@ body
 	width: 100%;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.9);
+	/*background-color: rgba(0, 0, 0, 0);
+	opacity: 0;*/
 	color: #fff;
 	overflow: hidden;
 	font-size: 20px;
-	/*opacity: 0;*/
-	/*display: hidden;*/
 }
 
 #cursor
@@ -247,6 +247,9 @@ body
 	font-family: Arial;
 	font-weight: 900;
 	display: block;
+	height: 50px;
+	width: 40px;
+	text-align: center;
 }
 
 .hudSideContainerButton:hover
@@ -546,10 +549,25 @@ body
 	margin-right: auto;
 }
 
-#itemContainer .fieldContainer
+.fieldForm
 {
+	/*
 	padding-top: 2px;
 	padding-bottom: 2px;
+	white-space: nowrap;	
+	*/
+}
+
+.fieldContainer
+{
+	height: 36px;
+	vertical-align: top;
+}
+
+#itemContainer .fieldContainer
+{
+	padding-top: 0px;
+	padding-bottom: 0px;
 	white-space: nowrap;
 }
 
@@ -558,6 +576,15 @@ body
 	display: inline-block;
 	padding-top: 1px;
 	padding-bottom: 1px;
+	border: 3px solid rgba(0, 0, 0, 1.0);
+}
+
+#itemContainer .fieldContainer form
+{
+	display: inline-block;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	margin: 0;
 	border: 3px solid rgba(0, 0, 0, 1.0);
 }
 
@@ -574,7 +601,7 @@ body
 	text-shadow: 2px 2px 2px #000;
 }
 
-#itemContainer .fieldContainer div:nth-of-type(2)
+#itemContainer .fieldContainer form/*div:nth-of-type(2)*/
 {
 	border-radius: 10px;
 	text-align: left;
@@ -590,7 +617,21 @@ body
 	background-color: rgba(0, 0, 0, 0.8);
 }
 
-#itemContainer .fieldContainer div:nth-of-type(2) input
+/*
+#itemContainer .fieldContainer div:nth-of-type(1)
+{
+	border-radius: 10px;
+	text-align: left;
+	margin-left: 4px;
+	font-family: Arial;
+	width: 80%;
+	padding-top: 0;
+	padding-bottom: 0;
+	background-color: rgba(0, 0, 0, 0.8);
+}
+*/
+
+#itemContainer .fieldContainer form input/*div:nth-of-type(2) input*/
 {
 	width: 100%;
 	background-color: transparent;
@@ -604,12 +645,12 @@ body
 	text-shadow: 2px 2px 2px #000;
 }
 
-#itemContainer .fieldContainer div:nth-of-type(2) div
+#itemContainer .fieldContainer form div/*div:nth-of-type(2) div*/
 {
 	width: 5%;
 }
 
-#itemContainer .fieldContainer div:nth-of-type(2) select
+#itemContainer .fieldContainer form select/*div:nth-of-type(2) select*/
 {
 	width: 100%;
 	/*background-color: transparent;*/

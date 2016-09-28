@@ -128,6 +128,8 @@ public:
 
 	void Close();
 
+	std::string GetURL() { return ""; }
+
 	// threaded
 	//unsigned Worker(void *params);
 

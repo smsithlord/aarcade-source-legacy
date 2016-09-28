@@ -2,6 +2,7 @@ function ArcadeHud()
 {
 	//this.selectedItem;
 	this.platformId = "-KJvcne3IKMZQTaG7lPo";
+	this.url = "";
 	this.selectedWebTab = null;
 	this.pinHudButtonElem;
 	this.returnHudButtonElem;
@@ -16,8 +17,213 @@ function ArcadeHud()
 	this.hudLoadingMessagesContainer;
 	this.hudLoadingMessages = {};
 	this.DOMReady = false;
+	this.addressElem;
+	this.DOMParser;
+	this.metaScrapeHandles = {};
+	this.scrapers = {
+		"currenturi":
+		{
+			"title": "Use Current Address",
+			"fields":
+			{
+				"marquee": 100,
+				"screen": 100,
+				"preview": 100,
+				"file": 100,
+				"reference": 100,
+				"download": 100,
+				"stream": 100
+			},
+			"run": function(url, doc)
+			{
+				// marqueeBase: http://image.tmdb.org/t/p/original/
+				var response = {};
+				response.marquee = url;
+				response.screen = url;
+				response.preview = url;
+				response.file = url;
+				response.reference = url;
+				response.download = url;
+				response.stream = url;
+				return response;
+			}
+		},
+		"themoviedb":
+		{
+			"title": "The Movie DB",
+			"fields":
+			{
+				"all": 100,
+				"marquee": 100,
+				"screen": 100,
+				"preview": 100,
+				"description": 100,
+				"reference": 100,
+				"title": 100,
+				"type": 80
+			},
+			"run": function(uri, doc)
+			{
+				// helper function for extracting YT ID's from YT URLs
+				function extractYouTubeId(trailerURL)
+				{
+					if( typeof trailerURL === "undefined" )
+						return trailerURL;
+
+					var youtubeid;
+					if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+					{
+						youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+						var found = youtubeid.indexOf("&");
+						if( found > -1 )
+						{
+							youtubeid = youtubeid.substr(0, found);
+						}
+					}
+					else
+					{
+						var bases = ["youtu.be/", "/embed/"]
+						var found = trailerURL.indexOf("youtu.be/");
+						if( found >= 0 )
+							youtubeid = trailerURL.substr(found+9);
+						else
+						{
+							found = trailerURL.indexOf("/embed/");
+							if( found >= 0 )
+								youtubeid = trailerURL.substr(found+7);
+						}
+
+						if( !!youtubeid )
+						{
+							found = youtubeid.indexOf("?");
+							if( found > 0 )
+								youtubeid = youtubeid.substr(0, found);
+							else
+							{
+								found = youtubeid.indexOf("&");
+								if( found > 0 )
+									youtubeid = youtubeid.substr(0, found);
+							}
+						}
+					}
+
+				  return youtubeid;
+				}
+
+				// marqueeBase: http://image.tmdb.org/t/p/original/
+				var response = {};
+
+				// reference
+				var goodUri = uri.substring(0, uri.indexOf("-")).replace("https", "http");
+				response.reference = goodUri;
+
+				// title
+				var goodTitle = doc.querySelector("meta[property='og:title']").getAttribute("content");
+
+				// type
+				var goodType = doc.querySelector("meta[property='og:type']").getAttribute("content");
+				if( goodType === "movie" )
+				{
+					// fix the type to be an AArcade type
+					goodType += "s";
+
+					// need to find a date to append if this movie's title
+					var releaseDate = doc.querySelector(".release_date").innerHTML;
+					if( releaseDate )
+						goodTitle += " " + releaseDate;
+				}
+
+				response.type = goodType;
+				response.title = goodTitle;
+
+				// preview
+				var yt = doc.querySelector(".original_content iframe");
+				if(!!yt)
+				{
+					yt = yt.getAttribute("src");
+					yt = extractYouTubeId(yt);
+				}
+
+				if(!!!yt)
+					yt = "";
+				else
+					yt = "http://www.youtube.com/watch?v=" + yt;
+
+				response.preview = yt;
+
+				// description
+				response.description = doc.querySelector("meta[name='description']").getAttribute("content");
+
+				// screen
+				var screen = doc.querySelector(".original_content div .backdrop");
+				
+				if(!!screen)
+				{
+					screen = screen.getAttribute("data-src");
+					screen = screen.substring(screen.lastIndexOf("/") + 1);
+				}
+
+				if(!!!screen)
+					screen = "";
+				else
+					screen = "http://image.tmdb.org/t/p/original/" + screen;
+
+				response.screen = screen;
+
+				// marquee
+				var marquee = doc.querySelector(".original_content div .poster");
+				
+				if(!!marquee)
+				{
+					marquee = marquee.getAttribute("data-src");
+					marquee = marquee.substring(marquee.lastIndexOf("/") + 1);
+				}
+
+				if(!!!marquee)
+					marquee = "";
+				else
+					marquee = "http://image.tmdb.org/t/p/original/" + marquee;
+
+				response.marquee = marquee;
+
+				return response;
+			}
+		}
+	};
 	this.onDOMReady().then(function()
 	{
+		this.DOMParser = new DOMParser();
+
+		/*
+		 * DOMParser HTML extension
+		 * 2012-09-04
+		 * 
+		 * By Eli Grey, http://eligrey.com
+		 * Public domain.
+		 * NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+		 */
+
+		/*! @source https://gist.github.com/1129031 */
+		/*global document, DOMParser*/
+		this.DOMParser.parseFromString = function(markup, type) {
+			"use strict";
+				if (/^\s*text\/html\s*(?:;|$)/i.test(type)) {
+					var
+					  doc = document.implementation.createHTMLDocument("")
+					;
+			      		if (markup.toLowerCase().indexOf('<!doctype') > -1) {
+		        			doc.documentElement.innerHTML = markup;
+		      			}
+		      			else {
+		        			doc.body.innerHTML = markup;
+		      			}
+					return doc;
+				} else {
+					return nativeParse.apply(this, arguments);
+				}
+			};
+
 		this.DOMReady = true;
 
 		// inject the browser menu
@@ -33,7 +239,14 @@ function ArcadeHud()
 			// navigation container
 			var navigationElem = document.createElement("div");
 			navigationElem.className = "hudHeaderNavigationContainer";
-			navigationElem.innerHTML = "helloo world";
+			navigationElem.style.cssText = "text-align: center;";
+
+			// address
+			this.addressElem = document.createElement("input");
+			this.addressElem.style.cssText= "width: 600px;";
+			
+			navigationElem.appendChild(this.addressElem);
+			//navigationElem.innerHTML = "helloo world";
 
 			// browser tabs container table
 			var topTabsTableElem = document.createElement("div");
@@ -269,7 +482,20 @@ ArcadeHud.prototype.expandAddressMenu = function()
 		elem.style.top = "-65px";
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu)
+ArcadeHud.prototype.getURL = function()
+{
+	return this.url;
+};
+
+ArcadeHud.prototype.onURLChanged = function(url)
+{
+	this.url = url;
+
+	if( !!this.addressElem )
+		this.addressElem.value = this.url;
+};
+
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url)
 {
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
@@ -377,6 +603,8 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	*/
 
 //	document.body.style.backgroundColor = "transparent";
+
+	this.onURLChanged(url);
 };
 
 ArcadeHud.prototype.setHudTitle = function(text)
@@ -428,6 +656,7 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 		"locallibrarytypes",
 		"locallibrarymodels",
 		"locallibraryapps",
+		"locallibraryitems",
 		"mounts",
 		"workfetch",
 		"detectmaps",
@@ -603,9 +832,181 @@ ArcadeHud.prototype.hideCursorPreviewImage = function(uri)
 	this.cursorPreviewImageElem.style.display = "none";
 };
 
+ArcadeHud.prototype.showScraperPopupMenu = function(popupId, x, y, width, height, itemHeight, fontSize, selectedItem, rightAligned, callback)
+{
+	console.log("Popup is: " + popupId);
+	var popup = {
+		"popupId": popupId,
+		"x": parseInt(x),
+		"y": parseInt(y),
+		"width": parseInt(width),
+		"height": parseInt(height),
+		"itemHeight": parseInt(itemHeight),
+		"fontSize": parseFloat(fontSize),
+		"selectedItem": parseInt(selectedItem),
+		"rightAligned": (rightAligned !== "0"),
+		"callback": callback,
+		"items": new Array()
+	};
+
+	var argIndex = 10;
+	var numArguments = arguments.length;
+	var popupItem;
+	while( argIndex <= arguments.length - 8)
+	{
+		popupItem = {
+			"type": arguments[argIndex],
+			"label": arguments[argIndex+1],
+			"tooltip": arguments[argIndex+2],
+			"action": arguments[argIndex+3],	// a string for generic popups.
+			"right_to_left": (arguments[argIndex+4] !== "0"),
+			"has_directional_override": (arguments[argIndex+5] !== "0"),
+			"enabled": (arguments[argIndex+6] !== "0"),
+			"checked": (arguments[argIndex+7] !== "0")
+		};
+
+		popup.items.push(popupItem);
+		argIndex += 8;
+	}
+
+	var blackout = document.createElement("div");
+	blackout.style.cssText = "background-color: transparent; position: fixed; top: 0; left: 0; bottom: 0; right: 0;";
+	blackout.popup = popup;
+
+	blackout.addEventListener("mousedown", function(e)
+	{
+		var elem = e.srcElement;
+		// make sure the blackout elem is what got clicked
+		if( !!!elem.popup )
+			return;
+
+		elem.parentNode.removeChild(elem);
+	}, true);
+
+	var container = document.createElement("div");
+	container.className = "popupMenuContainer";
+	container.style.left = popup.x - 2 + "px";
+	container.style.top = popup.y + popup.height + "px";
+	container.style.width = popup.width -2 + "px";
+	//container.style.height = popup.height + "px";
+
+	var popupMenuItems = document.createElement("div");
+	popupMenuItems.className = "popupMenuItems";
+
+	var i, option, optionTextNode;
+	var numItems = popup.items.length;
+	for( i = 0; i < numItems; i++ )
+	{
+		option = document.createElement("div");
+		option.className = "popupMenuItem";
+		option.style.fontSize = Math.round(popup.fontSize) + "px";
+//		if( popup.selectedItem === i )
+//			option.className += " selectedPopupMenuItem";
+
+		option.blackout = blackout;		
+		option.popupItem = popup.items[i];
+		option.addEventListener("click", function(e)
+		{
+			var elem = e.srcElement;
+			if( !!!elem.blackout )
+				return;
+
+			//aaapi.system.didSelectPopupMenuItem(elem.blackout.popup.popupId, elem.blackout.popup.items.indexOf(elem.popupItem));
+
+			//elem.blackout.popup.callback(elem.blackout.popup.action);
+			elem.blackout.popup.callback(elem.popupItem.action);
+			elem.blackout.parentNode.removeChild(elem.blackout);
+		}, true);
+
+		optionTextNode = document.createTextNode(popup.items[i].label);
+		option.appendChild(optionTextNode);
+		popupMenuItems.appendChild(option);
+	}
+
+	var optionSearchContainer = document.createElement("div");
+	optionSearchContainer.className = "popupMenuItemSearch";
+
+	var optionSearchForm = document.createElement("form");
+	optionSearchForm.addEventListener("submit", function(e)
+	{
+		//console.log(e.srcElement.firstChild.popupMenuItems.childNodes);
+		var elem = e.srcElement.firstChild;
+
+		var i;
+		var count = 0;
+		var firstIndex = -1;
+		var numNodes = elem.popupMenuItems.childNodes.length;
+		for( i = 0; i < numNodes && count < 2; i++ )
+		{
+			if( elem.popupMenuItems.childNodes[i].style.display !== "none" )
+			{
+				if( count === 0 )
+					firstIndex = i;
+
+				count++;
+			}
+		}
+
+		if( count === 1 )
+		{
+			var optionElem = elem.popupMenuItems.childNodes[firstIndex];
+			//aaapi.system.didSelectPopupMenuItem(optionElem.blackout.popup.popupId, optionElem.blackout.popup.items.indexOf(optionElem.popupItem));
+			optionElem.blackout.parentNode.removeChild(optionElem.blackout);
+		}
+
+		e.preventDefault();
+		return false;
+	}, true);
+
+	var optionSearch = document.createElement("input");
+	optionSearch.popupMenuItems = popupMenuItems;
+	optionSearch.type = "text";
+	optionSearch.placeholder = "Search...";
+	optionSearch.changeTimeout = null;
+
+	optionSearch.addEventListener("input", function(e)
+	{
+		var elem = e.srcElement;
+		if( elem.changeTimeout )
+			clearTimeout(elem.changeTimeout);
+
+		elem.changeTimeout = setTimeout(function()
+		{
+			// step through all options and set display mode accordingly
+			var searchText = this.value.toLowerCase();
+
+			var i, popupMenuItem;
+			var numPopupMenuItems = this.popupMenuItems.childNodes.length;
+			for( i = 0; i < numPopupMenuItems; i++ )
+			{
+				popupMenuItem = this.popupMenuItems.childNodes[i];
+				if( popupMenuItem.popupItem.label.toLowerCase().indexOf(searchText) >= 0 )
+					popupMenuItem.style.display = "block";
+				else
+					popupMenuItem.style.display = "none";
+			}
+
+			//console.log(this.value);
+			changeTimeout = null;
+		}.bind(elem), 300);
+	}, true);
+
+	optionSearchForm.appendChild(optionSearch);
+	optionSearchContainer.appendChild(optionSearchForm);
+
+	container.appendChild(popupMenuItems);
+	container.appendChild(optionSearchContainer);
+
+	blackout.appendChild(container);
+	document.body.insertBefore(blackout, this.cursorElem);
+
+	optionSearch.focus();
+};
+
 ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemHeight, fontSize, selectedItem, rightAligned)
 {
 	console.log("Popup is: " + popupId);
+	console.log(JSON.stringify(arguments));
 	var popup = {
 		"popupId": popupId,
 		"x": parseInt(x),
@@ -829,6 +1230,41 @@ ArcadeHud.prototype.addHelpMessage = function(text)
 	helpText.appendChild(helpTextNode);
 	this.helpElem.insertBefore(helpText, this.helpElem.firstChild);
 	this.helpElem.style.display = "block";
+};
+
+ArcadeHud.prototype.metaScrape = function(scraperId, callback)
+{
+	var id = "meta" + Math.random().toString() + Math.random().toString() + Math.random().toString() + Math.random().toString();
+	var scraper = this.scrapers[scraperId];
+	if( !!scraper )
+	{
+		this.metaScrapeHandles[id] = {"scraper": scraper, "callback": callback};
+		aaapi.system.getDOM(id);
+	}
+	else
+		console.log("ERROR: Invalid scraper ID received.");
+};
+
+ArcadeHud.prototype.onDOMGot = function(url, response)
+{
+	var index = response.indexOf("AAAPICALL");
+	var callId = response.substring(0, index);
+	if( !!this.metaScrapeHandles[callId] )
+	{
+		var content = response.substring(index + 9);
+		content = "<html>" + decodeURIComponent(content) + "</html>";
+
+		var doc = arcadeHud.DOMParser.parseFromString(content, "text/html");
+
+		var scraper = this.metaScrapeHandles[callId].scraper;
+		var callback = this.metaScrapeHandles[callId].callback;
+		delete this.metaScrapeHandles[callId];
+		
+		var results = scraper.run(url, doc);
+		callback(results);
+	}
+	else
+		console.log("ERROR: DOM received with no matching scrape handle.");
 };
 
 ArcadeHud.prototype.onDOMReady = function()

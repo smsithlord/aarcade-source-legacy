@@ -195,6 +195,49 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				}
 				pItem->SetString("local/screen", resolvedScreen.c_str());
 
+
+				/*
+				// CACHE NEEDS RESOLVING!!
+				//std::string legacyPath = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+				char fullPathBuf[AA_MAX_STRING];
+				std::string resolvedScreenCached = pItem->GetString("screenslocation");
+				//std::string resolvedScreenCached = VarArgs("%s\\%s\\screens\\%s.tbn", library_type.c_str(), newType.c_str(), this->GenerateHashX(itemfile_ref.c_str();
+				//BuildItemKV->SetString("marqueeslocation", UTIL_VarArgs("%s\\%s\\marquees\\%s.tbn", library_type.c_str(), newType.c_str(), this->GenerateHashX(itemfile_ref.c_str())));
+				//BuildItemKV->SetString("screenslocation", UTIL_VarArgs("%s\\%s\\screens\\%s.tbn", library_type.c_str(), newType.c_str(), this->GenerateHashX(itemfile_ref.c_str())));
+
+				if (resolvedScreenCached != "" && resolvedScreenCached.find(":") != 1)
+				{
+					g_pFullFileSystem->RelativePathToFullPath(resolvedScreenCached.c_str(), "MOD", fullPathBuf, AA_MAX_STRING);
+					resolvedScreenCached = fullPathBuf;
+
+					if (resolvedScreenCached.find(":") != 1)
+					{
+						DevMsg("Testing sample path: %s\n", file.c_str());
+						resolvedScreenCached = VarArgs("%s\\%s\\screens\\%s.tbn", "library", pItem->GetString("type"), g_pAnarchyManager->GenerateLegacyHash(file.c_str()));
+						g_pFullFileSystem->RelativePathToFullPath(resolvedScreenCached.c_str(), "MOD", fullPathBuf, AA_MAX_STRING);
+						resolvedScreenCached = fullPathBuf;
+
+						if (resolvedScreenCached.find(":") != 1)
+						{
+							DevMsg("Testing sample path: %s\n", file.c_str());
+							resolvedScreenCached = VarArgs("%s\\%s\\screens\\%s.tbn", "library_cache", pItem->GetString("type"), g_pAnarchyManager->GenerateLegacyHash(file.c_str()));
+							g_pFullFileSystem->RelativePathToFullPath(resolvedScreenCached.c_str(), "MOD", fullPathBuf, AA_MAX_STRING);
+							resolvedScreenCached = fullPathBuf;
+
+							if (resolvedScreenCached.find(":") != 1)
+								resolvedScreenCached = "";
+						}
+					}
+
+					DevMsg("Arbys full path here is: %s\n", resolvedScreenCached.c_str());
+				}
+				else
+					resolvedScreenCached = "";
+				pItem->SetString("local/screencached", resolvedScreenCached.c_str());
+				*/
+
+
+
 				// NEEDS RESOLVING!!
 				std::string resolvedMarquee = pItem->GetString("marquees/low");
 				if (resolvedMarquee == "")
@@ -204,6 +247,26 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 						resolvedMarquee = "";
 				}
 				pItem->SetString("local/marquee", resolvedMarquee.c_str());
+
+
+
+				/*
+				// CACHE NEEDS RESOLVING!!
+				//std::string legacyPath = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+				//char fullPathBuf[AA_MAX_STRING];
+				std::string resolvedMarqueeCached = pItem->GetString("marqueeslocation");
+				if (resolvedMarqueeCached != "" && resolvedMarqueeCached.find(":") != 1)
+				{
+					g_pFullFileSystem->RelativePathToFullPath(resolvedMarqueeCached.c_str(), "MOD", fullPathBuf, AA_MAX_STRING);
+					resolvedMarqueeCached = fullPathBuf;
+					DevMsg("Arbys full path here is: %s\n", resolvedMarqueeCached.c_str());
+				}
+				else
+					resolvedMarqueeCached = "";
+				pItem->SetString("local/marqueecached", resolvedMarqueeCached.c_str());
+				*/
+
+
 				m_previousLoadLocalItemsLegacyBuffer.push_back(pItem);
 				//DevMsg("WIN!\n");
 				// TODO: Generate an ID and add this to the library!!
@@ -983,6 +1046,28 @@ KeyValues* C_MetaverseManager::GetNextLibraryType()
 	return null;
 }
 
+KeyValues* C_MetaverseManager::GetFirstLibraryApp()
+{
+	m_previousGetAppIterator = m_apps.begin();
+	if (m_previousGetAppIterator != m_apps.end())
+		return m_previousGetAppIterator->second;
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::GetNextLibraryApp()
+{
+	if (m_previousGetAppIterator != m_apps.end())
+	{
+		m_previousGetAppIterator++;
+
+		if (m_previousGetAppIterator != m_apps.end())
+			return m_previousGetAppIterator->second;
+	}
+
+	return null;
+}
+
 KeyValues* C_MetaverseManager::GetLibraryType(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_types.find(id);
@@ -1592,6 +1677,103 @@ KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
 	return null;
 }
 
+KeyValues* C_MetaverseManager::LoadLocalItem(std::string file, std::string filePath)
+{
+
+	//DevMsg("Attemping to load item %s from %s\n", file.c_str(), filePath.c_str());
+	KeyValues* pItem = new KeyValues("item");
+	bool bLoaded;
+
+	if (filePath != "")
+	{
+		std::string fullFile = filePath + file;
+		bLoaded = pItem->LoadFromFile(g_pFullFileSystem, fullFile.c_str(), "");
+	}
+	else
+		bLoaded = pItem->LoadFromFile(g_pFullFileSystem, file.c_str(), "MOD");
+
+	if (!bLoaded)
+	{
+		pItem->deleteThis();
+		pItem = null;
+	}
+	else
+	{
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pItem->FindKey("current");
+		if (!pActive)
+			pActive = pItem->FindKey("local");
+
+		std::string id = pActive->GetString("info/id");
+
+		std::vector<std::string> defaultFields;
+		defaultFields.push_back("title");
+		defaultFields.push_back("description");
+		defaultFields.push_back("file");
+		defaultFields.push_back("type");
+		defaultFields.push_back("app");
+		defaultFields.push_back("reference");
+		defaultFields.push_back("preview");
+		defaultFields.push_back("download");
+		defaultFields.push_back("stream");
+		defaultFields.push_back("screen");
+		defaultFields.push_back("marquee");
+		defaultFields.push_back("model");
+
+		unsigned int max = defaultFields.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (!pActive->FindKey(defaultFields[i].c_str()))
+				pActive->SetString(defaultFields[i].c_str(), "");
+		}
+
+		if (!pActive->FindKey("type") || !Q_strcmp(pActive->GetString("type"), ""))
+			pActive->SetString("type", "-KKa1MHJTls2KqNphWFM");
+		
+		//DevMsg("Finished loading item\n");
+
+		m_items[id] = pItem;
+	}
+
+	return pItem;
+}
+
+unsigned int C_MetaverseManager::LoadAllLocalItems(std::string filePath)
+{
+	unsigned int count = 0;
+	FileFindHandle_t testFileHandle;
+	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%slibrary\\items\\*.key", filePath.c_str()), &testFileHandle);
+
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(testFileHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(testFileHandle);
+			continue;
+		}
+
+		std::string foundName = pFilename;
+		foundName = VarArgs("library\\items\\%s", pFilename);
+		pFilename = g_pFullFileSystem->FindNext(testFileHandle);
+
+		// MAKE THE FILE PATH NICE
+		char path_buffer[AA_MAX_STRING];
+		Q_strcpy(path_buffer, foundName.c_str());
+		V_FixSlashes(path_buffer);
+
+		for (int i = 0; path_buffer[i] != '\0'; i++)
+			path_buffer[i] = tolower(path_buffer[i]);
+		// FINISHED MAKING THE FILE PATH NICE
+
+		foundName = path_buffer;
+		if (this->LoadLocalItem(foundName, filePath))
+			count++;
+	}
+
+	g_pFullFileSystem->FindClose(testFileHandle);
+	return count;
+}
+
 KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string filePath)
 {
 
@@ -1619,6 +1801,19 @@ KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string file
 			pActive = pModel->FindKey("local");
 
 		std::string id = pActive->GetString("info/id");
+
+		std::vector<std::string> defaultFields;	// Should platform specific fields be expected as well?  Jump off that bridge when you cross it.
+		defaultFields.push_back("title");
+		defaultFields.push_back("keywords");
+		defaultFields.push_back("dynamic");
+
+		unsigned int max = defaultFields.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (!pActive->FindKey(defaultFields[i].c_str()))
+				pActive->SetString(defaultFields[i].c_str(), "");
+		}
+
 		m_models[id] = pModel;
 	}
 }

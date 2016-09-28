@@ -33,6 +33,8 @@ public:
 	bool Select();
 	bool Deselect();
 
+	std::string GetURL() { return m_URL; }
+
 	void Close();
 
 	void ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
@@ -84,6 +86,7 @@ public:
 	void SetWebView(Awesomium::WebView* pWebView) { m_pWebView = pWebView; }
 
 private:
+	std::string m_URL;
 	int m_iNumImagesLoading;
 	int m_iMaxImagesLoading;
 

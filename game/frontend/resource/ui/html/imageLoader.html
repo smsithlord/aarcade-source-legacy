@@ -70,7 +70,7 @@
 				// don't do anything if another image is already waiting to render
 				for( i = 0; i < this.imageRequests.length; i++ )
 				{
-					if( this.imageRequests[i].rendering )
+					if( this.imageRequests[i].rendering )//|| this.imageRequests[i].removing )
 						return;
 				}
 
@@ -89,8 +89,10 @@
 
 				if( !!imageRequest )
 				{
+					//imageRequest.imageElem.offsetHeight;	// not enough!!
 					setTimeout(function()
 					{
+						//console.log("Simple image ready for: " + this.imageElem.src);//this.itemId);
 						aaapi.system.simpleImageReady(this.channel, this.itemId, this.field);
 					}.bind(imageRequest), 100);	// delay because the image doesn't appear instantly when it is done loading
 				}
@@ -106,6 +108,7 @@
 					if( this.imageRequests[i].rendering )
 					{
 						imageRequest = this.imageRequests[i];
+						//imageRequest.removing = true;
 						break;
 					}
 				}
@@ -116,14 +119,49 @@
 					return;
 				}
 
+				//console.log("Removing elem for " + imageRequest.imageElem.src);
+				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+
 				var index = this.imageRequests.indexOf(imageRequest);
 				if( index >= 0 )
 					this.imageRequests.splice(index, 1);
 
-				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+				//this.imageElem.parentNode.removeChild(this.imageElem);
 
 				if( this.imageRequests.length > 0 )
 					this.renderNextImage();
+
+				/*
+				// removing the child might not be instantaneous!!
+				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+				setTimeout(function() {
+					var index = imageLoader.imageRequests.indexOf(this);
+					if( index >= 0 )
+						imageLoader.imageRequests.splice(index, 1);
+
+					//this.imageElem.parentNode.removeChild(this.imageElem);
+
+					if( imageLoader.imageRequests.length > 0 )
+						imageLoader.renderNextImage();
+				}.bind(imageRequest), 200);
+				*/
+			};
+
+			ImageLoader.prototype.isImageExtension = function(value)
+			{
+				var extensions = "::tbn::jpg::jpeg::tiff::gif::bmp::png::webp::";
+				var ext = value;
+				var found = ext.lastIndexOf(".");
+				if( found >= 0 )
+				{
+					ext = ext.substring(found+1);
+					ext = ext.toLowerCase();
+
+					if( extensions.indexOf("::" + ext + "::") >= 0 )
+						return true;
+				}
+
+				return false;
 			};
 
 			ImageLoader.prototype.loadImage = function(channel, itemId)
@@ -131,7 +169,7 @@
 				var imageRequest = {
 					"channel": channel,
 					"itemId": itemId,
-					"fields": new Array("marquee", "screen"),
+					"fields": new Array("marquee", "screen", "preview", "file"),
 					"usedFields": new Array(channel),
 					"item": undefined,
 					"field": channel,
@@ -165,8 +203,14 @@
 //console.log(channel);
 //console.log(item[channel]);
 
-				if( imageRequest.item[imageRequest.field] == "" || imageRequest.item[imageRequest.field].indexOf("file:///") === 0 || imageRequest.item[imageRequest.field].indexOf("\\") !== -1 )
+				//console.log("Attempting " + imageRequest.field + ": " + imageRequest.item[imageRequest.field]);
+
+				//if( imageRequest.item[imageRequest.field] == "" || imageRequest.item[imageRequest.field].indexOf("file:///") === 0 || imageRequest.item[imageRequest.field].indexOf("\\") !== -1 )
+				var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+
+				if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
 				{
+					imageRequest.usedFields.push(imageRequest.field);
 					var nextField = this.getNextField(imageRequest);
 					if( !!nextField )
 					{
@@ -180,6 +224,9 @@
 					}
 				}
 
+				// do this again incase the field has changed.
+				YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+
 				if( !!imageRequest.imageElem )
 					imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
 
@@ -189,7 +236,7 @@
 				document.body.appendChild(imageRequest.imageElem);
 				imageRequest.imageElem.addEventListener("load", this.onImageLoad.bind(imageRequest), true);
 				imageRequest.imageElem.addEventListener("error", this.onImageError.bind(imageRequest), true);
-				var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+				//var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
 				if( !!YouTubeId )
 					imageRequest.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
 				else
@@ -206,8 +253,21 @@
 				var i;
 				for( i = 0; i < imageRequest.fields.length; i++ )
 				{
-					if(imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" && imageRequest.item[imageRequest.fields[i]].indexOf("file:///") !== 0 && imageRequest.item[imageRequest.fields[i]].indexOf("\\") === -1)
+					//if(imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" && imageRequest.item[imageRequest.fields[i]].indexOf("file:///") !== 0 && imageRequest.item[imageRequest.fields[i]].indexOf("\\") === -1)
+
+//					var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+//					if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
+
+					if( imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" )
 					{
+						var NextYouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.fields[i]]);
+
+						if( !!!NextYouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.fields[i]]) )
+						{
+							imageRequest.usedFields.push(imageRequest.fields[i]);
+							continue;
+						}
+
 						nextField = imageRequest.fields[i];
 						break;
 					}
@@ -218,12 +278,14 @@
 
 			ImageLoader.prototype.onImageLoad = function(e)
 			{
-				if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
+				//if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
+				if( (this.imageElem.src.indexOf("img.youtube.com/") >= 0 || this.imageElem.src.indexOf("file:///") === 0) && this.imageElem.width == 120 && this.imageElem.height == 90 )
 				{
-					imageLoader.onImageError().bind(this);
+					imageLoader.onImageError.call(this);//().bind(this);
 				}
 				else
 				{
+					//console.log("Sucessfully loaded " + this.imageElem.src);
 					this.ready = true;
 					imageLoader.renderNextImage();
 				}
@@ -265,7 +327,7 @@
 
 			ImageLoader.prototype.onCompleteFailure = function(imageRequest)
 			{
-				console.log("All images for item " + imageRequest.itemId + " failed.");
+				//console.log("All images for item " + imageRequest.itemId + " failed.");
 
 				// empty field means failed to load image
 				setTimeout(function()
@@ -280,7 +342,11 @@
 
 			ImageLoader.prototype.onImageError = function(e)
 			{
+				var elem = this.imageElem;
+				//console.log("Error loading image: " + elem.src);
+
 				var nextField = imageLoader.getNextField(this);
+				//console.log("Next to attempt is: " + nextField);
 
 				if( !!nextField )
 				{
@@ -291,6 +357,7 @@
 						this.imageElem.parentNode.removeChild(this.imageElem);
 
 					this.imageElem = document.createElement("img");
+					this.imageElem.style.display = "none";
 					document.body.appendChild(this.imageElem);
 					this.imageElem.addEventListener("load", imageLoader.onImageLoad.bind(this), true);
 					this.imageElem.addEventListener("error", imageLoader.onImageError.bind(this), true);
@@ -300,6 +367,8 @@
 						this.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
 					else
 						this.imageElem.src = this.item[this.field];
+
+					//console.log("Alternate attempting " + this.field + ": " + this.item[this.field]);
 				}
 				else
 					imageLoader.onCompleteFailure(this);

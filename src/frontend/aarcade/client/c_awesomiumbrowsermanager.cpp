@@ -288,6 +288,9 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getMapInstances"), true);
 	systemObject.SetCustomMethod(WSLit("spawnNearestObject"), false);
 	systemObject.SetCustomMethod(WSLit("setNearestObjectDist"), false);
+	systemObject.SetCustomMethod(WSLit("fileBrowse"), false);
+	systemObject.SetCustomMethod(WSLit("metaSearch"), false);
+	systemObject.SetCustomMethod(WSLit("getDOM"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -297,6 +300,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	JSObject& libraryObject = result.ToObject();
 	libraryObject.SetCustomMethod(WSLit("getAllLibraryTypes"), true);
 	libraryObject.SetCustomMethod(WSLit("getLibraryType"), true);
+	libraryObject.SetCustomMethod(WSLit("getAllLibraryApps"), true);
+	libraryObject.SetCustomMethod(WSLit("getLibraryApp"), true);
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getLibraryItem"), true);
@@ -304,6 +309,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
 
 	// CALLBACKS
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.callbacks"));

@@ -33,6 +33,9 @@ public:
 	KeyValues* LoadLocalModel(std::string file, std::string filePath = "");
 	unsigned int LoadAllLocalModels(std::string filePath = "");
 
+	KeyValues* LoadLocalItem(std::string file, std::string filePath = "");
+	unsigned int LoadAllLocalItems(std::string filePath = "");
+
 	std::string ResolveLegacyApp(std::string legacyApp);
 	KeyValues* LoadLocalApp(std::string file, std::string filePath = "", std::string searchPath = "");
 	unsigned int LoadAllLocalApps(std::string filePath = "");
@@ -56,6 +59,8 @@ public:
 	KeyValues* GetNextLibraryType();
 	KeyValues* GetLibraryType(std::string id);
 
+	KeyValues* GetFirstLibraryApp();
+	KeyValues* GetNextLibraryApp();
 	KeyValues* GetLibraryApp(std::string id);
 
 	std::map<std::string, std::string>& DetectAllMapScreenshots();
@@ -76,6 +81,7 @@ public:
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 
 	// mutators
+	void SetPreviousLocaLocalItemLegacyWorkshopIds(std::string value) { m_previousLocaLocalItemLegacyWorkshopIds = value; }	// SHOULDN'T EVER BE USED EXCEPT FOR IN CASE OF HACKMERGENCY
 	
 private:
 	C_WebTab* m_pWebTab;
@@ -87,6 +93,7 @@ private:
 	std::map<std::string, KeyValues*> m_items;
 	std::map<std::string, KeyValues*> m_types;
 	std::map<std::string, KeyValues*>::iterator m_previousGetTypeIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousGetAppIterator;
 	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;	// are these used yet?????
 	std::map<std::string, KeyValues*>::iterator m_previousFindItemIterator;
 	KeyValues* m_pPreviousSearchInfo;

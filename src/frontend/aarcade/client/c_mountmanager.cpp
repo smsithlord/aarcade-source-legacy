@@ -45,7 +45,7 @@ void C_MountManager::Init()
 
 		// load %value/config/config.vdf to find other library paths
 		KeyValues* pConfigKV = new KeyValues("InstallConfigStore");
-		pConfigKV->UsesEscapeSequences(true);
+		//pConfigKV->UsesEscapeSequences(true);
 		if (pConfigKV->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\config\\config.vdf", value), ""))
 		{
 			// For now, try searching until a search path is not found.
