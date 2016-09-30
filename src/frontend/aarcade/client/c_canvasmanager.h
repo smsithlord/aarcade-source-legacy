@@ -35,6 +35,8 @@ public:
 
 	void LevelShutdownPreEntity();
 
+	void RefreshItemTextures(std::string itemId, std::string channel);
+
 	// accessors
 
 	// mutators

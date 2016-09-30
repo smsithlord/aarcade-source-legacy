@@ -369,6 +369,34 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
 	}
+	else if (method_name == WSLit("autoInspect"))
+	{
+		// FIXME: THIS SHOULD JUST CALL A SUBROUTINE OF THE METAVERSE MANAGER!!
+
+		std::string itemId = WebStringToCharString(args[0].ToString());
+		KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+		if (item)
+		{
+			KeyValues* active = item->FindKey("current");
+			if (!active)
+				active = item->FindKey("local", true);
+
+			std::string uri = "file://";
+			uri += engine->GetGameDirectory();
+			uri += "/resource/ui/html/autoInspectItem.html?id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
+
+			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			if (pEmbeddedInstance)
+			{
+				C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+				if (pSteamBrowserInstance)
+				{
+					pSteamBrowserInstance->SetActiveScraper("", "", "");
+					pSteamBrowserInstance->SetUrl(uri);
+				}
+			}
+		}
+	}
 	else if (method_name == WSLit("getDOM"))
 	{
 		// get the embedded instance
@@ -402,18 +430,27 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
 		code += WebStringToCharString(args[0].ToString());
 		code += "AAAPICALL' + encodeURIComponent(document.documentElement.innerHTML);";
-		pSteamBrowserInstance->InjectJavaScript(code.c_str());
+	///*
+		std::string mainCode = "if (document.readyState === 'complete'){";
+		mainCode += code;
+		mainCode += "}else{document.addEventListener('DOMContentLoaded', function() {";
+		mainCode += code;
+		mainCode += "});}";
+		//*/
+
+		pSteamBrowserInstance->InjectJavaScript(mainCode);
 
 		//pSteamBrowserInstance->InjectJavaScript("document.title = 'tester joint';");
 		//pSteamBrowserInstance->InjectJavaScript("window.status = 'testerrrrrrrrr';");// document.location = 'http://jk.smsithlord.com/'; ");// window.status = document.documentElement.innerHTML; ");
 	}
 	else if (method_name == WSLit("metaSearch"))
 	{
-		std::string id = WebStringToCharString(args[0].ToString());
-		std::string field = WebStringToCharString(args[1].ToString());
-		std::string query = WebStringToCharString(args[2].ToString());
+		std::string scraperId = WebStringToCharString(args[0].ToString());
+		std::string itemId = WebStringToCharString(args[1].ToString());
+		std::string field = WebStringToCharString(args[2].ToString());
+		std::string query = WebStringToCharString(args[3].ToString());
 
-		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 
 		KeyValues* active = pItem->FindKey("current");
 
@@ -422,21 +459,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		if (active)
 		{
-			//std::string term = active->GetString(field.c_str());
-			//if (term != "")
-			//{
-				bool bIsEntityInstance = false;
+			bool bIsEntityInstance = false;
 
-				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+			if (!pBrowserInstance)
+			{
 				std::string oldId;
 				if (pEmbeddedInstance)
 				{
 					oldId = pEmbeddedInstance->GetId();
 
-					//if (pEmbeddedInstance == g_pAnarchyManager->GetSelectedEntity()->)
-
 					// close this instance
-					DevMsg("Embedded Instance ID: %s\n", oldId.c_str());
+					DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
 
 					pEmbeddedInstance->Blur();
 					pEmbeddedInstance->Deselect();
@@ -444,17 +479,18 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					pEmbeddedInstance->Close();
 				}
 
-				C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
-				//if (query != "")
-					pBrowserInstance->Init(oldId, query.c_str(), null);
-				//else
-					//pBrowserInstance->Init(oldId, VarArgs("https://www.google.com/search/%s", query.c_str()), "");
-				
-				pBrowserInstance->Select();
-				pBrowserInstance->Focus();
+				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+				pBrowserInstance->Init(oldId, query.c_str(), null);
+			}
+			else
+				pBrowserInstance->SetUrl(query);	// reuse the current focused steam browser if it exists
 
-				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
-			//}
+			pBrowserInstance->SetActiveScraper(scraperId, itemId, field);
+				
+			pBrowserInstance->Select();
+			pBrowserInstance->Focus();
+
+			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
 		}
 	}
 	else if (method_name == WSLit("spawnNearestObject"))
@@ -533,9 +569,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					int iWidth = 512;
 					int iHeight = 512;
 
-					//ITexture* pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_MODEL, true, 1);
-					//if ( !pTexture )
-					ITexture* pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_MODEL, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+					ITexture* pTexture = null;
+					//ITexture* pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_MODEL, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+					if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
+						pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+					else
+						pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
 
 					if (!pTexture)
 						DevMsg("Failed to create texture!\n");
@@ -907,6 +946,7 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			if (active)
 			{
 				// now loop through our updated fields
+				bool bNeedsTextureUpdate = false;
 				std::string field;
 				std::string value;
 				JSArray update = args[1].ToArray();
@@ -921,9 +961,19 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 					// update field with value
 					active->SetString(field.c_str(), value.c_str());
+
+					// if any of the following fields were changed, the images on the item should be refreshed:
+					if (field == "file" || field == "preview" || field == "screen" || field == "marquee")
+						bNeedsTextureUpdate = true;
+				}
+				
+				if (bNeedsTextureUpdate)
+				{
+					g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "ALL");
+					//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "screen");
+					//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "marquee");
 				}
 
-				// always return true (until there are update rules that could possibly return false)
 				return JSValue(true);
 			}
 			else

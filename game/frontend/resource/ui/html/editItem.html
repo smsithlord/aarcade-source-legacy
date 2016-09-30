@@ -214,23 +214,13 @@ function getParameterByName(name, url) {
 					var buttonGlobeContainer = document.createElement("div");
 					buttonGlobeContainer.className = "button";
 					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-					buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
 					buttonGlobeContainer.field = x;
-					buttonGlobeContainer.addEventListener("click", function(e)
-					{
-						var elem = e.target;
-
-						var queryTitle = item["title"];
-						var dateCull = queryTitle.indexOf(" (");
-						if( dateCull >= 0 )
-							queryTitle = queryTitle.substring(0, dateCull);
-
-						var query = "https://www.netflix.com/search/" + encodeURIComponent(queryTitle);
-
-						aaapi.system.metaSearch(id, elem.field, query);
-
-						document.location = "asset://ui/blank.html";
-					}, true);
+					var buttonGlobeImage = document.createElement("img");
+					buttonGlobeImage.style.cssText = "width: 20px;";
+					buttonGlobeImage.src = "webicon.png";
+					buttonGlobeImage.field = x;
+					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
+					buttonGlobeContainer.appendChild(buttonGlobeImage);
 					fieldContainer.appendChild(buttonGlobeContainer);
 
 					var buttonCurrentContainer = document.createElement("div");
@@ -239,10 +229,15 @@ function getParameterByName(name, url) {
 
 					var buttonCurrentImage = document.createElement("img");
 					buttonCurrentImage.style.cssText = "width: 20px;";
-					buttonCurrentImage.src = "linkicon.png";
-					buttonCurrentImage.field = x;				
+					buttonCurrentImage.src = "scrapeicon.png";
+					buttonCurrentImage.field = x;
+					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
+
+					/*		
 					buttonCurrentImage.addEventListener("click", function(e)
 					{
+						
+						
 						arcadeHud.metaScrape("currenturi", function(scrapedData)
 						{
 							//console.log(this.field + " : " + scrapedData);
@@ -262,8 +257,10 @@ function getParameterByName(name, url) {
 									}
 								}
 							}
-						}.bind(this));					
+						}.bind(this));	
+										
 					}.bind(buttonCurrentImage), true);
+					*/
 					
 					buttonCurrentContainer.appendChild(buttonCurrentImage);
 					fieldContainer.appendChild(buttonCurrentContainer);
@@ -276,24 +273,13 @@ function getParameterByName(name, url) {
 					var buttonGlobeContainer = document.createElement("div");
 					buttonGlobeContainer.className = "button";
 					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-					buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
 					buttonGlobeContainer.field = x;
-					buttonGlobeContainer.addEventListener("click", function(e)
-					{
-						var elem = e.target;
-
-						var queryTitle = item["title"];
-						var dateCull = queryTitle.indexOf(" (");
-						if( dateCull >= 0 )
-							queryTitle = queryTitle.substring(0, dateCull);
-
-						//var query = "https://www.netflix.com/search/" + encodeURIComponent(queryTitle);
-						var query = "http://www.themoviedb.org/search?query=" + encodeURIComponent(queryTitle);
-
-						aaapi.system.metaSearch(id, elem.field, query);
-
-						document.location = "asset://ui/blank.html";
-					}, true);
+					var buttonGlobeImage = document.createElement("img");
+					buttonGlobeImage.style.cssText = "width: 20px;";
+					buttonGlobeImage.src = "webicon.png";
+					buttonGlobeImage.field = x;
+					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
+					buttonGlobeContainer.appendChild(buttonGlobeImage);
 					fieldContainer.appendChild(buttonGlobeContainer);
 
 					var buttonCurrentContainer = document.createElement("div");
@@ -302,8 +288,10 @@ function getParameterByName(name, url) {
 
 					var buttonCurrentImage = document.createElement("img");
 					buttonCurrentImage.style.cssText = "width: 20px;";
-					buttonCurrentImage.src = "linkicon.png";
-					buttonCurrentImage.field = x;				
+					buttonCurrentImage.src = "scrapeicon.png";
+					buttonCurrentImage.field = x;	
+					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
+					/*			
 					buttonCurrentImage.addEventListener("click", function(e)
 					{
 						arcadeHud.metaScrape("currenturi", function(scrapedData)
@@ -327,6 +315,7 @@ function getParameterByName(name, url) {
 							}
 						}.bind(this));					
 					}.bind(buttonCurrentImage), true);
+*/
 
 					buttonCurrentContainer.appendChild(buttonCurrentImage);	
 					fieldContainer.appendChild(buttonCurrentContainer);
@@ -344,23 +333,13 @@ function getParameterByName(name, url) {
 			var buttonGlobeContainer = document.createElement("div");
 			buttonGlobeContainer.className = "button";
 			buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
-			buttonGlobeContainer.innerHTML = "<img src='webicon.png' style='width: 20px;' />";
-			buttonGlobeContainer.field = x;
-			buttonGlobeContainer.addEventListener("click", function(e)
-			{
-				var elem = e.target;
-
-				var queryTitle = item["title"];
-				var dateCull = queryTitle.indexOf(" (");
-				if( dateCull >= 0 )
-					queryTitle = queryTitle.substring(0, dateCull);
-
-				var query = "http://www.themoviedb.org/search?query=" + encodeURIComponent(queryTitle);
-
-				aaapi.system.metaSearch(id, elem.field, query);
-
-				document.location = "asset://ui/blank.html";
-			}, true);
+			buttonGlobeContainer.field = "all";
+			var buttonGlobeImage = document.createElement("img");
+			buttonGlobeImage.style.cssText = "width: 20px;";
+			buttonGlobeImage.src = "webicon.png";
+			buttonGlobeImage.field = "all";
+			buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
+			buttonGlobeContainer.appendChild(buttonGlobeImage);
 			metaScrapeContainer.insertBefore(buttonGlobeContainer, metaScrapeContainer.firstChild);
 			//metaScrapeContainer.appendChild(buttonGlobeContainer);
 
@@ -370,11 +349,16 @@ function getParameterByName(name, url) {
 
 			var buttonCurrentImage = document.createElement("img");
 			buttonCurrentImage.style.cssText = "width: 20px;";
-			buttonCurrentImage.src = "linkicon.png";
+			buttonCurrentImage.src = "scrapeicon.png";
 			buttonCurrentImage.field = "all";				
-			buttonCurrentImage.addEventListener("click", function(e)
+			buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
+			
+			buttonCurrentContainer.appendChild(buttonCurrentImage);
+			metaScrapeContainer.appendChild(buttonCurrentContainer);
+
+			function metaScrapeButtonClicked(e)
 			{
-				console.log("enterprise:");
+				console.log("enterprisexx:");
 				console.log(e.target.tagName);
 
 				var elem = e.target;
@@ -399,14 +383,148 @@ function getParameterByName(name, url) {
 				args.push(function(selectedOption)
 				{
 					console.log(selectedOption);
-					arcadeHud.metaScrape(selectedOption, function(scrapedData)
+					arcadeHud.metaScrape(selectedOption, this.field, function(scrapedData)
 					{
+						var usedFields = [];
 						var args = [];
 						var x, field;
 						for( x in scrapedData)
 						{
 							field = scrapedData[x];
-							if( field === "" )
+							if(field === "" || (this.field !== "all" && this.field !== x))
+								continue;
+
+							if( x === "type" )
+							{
+								var allTypes = aaapi.library.getAllLibraryTypes();
+								var y;
+								for( y in allTypes )
+								{
+									console.log(allTypes[y].title);
+									if( allTypes[y].title === field )
+									{
+										field = allTypes[y].info.id;
+										break;
+									}
+								}
+							}
+
+							/*
+							var inputs = document.querySelectorAll("input, select");
+							var i;
+							for( i = 0; i < inputs.length; i++ )
+							{
+								if( inputs[i].field === x )
+								{
+									//inputs[i].focus();
+									inputs[i].value = field;
+									break;
+								}
+							}
+							*/
+
+							args.push(x);
+							args.push(field);
+							usedFields.push(x);
+						}
+
+						var success = aaapi.library.updateItem(id, args);
+
+						if( success )
+						{
+							// only update the item currently loaded if it matches the ID of the newly updated one.
+							if( item.id === this.itemId)
+							{
+								var i;
+								var max = args.length;
+								for( i = 0; i < max; i += 2)
+								{
+									if( this.field == "all" || args[i] === this.field )
+										item[args[i]] = args[i+1];
+								}
+							}
+
+							console.log("Item updated!");
+
+							//aaapi.system.autoInspect(this.itemId);
+						}
+						else
+							console.log("Item update rejected!");
+					}.bind(this));
+				}.bind(this));
+
+				// then add entries for each scraper...
+				var scraper;
+				var w;
+				for( w in arcadeHud.scrapers )
+				{
+					var scraper = arcadeHud.scrapers[w];
+
+					if( !!!scraper.fields[this.field] )
+						continue;
+
+					var entry = {};
+					entry.popType = "Option";
+					entry.popLabel = scraper.title;
+					entry.popTooltip = "";
+					entry.popAction = w;
+					entry.popRightToLeft = "0";
+					entry.popHasDirectionalOverride = "0";
+					entry.popEnabled = "0";
+					entry.checked = "0";
+
+					var z;
+					for( z in entry )
+						args.push(entry[z]);
+				}
+
+				arcadeHud.showScraperPopupMenu.apply(arcadeHud, args);
+			}
+
+			function metaSearchButtonClicked(e)
+			{
+				console.log("enterprisexx:");
+				console.log(e.target.tagName);
+
+				var elem = e.target;
+				while( elem.tagName != "DIV" )
+					elem = elem.parentNode;
+
+				var popupId = "genericId";
+				var rect = elem.getBoundingClientRect();
+				var x = rect.left;
+				var y = rect.top;
+				//var width = rect.right - rect.left;
+				var width = 220;
+				var height = rect.bottom - rect.top;
+				var itemHeight = height;
+				var fontSize = "16";
+				var selectedItem = "";
+				var rightAligned = "0";
+
+				var args = [popupId, x, y, width, height, height, fontSize, selectedItem, rightAligned];
+
+				// the callback
+				args.push(function(selectedOption)
+				{
+					var term = item["title"];
+					var dateCull = term.indexOf(" (");
+					if( dateCull >= 0 )
+						term = term.substring(0, dateCull);
+
+					arcadeHud.metaSearch(id, this.field, selectedOption, term);
+					document.location = "asset://ui/blank.html";
+					/*
+					console.log(selectedOption);
+					arcadeHud.metaScrape(selectedOption, function(scrapedData)
+					{
+						var usedFields = [];
+						var args = [];
+						var x, field;
+						for( x in scrapedData)
+						{
+							field = scrapedData[x];
+							if( field === "" || (this.field !== "all" && this.field !== x))
 								continue;
 
 							if( x === "type" )
@@ -438,6 +556,7 @@ function getParameterByName(name, url) {
 
 							args.push(x);
 							args.push(field);
+							usedFields.push(x);
 						}
 
 						var success = aaapi.library.updateItem(id, args);
@@ -447,13 +566,16 @@ function getParameterByName(name, url) {
 							var i;
 							var max = args.length;
 							for( i = 0; i < max; i += 2)
-								item[args[i]] = args[i+1];
-
+							{
+								if( this.field == "all" || args[i] === this.field )
+									item[args[i]] = args[i+1];
+							}
 							console.log("Item updated!");
 						}
 						else
 							console.log("Item update rejected!");
 					}.bind(this));
+*/
 				}.bind(this));
 
 				// then add entries for each scraper...
@@ -463,7 +585,7 @@ function getParameterByName(name, url) {
 				{
 					var scraper = arcadeHud.scrapers[w];
 
-					if( !!!scraper.fields.all )
+					if( !!!scraper.search || scraper.search === "" || !!!scraper.fields[this.field] )
 						continue;
 
 					var entry = {};
@@ -482,10 +604,7 @@ function getParameterByName(name, url) {
 				}
 
 				arcadeHud.showScraperPopupMenu.apply(arcadeHud, args);
-			}.bind(buttonCurrentImage), true);
-			
-			buttonCurrentContainer.appendChild(buttonCurrentImage);
-			metaScrapeContainer.appendChild(buttonCurrentContainer);
+			}
 		</script>
 	</body>
 </html>

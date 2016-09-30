@@ -442,6 +442,60 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		m_pCurrentEmbeddedInstance->OnProxyBind(pC_BaseEntity);
 	}
 }
+
+void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::string channel)
+{
+	auto channelIt = s_simpleImages.begin();
+	while (channelIt != s_simpleImages.end())
+	{
+		if (channel == "ALL" || channelIt->first == channel)
+		{
+			auto itemIt = channelIt->second.find(itemId);
+			if (itemIt != channelIt->second.end())
+			{
+				ITexture* pTexture = itemIt->second;
+				if (pTexture && m_pMaterialTextureVar->GetTextureValue() == pTexture)
+					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+			}
+
+			if (channel != "ALL")
+				break;
+		}
+
+		channelIt++;
+	}
+}
+
+void CWebSurfaceProxy::RefreshItemTextures(std::string itemId, std::string channel)
+{
+	auto channelIt = s_simpleImages.begin();
+	while (channelIt != s_simpleImages.end())
+	{
+		if (channel == "ALL" || channelIt->first == channel)
+		{
+			auto itemIt = channelIt->second.find(itemId);
+			if (itemIt != channelIt->second.end())
+			{
+				ITexture* pTexture = itemIt->second;
+				if (pTexture)
+				{
+					// if there's already a texture for this item, we're gonna have to replace it.  So that means releasing it first.
+					// FIXME: do work...
+
+					// aaaand theeeeen....
+				}
+
+				channelIt->second.erase(itemIt);
+			}
+
+			if (channel != "ALL")
+				break;
+		}
+
+		channelIt++;
+	}
+}
+
 	//DevMsg("WebSurfaceProxy: OnBind\n");
 	// The objective is to fill these two values
 	//DynamicImage* pImage = null;

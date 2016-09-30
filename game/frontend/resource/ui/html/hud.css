@@ -238,17 +238,17 @@ body
 .hudSideContainerButton
 {
 	font-size: 40px;
-	display: none;
 	background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
 	border-radius: 0 10px 10px 0;
 	border: 2px solid #000;
+	border-left: 0;
 	padding-right: 5px;
 	padding-left: 5px;
 	font-family: Arial;
 	font-weight: 900;
-	display: block;
+	display: inline-block;
 	height: 50px;
-	width: 40px;
+	/*width: 40px;*/
 	text-align: center;
 }
 
@@ -434,6 +434,106 @@ body
 	width: 150px;
 	height: 84px;
 }
+
+.metaScrapeContainer
+{
+	display: none;
+	position: fixed;
+	bottom: 10%;
+	left: 0;
+	color: #fff;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+	font-family: Arial;
+	text-align: center;
+
+	/*
+	border: 3px solid rgba(0, 0, 0, 1.0);
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	background-color: rgba(50, 50, 50, 0.95);
+	padding-bottom: 30px;
+	padding: 6px;
+	border: 20px solid pink;
+	*/
+}
+
+.hudScrapeButton
+{
+	display: table-cell;
+	pointer-events: auto;
+	vertical-align: middle;
+	font-size: 20px;
+	white-space: nowrap;
+	/*background-color: rgba(150, 150, 150, 0.5);*/
+	background-color: rgba(0, 0, 255, 0.9);
+	border-radius: 0 10px 10px 0;
+	border: 2px solid #000;
+	border-left: 0;
+	text-align: center;
+	padding-left: 15px;
+	padding-right: 15px;
+	padding-top: 2px;
+	padding-bottom: 4px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+	-webkit-box-shadow: 3px 5px 8px #000;
+}
+
+.hudScrapeButton .buttonText
+{
+	display: none;
+	white-space: nowrap;
+	font-size: 26px;
+	text-align: center;
+	vertical-align: middle;
+	font-family: Arial;
+	padding: 5px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+	padding: 0;
+	margin: 0;
+}
+
+.hudScrapeButton:hover .buttonText
+{
+	display: inline;
+}
+
+.hudScrapeButton img
+{
+	vertical-align: middle;
+}
+
+.hudScrapeButton:hover
+{
+	/*background-color: rgba(150, 150, 150, 0.8);*/
+	background-color: rgba(0, 0, 255, 1.0);
+}
+
+.hudSideContainerButton .buttonText
+{
+	display: none;
+	white-space: nowrap;
+	font-size: 26px;
+	text-align: center;
+	vertical-align: middle;
+	font-family: Arial;
+	padding: 5px;
+	font-style: italic;
+	text-shadow: 2px 2px 2px #000;
+	font-weight: bold;
+	padding: 0;
+	margin: 0;
+}
+
+.hudSideContainerButton:hover .buttonText
+{
+	display: inline;
+}
+
 
 .helpContainer
 {

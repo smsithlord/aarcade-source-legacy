@@ -68,8 +68,9 @@ C_SteamBrowserInstance::C_SteamBrowserInstance() : m_StartRequest(this, &C_Steam
 m_FinishedRequest(this, &C_SteamBrowserInstance::BrowserInstanceFinishedRequest),
 m_NeedsPaint(this, &C_SteamBrowserInstance::BrowserInstanceNeedsPaint),
 m_NewWindow(this, &C_SteamBrowserInstance::BrowserPopupHTMLWindow),
-m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged),
-m_ChangeTitle(this, &C_SteamBrowserInstance::BrowserSetHTMLTitle)
+m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged)
+//m_ChangeTitle(this, &C_SteamBrowserInstance::BrowserSetHTMLTitle),
+//m_FinishedRequest(this, &C_SteamBrowserInstance::BrowserFinishedRequest)
 //m_StatusText(this, &C_SteamBrowserInstance::BrowserStatusText)
 {
 	DevMsg("SteamBrowserInstance: Constructor\n");
@@ -382,32 +383,30 @@ bool C_SteamBrowserInstance::OnStartRequest(const char *url, const char *target,
 //-----------------------------------------------------------------------------
 void C_SteamBrowserInstance::BrowserInstanceFinishedRequest(HTML_FinishedRequest_t *pCmd)
 {
-	if (m_unHandle != pCmd->unBrowserHandle)
+	return;	// DISABLED for consistent usage of onurlchanged for meta scraping
+
+	if (m_unHandle != pCmd->unBrowserHandle || m_scraperId == "")	// only continue if we have an active scraper waiting for load finished events. (FIXME: This might change when the UI's address bar gets updated.)
 		return;
 
-	//C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 
-	/*
-	PostActionSignal(new KeyValues("OnFinishRequest", "url", pCmd->pchURL));
-	if (pCmd->pchPageTitle && pCmd->pchPageTitle[0])
-	PostActionSignal(new KeyValues("PageTitleChange", "title", pCmd->pchPageTitle));
-	*/
-	CUtlMap < CUtlString, CUtlString > mapHeaders;
-	SetDefLessFunc(mapHeaders);
-	// headers are no longer reported on loads
-
-	OnFinishRequest(pCmd->pchURL, pCmd->pchPageTitle, mapHeaders);
+	std::vector<std::string> params;
+	params.push_back(std::string(pCmd->pchURL));
+	params.push_back(m_scraperId);
+	params.push_back(m_scraperItemId);
+	params.push_back(m_scraperField);
+	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onBrowserFinishedRequest", params);
 }
 
-void C_SteamBrowserInstance::OnFinishRequest(const char *url, const char *pageTitle, const CUtlMap < CUtlString, CUtlString > &headers)
-{
-	if (!url || !Q_stricmp(url, "about:blank"))
-		return;
-
+//void C_SteamBrowserInstance::OnFinishRequest(const char *url, const char *pageTitle, const CUtlMap < CUtlString, CUtlString > &headers)
+//{
+//	if (!url || !Q_stricmp(url, "about:blank"))
+//		return;
+//
 	//DevMsg("Request finished!!\n");
 	//	steamapicontext->SteamHTMLSurface()->
 	//	m_unBrowserHandle
-}
+//}
 
 //-----------------------------------------------------------------------------
 // Purpose: we have a new texture to update
@@ -573,8 +572,12 @@ void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 
 	std::vector<std::string> params;
 	params.push_back(m_URL);
+	params.push_back(m_scraperId);
+	params.push_back(m_scraperItemId);
+	params.push_back(m_scraperField);
 
 	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onURLChanged", params);
+
 	//)
 	//m_URL
 
@@ -582,6 +585,7 @@ void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 }
 
 //void C_SteamBrowserInstance::BrowserStatusText(HTML_StatusText_t *pCmd)
+/*
 void C_SteamBrowserInstance::BrowserSetHTMLTitle(HTML_ChangedTitle_t *pCmd)
 {
 	return;
@@ -598,6 +602,8 @@ void C_SteamBrowserInstance::BrowserSetHTMLTitle(HTML_ChangedTitle_t *pCmd)
 
 	//DevMsg("Response is: %s\n", pCmd->pchTitle);
 }
+*/
+
 
 
 //#include "ienginevgui.h"

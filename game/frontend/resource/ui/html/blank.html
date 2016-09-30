@@ -7,9 +7,28 @@
 		<div class="hudHeaderContainer"></div>
 
 		<div class="hudSideContainer">
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this object."><table style="width: 100%; height: 100%;"><tr><td><img src="objecticon.png" style="vertical-align: middle;" /></td></tr></table></div>
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item."><table style="width: 100%; height: 100%;"><tr><td><img src="editicon.png" /></td></tr></table></div>
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut."><table style="width: 100%; height: 100%;"><tr><td><img src="launchicon.png" /></td></tr></table></div>
+			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this object.">
+				<table style="width: 100%; height: 100%;">
+					<tr><td>
+						<img src="objecticon.png" style="vertical-align: middle;" />
+						<div class="buttonText"> Edit Object</div>
+					</td></tr>
+				</table>
+			</div><br />
+			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item.">
+				<table style="width: 100%; height: 100%;">
+					<tr><td>
+						<img src="editicon.png" style="vertical-align: middle;" /><div class="buttonText"> Edit Item</div>
+					</td></tr>
+				</table>
+			</div><br />
+			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut.">
+				<table style="width: 100%; height: 100%;">
+					<tr><td>
+						<img src="launchicon.png" style="vertical-align: middle;" /><div class="buttonText"> Launch Shortcut</div>
+					</td></tr>
+				</table>
+			</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;</a>

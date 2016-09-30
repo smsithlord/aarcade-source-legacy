@@ -102,6 +102,7 @@ public:
 	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);
 	const char* GenerateLegacyHash(const char* text);
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
+	std::string C_AnarchyManager::encodeURIComponent(const std::string &s);
 
 	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 

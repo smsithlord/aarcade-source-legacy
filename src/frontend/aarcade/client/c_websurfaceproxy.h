@@ -31,6 +31,9 @@ public:
 	void LevelShutdownPreEntity();
 	void ReleaseCurrent();
 
+	void PrepareRefreshItemTextures(std::string itemId, std::string channel);
+	void RefreshItemTextures(std::string itemId, std::string channel);
+
 	// mutators
 	//void SetId(std::string id) { m_id = id; }
 
@@ -48,7 +51,7 @@ private:
 	IMaterialVar*	m_pMaterialTextureVar;
 	IMaterialVar*	m_pMaterialDetailBlendFactorVar;
 	ITexture*		m_pOriginalTexture;
-	ITexture*		m_pCurrentTexture;
+	ITexture*		m_pCurrentTexture;	// NOT ACTUALLY USED!!!! OBSOLETE!!
 	std::string		m_originalId;
 	int				m_iOriginalAutoCreate;
 	std::string		m_originalUrl;

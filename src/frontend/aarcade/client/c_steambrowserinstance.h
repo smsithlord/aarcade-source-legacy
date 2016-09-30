@@ -47,7 +47,7 @@ public:
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
 	bool OnStartRequest(const char *url, const char *target, const char *pchPostData, bool bIsRedirect);
-	void OnFinishRequest(const char *url, const char *pageTitle, const CUtlMap < CUtlString, CUtlString > &headers);
+//	void OnFinishRequest(const char *url, const char *pageTitle, const CUtlMap < CUtlString, CUtlString > &headers);
 	void OnNeedsPaint(const void* data, unsigned int width, unsigned int height, unsigned int depth);
 	//void BrowserInstanceNeedsPaint(HTML_NeedsPaint_t *pCallback);
 
@@ -68,10 +68,18 @@ public:
 	C_InputListener* GetInputListener();
 	unsigned int GetHandle() { return m_unHandle; }
 	std::string GetInitialUrl() { return m_initialURL; }
+	std::string GetScraperId() { return m_scraperId; }
+	std::string GetScraperItemId() { return m_scraperItemId; }
+	std::string GetScraperField() { return m_scraperItemId; }
 
 	// mutators	
 	void SetTexture(ITexture* pTexture) { m_pTexture = pTexture; }
 	void SetHandle(unsigned int unHandle) { m_unHandle = unHandle; }
+	void SetActiveScraper(std::string scraperId, std::string itemId, std::string field) {
+		m_scraperId = scraperId;
+		m_scraperItemId = itemId;
+		m_scraperField = field;
+	}
 
 private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceStartRequest, HTML_StartRequest_t, m_StartRequest);
@@ -79,8 +87,12 @@ private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceNeedsPaint, HTML_NeedsPaint_t, m_NeedsPaint);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserPopupHTMLWindow, HTML_NewWindow_t, m_NewWindow);
 	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserStatusText, HTML_StatusText_t, m_StatusText);
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
+	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserURLChanged, HTML_URLChanged_t, m_URLChanged);
+	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
+	std::string m_scraperId;
+	std::string m_scraperItemId;
+	std::string m_scraperField;
 	std::string m_URL;
 	int m_iLastVisibleFrame;
 	unsigned int m_unHandle;

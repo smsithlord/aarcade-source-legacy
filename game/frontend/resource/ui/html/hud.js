@@ -13,6 +13,8 @@ function ArcadeHud()
 	this.cursorPreviewImageElem;
 	this.cursorImageElem;
 	this.helpElem;
+	this.metaScrapeElem;
+	this.hudMetaScrapeContainer;
 	this.startupLoadingMessagesContainer;
 	this.hudLoadingMessagesContainer;
 	this.hudLoadingMessages = {};
@@ -20,9 +22,11 @@ function ArcadeHud()
 	this.addressElem;
 	this.DOMParser;
 	this.metaScrapeHandles = {};
+	this.activeScraper = null;
 	this.scrapers = {
 		"currenturi":
 		{
+			"id": "currenturi",
 			"title": "Use Current Address",
 			"fields":
 			{
@@ -48,9 +52,130 @@ function ArcadeHud()
 				return response;
 			}
 		},
+		"youtube":
+		{
+			"id": "youtube",
+			"title": "YouTube",
+			"search": "http://www.youtube.com/results?search_query=$TERM",
+			"fields":
+			{
+				"all": 100,
+				"screen": 100,
+				"preview": 100,
+				"file": 100,
+				"reference": 100,
+				"stream": 100
+			},
+			"run": function(url, field, doc)
+			{
+				var response = {};
+
+				/* doesn't matter anymore because all non-requested fields get stripped out by AArcade now.
+				var fullUriFields = ["preview", "file", "reference", "stream"];
+				if( fullUriFields.indexOf(field) >= 0 )
+					response[field] = url;
+				else if( field === "all" )
+				{
+					response.preview = url;
+					response.file = url;
+					response.reference = url;
+					response.stream = url;
+				}
+				*/
+
+				response.preview = url;
+				response.file = url;
+				response.reference = url;
+				response.stream = url;
+
+				return response;
+			},
+			"test": function(url, doc, callback)
+			{
+				var validForScrape = false;
+				var redirect = false;
+				
+				var pageElem = doc.querySelector("#page");
+				var pageType = pageElem.className;
+				console.log(pageType);
+				if( pageType.indexOf(" search ") >= 0 )
+				{
+					// perform search results logic
+				}
+				else if( pageType.indexOf(" watch ") >= 0 )
+				{
+					console.log("what meow");
+					//var container = doc.querySelector(".metaScrapeContainer");
+					//container.style.display = "block";
+
+
+					/*
+					backstab
+					volitile
+					lacerate
+					lacerate
+					root with knife throw
+					try to backstab
+					good shiv
+					try to backstab
+					lacerate
+					lacerate
+					volitile
+					*/
+
+					// hud-notify that this page can be scraped
+					validForScrape = true;
+				}
+				//<div id="page" class=" search branded-page-v2-secondary-column-wide no-flex">
+				//console.log("You Tube is examining the page...");
+				callback({"validForScrape": validForScrape, "redirect": redirect});
+			},
+			"testDelay": 2000,
+			"runDelay": 0
+		},
+		"steamstore":
+		{
+			"id": "steamstore",
+			"title": "Steam Store",
+			"search": "http://store.steampowered.com/search/?term=$TERM",
+			"fields":
+			{
+				"all": 100,
+				"screen": 100,
+				"marquee": 100,
+				"preview": 100,
+				"file": 100,
+				"reference": 100,
+				"stream": 100
+			},
+			"run": function(url, doc)
+			{
+				return {};
+			}
+		},
+		"googleimages":
+		{
+			"id": "googleimages",
+			"title": "Google Images",
+			"search": "http://www.google.com/search?tbm=isch&q=$TERM",
+			"fields":
+			{
+				"all": 100,
+				"screen": 100,
+				"marquee": 100,
+				"preview": 100,
+				"file": 100
+			},
+			"run": function(url, doc)
+			{
+				return {};
+			}
+		},
 		"themoviedb":
 		{
+			"id": "themoviedb",
 			"title": "The Movie DB",
+			"search": "http://www.themoviedb.org/search?query=$TERM",
 			"fields":
 			{
 				"all": 100,
@@ -62,7 +187,18 @@ function ArcadeHud()
 				"title": 100,
 				"type": 80
 			},
-			"run": function(uri, doc)
+			"test": function(url, doc, callback)
+			{
+				var validForScrape = false;
+				var redirect = false;
+				//<meta property="og:type" content="movie"/>
+				var elem = doc.querySelector("meta[property='og:type']");
+				if( elem && elem.getAttribute("content") === "movie" )
+					validForScrape = true;
+
+				callback({"validForScrape": validForScrape, "redirect": redirect});
+			},
+			"run": function(uri, field, doc)
 			{
 				// helper function for extracting YT ID's from YT URLs
 				function extractYouTubeId(trailerURL)
@@ -361,6 +497,87 @@ function ArcadeHud()
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
 		document.body.appendChild(this.helpElem);
 
+
+		this.metaScrapeElem = document.createElement("div");
+		this.metaScrapeElem.className = "metaScrapeContainer";
+		this.metaScrapeElem.addEventListener("click", function()
+		{
+			arcadeHud.metaScrape(this.scraperId, this.field, function(scrapedData)
+			{
+				console.log("Scraped data is: ");
+				console.log(scrapedData);
+				var usedFields = [];
+				var args = [];
+				var x, field;
+				for( x in scrapedData)
+				{
+					field = scrapedData[x];
+					if( field === "" || (this.field !== "all" && this.field !== x))
+						continue;
+
+					if( x === "type" )
+					{
+						var allTypes = aaapi.library.getAllLibraryTypes();
+						var y;
+						for( y in allTypes )
+						{
+							console.log(allTypes[y].title);
+							if( allTypes[y].title === field )
+							{
+								field = allTypes[y].info.id;
+								break;
+							}
+						}
+					}
+					
+					var inputs = document.querySelectorAll("input, select");
+					var i;
+					for( i = 0; i < inputs.length; i++ )
+					{
+						if( inputs[i].field === x )
+						{
+							//inputs[i].focus();
+							inputs[i].value = field;
+							break;
+						}
+					}
+
+					args.push(x);
+					args.push(field);
+					usedFields.push(x);
+				}
+
+				var success = aaapi.library.updateItem(this.itemId, args);
+
+				if( success )
+				{
+					/*
+					var i;
+					var max = args.length;
+					for( i = 0; i < max; i += 2)
+					{
+						if( this.field == "all" || args[i] === this.field )
+							item[args[i]] = args[i+1];
+					}
+					*/
+					console.log("Item updated!");
+
+					var container = document.querySelector(".metaScrapeContainer");
+					container.style.display = "none";
+
+					aaapi.system.autoInspect(this.itemId);
+				}
+				else
+					console.log("Item update rejected!");
+			}.bind(this));
+		}.bind(this.metaScrapeElem), true);
+		this.hudMetaScrapeContainer = document.createElement("div");
+		this.hudMetaScrapeContainer.className = "hudScrapeButton";//hudMetaScrapeContainer";
+		//this.hudMetaScrapeContainer.style = "";
+		this.hudMetaScrapeContainer.innerHTML = "<img src='scrapeicon.png' style='vertical-align: middle;' /><div class='buttonText'> Meta Scrape</div>";
+		this.metaScrapeElem.appendChild(this.hudMetaScrapeContainer);
+		document.body.appendChild(this.metaScrapeElem);
+
 /*
 		document.body.addEventListener("dblclick", function(e)
 		{
@@ -487,12 +704,19 @@ ArcadeHud.prototype.getURL = function()
 	return this.url;
 };
 
-ArcadeHud.prototype.onURLChanged = function(url)
+//ArcadeHud.prototype.onURLChanged = function(url)
+ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 {
 	this.url = url;
 
-	if( !!this.addressElem )
+	if( !!this.addressElem && this.addressElem.value !== this.url )
+	{
 		this.addressElem.value = this.url;
+
+		console.log("URL changed to " + url + " and we are " + document.location.href);
+		if( scraperId !== "" )
+			this.onBrowserFinishedRequest(url, scraperId, itemId, field);
+	}
 };
 
 ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url)
@@ -514,7 +738,7 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 		var i;
 		for( i = 0; i < elems.length; i++ )
 		{
-			elems[i].style.display = "block";
+			elems[i].style.display = "inline-block";
 		}
 	}
 	//*/
@@ -1232,17 +1456,138 @@ ArcadeHud.prototype.addHelpMessage = function(text)
 	this.helpElem.style.display = "block";
 };
 
-ArcadeHud.prototype.metaScrape = function(scraperId, callback)
+//ArcadeHud.prototype.metaSearch = function(scraperId, callback)
+//aaapi.system.metaSearch(id, elem.field, query);
+ArcadeHud.prototype.metaSearch = function(itemId, field, scraperId, term)
+{
+	var scraper = this.scrapers[scraperId];
+	if( !!scraper && !!scraper.search && scraper.search.indexOf("$TERM") >= 0 )
+	{
+		var query = scraper.search.replace("$TERM", term);
+
+		// set this as the active scraper so it can handle page loaded events with scraper logic
+		//console.log("set active scraper");
+		//this.activeScraper = scraper;
+
+		//this.metaSearchHandles[id] = {"scraper": scraper, "callback": callback};
+		aaapi.system.metaSearch(scraperId, itemId, field, query);
+	}
+	else
+		console.log("ERROR: Invalid or unsupported scraper ID received.");
+};
+
+ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 {
 	var id = "meta" + Math.random().toString() + Math.random().toString() + Math.random().toString() + Math.random().toString();
+	//var id = "run";
 	var scraper = this.scrapers[scraperId];
 	if( !!scraper )
 	{
-		this.metaScrapeHandles[id] = {"scraper": scraper, "callback": callback};
+		var dummy = new Object();
+		dummy.scraper = scraper;
+		dummy.callback = callback;
+		dummy.field = field;
+		//this.metaScrapeHandles[id] = {"scraper": scraper, "callback": callback};
+		this.metaScrapeHandles[id] = {"scraper": scraper, "callback": function(callId, url, doc)
+		{
+			// clear the a active scraper
+			//console.log("clear active scraper");
+			//arcadeHud.activeScraper = null;
+
+			var results = this.scraper.run(url, this.field, doc);
+
+			// strip everything out of the response except what was asked for.
+			if( this.field !== "all" )
+			{
+				var shitList = [];
+
+				var x;
+				for( x in results )
+				{
+					if( dummy.field !== x )
+						shitList.push(x);
+				}
+
+				var i;
+				var max = shitList.length;
+				for( i = 0; i < max; i++ )
+					delete results[shitList[i]];
+			}
+
+			this.callback(results);
+		}.bind(dummy)};
 		aaapi.system.getDOM(id);
 	}
 	else
 		console.log("ERROR: Invalid scraper ID received.");
+};
+
+ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, field)
+{
+	console.log("Finished a request " + scraperId + ": " + url);
+	var scraper = this.scrapers[scraperId];
+	if( !!scraper )
+	{
+		//console.log(typeof scraper.test);
+		if(typeof scraper.test === "function")
+		{
+			//scraper.test();
+			var id = "meta" + Math.random().toString() + Math.random().toString() + Math.random().toString() + Math.random().toString();
+			//var id = "test";
+
+			var dummy = new Object();
+			dummy.scraper = scraper;
+			dummy.itemId = itemId;
+			dummy.field = field;
+//			dummy.callback = callback;
+
+			if( this.metaScrapeHandles[id] )
+				console.log("WARNING: handle already exists for this scraper!  Should probably abort, but not aborting right now.");
+
+			this.metaScrapeHandles[id] = {"scraper": scraper, "callback": function(callId, url, doc)
+			{
+				console.log("run test logic");
+				this.scraper.test(url, doc, function(response)
+				{
+					var container = document.querySelector(".metaScrapeContainer");
+					if( response.validForScrape )
+					{
+						console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
+						container.style.display = "block";
+						container.scraperId = this.scraper.id;
+						container.itemId = this.itemId;
+						container.field = this.field;
+						return;
+					}
+					else
+						container.style.display = "none";
+
+					if( !!response.redirect && response.redirect !== "")
+						aaapi.system.metaSearch(this.scraper.id, this.scraper.itemId, this.scraper.field, response.redirect);
+				}.bind(this));
+			}.bind(dummy)};
+
+			var delay = scraper.testDelay;
+			if( !!!delay )
+				delay = 0;
+
+			var dummy = {"id": id};
+			setTimeout(function()
+			{
+				aaapi.system.getDOM(this.id);
+			}.bind(dummy), delay);
+		}
+
+		this.activeScraper = scraper;
+	}
+	//console.log("yar yar yar");
+	//console.log(this.activeScraper);
+	//if( this.activeScraper )
+	//{
+//		console.log("twat teh funnuck");
+	//}
+	//console.log("Main frame just finished loading " + url);
+	//console.log("Should any scrapers analyze the newly loaded page?");
 };
 
 ArcadeHud.prototype.onDOMGot = function(url, response)
@@ -1259,9 +1604,11 @@ ArcadeHud.prototype.onDOMGot = function(url, response)
 		var scraper = this.metaScrapeHandles[callId].scraper;
 		var callback = this.metaScrapeHandles[callId].callback;
 		delete this.metaScrapeHandles[callId];
-		
-		var results = scraper.run(url, doc);
-		callback(results);
+
+		// FIXME: WHEN DOES THE BROWSER INSTANCE CLEAR ITS ACTIVE SCRAPER????? It doesn't, but it needs to.
+		//var results = scraper[callId](url, doc);
+		//callback(results);
+		callback(callId, url, doc);
 	}
 	else
 		console.log("ERROR: DOM received with no matching scrape handle.");

@@ -302,10 +302,11 @@
 			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
 
 			    var found = youtubeid.indexOf("&");
+			    if(found == -1)
+			    	found = youtubeid.indexOf("?");
+
 			    if( found > -1 )
-			    {
 			      youtubeid = youtubeid.substr(0, found);
-			    }
 			  }
 			  else
 			  {
@@ -315,6 +316,9 @@
 			      youtubeid = trailerURL.substr(found+9);
 
 			      found = youtubeid.indexOf("&");
+			      if(found == -1)
+			    	found = youtubeid.indexOf("?");
+			    
 			      if( found != -1 )
 			      {
 			        youtubeid = youtubeid.substr(0, found);

@@ -926,12 +926,14 @@ bool C_AnarchyManager::AttemptSelectEntity()
 		else
 			return false;
 	}
+
+	return false;
 }
 
 // from http://www.zedwood.com/article/cpp-urlencode-function
 #include <iostream>
 #include <sstream>
-std::string encodeURIComponent(const std::string &s)
+std::string C_AnarchyManager::encodeURIComponent(const std::string &s)
 {
 	static const char lookup[] = "0123456789abcdef";
 	std::stringstream e;
@@ -994,6 +996,8 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	for (i = 0; i < size; i++)
 	{
 		pEmbeddedInstance = embeddedInstances[i];
+		if (!pEmbeddedInstance)
+			continue;
 
 		if (pEmbeddedInstance->GetId() == "hud")
 			continue;
@@ -1054,6 +1058,11 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 							pEmbeddedInstance = pSteamBrowserInstance;
 						}
 					}
+					else
+					{
+						// the item specified by the shortcut was not found
+						// by doing NOTHING, it lets you select the object but not bring up any menus on it
+					}
 				}
 			}
 		}
@@ -1068,25 +1077,33 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 			}
 		}
 
-		pSelectedEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
-		if (pSelectedEmbeddedInstance && pSelectedEmbeddedInstance != pEmbeddedInstance)
+		if (pEmbeddedInstance)
 		{
-			//m_pWebManager->DeselectWebTab(pSelectedEmbeddedInstance);
-			pSelectedEmbeddedInstance->Deselect();
-			m_pInputManager->SetEmbeddedInstance(null);
+			pSelectedEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+			if (pSelectedEmbeddedInstance && pSelectedEmbeddedInstance != pEmbeddedInstance)
+			{
+				//m_pWebManager->DeselectWebTab(pSelectedEmbeddedInstance);
+				pSelectedEmbeddedInstance->Deselect();
+				m_pInputManager->SetEmbeddedInstance(null);
 
-			//m_pWebManager->SelectWebTab(pWebTab);
-			pEmbeddedInstance->Select();
-			m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
+				//m_pWebManager->SelectWebTab(pWebTab);
+				pEmbeddedInstance->Select();
+				m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
+			}
+			else if (!pSelectedEmbeddedInstance)
+			{
+				//if (pEmbeddedInstance)
+				//{
+				pEmbeddedInstance->Select();
+				m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
+				//}
+
+
+
+			}
 		}
-		else if (!pSelectedEmbeddedInstance)
-		{
-			pEmbeddedInstance->Select();
-			m_pInputManager->SetEmbeddedInstance(pEmbeddedInstance);
-
-
-
-		}
+		else
+			DevMsg("ERROR: No embedded instance!!\n");
 		//m_pWebManager->SelectWebTab(pWebTab);
 
 		//break;

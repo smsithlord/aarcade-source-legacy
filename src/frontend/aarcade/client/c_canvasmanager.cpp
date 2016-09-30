@@ -411,3 +411,19 @@ void C_CanvasManager::LevelShutdownPreEntity()
 		break;
 	}
 }
+
+void C_CanvasManager::RefreshItemTextures(std::string itemId, std::string channel)
+{
+	// tell ALL proxies that the textures for this item need to be re-loaded
+	unsigned int max = m_webSurfaceProxies.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->PrepareRefreshItemTextures(itemId, channel);
+	}
+
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->RefreshItemTextures(itemId, channel);
+		break;	// its a static member that will get modified.
+	}
+}
