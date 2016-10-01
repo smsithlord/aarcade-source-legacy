@@ -27,6 +27,7 @@ public:
 	void MountWorkshopClose();
 
 	unsigned int GetNumDetails();
+	SteamUGCDetails_t* GetDetails(unsigned int index);
 
 	// accessors
 

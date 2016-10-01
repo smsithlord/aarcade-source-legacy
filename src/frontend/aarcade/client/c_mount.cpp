@@ -71,6 +71,7 @@ bool C_Mount::Activate()
 	{
 		path = m_mountedPaths[i];
 		g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+		//engine->ClientCmd(VarArgs("snd_buildcache \"%s\";", path.c_str()));
 		DevMsg("Mounted %s for %s\n", path.c_str(), m_id.c_str());
 	}
 

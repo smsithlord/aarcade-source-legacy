@@ -382,25 +382,28 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 							std::map<std::string, ITexture*>::iterator it2 = it->second.find(itemId);
 							if (it2 != it->second.end())
 							{
-								// we have found our texture.  swap it in and we're done.
-								if (it2->second)	// only use it if it's non-null
+								if (m_pMaterialTextureVar)
 								{
-									if (m_originalSimpleImageChannel == "screen")
+									// we have found our texture.  swap it in and we're done.
+									if (it2->second)	// only use it if it's non-null
 									{
-										C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
-										if (testerInstance && testerInstance->GetTexture())
+										if (m_originalSimpleImageChannel == "screen")
 										{
-											m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
-											testerInstance->Update();
+											C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
+											if (testerInstance && testerInstance->GetTexture())
+											{
+												m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
+												testerInstance->Update();
+											}
+											else
+												m_pMaterialTextureVar->SetTextureValue(it2->second);
 										}
 										else
 											m_pMaterialTextureVar->SetTextureValue(it2->second);
 									}
 									else
-										m_pMaterialTextureVar->SetTextureValue(it2->second);
+										m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 								}
-								else
-									m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 
 								bTextureExists = true;
 							}
@@ -445,6 +448,9 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 
 void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::string channel)
 {
+	if (!m_pMaterialTextureVar)
+		return;
+
 	auto channelIt = s_simpleImages.begin();
 	while (channelIt != s_simpleImages.end())
 	{

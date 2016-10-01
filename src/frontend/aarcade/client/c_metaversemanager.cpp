@@ -82,6 +82,16 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 //	g_pAnarchyManager->OnMountAllWorkshopsComplete();
 }
 
+void C_MetaverseManager::SaveItem(KeyValues* pItem)
+{
+	KeyValues* active = pItem->FindKey("current");
+	if (!active)
+		active = pItem->FindKey("local");
+
+	pItem->SaveToFile(g_pFullFileSystem, VarArgs("library/items/%s.key", active->GetString("info/id")), "DEFAULT_WRITE_PATH");
+	DevMsg("Saved item %s to library/items/%s.key\n", active->GetString("title"), active->GetString("info/id"));
+}
+
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath, std::string workshopIds, std::string mountIds)
 {
 	//KeyValues* pItem2 = new KeyValues("item");
@@ -1503,6 +1513,21 @@ void C_MetaverseManager::DetectAllLegacyCabinets()
 
 void C_MetaverseManager::DetectAllMaps()
 {
+	// detext all saves now
+	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+	g_pAnarchyManager->ScanForLegacySaveRecursive(path);
+
+	///*
+	std::string workshopPath;
+	unsigned int max = g_pAnarchyManager->GetWorkshopManager()->GetNumDetails();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		SteamUGCDetails_t* pDetails = g_pAnarchyManager->GetWorkshopManager()->GetDetails(i);
+		workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
+		g_pAnarchyManager->ScanForLegacySaveRecursive(workshopPath);
+	}
+	//*/
+
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	bool bAlreadyExists;
 	KeyValues* map = this->DetectFirstMap(bAlreadyExists);
@@ -1520,6 +1545,7 @@ void C_MetaverseManager::DetectAllMaps()
 void C_MetaverseManager::OnDetectAllMapsCompleted()
 {
 	DevMsg("Done detecting maps!\n");
+
 	g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
 	g_pAnarchyManager->OnDetectAllMapsComplete();
 }
@@ -1705,6 +1731,13 @@ KeyValues* C_MetaverseManager::LoadLocalItem(std::string file, std::string fileP
 			pActive = pItem->FindKey("local");
 
 		std::string id = pActive->GetString("info/id");
+		/*
+		if (id == "0ccb412c")
+		{
+			DevMsg("Loaded an instance of mermaid: %s%s\n", filePath.c_str(), file.c_str());
+			//DevMsg("Loaded an instance of mermaid: %s\n", pActive->GetString("screen"));
+		}
+		*/
 
 		std::vector<std::string> defaultFields;
 		defaultFields.push_back("title");
@@ -1776,6 +1809,8 @@ unsigned int C_MetaverseManager::LoadAllLocalItems(std::string filePath)
 
 KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string filePath)
 {
+	// make sure sound doesn't stutter
+	engine->Sound_ExtraUpdate();
 
 	KeyValues* pModel = new KeyValues("model");
 	bool bLoaded;

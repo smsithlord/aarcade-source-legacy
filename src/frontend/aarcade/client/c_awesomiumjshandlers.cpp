@@ -427,6 +427,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		//std::string code = "var aaapicallform = document.createElement('form'); aaapicallform.method = 'post'; aaapicallform.action = 'http://www.aarcadeapicall.com.net.org/'; var aaapicallinput = document.createElement('input'); aaapicallinput.name = 'doc'; aaapicallinput.type = 'text'; aaapicallinput.value = 'tester joint'; aaapicallform.appendChild(aaapicallinput); document.body.appendChild(aaapicallform); aaapicallform.submit();";
 		//pSteamBrowserInstance->InjectJavaScript(code.c_str());
 
+		DevMsg("Injecting DOM getting code...\n");
 		std::string code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
 		code += WebStringToCharString(args[0].ToString());
 		code += "AAAPICALL' + encodeURIComponent(document.documentElement.innerHTML);";
@@ -966,6 +967,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 					if (field == "file" || field == "preview" || field == "screen" || field == "marquee")
 						bNeedsTextureUpdate = true;
 				}
+
+				// now save the item's changes
+				g_pAnarchyManager->GetMetaverseManager()->SaveItem(pItem);
 				
 				if (bNeedsTextureUpdate)
 				{

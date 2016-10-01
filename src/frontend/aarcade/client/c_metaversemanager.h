@@ -15,6 +15,8 @@ public:
 	//void OnWebTabCreated(C_WebTab* pWebTab);
 	void OnMountAllWorkshopsCompleted();
 
+	void SaveItem(KeyValues* pItem);
+
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");	// probably obsolete!!!

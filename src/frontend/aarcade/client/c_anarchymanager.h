@@ -97,6 +97,8 @@ public:
 	void ShowFileBrowseMenu();// const char* keyFieldName, KeyValues* itemKV);
 	//void ReleaseFileBrowseParams();
 
+	void ScanForLegacySaveRecursive(std::string path);
+
 	// helpers
 	std::string GenerateUniqueId();
 	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);

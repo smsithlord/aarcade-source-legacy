@@ -227,26 +227,19 @@ ConCommand detectallmaps("detectallmaps", DetectAllMaps, "Usage: aa_activated en
 
 void SpawnObjects(const CCommand &args)
 {
+	g_pAnarchyManager->GetInstanceManager()->SpawnActionPressed();
+
+	/*
 	std::string instanceId = g_pAnarchyManager->GetInstanceId();
 	if (instanceId != "")
 	{
 		std::string uri = "asset://ui/spawnItems.html?max=" + std::string(args[1]);
-		/*
-		C_WebTab* pHudWebTab = g_pAnarchyManager->GetWebManager()->GetHudWebTab();
-		g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
-		pHudWebTab->SetUrl(uri);
-		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
-		*/
 
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 		g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
-//		g_pAnarchyManager->GetWebManager()->SelectWebTab(pHudWebTab);
-//		pHudWebTab->SetUrl(uri);
 		pHudBrowserInstance->SetUrl(uri);
 		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
 	}
-
-	//g_pAnarchyManager->GetInstanceManager()->SpawnNearestObject();
-	//DevMsg("Detect all maps!\n");
+	*/
 }
 ConCommand spawnobjects("spawnobjects", SpawnObjects, "Usage: ...");

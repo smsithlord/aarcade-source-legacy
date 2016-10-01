@@ -14,6 +14,8 @@ C_InstanceManager::C_InstanceManager()
 {
 	DevMsg("WebManager: Constructor\n");
 	m_fNearestSpawnDist = 0;
+	m_fLastSpawnActionPressed = 0;
+	m_uNextFlashedObject = 0;
 }
 
 C_InstanceManager::~C_InstanceManager()
@@ -112,6 +114,7 @@ bool C_InstanceManager::SpawnNearestObject()
 
 void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds)
 {
+	DevMsg("Add instance for mapid %s with title %s and with file %s\n", mapId.c_str(), title.c_str(), file.c_str());
 	instance_t* pInstance = new instance_t();
 	pInstance->id = instanceId;
 	pInstance->mapId = mapId;
@@ -167,6 +170,146 @@ void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string ma
 			it->second->mapId = mapId;
 
 		it++;
+	}
+}
+
+//#include "../../../public/engine/ivdebugoverlay.h"
+#include "../../../game/shared/debugoverlay_shared.h"
+void C_InstanceManager::SpawnActionPressed()
+{
+	float fMinDist = 420.0;
+	float fDuration = 4.0f;
+	DevMsg("Time is: %f\n", gpGlobals->realtime - m_fLastSpawnActionPressed);
+
+	// determine if there is anything to spawn
+	Vector testPlayerPos = C_BasePlayer::GetLocalPlayer()->GetAbsOrigin();
+
+	bool bHasOne = false;
+	//object_t* pTestNearObject = null;
+	object_t* pTestTestObject = null;
+	//float fTestMinDist = -1;
+	float fTestTestDist;
+	std::vector<object_t*>::iterator testIt = m_unspawnedObjects.begin();
+	while (testIt != m_unspawnedObjects.end())
+	{
+		pTestTestObject = *testIt;
+		fTestTestDist = pTestTestObject->origin.DistTo(testPlayerPos);
+		if (fMinDist == -1 || fTestTestDist < fMinDist)
+		{
+			bHasOne = true;
+			break;
+		}
+
+		testIt++;
+	}
+
+	if (!bHasOne)
+		return;
+
+	//if (m_fLastSpawnActionPressed != 0 && gpGlobals->realtime - m_fLastSpawnActionPressed < fDuration)
+	if ( true)	// turn off double-tap loading if unspawned item title previews are on while walking around
+	{
+		m_fLastSpawnActionPressed = gpGlobals->realtime;
+
+		std::string instanceId = g_pAnarchyManager->GetInstanceId();
+		if (instanceId != "")
+		{
+			std::string uri = "asset://ui/spawnItems.html?max=" + std::string("420");
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+			pHudBrowserInstance->SetUrl(uri);
+			g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
+		}
+	}
+	else
+	{
+		m_fLastSpawnActionPressed = gpGlobals->realtime;
+
+	//	while (true)
+		//{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+
+			Vector playerPos = pPlayer->GetAbsOrigin();
+
+			//object_t* pNearObject = null;
+			object_t* pTestObject = null;
+			float fTestDist;
+			//std::vector<object_t*>::iterator nearestIt;
+			std::vector<object_t*>::iterator it = m_unspawnedObjects.begin();
+			while (it != m_unspawnedObjects.end())
+			{
+				pTestObject = *it;
+				fTestDist = pTestObject->origin.DistTo(playerPos);
+				//if (fTestDist < m_fNearestSpawnDist && (fMinDist == -1 || fTestDist < fMinDist))
+				if (fMinDist == -1 || fTestDist < fMinDist)
+				{
+					//fMinDist = fTestDist;
+					//pNearObject = pTestObject;
+					//nearestIt = it;
+
+					KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pTestObject->itemId.c_str());
+					if (item)
+					{
+						KeyValues* active = item->FindKey("current");
+						if (!active)
+							active = item->FindKey("local", true);
+
+						if (active)
+							NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
+							//debugoverlay->AddTextOverlay(pTestObject->origin, 3.0, "%s", active->GetString("title"));
+					}
+					//std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+					//std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z, pNearObject->scale);
+					//engine->ServerCmd(msg.c_str(), false);
+				}
+
+				it++;
+			}
+			/*
+			unsigned int uNumObjects = m_unspawnedObjects.size();
+			unsigned int i;
+			for (i = 0; i < uNumObjects; i++)
+			{
+			pTestObject = m_unspawnedObjects[i];
+			fTestDist = pTestObject->origin.DistTo(playerPos);
+			if (fMinDist == -1 || fTestDist < fMinDist)
+			{
+			fMinDist = fTestDist;
+			pNearObject = pTestObject;
+			}
+			}
+			*/
+
+			/*
+			if (pNearObject)
+			{
+				m_unspawnedObjects.erase(nearestIt);
+
+				pNearObject->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
+
+				KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pNearObject->modelId);
+				if (model)
+				{
+					DevMsg("Spawning an object w/ %s\n", pNearObject->modelId.c_str());
+
+					KeyValues* active = model->FindKey("current");
+					if (!active)
+						active = model->FindKey("local", true);
+
+					std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+					std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z, pNearObject->scale);
+					engine->ServerCmd(msg.c_str(), false);
+				}
+				else
+				{
+					DevMsg("Could not spawn object because it's model was not found: %s\n", pNearObject->modelId.c_str());
+				}
+
+				return true;
+			}
+			*/
+	//	}
 	}
 }
 
@@ -237,6 +380,92 @@ void C_InstanceManager::SpawnItem(std::string id)
 	engine->ServerCmd(msg.c_str(), false);
 }
 */
+
+void C_InstanceManager::LevelShutdownPostEntity()
+{
+	DevMsg("FIXME: C_InstanceManager::LevelShutdownPostEntity needs to actually clear shit out (or does it?)!!\n");
+	m_uNextFlashedObject = 0;
+	m_fLastSpawnActionPressed = 0;
+	m_fNearestSpawnDist = 0;
+
+	// clear out objects and unspanwed objects
+	auto it = m_objects.begin();
+	while (it != m_objects.end())
+	{
+		delete it->second;
+		it++;
+	}
+
+	m_objects.clear();
+	m_unspawnedObjects.clear();
+}
+
+void C_InstanceManager::Update()
+{
+	if (engine->IsInGame() && g_pAnarchyManager->GetInstanceId() != "")
+	{
+		// grab an iterator to the last flashed object and increment it, otherwise just use .begin()
+		unsigned int max = m_unspawnedObjects.size();
+		if (m_uNextFlashedObject >= max)
+			m_uNextFlashedObject = 0;
+
+		//m_uNextFlashedObject++;
+		//if (m_uNextFlashedObject >= max)
+//			m_uNextFlashedObject = 0;
+
+		if (max > 0)
+		{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			Vector playerPos = pPlayer->GetAbsOrigin();
+
+			object_t* pTestObject = null;
+			float fDuration = 3.0f;
+			float fMinDist = 420.0;
+			float fTestDist;
+			//std::vector<object_t*>::iterator nearestIt;
+			//std::vector<object_t*>::iterator it = m_unspawnedObjects.begin();
+			while (m_uNextFlashedObject < max)
+			{
+				pTestObject = m_unspawnedObjects[m_uNextFlashedObject];
+				fTestDist = pTestObject->origin.DistTo(playerPos);
+				//if (fTestDist < m_fNearestSpawnDist && (fMinDist == -1 || fTestDist < fMinDist))
+				if (fMinDist == -1 || fTestDist < fMinDist)
+				{
+					//fMinDist = fTestDist;
+					//pNearObject = pTestObject;
+					//nearestIt = it;
+
+					KeyValues* kv = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pTestObject->itemId);
+					if (!kv)	// load the model instead if no item exists
+						kv = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pTestObject->modelId);
+
+					if (kv)
+					{
+						KeyValues* active = kv->FindKey("current");
+						if (!active)
+							active = kv->FindKey("local", true);
+
+						if (active)
+						{
+							NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
+							break;
+						}
+						//debugoverlay->AddTextOverlay(pTestObject->origin, 3.0, "%s", active->GetString("title"));
+					}
+					//std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+					//std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z, pNearObject->scale);
+					//engine->ServerCmd(msg.c_str(), false);
+				}
+
+				m_uNextFlashedObject++;
+			}
+
+			m_uNextFlashedObject++;
+			if (m_uNextFlashedObject >= max)
+				m_uNextFlashedObject = 0;
+		}
+	}
+}
 
 void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
 {

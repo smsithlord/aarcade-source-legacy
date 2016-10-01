@@ -1325,6 +1325,12 @@ void C_AwesomiumBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFT
 	if (!m_pWebView)
 		return;
 
+	if (!pTexture || !pTexture->IsProcedural())
+	{
+		DevMsg("Error: RegenerateTextureBits called with a non-procedural texture!\n");
+		return;
+	}
+
 	if (m_id == "images")
 		DevMsg("Regenerating hud bits...\n");
 

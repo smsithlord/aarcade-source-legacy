@@ -161,7 +161,11 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 void C_AnarchyManager::LevelShutdownPostEntity()
 {
 	DevMsg("AnarchyManager: LevelShutdownPostEntity\n");
-	m_instanceId = "";	// wtf is this??
+
+	if (m_pInstanceManager)
+		m_pInstanceManager->LevelShutdownPostEntity();
+
+	m_instanceId = "";	// wtf is this??  (its the name of the currently loaded instance, which *should* actually be held inside of the isntance manager.
 
 	// Clear out the simple images
 }
@@ -307,6 +311,9 @@ void C_AnarchyManager::Update(float frametime)
 
 			if (m_pAwesomiumBrowserManager)
 				m_pAwesomiumBrowserManager->Update();
+
+			if (m_pInstanceManager)
+				m_pInstanceManager->Update();
 			/*
 			if (m_pWebManager)
 				m_pWebManager->Update();
@@ -1171,18 +1178,91 @@ void C_AnarchyManager::OnWorkshopManagerReady()
 	//*/
 }
 
+void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
+{
+	// detect any .set files in the legacy folder too
+	std::string file;
+	KeyValues* kv = new KeyValues("instance");
+	FileFindHandle_t findHandle;
+	DevMsg("Tester folder: %smaps\\*.set\n", path.c_str());
+	//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path.c_str()), "", &findHandle);
+
+	//const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "", &findHandle);
+	//const char *pFilename = g_pFullFileSystem->FindFirstEx("*.set", "GAME", &findHandle);
+//	const char *pFilename = g_pFullFileSystem->FindFirstEx("*", "GAME", &findHandle);
+	while (pFilename != NULL)
+	{
+		file = path + "maps\\" + std::string(pFilename);
+		//file = path + std::string(pFilename);
+
+		if (g_pFullFileSystem->FindIsDirectory(findHandle))
+		{
+			//this->ScanForLegacySaveRecursive(file + "\\");
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+			continue;
+		}
+		//else if (std::string(pFilename).)
+
+		//file = "maps\\" + std::string(pFilename);
+
+		// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
+		if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+		{
+			if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+			{
+				//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+				// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
+				// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
+
+				std::string title = kv->GetString("title");
+				if (title == "")
+				{
+					//title = "Unnamed";
+					title = file;
+					size_t found = title.find_last_of("/\\");
+					if (found != std::string::npos)
+						title = title.substr(found + 1);
+				}
+
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
+				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
+			}
+		}
+
+		kv->Clear();
+		pFilename = g_pFullFileSystem->FindNext(findHandle);
+	}
+	g_pFullFileSystem->FindClose(findHandle);
+}
+
 void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
 	if (!m_pMountManager)	// it is our first time here
 	{
-		std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+		//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+		//this->ScanForLegacySaveRecursive(path);
 
+		/*
+		std::string workshopPath;
+		unsigned int max = m_pWorkshopManager->GetNumDetails();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			SteamUGCDetails_t* pDetails = m_pWorkshopManager->GetDetails(i);
+			workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
+			this->ScanForLegacySaveRecursive(workshopPath);
+		}
+		*/
+
+		/*
 		// detect any .set files in the legacy folder too
 		std::string file;
 		KeyValues* kv = new KeyValues("instance");
 		FileFindHandle_t findHandle;
 		//DevMsg("Tester folder: %smaps\\*.set", path);
-		const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
+		//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+		//const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
+		const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "GAME", &findHandle);
 		while (pFilename != NULL)
 		{
 			if (g_pFullFileSystem->FindIsDirectory(findHandle))
@@ -1191,7 +1271,8 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 				continue;
 			}
 
-			file = std::string(path) + "maps\\" + std::string(pFilename);
+			//file = std::string(path) + "maps\\" + std::string(pFilename);
+			file = "maps\\" + std::string(pFilename);
 
 			// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
 			if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
@@ -1221,6 +1302,7 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 			pFilename = g_pFullFileSystem->FindNext(findHandle);
 		}
 		g_pFullFileSystem->FindClose(findHandle);
+		*/
 
 		m_pMountManager = new C_MountManager();
 		m_pMountManager->Init();

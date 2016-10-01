@@ -33,6 +33,10 @@ public:
 	C_InstanceManager();
 	~C_InstanceManager();
 
+	void LevelShutdownPostEntity();
+
+	void Update();
+
 	void LoadLegacyInstance(std::string instanceId);
 
 	void AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale);
@@ -44,6 +48,8 @@ public:
 	instance_t* FindInstance(std::string mapId);
 	void FindAllInstances(std::string mapId, std::vector<instance_t*> &instances);
 	void LegacyMapIdFix(std::string legacyMapName, std::string mapId);
+
+	void SpawnActionPressed();
 	//void SpawnItem(std::string id);
 
 	// accessors
@@ -51,6 +57,8 @@ public:
 	// mutators
 	
 private:
+	unsigned int m_uNextFlashedObject;
+	float m_fLastSpawnActionPressed;
 	float m_fNearestSpawnDist;
 	std::map<std::string, object_t*> m_objects;
 	std::vector<object_t*> m_unspawnedObjects;
