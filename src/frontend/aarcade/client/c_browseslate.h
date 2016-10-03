@@ -39,7 +39,7 @@ struct ThreadedFileBrowseParams_t
 class IBrowseSlate
 {
 public:
-	virtual void		Create(vgui::VPANEL parent) = 0;
+	virtual void		Create(vgui::VPANEL parent, std::string browseId) = 0;
 	virtual void		Destroy(void) = 0;
 	//	virtual vgui::Panel*		GetPanel() = 0;
 };
@@ -53,7 +53,7 @@ namespace vgui
 		DECLARE_CLASS_SIMPLE(CBrowseSlate, Frame);
 
 	public:
-		CBrowseSlate(vgui::VPANEL parent);
+		CBrowseSlate(vgui::VPANEL parent, std::string browseId);
 		virtual ~CBrowseSlate();
 
 		//static ITexture* s_pOriginalTexture;
@@ -80,6 +80,8 @@ namespace vgui
 	//	vgui::Panel* GetPanel();
 
 	private:
+		bool m_bIsInvisible;
+		std::string m_browseId;
 		ThreadedFileBrowseParams_t* m_pFileParams;
 //		bool m_bMainMenu;
 //		bool m_bFullscreen;

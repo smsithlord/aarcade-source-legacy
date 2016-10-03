@@ -17,7 +17,7 @@ CCanvasRegen* CWebSurfaceProxy::s_pCanvasRegen = null;
 
 void CWebSurfaceProxy::OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
 {
-	DevMsg("WebSurfaceProxy: OnSimpleImageRendered\n");
+	DevMsg("WebSurfaceProxy: OnSimpleImageRendered %s %s %s\n", channel.c_str(), itemId.c_str(), field.c_str());
 	s_simpleImages[channel][itemId] = pTexture;
 
 	if (field != "" && field != channel && field != "file")	// FIXME: more intellegent look-ahead before requesting images be rendered would speed stuff up a lot.
@@ -366,6 +366,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			}else*/
 			if(true)
 			{
+				bool bSwappedEmbeddedInstanceIn = false;
 				// if a texture exists for this shortcut's item's id for this channel, then we're done already.
 				// otherwise, we have to request the web tab to render us, which will be ignored 90% of the time, but thats OK.
 				bool bTextureExists = false;
@@ -375,18 +376,32 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					std::string itemId = pShortcut->GetItemId();
 					if (itemId != "")
 					{
+						// we're swapping in the web browser tab even if no simple image is anywhere.
+						if (m_originalSimpleImageChannel == "screen")
+						{
+							C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
+							if (m_pMaterialTextureVar && testerInstance && testerInstance->GetTexture())
+							{
+								m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
+								testerInstance->Update();
+								bSwappedEmbeddedInstanceIn = true;
+							}
+						}
+
+						// we still need to find the texture so we can process the image loading still.
 						//std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalId);
 						std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalSimpleImageChannel);
 						if (it != s_simpleImages.end())
 						{
 							std::map<std::string, ITexture*>::iterator it2 = it->second.find(itemId);
-							if (it2 != it->second.end())
+							if (it2 != it->second.end() )
 							{
-								if (m_pMaterialTextureVar)
+								if (!bSwappedEmbeddedInstanceIn && m_pMaterialTextureVar)
 								{
 									// we have found our texture.  swap it in and we're done.
 									if (it2->second)	// only use it if it's non-null
 									{
+										/*
 										if (m_originalSimpleImageChannel == "screen")
 										{
 											C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
@@ -398,14 +413,15 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 											else
 												m_pMaterialTextureVar->SetTextureValue(it2->second);
 										}
-										else
+										else*/
 											m_pMaterialTextureVar->SetTextureValue(it2->second);
 									}
 									else
 										m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 								}
 
-								bTextureExists = true;
+								//if( it2->second )
+									bTextureExists = true;
 							}
 						}
 
@@ -423,7 +439,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					}
 				}
 
-				if (!bTextureExists)
+				if (!bTextureExists && !bSwappedEmbeddedInstanceIn)
 					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);	// Note that there is 1 case where bTextureExists can be true but the original texture still gets swapped in.
 			}
 		}
@@ -470,6 +486,12 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 
 		channelIt++;
 	}
+}
+
+void CWebSurfaceProxy::UnreferenceTexture(ITexture* pTexture)
+{
+	if (m_pMaterialTextureVar && m_pMaterialTextureVar->GetTextureValue() == pTexture)
+		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 }
 
 void CWebSurfaceProxy::RefreshItemTextures(std::string itemId, std::string channel)

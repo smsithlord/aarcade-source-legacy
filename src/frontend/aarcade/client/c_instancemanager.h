@@ -39,7 +39,8 @@ public:
 
 	void LoadLegacyInstance(std::string instanceId);
 
-	void AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale);
+	void SpawnObject(object_t* object);
+	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale);
 	bool SpawnNearestObject();
 	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 

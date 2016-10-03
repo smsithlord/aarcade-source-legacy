@@ -7,20 +7,21 @@ function ArcadeHud()
 	this.pinHudButtonElem;
 	this.returnHudButtonElem;
 	//this.closeContentButtonElem;
-	this.hudHeaderContainerElem;
+	//this.hudHeaderContainerElem;
 	this.clickThruElem;
 	this.cursorElem;
 	this.cursorPreviewImageElem;
 	this.cursorImageElem;
 	this.helpElem;
-	this.metaScrapeElem;
-	this.hudMetaScrapeContainer;
+	//this.metaScrapeElem;
+	//this.hudMetaScrapeContainer;
 	this.startupLoadingMessagesContainer;
 	this.hudLoadingMessagesContainer;
 	this.hudLoadingMessages = {};
 	this.DOMReady = false;
 	this.addressElem;
 	this.DOMParser;
+	this.fileBrowseHandles = {};
 	this.metaScrapeHandles = {};
 	this.activeScraper = null;
 	this.scrapers = {
@@ -151,7 +152,7 @@ function ArcadeHud()
 		"origin":
 		{
 			"id": "origin",
-			"title": "Origin",
+			"title": "Origin Store",
 			"search": "http://www.origin.com/search?searchString=$TERM",
 			"fields":
 			{
@@ -418,7 +419,7 @@ function ArcadeHud()
 		"themoviedb":
 		{
 			"id": "themoviedb",
-			"title": "TheMovieDB",
+			"title": "TheMovieDb",
 			"search": "http://www.themoviedb.org/search?query=$TERM",
 			"fields":
 			{
@@ -930,6 +931,7 @@ function ArcadeHud()
 		this.returnHudButtonElem = document.body.querySelector("#returnHudButton");
 		this.addressTabElem = document.body.querySelector("#addressTab");
 		this.hudHeaderContainerElem = document.body.querySelector(".hudHeaderContainer");
+		//this.hudMetaScrapeContainerElem = document.body.querySelector("#hudMetaScrapeContainer");
 //		this.closeContentButtonElem = document.body.querySelector(".hudContentHeaderCell:nth-of-type(3) .hudContentHeaderButton");
 		
 		aaapi.system.requestActivateInputMode();
@@ -942,7 +944,7 @@ function ArcadeHud()
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
 		document.body.appendChild(this.helpElem);
 
-
+		/*
 		this.metaScrapeElem = document.createElement("div");
 		this.metaScrapeElem.className = "metaScrapeContainer";
 		this.metaScrapeElem.addEventListener("click", function()
@@ -957,7 +959,8 @@ function ArcadeHud()
 				for( x in scrapedData)
 				{
 					field = scrapedData[x];
-					if( field === "" || (this.field !== "all" && this.field !== x))
+					//if( field === "" || (this.field !== "all" && this.field !== x))
+					if( this.field !== "all" && this.field !== x)
 						continue;
 
 					if( x === "type" )
@@ -996,15 +999,6 @@ function ArcadeHud()
 
 				if( success )
 				{
-					/*
-					var i;
-					var max = args.length;
-					for( i = 0; i < max; i += 2)
-					{
-						if( this.field == "all" || args[i] === this.field )
-							item[args[i]] = args[i+1];
-					}
-					*/
 					console.log("Item updated!");
 
 					var container = document.querySelector(".metaScrapeContainer");
@@ -1023,6 +1017,7 @@ function ArcadeHud()
 		this.hudMetaScrapeContainer.innerHTML = "<img src='scrapeicon.png' style='vertical-align: middle;' /><div class='buttonText'> Meta Scrape</div>";
 		this.metaScrapeElem.appendChild(this.hudMetaScrapeContainer);
 		document.body.appendChild(this.metaScrapeElem);
+		*/
 
 /*
 		document.body.addEventListener("dblclick", function(e)
@@ -1184,6 +1179,9 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 		var i;
 		for( i = 0; i < elems.length; i++ )
 		{
+			if( elems[i].id === "metaSearchButton" )
+				continue;
+			
 			elems[i].style.display = "inline-block";
 		}
 	}
@@ -1836,8 +1834,14 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	container.appendChild(popupMenuItems);
 	container.appendChild(optionSearchContainer);
 
+//container.style.top = popup.y + popup.height + "px";
 	blackout.appendChild(container);
 	document.body.insertBefore(blackout, this.cursorElem);
+
+	var offsetHeight = container.offsetHeight;
+	console.log(parseInt(container.style.top));
+	if( parseInt(container.style.top) + offsetHeight > window.innerHeight )
+		container.style.top = parseInt(container.style.top) - popup.height - offsetHeight + "px";
 
 	optionSearch.focus();
 
@@ -1904,6 +1908,14 @@ ArcadeHud.prototype.addHelpMessage = function(text)
 
 //ArcadeHud.prototype.metaSearch = function(scraperId, callback)
 //aaapi.system.metaSearch(id, elem.field, query);
+
+ArcadeHud.prototype.metaSearchEasy = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	if( item )
+		window.location='asset://ui/metaSearch.html?id=' + encodeURIComponent(item.info.id);
+};
+
 ArcadeHud.prototype.metaSearch = function(itemId, field, scraperId, term)
 {
 	var scraper = this.scrapers[scraperId];
@@ -1965,62 +1977,76 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 			{
 				// if there is a file, do not use duplicates on anything else
 				if( results.file === results.reference )
-					delete results["reference"];
+					results.reference = "";
+					//delete results["reference"];
 
 				if( results.file === results.preview )
-					delete results["preview"];
+					results.preview = "";
+//					delete results["preview"];
 
 				if( results.file === results.stream )
-					delete results["stream"];
+					results.stream = "";
+					//delete results["stream"];
 
 				if( results.file === results.download )
-					delete results["download"];
+					results.download = "";
+					//delete results["download"];
 
 				if( results.file === results.screen )
-					delete results["screen"];
+					results.screen = "";
+					//delete results["screen"];
 
 				if( results.file === results.marquee )
-					delete results["marquee"];
+					results.marquee = "";
+					//delete results["marquee"];
 			}
 
 			if( !!results.stream && results.stream !== "" )
 			{
 				// if there is a stream, do not use duplicates on anything
 				if( results.stream === results.preview )
-					delete results["preview"];
+					results.preview = "";
+					//delete results["preview"];
 
 				if( results.stream === results.download )
-					delete results["download"];
+					results.download = "";
+					//delete results["download"];
 			}
 
 			if( !!results.preview && results.preview !== "" )
 			{
 				// if there is a preview, do not use duplicates on anything
 				if( results.preview === results.download )
-					delete results["download"];
+					results.download = "";
+					//delete results["download"];
 
 				if( results.file === results.screen )
-					delete results["screen"];
+					results.screen = "";
+					//delete results["screen"];
 
 				if( results.file === results.marquee )
-					delete results["marquee"];
+					results.marquee = "";
+					//delete results["marquee"];
 			}
 
 			if( !!results.download && results.download !== "" )
 			{
 				// if there is a download, do not use duplicates on anything
 				if( results.download === results.screen )
-					delete results["screen"];
+					results.screen = "";
+					//delete results["screen"];
 
 				if( results.download === results.marquee )
-					delete results["marquee"];
+					results.marquee = "";
+					//delete results["marquee"];
 			}
 
 			if( !!results.screen && results.screen !== "" )
 			{
 				// if there is a screen, do not use duplicates on anything
 				if( results.screen === results.marquee )
-					delete results["marquee"];
+					results.marquee = "";
+					//delete results["marquee"];
 			}
 
 			this.callback(results);
@@ -2029,6 +2055,23 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 	}
 	else
 		console.log("ERROR: Invalid scraper ID received.");
+};
+
+ArcadeHud.prototype.browseForFile = function(callback)
+{
+	var browseId = "browse" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
+	this.fileBrowseHandles[browseId] = {"callback": callback};
+	aaapi.system.fileBrowse(browseId);
+};
+
+ArcadeHud.prototype.onBrowseFileSelected = function(browseId, response)
+{
+	var browseInfo = this.fileBrowseHandles[browseId];
+	var callback = browseInfo.callback;
+
+	delete this.fileBrowseHandles[browseId];
+
+	callback(response);
 };
 
 ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, field)
@@ -2058,20 +2101,23 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 				console.log("run test logic");
 				this.scraper.test(url, doc, function(response)
 				{
-					var container = document.querySelector(".metaScrapeContainer");
-					if( response.validForScrape )
+					var container = document.querySelector("#hudSideScrapeContainer");
+					if(container)
 					{
-						console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
-						container.style.display = "block";
-						container.scraperId = this.scraper.id;
-						container.itemId = this.itemId;
-						container.field = this.field;
-						return;
+						if( response.validForScrape )
+						{
+							console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
+							container.style.display = "block";
+							container.scraperId = this.scraper.id;
+							container.itemId = this.itemId;
+							container.field = this.field;
+							return;
+						}
+						else
+							container.style.display = "none";
 					}
-					else
-						container.style.display = "none";
 
-					if( !!response.redirect && response.redirect !== "")
+					if( !response.validForScrape && !!response.redirect && response.redirect !== "")
 					{
 						//var dummy3 = {"scraper": this.scraper, ""};
 						aaapi.system.metaSearch(this.scraper.id, this.itemId, this.field, response.redirect);

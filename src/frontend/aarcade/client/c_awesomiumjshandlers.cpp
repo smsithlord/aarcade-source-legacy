@@ -21,10 +21,77 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}	
 	else if (method_name == WSLit("spawnItem"))
 	{
-		g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
 		std::string id = WebStringToCharString(args[0].ToString());
-		DevMsg("SPAWN THE SHIT! %s\n", id.c_str());
+
+		// Figure out where to place it
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+
+		trace_t tr;
+		UTIL_TraceLine(pPlayer->EyePosition(),
+			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+			pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		// No hit? We're done.
+		if (tr.fraction == 1.0)
+			return;
+
+		VMatrix entToWorld;
+		Vector xaxis;
+		Vector yaxis;
+
+		if (tr.plane.normal.z == 0.0f)
+		{
+			yaxis = Vector(0.0f, 0.0f, 1.0f);
+			CrossProduct(yaxis, tr.plane.normal, xaxis);
+			entToWorld.SetBasisVectors(tr.plane.normal, xaxis, yaxis);
+		}
+		else
+		{
+			Vector ItemToPlayer;
+			VectorSubtract(pPlayer->GetAbsOrigin(), Vector(tr.endpos.x, tr.endpos.y, tr.endpos.z), ItemToPlayer);
+
+			xaxis = Vector(ItemToPlayer.x, ItemToPlayer.y, ItemToPlayer.z);
+
+			CrossProduct(tr.plane.normal, xaxis, yaxis);
+			if (VectorNormalize(yaxis) < 1e-3)
+			{
+				xaxis.Init(0.0f, 0.0f, 1.0f);
+				CrossProduct(tr.plane.normal, xaxis, yaxis);
+				VectorNormalize(yaxis);
+			}
+			CrossProduct(yaxis, tr.plane.normal, xaxis);
+			VectorNormalize(xaxis);
+
+			entToWorld.SetBasisVectors(xaxis, yaxis, tr.plane.normal);
+		}
+
+		QAngle angles;
+		MatrixToAngles(entToWorld, angles);
+
+		std::string modelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f);
+		g_pAnarchyManager->GetInstanceManager()->SpawnObject(pObject);
+
+		//char buf[512];
+		//Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", tr.endpos.x, tr.endpos.y, tr.endpos.z);
+		//pObjectKV->SetString("origin", buf);
+		//Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z);
+		//pObjectKV->SetString("angles", buf);
+
+		//pClientArcadeResources->AddObjectToArrangement(pObjectKV);
+		//pClientArcadeResources->SaveArrangements(true);
+
+		//	ConVar* NextToMakeTypeVar = cvar->FindVar("NextToMakeType");
+		//	NextToMakeTypeVar->SetValue(pItemKV->GetString("type", "other"));
+
+		//std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f\n", id.c_str(), "models/cabinets/two_player_arcade.mdl", tr.endpos.x, tr.endpos.y, tr.endpos.z, angles.x, angles.y, angles.z);
+		//engine->ServerCmd(msg.c_str(), false);
+
+		//DevMsg("SPAWN THE SHIT! %s\n", id.c_str());
 
 		/*
 		std::string modelFile = "";
@@ -104,9 +171,98 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					executable = "steam://run/" + executable;
 				}
 
-				DevMsg("Item to launch: %s %s\n", executable.c_str(), params.c_str());
+//				DevMsg("Item to launch: %s %s\n", executable.c_str(), params.c_str());
 				//vgui::system()->ShellExecuteA("open", executable.c_str());
-				vgui::system()->ShellExecuteEx("open", executable.c_str(), params.c_str());
+				//vgui::system()->ShellExecuteEx("open", executable.c_str(), params.c_str());
+
+
+
+				// new, more advanced way...
+				std::string executableDirectory = executable;
+				size_t found = executableDirectory.find_last_of("/\\");
+				if (found != std::string::npos)
+					executableDirectory = executableDirectory.substr(0, found+1);
+
+				/*
+				found = executableDirectory.find(".");
+				if (found != std::string::npos)
+					executableDirectory = executableDirectory.substr(0, found);
+				*/
+
+				STARTUPINFO si;
+				PROCESS_INFORMATION pi;
+
+				// set the size of the structures
+				ZeroMemory(&si, sizeof(si));
+				si.cb = sizeof(si);
+				ZeroMemory(&pi, sizeof(pi));
+
+				std::string executableFile = executable;
+				found = executableFile.find_last_of("/\\");
+				if (found != std::string::npos)
+					executableFile = executableFile.substr(found + 1);
+
+				//std::string masterCommand = "\"" + executable + "\" " + params;
+				std::string masterCommand = "\"" + executableFile + "\" " + params;
+				//std::string masterCommand = "Application " + params;
+
+				char pCommands[AA_MAX_STRING];
+				Q_strcpy(pCommands, masterCommand.c_str());
+			//	Q_strcpy(pCommands, params.c_str());
+				
+
+				//pSelectedEmbeddedInstance->Deselect();
+				//m_pInputManager->SetEmbeddedInstance(null);
+
+				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+				if (g_pAnarchyManager->GetSelectedEntity())
+					g_pAnarchyManager->DeselectEntity("none");
+
+				// > SetFullscreenMode(false);
+				C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+				C_EmbeddedInstance* pOldEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+				
+				if (pOldEmbeddedInstance && pOldEmbeddedInstance != pHudBrowserInstance)
+					pOldEmbeddedInstance->Close();
+
+				g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
+
+				DevMsg("Launching Item: \n\tExecutable: %s\n\tExecutable File: %s\n\tCommands: %s\n\tDirectory: %s\n", executable.c_str(), executableFile.c_str(), params.c_str(), executableDirectory.c_str());
+				DevMsg("Maser Command:\n\t%s\n", masterCommand.c_str());
+
+				// start the program up
+				CreateProcess(executable.c_str(),   // the path
+					pCommands,        // Command line
+					NULL,           // Process handle not inheritable
+					NULL,           // Thread handle not inheritable
+					FALSE,          // Set handle inheritance to FALSE
+					0,              // No creation flags
+					NULL,           // Use parent's environment block
+					executableDirectory.c_str(),           // Use parent's starting directory 
+					&si,            // Pointer to STARTUPINFO structure
+					&pi);           // Pointer to PROCESS_INFORMATION structure
+				
+
+				/*
+				
+				typedef struct _SHELLEXECUTEINFOA
+				{
+				DWORD cbSize;               // in, required, sizeof of this structure
+				ULONG fMask;                // in, SEE_MASK_XXX values
+				HWND hwnd;                  // in, optional
+				LPCSTR   lpVerb;            // in, optional when unspecified the default verb is choosen
+				LPCSTR   lpFile;            // in, either this value or lpIDList must be specified
+				LPCSTR   lpParameters;      // in, optional
+				LPCSTR   lpDirectory;       // in, optional
+				int nShow;                  // in, required
+				HINSTANCE hInstApp;         // out when SEE_MASK_NOCLOSEPROCESS is specified
+				void *lpIDList;             // in, valid when SEE_MASK_IDLIST is specified, PCIDLIST_ABSOLUTE, for use with SEE_MASK_IDLIST & SEE_MASK_INVOKEIDLIST
+				LPCSTR   lpClass;           // in, valid when SEE_MASK_CLASSNAME is specified
+				HKEY hkeyClass;             // in, valid when SEE_MASK_CLASSKEY is specified
+				DWORD dwHotKey;             // in, valid when SEE_MASK_HOTKEY is specified
+
+				*/
 			}
 		}
 
@@ -525,7 +681,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("fileBrowse"))
 	{
-		g_pAnarchyManager->ShowFileBrowseMenu();
+		std::string browseId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->ShowFileBrowseMenu(browseId);
 	}
 	else if (method_name == WSLit("simpleImageReady"))
 	{
@@ -539,9 +696,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		if (pImagesBrowserInstance->GetWebView() != caller)
 			return;// JSValue(false);
 
-		std::string channel = WebStringToCharString(args[0].ToString());
-		std::string itemId = WebStringToCharString(args[1].ToString());
-		std::string field = WebStringToCharString(args[2].ToString());
+		std::string sessionId = WebStringToCharString(args[0].ToString());
+		if (sessionId != "ready" && sessionId != pImagesBrowserInstance->GetImagesSessionId())
+			return;
+
+		std::string channel = WebStringToCharString(args[1].ToString());
+		std::string itemId = WebStringToCharString(args[2].ToString());
+		std::string field = WebStringToCharString(args[3].ToString());
 
 		if (channel == "" && itemId == "" && field == "")
 		{
@@ -590,13 +751,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					pTexture->Download();
 					DevMsg("Download\n");
 					
-					pImagesBrowserInstance->OnSimpleImageReady(channel, itemId, field, pTexture);
+					pImagesBrowserInstance->OnSimpleImageReady(sessionId, channel, itemId, field, pTexture);
 				}
 			}
 		}
 		else if (itemId != "")
 		{
-			pImagesBrowserInstance->OnSimpleImageReady(channel, itemId, field, null);
+			pImagesBrowserInstance->OnSimpleImageReady(sessionId, channel, itemId, field, null);
 		}
 
 		return;// JSValue(true);

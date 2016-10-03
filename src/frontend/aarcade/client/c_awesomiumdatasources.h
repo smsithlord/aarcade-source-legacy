@@ -31,4 +31,13 @@ public:
 	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
 };
 
+class LocalDataSource : public DataSource
+{
+public:
+	LocalDataSource();
+	virtual ~LocalDataSource();
+	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
+};
+
+
 #endif

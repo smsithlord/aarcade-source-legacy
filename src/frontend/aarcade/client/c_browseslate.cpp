@@ -60,8 +60,10 @@ unsigned ThreadedFileBrowse(void *params)
 	return 0;
 }
 
-CBrowseSlate::CBrowseSlate(vgui::VPANEL parent) : Frame(null, "BrowseSlate")
+CBrowseSlate::CBrowseSlate(vgui::VPANEL parent, std::string browseId) : Frame(null, "BrowseSlate")
 {
+	m_bIsInvisible = false;
+	m_browseId = browseId;
 	SetParent( parent );
 	SetKeyBoardInputEnabled(true);
 	SetMouseInputEnabled(true);
@@ -140,10 +142,20 @@ void CBrowseSlate::OnTick()
 	{
 		if (m_pFileParams->ready)
 		{
-			DevMsg("Params are ready: %s\n", m_pFileParams->response.c_str());
+			//DevMsg("Params are ready: %s\n", m_pFileParams->response.c_str());
+			g_pAnarchyManager->OnBrowseFileSelected(m_browseId, m_pFileParams->response);
 
 			this->OnCommand("close");
+			return;
 		}
+	}
+
+	if (!m_bIsInvisible)
+	{
+		if (GetAlpha() > 0)
+			SetAlpha(0);
+		else
+			m_bIsInvisible = true;
 	}
 }
 
@@ -366,9 +378,9 @@ public:
 		BrowseSlate = NULL;
 	}
 
-	void Create(vgui::VPANEL parent)
+	void Create(vgui::VPANEL parent, std::string browseId)
 	{
-		BrowseSlate = new CBrowseSlate(parent);
+		BrowseSlate = new CBrowseSlate(parent, browseId);
 	}
 	/*
 	vgui::Panel* GetPanel()

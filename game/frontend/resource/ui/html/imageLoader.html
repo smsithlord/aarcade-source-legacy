@@ -48,7 +48,8 @@
 
 			function ImageLoader()
 			{
-				this.imageRenderElem;
+				this.sessionId = "loading";
+				//this.imageRenderElem;
 				
 				this.waitingToRender = false;
 				this.imageRequests = [];
@@ -93,7 +94,7 @@
 					setTimeout(function()
 					{
 						//console.log("Simple image ready for: " + this.imageElem.src);//this.itemId);
-						aaapi.system.simpleImageReady(this.channel, this.itemId, this.field);
+						aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, this.field);
 					}.bind(imageRequest), 100);	// delay because the image doesn't appear instantly when it is done loading
 				}
 			};
@@ -164,9 +165,28 @@
 				return false;
 			};
 
-			ImageLoader.prototype.loadImage = function(channel, itemId)
+			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId)
 			{
+				if( sessionId !== this.sessionId )
+				{
+					var max = this.imageRequests.length;
+					var i;
+					for( i = 0; i < max; i++ )
+						this.imageRequests[i].invalid = true;
+
+					this.waitingToRender = false;
+					this.imageRequests = [];
+
+					var imgElems = document.body.querySelector("img");
+					max = imgElems.length;
+					for( i = 0; i < max; i++ )
+						imgElems[i].parentNode.removeChild(imgElems[i]);
+
+					this.sessionId = sessionId;
+				}
+
 				var imageRequest = {
+					"sessionId": sessionId,	// obsolete cuz requests are invalidated now
 					"channel": channel,
 					"itemId": itemId,
 					"fields": new Array("marquee", "screen", "preview", "file"),
@@ -178,12 +198,19 @@
 					"rendering": false
 				};
 
+				// if we are looking for a screen, put the marquee last so it doesn't get re-used
+				if( imageRequest.field === "screen" )
+				{
+					var temp = imageRequest.fields.shift();
+					imageRequest.fields.push(temp);
+				}
+
 				this.imageRequests.push(imageRequest);
 
 				var item = aaapi.library.getLibraryItem(itemId);
 				if( !item )
 				{
-					console.log("Error: cannot load image for item " + itemId);
+					console.log("Error: cannot load image for item " + itemId + " channel " + imageRequest.channel);
 
 					setTimeout(function()
 					{
@@ -191,7 +218,7 @@
 						if( index >= 0 )
 							imageLoader.imageRequests.splice(index, 1);
 
-						aaapi.system.simpleImageReady(this.channel, this.itemId, "");
+						aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, "");
 					}.bind(imageRequest), 100);
 					
 					return;
@@ -240,7 +267,12 @@
 				if( !!YouTubeId )
 					imageRequest.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
 				else
-					imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
+				{
+					var goodSrc = imageRequest.item[imageRequest.field];
+					if( goodSrc.indexOf(":") === 1 )
+						goodSrc = "asset://local/" + goodSrc;
+					imageRequest.imageElem.src = goodSrc;
+				}
 				//imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
 			};
 
@@ -278,6 +310,9 @@
 
 			ImageLoader.prototype.onImageLoad = function(e)
 			{
+				if( !!this.invalid )
+					return;
+
 				//if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
 				if( (this.imageElem.src.indexOf("img.youtube.com/") >= 0 || this.imageElem.src.indexOf("file:///") === 0) && this.imageElem.width == 120 && this.imageElem.height == 90 )
 				{
@@ -340,12 +375,15 @@
 					if( index >= 0 )
 						imageLoader.imageRequests.splice(index, 1);
 
-					aaapi.system.simpleImageReady(this.channel, this.itemId, "");
+					aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, "");
 				}.bind(imageRequest), 100);
 			};
 
 			ImageLoader.prototype.onImageError = function(e)
 			{
+				if( !!this.invalid )
+					return;
+
 				var elem = this.imageElem;
 				//console.log("Error loading image: " + elem.src);
 
@@ -370,7 +408,12 @@
 					if( !!YouTubeId )
 						this.imageElem.src = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
 					else
-						this.imageElem.src = this.item[this.field];
+					{
+						var goodSrc = this.item[this.field];
+						if( goodSrc.indexOf(":") === 1 )
+							goodSrc = "asset://local/" + goodSrc;
+						this.imageElem.src = goodSrc;
+					}
 
 					//console.log("Alternate attempting " + this.field + ": " + this.item[this.field]);
 				}
@@ -384,7 +427,7 @@
 //			setTimeout(function()
 //			{
 				//aaapi.system.simpleImageReady(this.channel, this.itemId, "");
-				aaapi.system.simpleImageReady("", "", "");
+				aaapi.system.simpleImageReady("ready", "", "", "");
 //			}, 100);
 
 		</script>

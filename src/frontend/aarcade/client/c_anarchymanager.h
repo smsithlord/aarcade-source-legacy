@@ -90,11 +90,12 @@ public:
 	//void OnLoadingManagerReady();
 	bool AttemptSelectEntity();
 	bool SelectEntity(C_BaseEntity* pEntity);
-	bool DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl = "", bool bCloseInstance = true);
+	bool DeselectEntity(std::string nextUrl = "", bool bCloseInstance = true);
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
 
-	void ShowFileBrowseMenu();// const char* keyFieldName, KeyValues* itemKV);
+	void ShowFileBrowseMenu(std::string browseId);// const char* keyFieldName, KeyValues* itemKV);
+	void OnBrowseFileSelected(std::string browseId, std::string response);
 	//void ReleaseFileBrowseParams();
 
 	void ScanForLegacySaveRecursive(std::string path);

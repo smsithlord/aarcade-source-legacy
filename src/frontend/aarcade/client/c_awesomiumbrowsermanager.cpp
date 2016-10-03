@@ -63,12 +63,16 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	m_pWebSession->AddDataSource(WSLit("newwindow"), pNewWindowDataSource);
 
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
+
 	UiDataSource* pUiDataSource = new UiDataSource();
 	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
-
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\screenshots", engine->GetGameDirectory()), "SCREENSHOTS");
+
 	ScreenshotDataSource* pScreenshotDataSource = new ScreenshotDataSource();
 	m_pWebSession->AddDataSource(WSLit("screenshots"), pScreenshotDataSource);
+
+	LocalDataSource* pLocalDataSource = new LocalDataSource();
+	m_pWebSession->AddDataSource(WSLit("local"), pLocalDataSource);
 
 	// MASTER
 	m_pMasterLoadListener = new MasterLoadListener;

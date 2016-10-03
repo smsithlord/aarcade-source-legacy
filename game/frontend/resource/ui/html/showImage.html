@@ -39,7 +39,7 @@ function getParameterByName(name, url) {
 			var imageContainerElem = document.body.querySelector("#loadingImageContainer");
 			var imageElem = document.createElement("img");
 			imageContainerElem.appendChild(imageElem);
-			imageElem.src = getParameterByName("uri");
+			imageElem.src = decodeURIComponent(getParameterByName("uri"));
 		</script>
 	</body>
 </html>

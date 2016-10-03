@@ -24,7 +24,35 @@ C_InstanceManager::~C_InstanceManager()
 	m_instances.clear();
 }
 
-void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale)
+void C_InstanceManager::SpawnObject(object_t* object)
+{
+	auto it = std::find(m_unspawnedObjects.begin(), m_unspawnedObjects.end(), object);
+	if (it != m_unspawnedObjects.end())
+		m_unspawnedObjects.erase(it);
+	else
+		return;
+	
+	object->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
+	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(object->modelId);
+	if (model)
+	{
+		DevMsg("Spawning an object w/ %s\n", object->modelId.c_str());
+
+		KeyValues* active = model->FindKey("current");
+		if (!active)
+			active = model->FindKey("local", true);
+
+		std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+		std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale);
+		engine->ServerCmd(msg.c_str(), false);
+	}
+	else
+	{
+		DevMsg("Could not spawn object because it's model was not found: %s\n", object->modelId.c_str());
+	}
+}
+
+object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
 
@@ -40,6 +68,7 @@ void C_InstanceManager::AddObject(std::string objectId, std::string itemId, std:
 	m_objects[goodObjectId] = pObject;
 
 	m_unspawnedObjects.push_back(pObject);
+	return pObject;
 }
 
 bool C_InstanceManager::SpawnNearestObject()
@@ -84,28 +113,7 @@ bool C_InstanceManager::SpawnNearestObject()
 
 	if (pNearObject)
 	{
-		m_unspawnedObjects.erase(nearestIt);
-
-		pNearObject->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
-
-		KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pNearObject->modelId);
-		if (model)
-		{
-			DevMsg("Spawning an object w/ %s\n", pNearObject->modelId.c_str());
-
-			KeyValues* active = model->FindKey("current");
-			if (!active)
-				active = model->FindKey("local", true);
-
-			std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-			std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", pNearObject->itemId.c_str(), modelFile.c_str(), pNearObject->origin.x, pNearObject->origin.y, pNearObject->origin.z, pNearObject->angles.x, pNearObject->angles.y, pNearObject->angles.z, pNearObject->scale);
-			engine->ServerCmd(msg.c_str(), false);
-		}
-		else
-		{
-			DevMsg("Could not spawn object because it's model was not found: %s\n", pNearObject->modelId.c_str());
-		}
-
+		this->SpawnObject(pNearObject);
 		return true;
 	}
 
@@ -140,7 +148,7 @@ instance_t* C_InstanceManager::FindInstance(std::string mapId)
 	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
 	while (it != m_instances.end())
 	{
-		if ( it->second->mapId == mapId )
+		if ( !Q_stricmp(it->second->mapId.c_str(), mapId.c_str()) )
 			return it->second;
 
 		it++;
@@ -154,10 +162,11 @@ void C_InstanceManager::FindAllInstances(std::string mapId, std::vector<instance
 	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
 	while (it != m_instances.end())
 	{
-		if (it->second->mapId == mapId)
+		//if (it->second->mapId == mapId)
+		if (!Q_stricmp(it->second->mapId.c_str(), mapId.c_str()))
 			instances.push_back(it->second);
 
-		it++;
+		it++; 
 	}
 }
 
@@ -166,7 +175,8 @@ void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string ma
 	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
 	while (it != m_instances.end())
 	{
-		if (it->second->mapId == legacyMapName)
+		//if (it->second->mapId == legacyMapName)
+		if (!Q_stricmp(it->second->mapId.c_str(), legacyMapName.c_str()))
 			it->second->mapId = mapId;
 
 		it++;
@@ -404,6 +414,8 @@ void C_InstanceManager::Update()
 {
 	if (engine->IsInGame() && g_pAnarchyManager->GetInstanceId() != "")
 	{
+	//	DevMsg("Letters callback\n");
+
 		// grab an iterator to the last flashed object and increment it, otherwise just use .begin()
 		unsigned int max = m_unspawnedObjects.size();
 		if (m_uNextFlashedObject >= max)
@@ -457,7 +469,8 @@ void C_InstanceManager::Update()
 					//engine->ServerCmd(msg.c_str(), false);
 				}
 
-				m_uNextFlashedObject++;
+				break;
+				//m_uNextFlashedObject++;
 			}
 
 			m_uNextFlashedObject++;

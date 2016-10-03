@@ -66,7 +66,7 @@ function getParameterByName(name, url) {
 			var item = aaapi.library.getLibraryItem(id);
 			for( var x in item )
 			{
-				if( x === "info" )
+				if( x === "info" || x === "model" )
 					continue;
 
 				fieldContainer = document.createElement("div");
@@ -182,6 +182,7 @@ function getParameterByName(name, url) {
 					fieldValueInput.type = "text";
 					fieldValueInput.value = item[x];
 					fieldValueInput.field = x;
+					//fieldValueInput.setAttribute("fieldz", x);
 					fieldValueInput.addEventListener('blur', function(e)
 					{
 						var elem = e.target;
@@ -206,8 +207,54 @@ function getParameterByName(name, url) {
 					buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
 					buttonBrowseContainer.addEventListener("click", function(e)
 					{
-						aaapi.system.fileBrowse();
-					}, true);
+						arcadeHud.browseForFile(function(chosenFile)
+						{
+							if(chosenFile !== "")
+							{
+								if( item.app !== "" )
+								{
+									var app = aaapi.library.getLibraryApp(item.app);
+									var x;
+									for( x in app.filepaths )
+									{
+										if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+										{
+											chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+											break;
+										}
+									}
+								}
+
+								var myInput = this.parentNode.querySelector("input");
+								//item[myInput.field] = chosenFile;
+								myInput.value = chosenFile;
+								//myInput.focus();
+								//myInput.form.submit();
+
+								// update the item
+								var args = [myInput.field, chosenFile];
+							//	console.log("Item name is: " + item.info.id);
+								var success = aaapi.library.updateItem(item.info.id, args);
+								if( success )
+								{
+									var i;
+									var max = args.length;
+									for( i = 0; i < max; i += 2)
+									{
+										if( myInput.field == "all" || args[i] === myInput.field )
+											item[args[i]] = args[i+1];
+									}
+
+									console.log("Item updated!");
+
+									//aaapi.system.autoInspect(this.itemId);
+								}
+								else
+									console.log("Item update rejected!");
+							}
+						}.bind(this));
+//						aaapi.system.fileBrowse();
+					}.bind(buttonBrowseContainer), true);
 					buttonBrowseContainer.innerHTML = "<img src='browseicon.png' style='width: 20px;' />";
 					fieldContainer.appendChild(buttonBrowseContainer);
 
@@ -391,7 +438,7 @@ function getParameterByName(name, url) {
 						for( x in scrapedData)
 						{
 							field = scrapedData[x];
-							if(field === "" || (this.field !== "all" && this.field !== x))
+							if(this.field !== "all" && this.field !== x)
 								continue;
 
 							if( x === "type" )

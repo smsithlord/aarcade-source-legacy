@@ -64,10 +64,12 @@ public:
 	//std::vector<JavaScriptMethodCall_t*> GetJavaScriptMethodCalls() { return m_javaScriptMethodCalls; }
 
 	// images webtab only
+	void ResetImagesSession();
+	std::string GetImagesSessionId() { return m_imagesSessionId; }
 	void DecrementNumImagesLoading() { m_iNumImagesLoading--; };
 	void SetNumImagesLoading(int num) { m_iNumImagesLoading = num; }
 	bool RequestLoadSimpleImage(std::string channel, std::string itemId);	// images web-views only!
-	void OnSimpleImageReady(std::string channel, std::string itemId, std::string field, ITexture* pTexture);	// images web-views only!
+	void OnSimpleImageReady(std::string sessionId, std::string channel, std::string itemId, std::string field, ITexture* pTexture);	// images web-views only!
 
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
@@ -87,6 +89,7 @@ public:
 
 private:
 	std::string m_URL;
+	std::string m_imagesSessionId;
 	int m_iNumImagesLoading;
 	int m_iMaxImagesLoading;
 

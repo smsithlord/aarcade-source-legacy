@@ -391,3 +391,92 @@ void ScreenshotDataSource::OnRequest(int request_id, const ResourceRequest& requ
 		}
 	}
 }
+
+LocalDataSource::LocalDataSource()
+{
+
+}
+
+LocalDataSource::~LocalDataSource()
+{
+
+}
+
+void LocalDataSource::OnRequest(int request_id, const ResourceRequest& request, const WebString& path)
+{
+	// Convert the path to a string
+	int len = path.ToUTF8(null, 0);
+	char* buf = new char[len + 1];
+	path.ToUTF8(buf, len);
+	buf[len] = 0;	// null terminator
+
+	std::string requestPath = buf;
+	delete[] buf;
+
+	std::vector<std::string> imageTypes;
+	imageTypes.push_back(".tbn");
+	imageTypes.push_back(".jpg");
+	imageTypes.push_back(".jpeg");
+	imageTypes.push_back(".gif");
+	imageTypes.push_back(".png");
+	imageTypes.push_back(".bmp");
+	imageTypes.push_back(".tga");
+
+	std::string ext = requestPath;
+	size_t found = ext.find_last_of(".");
+	if (found == std::string::npos)
+	{
+		DevMsg("Requested local file is not a valid image file format: %s\n", requestPath.c_str());
+		SendResponse(request_id, 0, null, WSLit("image"));
+		return;
+	}
+
+	ext = ext.substr(found);
+
+	bool supportedType = false;
+	for (int i = 0; i<imageTypes.size(); i++)
+	{
+		if (!Q_stricmp(imageTypes[i].c_str(), ext.c_str()))
+		{
+			supportedType = true;
+			break;
+		}
+	}
+
+	if (supportedType)
+	{
+		std::string localFile = requestPath;
+
+		// If the local file exists, send it.
+		if (filesystem->FileExists(localFile.c_str()))
+		{
+			FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb");
+
+			if (fileHandle)
+			{
+				int bufferSize = filesystem->Size(fileHandle);
+				unsigned char* responseBuffer = new unsigned char[bufferSize + 1];
+
+				filesystem->Read((void*)responseBuffer, bufferSize, fileHandle);
+				responseBuffer[bufferSize] = 0; // null terminator
+
+				filesystem->Close(fileHandle);
+
+				SendResponse(request_id, bufferSize + 1, responseBuffer, WSLit("image"));
+
+				delete[] responseBuffer;
+			}
+		}
+		else
+		{
+			DevMsg("Could not find local file for asset: %s\n", requestPath.c_str());
+			SendResponse(request_id, 0, null, WSLit("image"));
+		}
+	}
+	else
+	{
+		DevMsg("Debug: %s : %s\n", requestPath.c_str(), ext.c_str());
+		DevMsg("Only local IMAGE files can be referenced.\n");
+		SendResponse(request_id, 0, null, WSLit("image"));
+	}
+}

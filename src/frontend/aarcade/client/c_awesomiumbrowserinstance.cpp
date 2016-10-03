@@ -23,6 +23,7 @@
 
 C_AwesomiumBrowserInstance::C_AwesomiumBrowserInstance()
 {
+	m_imagesSessionId = g_pAnarchyManager->GenerateUniqueId();
 	m_iNumImagesLoading = -1;
 	m_iMaxImagesLoading = 10;
 
@@ -55,6 +56,7 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
 		m_pTexture->DecrementReferenceCount();	// FIXME: this is hte next statement to execute on an exit crash after checkin out a level...
 		m_pTexture->DeleteIfUnreferenced();
 		m_pTexture = null;
@@ -115,6 +117,9 @@ void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, bool alph
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
 	//pRegen->SetEmbeddedInstance(this);
 	m_pTexture->SetTextureRegenerator(pRegen);
+
+	if (m_id == "images")
+		this->ResetImagesSession();
 }
 
 /*
@@ -1289,10 +1294,10 @@ void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 		{
 			Render();
 
-			if (m_id == "hud")
-				DevMsg("Render PRIORITY (HUD)!\n");
-			else
-				DevMsg("Render AWESOMIUM!\n");
+		//	if (m_id == "hud")
+		//		DevMsg("Render PRIORITY (HUD)!\n");
+		//	else
+		//		DevMsg("Render AWESOMIUM!\n");
 		}
 		else
 		{
@@ -1396,6 +1401,13 @@ void C_AwesomiumBrowserInstance::AddHudLoadingMessage(std::string type, std::str
 		this->DispatchJavaScriptMethodCalls();
 }
 
+void C_AwesomiumBrowserInstance::ResetImagesSession()
+{
+	m_imagesSessionId = g_pAnarchyManager->GenerateUniqueId();
+	m_iNumImagesLoading = 0;
+	//m_iMaxImagesLoading = 10;
+}
+
 bool C_AwesomiumBrowserInstance::RequestLoadSimpleImage(std::string channel, std::string itemId)
 {
 	if (m_id != "images" || m_iNumImagesLoading == -1 || m_iNumImagesLoading >= m_iMaxImagesLoading)
@@ -1403,6 +1415,7 @@ bool C_AwesomiumBrowserInstance::RequestLoadSimpleImage(std::string channel, std
 
 	// check if we are ready to accept a new image request
 	std::vector<std::string> args;
+	args.push_back(m_imagesSessionId);	// so we know when to quit loading old shit
 	args.push_back(channel);
 	args.push_back(itemId);	// these should also be remembered locally too, so we can load entire websites as images too.
 
@@ -1411,9 +1424,10 @@ bool C_AwesomiumBrowserInstance::RequestLoadSimpleImage(std::string channel, std
 	return true;
 }
 
-void C_AwesomiumBrowserInstance::OnSimpleImageReady(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
+// FIXME: we probably don't need sessionId's here
+void C_AwesomiumBrowserInstance::OnSimpleImageReady(std::string sessionId, std::string channel, std::string itemId, std::string field, ITexture* pTexture)
 {
-	if (m_id != "images")
+	if (m_id != "images" || (sessionId != "ready" && sessionId != m_imagesSessionId))
 		return;
 
 	CWebSurfaceProxy::OnSimpleImageRendered(channel, itemId, field, pTexture);

@@ -1,36 +1,403 @@
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
-		<script src="asset://ui/hud.js"></script>
+		<link rel="stylesheet" type="text/css" href="hud.css"></link>
+		<script src="hud.js"></script>
+
+		<style>
+			.hudSideContainer
+			{
+				position: fixed;
+				left: 0;
+				top: 50%;
+				-webkit-transform: translate(0, -50%);
+			}
+
+			.hudSideContainerRow
+			{
+				display: block;
+			}
+
+			.hudSideContainerButton
+			{
+				font-size: 40px;
+				background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+				border-radius: 0 10px 10px 0;
+				border: 2px solid #000;
+				border-left: 0;
+				padding-right: 5px;
+				padding-left: 5px;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline-block;
+				height: 50px;
+				/*width: 40px;*/
+				text-align: center;
+				white-space: nowrap;
+				width: 40px;
+				overflow: hidden;
+				cursor: pointer;
+				-webkit-transition: width 0.3s;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: none;
+				width: 1px;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: none;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: all;
+				width: 40px;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton:hover ~ .hudSideContainerButton
+			{
+				width: 40px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton ~ .hudSideContainerButton:hover
+			{
+				width: 200px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerButton:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+				width: 200px;
+			}
+
+			.hudSideContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+/*
+			.hudSideContainerRow .hudSideContainerButton img
+			{
+				display: inline;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton img
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow .hudSideContainerButton .buttonText
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton .buttonText
+			{
+				display: inline;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+			*/
+/*
+			.hudSideContainerButton + #metaSearchButton table
+			{
+				display: none;
+			}
+
+			.hudSideContainerButton:hover + #metaSearchButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton + #metaSearchButton:hover table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton buttonText
+			{
+				display: inline-block;
+			}
+*/
+			#hudSideScrapeContainer
+			{
+				display: none;
+				position: fixed;
+				bottom: 15%;
+				left: 0;
+				color: #fff;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				font-family: Arial;
+				text-align: center;
+
+				/*
+				border: 3px solid rgba(0, 0, 0, 1.0);
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				background-color: rgba(50, 50, 50, 0.95);
+				padding-bottom: 30px;
+				padding: 6px;
+				border: 20px solid pink;
+				*/
+			}
+
+			.hudSideScrapeContainerButton
+			{
+				display: table-cell;
+				pointer-events: auto;
+				vertical-align: middle;
+				font-size: 20px;
+				white-space: nowrap;
+				/*background-color: rgba(150, 150, 150, 0.5);*/
+				background-color: rgba(0, 0, 255, 0.9);
+				border-radius: 0 10px 10px 0 !important;
+				border: 2px solid #000;
+				border-left: 0;
+				text-align: center;
+				padding-left: 15px;
+				padding-right: 15px;
+				padding-top: 2px;
+				padding-bottom: 4px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				-webkit-box-shadow: 3px 5px 8px #000;
+			}
+
+			.hudSideScrapeContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
 	</head>
 	<body style="background-color: transparent;">
 		<div class="hudHeaderContainer"></div>
 
 		<div class="hudSideContainer">
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this object.">
-				<table style="width: 100%; height: 100%;">
-					<tr><td>
-						<img src="objecticon.png" style="vertical-align: middle;" />
-						<div class="buttonText"> Edit Object</div>
-					</td></tr>
-				</table>
-			</div><br />
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item.">
-				<table style="width: 100%; height: 100%;">
-					<tr><td>
-						<img src="editicon.png" style="vertical-align: middle;" /><div class="buttonText"> Edit Item</div>
-					</td></tr>
-				</table>
-			</div><br />
-			<div class="hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut.">
-				<table style="width: 100%; height: 100%;">
-					<tr><td>
-						<img src="launchicon.png" style="vertical-align: middle;" /><div class="buttonText"> Launch Shortcut</div>
-					</td></tr>
-				</table>
+			<div class="hudSideContainerRow">
+				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this object.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="objecticon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Edit Object</div>
+						</td></tr>
+					</table>
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Move this object.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="moveicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Move</div>
+						</td></tr>
+					</table>
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Remove this object from the world.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="eraseicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Erase</div>
+						</td></tr>
+					</table>
+				</div>
+			</div>
+			<div class="hudSideContainerRow">
+				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="editicon.png" style="vertical-align: middle;" /><div class="buttonText">Edit Item</div>
+						</td></tr>
+					</table>
+				</div><div id="metaSearchButton" class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Search for web images & videos to decorate this item.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="webicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Meta Search</div>
+						</td></tr>
+					</table>
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Apply images & videos from the current page to this item.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="scrapeicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Meta Scrape</div>
+						</td></tr>
+					</table>
+				</div>
+			</div>
+			<div class="hudSideContainerRow">
+				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut in Windows.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="launchicon.png" style="vertical-align: middle;" /><div class="buttonText">Launch</div>
+						</td></tr>
+					</table>
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Watch this item's web stream on the in-game screen.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="streamicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Stream</div>
+						</td></tr>
+					</table>
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Run this item on the in-game screen using Libretro.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="runicon.png" style="vertical-align: middle;" />
+							<div class="buttonText">Run</div>
+						</td></tr>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div id="hudSideScrapeContainer">
+			<div class="hudSideContainerRow">
+				<div id="hudMetaScrapeButton" class="hudSideScrapeContainerButton helpNote" style="border-radius: 10px; width: 200px;" onclick="arcadeHud.metaSearchEasy();" help="Search for web images and video to decorate this item.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;">
+							<img src="scrapeicon.png" style="vertical-align: middle;" />
+							<div class="buttonText" style="display: inline;">Meta Scrape</div>
+						</td></tr>
+					</table>
+				</div>
 			</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<script>
+			/*
+			this.metaScrapeElem = document.createElement("div");
+		this.metaScrapeElem.className = "metaScrapeContainer";
+		this.metaScrapeElem.addEventListener("click", function()
+		{
+			arcadeHud.metaScrape(this.scraperId, this.field, function(scrapedData)
+			{
+				console.log("Scraped data is: ");
+				console.log(scrapedData);
+				var usedFields = [];
+				var args = [];
+				var x, field;
+				for( x in scrapedData)
+				{
+					field = scrapedData[x];
+					//if( field === "" || (this.field !== "all" && this.field !== x))
+					if( this.field !== "all" && this.field !== x)
+						continue;
+
+					if( x === "type" )
+					{
+						var allTypes = aaapi.library.getAllLibraryTypes();
+						var y;
+						for( y in allTypes )
+						{
+							console.log(allTypes[y].title);
+							if( allTypes[y].title === field )
+							{
+								field = allTypes[y].info.id;
+								break;
+							}
+						}
+					}
+					
+					var inputs = document.querySelectorAll("input, select");
+					var i;
+					for( i = 0; i < inputs.length; i++ )
+					{
+						if( inputs[i].field === x )
+						{
+							//inputs[i].focus();
+							inputs[i].value = field;
+							break;
+						}
+					}
+
+					args.push(x);
+					args.push(field);
+					usedFields.push(x);
+				}
+
+				var success = aaapi.library.updateItem(this.itemId, args);
+
+				if( success )
+				{
+					console.log("Item updated!");
+
+					var container = document.querySelector(".metaScrapeContainer");
+					container.style.display = "none";
+
+					aaapi.system.autoInspect(this.itemId);
+					aaapi.system.deactivateInputMode();
+				}
+				else
+					console.log("Item update rejected!");
+			}.bind(this));
+		}.bind(this.metaScrapeElem), true);
+		this.hudMetaScrapeContainer = document.createElement("div");
+		this.hudMetaScrapeContainer.className = "hudScrapeButton";//hudMetaScrapeContainer";
+		//this.hudMetaScrapeContainer.style = "";
+		this.hudMetaScrapeContainer.innerHTML = "<img src='scrapeicon.png' style='vertical-align: middle;' /><div class='buttonText'> Meta Scrape</div>";
+		this.metaScrapeElem.appendChild(this.hudMetaScrapeContainer);
+		document.body.appendChild(this.metaScrapeElem);
+			*/
+
+			var rows = document.querySelectorAll(".hudSideContainerRow");
+			var max = rows.length;
+			var row;
+			var button;
+			var i;
+			for( i = 0; i < max; i++ )
+			{
+				row = rows[i];
+				button = row.querySelector(".hudSideContainerButton");
+				button.addEventListener("mouseover", function(e)
+				{
+					if( this.className.indexOf(" activeHudRow") === -1 )
+						this.className += " activeHudRow";
+				}.bind(row), true);
+
+				row.addEventListener("mouseout", function(e)
+				{
+					var hilighted = this.querySelector(".hudSideContainerButton:hover");
+					if( !!!hilighted )
+						this.className = this.className.replace(" activeHudRow", "");
+				}.bind(row), true);
+			}
+		</script>
 	</body>
 </html>

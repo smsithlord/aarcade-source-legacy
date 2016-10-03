@@ -412,6 +412,16 @@ void C_CanvasManager::LevelShutdownPreEntity()
 	}
 }
 
+void C_CanvasManager::UnreferenceTexture(ITexture* pTexture)
+{
+	// tell ALL proxies that this texture is on its way out and should NOT be referenced anywhere (mostly the issue is when its still set as the texturevar of the proxy's material.)
+	unsigned int max = m_webSurfaceProxies.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->UnreferenceTexture(pTexture);
+	}
+}
+
 void C_CanvasManager::RefreshItemTextures(std::string itemId, std::string channel)
 {
 	// tell ALL proxies that the textures for this item need to be re-loaded

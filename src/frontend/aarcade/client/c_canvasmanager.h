@@ -37,6 +37,8 @@ public:
 
 	void RefreshItemTextures(std::string itemId, std::string channel);
 
+	void UnreferenceTexture(ITexture* pTexture);
+
 	// accessors
 
 	// mutators

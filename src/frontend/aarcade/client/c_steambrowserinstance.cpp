@@ -96,6 +96,7 @@ C_SteamBrowserInstance::~C_SteamBrowserInstance()
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
 		m_pTexture->DecrementReferenceCount();
 		m_pTexture->DeleteIfUnreferenced();
 		m_pTexture = null;
@@ -958,10 +959,10 @@ void C_SteamBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 	{
 		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this) && m_bIsDirty && m_bReadyToCopyFrame)
 		{
-			if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
-				DevMsg("Render PRIORITY (STEAM)!\n");
-			else
-				DevMsg("Render STEAM\n");
+		//	if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
+			//	DevMsg("Render PRIORITY (STEAM)!\n");
+		//	else
+			//	DevMsg("Render STEAM\n");
 			Render();
 		}
 		else

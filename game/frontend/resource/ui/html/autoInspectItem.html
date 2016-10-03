@@ -53,6 +53,8 @@ function ExtractYouTubeId(trailerURL)
 			var screen = decodeURIComponent(getParameterByName("screen"));
 			var marquee = decodeURIComponent(getParameterByName("marquee"));
 
+      console.log(screen);
+
       // FIXME: This needs to pass the php all of its known YouTubeIds, so the player can try them all until it finds one that actually works.
 
 			var youTubeIds = [];
@@ -96,13 +98,13 @@ function ExtractYouTubeId(trailerURL)
           extension = extension.substring(0, found);
 
         found = extension.indexOf(":");
-        if( found >= 0 )
+        if( found > 1 )
           extension = extension.substring(0, found);
 
         found = extension.lastIndexOf(".");
         if( found >= 0 )
           extension = extension.substring(found+1);
-
+        
         if( imageEndings.indexOf(extension) >= 0 )
           window.location = "showImage.html?uri=" + encodeURIComponent(fieldValue);//window.location = "asset://ui/showImage.html?uri=" + encodeURIComponent(fieldValue);
         else

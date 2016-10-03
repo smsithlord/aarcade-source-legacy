@@ -84,12 +84,289 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 
 void C_MetaverseManager::SaveItem(KeyValues* pItem)
 {
+	KeyValues* pTargetKey = pItem->FindKey("loadedFromLegacy");
+	if (pTargetKey)
+		pItem->RemoveSubKey(pTargetKey);
+
 	KeyValues* active = pItem->FindKey("current");
 	if (!active)
 		active = pItem->FindKey("local");
 
 	pItem->SaveToFile(g_pFullFileSystem, VarArgs("library/items/%s.key", active->GetString("info/id")), "DEFAULT_WRITE_PATH");
 	DevMsg("Saved item %s to library/items/%s.key\n", active->GetString("title"), active->GetString("info/id"));
+}
+
+void C_MetaverseManager::SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst)
+{
+	KeyValues* pKeeperItem = (bPreferFirst) ? pItemA : pItemB;
+	KeyValues* pMergerItem = (bPreferFirst) ? pItemB : pItemA;
+
+	KeyValues* pActiveKeeper = pKeeperItem->FindKey("current");
+	if (!pActiveKeeper)
+		pActiveKeeper = pKeeperItem->FindKey("local", true);
+
+	KeyValues* pActiveMerger = pMergerItem->FindKey("current");
+	if (!pActiveMerger)
+		pActiveMerger = pMergerItem->FindKey("local", true);
+
+	if (Q_strcmp(pActiveKeeper->GetString("info/id"), pActiveMerger->GetString("info/id")))
+		DevMsg("WARNING: SmargMerg-ing 2 items with different IDs: %s %s\n", pActiveKeeper->GetString("info/id"), pActiveMerger->GetString("info/id"));
+
+	/*
+	KeyValues* pItem = new KeyValues("item");
+	if (pKeeperItem->GetBool("loadedFromLegacy") && pMergerItem->GetBool("loadedFromLegacy"))
+		pItem->SetBool("loadedFromLegacy", true);
+
+	KeyValues* pActive = pItem->FindKey("local", true);
+	*/
+
+	// pKeeperItem
+	// - Contains the most user-customized versions of fields.
+	// - Fields with local file paths are probably important.
+
+	// Compare "app values.
+	// If the Primary uses an app, keep it.  Otherwise, use the one from Secondary.
+	if (!Q_strcmp(pActiveKeeper->GetString("app"), "") && Q_strcmp(pActiveMerger->GetString("app"), ""))
+		pActiveKeeper->SetString("app", pActiveMerger->GetString("app"));
+
+	// Compare "file" values.
+	// If Primary uses a non-internet location, keep it.
+	bool bSecondaryFileLocationIsGood = true;
+	if (!Q_strcmp(pActiveMerger->GetString("file"), "") || !Q_strcmp(pActiveMerger->GetString("file"), pActiveMerger->GetString("title")) || !Q_stricmp(pActiveMerger->GetString("file"), pActiveKeeper->GetString("file")))
+		bSecondaryFileLocationIsGood = false;
+
+	if (bSecondaryFileLocationIsGood)
+	{
+		std::string primaryFileLocation = pActiveKeeper->GetString("file");
+
+		bool bPrimaryFileLocationIsGood = true;
+		if (!Q_strcmp(pActiveKeeper->GetString("file"), "") || !Q_strcmp(pActiveKeeper->GetString("file"), pActiveKeeper->GetString("title")) || primaryFileLocation.find("http://") == 0 || primaryFileLocation.find("https://") == 0 || primaryFileLocation.find("www.") == 0)
+			bPrimaryFileLocationIsGood = false;
+
+		if (!bPrimaryFileLocationIsGood)
+		{
+			bool bSecondaryFileLocationIsAWebImage = false;
+
+			if (Q_strcmp(pActiveKeeper->GetString("file"), ""))
+			{
+				std::string imageTypes = "|jpg|jpeg|gif|png|bmp|tga|tbn|";
+
+				// Find out if Secondary's "file" is a web image.
+				std::string secondaryFileLocationExtension = pActiveMerger->GetString("file");
+				if (secondaryFileLocationExtension.find("http://") == 0 || secondaryFileLocationExtension.find("https://") == 0 || secondaryFileLocationExtension.find("www.") == 0)
+				{
+					size_t found = secondaryFileLocationExtension.find_last_of(".");
+					if (found != std::string::npos)
+					{
+						secondaryFileLocationExtension = secondaryFileLocationExtension.substr(found + 1);
+
+						if (imageTypes.find(VarArgs("|%s|", secondaryFileLocationExtension.c_str())) != std::string::npos)
+						{
+							bSecondaryFileLocationIsAWebImage = true;
+						}
+					}
+				}
+			}
+
+			if (bSecondaryFileLocationIsAWebImage)
+			{
+				// So, we have a "file" property about to be replaced with a web image.  We need to determine if we should replace the screen and marquee URLs now along with it.
+
+				bool bPrimaryScreensLocationIsALocalImage = false;
+				std::string primaryScreensLocation = pActiveKeeper->GetString("screen");
+
+				if (primaryScreensLocation.find(":") == 1)
+					bPrimaryScreensLocationIsALocalImage = true;
+
+				if (!bPrimaryScreensLocationIsALocalImage)
+				{
+					if (!Q_strcmp(pActiveKeeper->GetString("screen"), "") || !Q_strcmp(pActiveKeeper->GetString("screen"), pActiveKeeper->GetString("file")))
+					{
+						pActiveKeeper->SetString("screen", pActiveMerger->GetString("file"));
+
+						// Clear Primary's "screenslocation" as well so the image refreshes next time.
+						// First,  delete the cached version of the image so it can be re-downloaded.
+						/*
+						if (Q_strcmp(pActiveKeeper->GetString("screen"), "") && g_pFullFileSystem->FileExists(pActiveKeeper->GetString("screen"), USE_GAME_PATH))
+						{
+							if (pClientArcadeResources->GetReallyDoneStarting())
+							{
+								pClientArcadeResources->DeleteLocalFile(pActiveKeeper->GetString("screenslocation"));
+								pActiveKeeper->SetString("screenslocation", "");	// Only clear this if we are really gonna re-download it, for speed up 3/30/2015
+							}
+						}
+						*/
+
+						//						pPrimaryItemKV->SetString("screenslocation", "");	// Move this higher to try to improve speedup
+					}
+				}
+
+				bool bPrimaryMarqueesLocationIsALocalImage = false;
+				std::string primaryMarqueesLocation = pActiveKeeper->GetString("marquee");
+
+				if (primaryMarqueesLocation.find(":") == 1)
+					bPrimaryMarqueesLocationIsALocalImage = true;
+
+				if (!bPrimaryMarqueesLocationIsALocalImage)
+				{
+					if (!Q_strcmp(pActiveKeeper->GetString("marquee"), "") || !Q_strcmp(pActiveKeeper->GetString("marquee"), pActiveKeeper->GetString("file")))
+					{
+						pActiveKeeper->SetString("marquee", pActiveMerger->GetString("file"));
+
+						// Clear Primary's "marqueeslocation" as well so the image refreshes next time.
+						// First,  delete the cached version of the image so it can be re-downloaded.
+						/*
+						if (Q_strcmp(pActiveKeeper->GetString("marqueeslocation"), "") && g_pFullFileSystem->FileExists(pActiveKeeper->GetString("marqueeslocation"), USE_GAME_PATH))
+						{
+							if (pClientArcadeResources->GetReallyDoneStarting())
+							{
+								pClientArcadeResources->DeleteLocalFile(pActiveKeeper->GetString("marqueeslocation"));
+
+								pActiveKeeper->SetString("marqueeslocation", "");
+							}
+						}
+						*/
+					}
+				}
+			}
+
+			// The "file" property is going to change, and if Primary has no "trailerurl", then Primary's "noembed" property should change along with it.
+//			if (!Q_strcmp(pActiveKeeper->GetString("preview"), ""))
+	//			pActiveKeeper->SetInt("noembed", pActiveMerger->GetInt("noembed"));
+
+
+			// Now replace the "file" property.
+			pActiveKeeper->SetString("file", pActiveMerger->GetString("file"));
+		}
+	}
+
+	// Compare "screens/low" values.
+	// If Primary's screenslocation is not a local image, use Secondary's.
+	bool bSecondaryScreensURLIsGood = true;
+	if (!Q_strcmp(pActiveMerger->GetString("screen"), "") || !Q_stricmp(pActiveMerger->GetString("screen"), pActiveKeeper->GetString("screen")))
+		bSecondaryScreensURLIsGood = false;
+
+	if (bSecondaryScreensURLIsGood)
+	{
+		bool bPrimaryScreensLocationIsALocalImage = false;
+		std::string primaryScreensLocation = pActiveKeeper->GetString("screen");
+
+		if (primaryScreensLocation.find(":") == 1)
+			bPrimaryScreensLocationIsALocalImage = true;
+
+		if (!bPrimaryScreensLocationIsALocalImage)
+		{
+			// So Secondary's "screens/low" is good, and there is no local image used on Primary's "screenslocation".
+			pActiveKeeper->SetString("screen", pActiveMerger->GetString("screen"));
+
+			// Clear Primary's "screenslocation" as well so the image refreshes next time.
+			// First,  delete the cached version of the image so it can be re-downloaded.
+			/*
+			if (Q_strcmp(pActiveKeeper->GetString("screenslocation"), "") && g_pFullFileSystem->FileExists(pActiveKeeper->GetString("screenslocation"), USE_GAME_PATH))
+			{
+				if (pClientArcadeResources->GetReallyDoneStarting())
+				{
+					pClientArcadeResources->DeleteLocalFile(pActiveKeeper->GetString("screenslocation"));
+					pActiveKeeper->SetString("screenslocation", "");
+				}
+			}
+			*/
+		}
+	}
+
+	// Compare "marquees/low" values.
+	// If Primary's marqueeslocation is not a local image, use Secondary's.
+	bool bSecondaryMarqueesURLIsGood = true;
+	if (!Q_strcmp(pActiveMerger->GetString("marquee"), "") || !Q_stricmp(pActiveMerger->GetString("marquee"), pActiveKeeper->GetString("marquee")))
+		bSecondaryMarqueesURLIsGood = false;
+
+	if (bSecondaryMarqueesURLIsGood)
+	{
+		bool bPrimaryMarqueesLocationIsALocalImage = false;
+		std::string primaryMarqueesLocation = pActiveKeeper->GetString("marquee");
+
+		if (primaryMarqueesLocation.find(":") == 1)
+			bPrimaryMarqueesLocationIsALocalImage = true;
+
+		if (!bPrimaryMarqueesLocationIsALocalImage)
+		{
+			// So Secondary's "marquees/low" is good, and there is no local image used on Primary's "marqueeslocation".
+			pActiveKeeper->SetString("marquee", pActiveMerger->GetString("marquee"));
+
+			// Clear Primary's "marqueeslocation" as well so the image refreshes next time.
+			// First,  delete the cached version of the image so it can be re-downloaded.
+			/*
+			if (Q_strcmp(pActiveKeeper->GetString("marqueeslocation"), "") && g_pFullFileSystem->FileExists(pActiveKeeper->GetString("marqueeslocation"), USE_GAME_PATH))
+			{
+				if (pClientArcadeResources->GetReallyDoneStarting())
+				{
+					pClientArcadeResources->DeleteLocalFile(pActiveKeeper->GetString("marqueeslocation"));
+					pActiveKeeper->SetString("marqueeslocation", "");
+				}
+			}
+			*/
+		}
+	}
+
+	// Compare "trailerurl" values
+	if (Q_strcmp(pActiveMerger->GetString("preview"), ""))
+		pActiveKeeper->SetString("preview", pActiveMerger->GetString("preview"));
+
+	/*
+	// Compare "publishedfileid" values
+	if (Q_strcmp(pActiveMerger->GetString("publishedfileid"), ""))
+		pActiveKeeper->SetString("publishedfileid", pActiveMerger->GetString("publishedfileid"));
+	*/
+
+	// Compare "model" values
+	if (Q_strcmp(pActiveMerger->GetString("model"), ""))
+		pActiveKeeper->SetString("model", pActiveMerger->GetString("model"));
+
+	// Compare "type" values
+	// Always use Secondary's "type" (unless maybe we have a m_pKeepMyItem"Names"ConVar?)
+	pActiveKeeper->SetString("type", pActiveMerger->GetString("type"));
+
+	// If there was a m_bKeepMyItemNamesConvar, this is where it should be used.
+	/*
+	if (bFullMerg)
+	{
+		// Compare "title" values
+		if (Q_strcmp(pActiveMerger->GetString("title"), ""))
+			pActiveKeeper->SetString("title", pActiveMerger->GetString("title"));
+
+		// Compare "description" values
+		if (Q_strcmp(pActiveMerger->GetString("description"), ""))
+			pActiveKeeper->SetString("description", pActiveMerger->GetString("description"));
+
+		// Compare "downloadurl" values
+		if (Q_strcmp(pActiveMerger->GetString("downloadurl"), ""))
+			pActiveKeeper->SetString("downloadurl", pActiveMerger->GetString("downloadurl"));
+
+		// Compare "detailsurl" values
+		if (Q_strcmp(pActiveMerger->GetString("detailsurl"), ""))
+			pActiveKeeper->SetString("detailsurl", pActiveMerger->GetString("detailsurl"));
+
+		// Compare "comments" values
+		if (Q_strcmp(pActiveMerger->GetString("comments"), ""))
+			pActiveKeeper->SetString("comments", pActiveMerger->GetString("comments"));
+
+		// Compare "instructions" values
+		if (Q_strcmp(pActiveMerger->GetString("instructions"), ""))
+			pActiveKeeper->SetString("instructions", pActiveMerger->GetString("instructions"));
+
+		// Compare "group" values
+		if (Q_strcmp(pActiveMerger->GetString("group"), ""))
+			pActiveKeeper->SetString("group", pActiveMerger->GetString("group"));
+
+		// Compare "groupurl" values
+		if (Q_strcmp(pActiveMerger->GetString("groupurl"), ""))
+			pActiveKeeper->SetString("groupurl", pActiveMerger->GetString("groupurl"));
+
+		// Compare "addon" values
+		if (Q_strcmp(pActiveMerger->GetString("addon"), ""))
+			pActiveKeeper->SetString("addon", pActiveMerger->GetString("addon"));
+	}
+	*/
 }
 
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath, std::string workshopIds, std::string mountIds)
@@ -122,6 +399,9 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 	}
 	else
 	{
+		// flag us as being loaded from legacy
+		pItem->SetBool("loadedFromLegacy", true);
+
 		// determine the generation of this item
 		KeyValues* pGeneration = pItem->FindKey("generation");
 		if (!pGeneration)
@@ -165,7 +445,15 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 
 				// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
 				//DevMsg("Loading model with ID %s and model %s\n", itemId.c_str(), modelFile.c_str());
-				m_models[itemId] = pItem;
+
+				auto it = m_models.find(itemId);
+				if (it != m_models.end())
+				{
+					pItem->deleteThis();
+					pItem = it->second;
+				}
+				else
+					m_models[itemId] = pItem;
 			}
 			else
 			{
@@ -763,7 +1051,35 @@ void C_MetaverseManager::ResolveLoadLocalItemLegacyBuffer()
 			victims.clear();
 
 		std::string id = VarArgs("%s", pItem->GetString("local/info/id"));
-		m_items[id] = pItem;
+
+		auto it = m_items.find(id);
+		if (it != m_items.end())
+		{
+			// this is a legacy item, so give the right-of-way to any generation 3 item that was already found.
+			KeyValues* pLoadedFromLegacy = it->second->FindKey("isLoadedFromLegacy");
+			if (pLoadedFromLegacy && pLoadedFromLegacy->GetBool())
+			{
+				// merg this legacy item with the other legacy item
+				this->SmartMergItemKVs(it->second, pItem);
+				pItem->deleteThis();
+				pItem = it->second;
+
+				//// FIXME: For now, just delete the old one and let this one overpower it.
+				//it->second->deleteThis();
+				//m_items.erase(it);
+				//m_items[id] = pItem;
+			}
+			else
+			{
+				// let the generation 3 item overpower us
+				pItem->deleteThis();
+				pItem = it->second;
+			}
+
+			//KeyValues* pExistingItem = it->second;
+		}
+		else
+			m_items[id] = pItem;
 	}
 
 	m_previousLoadLocalItemsLegacyBuffer.clear();
@@ -1765,7 +2081,30 @@ KeyValues* C_MetaverseManager::LoadLocalItem(std::string file, std::string fileP
 		
 		//DevMsg("Finished loading item\n");
 
-		m_items[id] = pItem;
+		auto it = m_items.find(id);
+		if (it != m_items.end())
+		{
+			// FIXME: Merg with existing item (keeping in mind that non-legacy items overpower legacy items
+			if (it->second->GetBool("loadedFromLegacy"))
+			{
+				this->SmartMergItemKVs(pItem, it->second);
+				it->second->deleteThis();
+				it->second = pItem;
+
+				// Then remove the loadedFromLegacy tag, if it exits.
+				KeyValues* pTargetKey = pItem->FindKey("loadedFromLegacy");
+				if (pTargetKey)
+					pItem->RemoveSubKey(pTargetKey);
+			}
+			else
+			{
+				this->SmartMergItemKVs(it->second, pItem);
+				pItem->deleteThis();
+				pItem = it->second;
+			}
+		}
+		else
+			m_items[id] = pItem;
 	}
 
 	return pItem;

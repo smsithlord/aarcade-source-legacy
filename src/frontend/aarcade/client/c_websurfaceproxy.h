@@ -34,6 +34,8 @@ public:
 	void PrepareRefreshItemTextures(std::string itemId, std::string channel);
 	void RefreshItemTextures(std::string itemId, std::string channel);
 
+	void UnreferenceTexture(ITexture* pTexture);
+
 	// mutators
 	//void SetId(std::string id) { m_id = id; }
 

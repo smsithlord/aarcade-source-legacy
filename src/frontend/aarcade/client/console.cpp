@@ -81,7 +81,7 @@ void SetContinuous(const CCommand &args)
 				testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
 				if (testerInstance && testerInstance->GetTexture())
 				{
-					g_pAnarchyManager->DeselectEntity(pEntity, "", false);
+					g_pAnarchyManager->DeselectEntity("", false);
 					break; // only put the 1st embedded instance on continous play
 				}
 			}

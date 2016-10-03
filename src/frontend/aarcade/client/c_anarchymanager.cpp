@@ -125,6 +125,9 @@ void C_AnarchyManager::LevelInitPreEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPreEntity\n");
 	m_instanceId = m_nextInstanceId;
+
+	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
+	pImagesBrowserInstance->ResetImagesSession();
 }
 
 void C_AnarchyManager::LevelInitPostEntity()
@@ -133,6 +136,8 @@ void C_AnarchyManager::LevelInitPostEntity()
 
 	if (m_instanceId != "")
 		g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance(m_instanceId);
+
+	engine->ClientCmd("r_drawothermodels 1;");
 }
 
 void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
@@ -142,11 +147,15 @@ void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
 
 void C_AnarchyManager::LevelShutdownPreEntity()
 {
+	engine->ClientCmd("r_drawothermodels 0;");
+
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
 	C_BaseEntity* pEntity = this->GetSelectedEntity();
 	if (pEntity)
-		this->DeselectEntity(pEntity);
+		this->DeselectEntity();
 
+	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
+	pImagesBrowserInstance->ResetImagesSession();
 	m_pCanvasManager->LevelShutdownPreEntity();
 
 	/*
@@ -373,7 +382,7 @@ void C_AnarchyManager::Update(float frametime)
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
-			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("images", "asset://ui/imageLoader.html", true);	// defaults to asset://ui/blank.html
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("images", "asset://ui/imageLoader.html", true);	// defaults to asset://ui/blank.html	// does this need to be created here????
 			g_pAnarchyManager->IncrementState();
 			break;
 
@@ -530,7 +539,7 @@ bool C_AnarchyManager::HandleUiToggle()
 
 			//DevMsg("DISPLAY MAIN MENU\n");
 			if (m_pSelectedEntity)
-				this->DeselectEntity(m_pSelectedEntity, "asset://ui/welcome.html");
+				this->DeselectEntity("asset://ui/welcome.html");
 			else
 				pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 
@@ -557,6 +566,8 @@ void C_AnarchyManager::Unpause()
 
 void C_AnarchyManager::RunAArcade()
 {
+	engine->ClientCmd("r_drawothermodels 0;");
+
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
 //	pHudBrowserInstance->A
@@ -929,7 +940,7 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	else
 	{
 		if (m_pSelectedEntity)
-			return DeselectEntity(m_pSelectedEntity);
+			return DeselectEntity();
 		else
 			return false;
 	}
@@ -971,7 +982,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 //	return true;
 //	/*
 	if (m_pSelectedEntity)
-		DeselectEntity(m_pSelectedEntity);
+		DeselectEntity();
 
 //	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
@@ -1110,7 +1121,10 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 			}
 		}
 		else
+		{
 			DevMsg("ERROR: No embedded instance!!\n");
+			DevMsg("ID on this item is: %s", pShortcut->GetItemId().c_str());
+		}
 		//m_pWebManager->SelectWebTab(pWebTab);
 
 		//break;
@@ -1120,7 +1134,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 	//*/
 }
 
-bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl, bool bCloseInstance)
+bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 {
 	C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
@@ -1132,10 +1146,13 @@ bool C_AnarchyManager::DeselectEntity(C_BaseEntity* pEntity, std::string nextUrl
 		m_pInputManager->SetEmbeddedInstance(null);
 		//m_pWebManager->DeselectWebTab(pWebTab);
 
-		if (nextUrl != "")
-			pHudBrowserInstance->SetUrl(nextUrl);
-		else
-			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+		if (nextUrl != "none")
+		{
+			if (nextUrl != "")
+				pHudBrowserInstance->SetUrl(nextUrl);
+			else
+				pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+		}
 
 		// ALWAYS close the selected web tab when de-selecting entities. (this has to be accounted for or changed when the continous play button gets re-enabled!)
 		if (bCloseInstance && pEmbeddedInstance != pHudBrowserInstance)
@@ -1157,9 +1174,20 @@ void C_AnarchyManager::RemoveGlowEffect(C_BaseEntity* pEntity)
 	engine->ServerCmd(VarArgs("removegloweffect %i", pEntity->entindex()), false);
 }
 
-void C_AnarchyManager::ShowFileBrowseMenu()
+void C_AnarchyManager::ShowFileBrowseMenu(std::string browseId)
 {
-	BrowseSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
+	BrowseSlate->Create(enginevgui->GetPanel(PANEL_ROOT), browseId);
+}
+
+void C_AnarchyManager::OnBrowseFileSelected(std::string browseId, std::string response)
+{
+	// only the HUD web view brings up the file browse menu so far...
+	std::vector<std::string> params;
+	params.push_back(browseId);
+	params.push_back(response);
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onBrowseFileSelected", params);
 }
 
 void C_AnarchyManager::OnWorkshopManagerReady()
@@ -1191,6 +1219,7 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 	//const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "", &findHandle);
 	//const char *pFilename = g_pFullFileSystem->FindFirstEx("*.set", "GAME", &findHandle);
 //	const char *pFilename = g_pFullFileSystem->FindFirstEx("*", "GAME", &findHandle);
+	std::string goodMapName;
 	while (pFilename != NULL)
 	{
 		file = path + "maps\\" + std::string(pFilename);
@@ -1209,7 +1238,12 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 		// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
 		if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
 		{
-			if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+			// kv->GetString("map") can be corrupt on certain shitty saves that early access AArcade generated.  so use filename instead.
+			goodMapName = pFilename;
+			goodMapName = goodMapName.substr(0, goodMapName.find("."));
+
+			//if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+			if(kv->FindKey("objects", true)->GetFirstSubKey())
 			{
 				//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
 				// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
@@ -1225,7 +1259,8 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 						title = title.substr(found + 1);
 				}
 
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
+//				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), goodMapName.c_str(), title, file, "", "");
 				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
 			}
 		}
@@ -1326,6 +1361,9 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	if (m_iState < 1)
 	{
 		m_iState = 1;
+
+		// restart the sound system so that mounted paths can play sounds
+		engine->ClientCmd("snd_restart");
 
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
 		pHudBrowserInstance->SetUrl("asset://ui/welcome.html");

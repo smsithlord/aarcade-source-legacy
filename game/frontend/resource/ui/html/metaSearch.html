@@ -1,0 +1,212 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+
+		<style>
+			#scraperButtonsContainer
+			{
+				display: block;
+				width: 100%;
+				/*height: 200px;*/
+				overflow-y: auto;
+				max-height: 300px;
+			}
+
+			#scraperButtonsContainer::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#scraperButtonsContainer::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#scraperButtonsContainer::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#scraperButtonsContainer::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			#searchTagsContainer
+			{
+				text-align: center;
+				font-weight: bold;
+				font-family: Arial;
+				font-size: 14px;
+			}
+
+			#searchTagsContainer div
+			{
+				color: #fff;
+				display: inline;
+				text-decoration: underline;
+				white-space: nowrap;
+			}
+
+		</style>
+
+	</head>
+	<body>
+		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/blank.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Meta Search
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="scraperButtonsContainer"></div>
+			<select id="fieldSelect" style="width: 100%; font-size: 20px;"></select>
+			<input id="term" style="width: 100%; font-size: 20px;" placeholder="Search Term"></input>
+			<div id="searchTagsContainer">
+				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
+			</div>
+		</div>
+
+
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+		<script>
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+		var termInput = document.querySelector("#term");
+		var fieldSelect = document.querySelector("#fieldSelect");
+		var itemId = getParameterByName("id");
+		var item = aaapi.library.getLibraryItem(itemId);
+		if( !!item )
+		{
+			//console.log("Clicked " + this.scraper.title);
+			var term = item["title"];
+			var dateCull = term.indexOf(" (");
+			if( dateCull >= 0 )
+				term = term.substring(0, dateCull);
+
+			termInput.value = term;
+			termInput.placeholder = term;
+
+			var searchTermElems = document.querySelectorAll("#searchTagsContainer div");
+			var max = searchTermElems.length;
+			var termElem;
+			var i;
+			for( i = 0; i < max; i++ )
+			{
+				termElem = searchTermElems[i];
+				termElem.addEventListener("click", function(e)
+				{
+					var term = this.innerText.substring(1);
+
+					if( term !== "clear" )
+					{
+						termInput.value = termInput.placeholder + " " + term;
+						fieldSelect.value = this.getAttribute("field");
+					}
+					else
+						termInput.value = termInput.placeholder;
+				}.bind(termElem), true);
+			}
+
+			function addSearchTag(e)
+			{
+				console.log("har it is:");
+				console.log(e);
+			}
+		}
+
+		// tac it onto the hudcontent
+		//<div class="mainButton" onclick="play();">Playx</div>
+		var hudContent = document.querySelector("#scraperButtonsContainer");
+		var button;
+		var scraper;
+		var x;
+		for( x in arcadeHud.scrapers )
+		{
+			scraper = arcadeHud.scrapers[x];
+
+			if( !!!scraper.fields["all"] )
+				continue;
+
+			button = document.createElement("div");
+			button.className = "mainbutton";
+			button.scraper = scraper;
+			button.addEventListener("click", function(e)
+			{
+				//var item =  aaapi.system.getSelectedItem();
+				//var item = aaapi.library.getSelectedLibraryItem();
+				//var item = aaapi.library.getLibraryItem(itemId);
+				if( !!item )
+				{
+					//console.log("Clicked " + this.scraper.title);
+					/*
+					var term = item["title"];
+					var dateCull = term.indexOf(" (");
+					if( dateCull >= 0 )
+						term = term.substring(0, dateCull);
+					*/
+
+					var term = document.querySelector("#term").value;
+
+					var field = fieldSelect.options[fieldSelect.selectedIndex].value;
+
+					var dummy = {"itemId": itemId, "field": field, "scraperId": this.scraper.id, "term": term};
+					setTimeout(function()
+					{
+						//console.log("testing " + this.itemId + " " + this.field + " " + this.scraperId + " " + this.term);
+						arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
+						document.location = "asset://ui/blank.html";
+					}.bind(dummy), 10);
+				}
+			}.bind(button), true);
+			button.innerHTML = this.scraper.title;
+			hudContent.appendChild(button);
+		}
+
+		var fields = ["all", "preview", "screen", "marquee", "stream", "file", "download", "reference"];
+		var selectElem = document.body.querySelector("#fieldSelect");
+		var field;
+		var elem;
+		var i;
+		for( i = 0; i < fields.length; i++)
+		{
+			field = fields[i];
+
+			elem = document.createElement("option");
+			elem.value = field;
+			elem.text = field;
+			//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
+
+			selectElem.appendChild(elem);
+		}
+		</script>
+	</body>
+</html>
