@@ -36,14 +36,14 @@ void C_InstanceManager::SpawnObject(object_t* object)
 	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(object->modelId);
 	if (model)
 	{
-		DevMsg("Spawning an object w/ %s\n", object->modelId.c_str());
+	//	DevMsg("Spawning an object w/ %s\n", object->modelId.c_str());
 
 		KeyValues* active = model->FindKey("current");
 		if (!active)
 			active = model->FindKey("local", true);
 
 		std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-		std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n", object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale);
+		std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i\n", object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave);
 		engine->ServerCmd(msg.c_str(), false);
 	}
 	else
@@ -52,7 +52,7 @@ void C_InstanceManager::SpawnObject(object_t* object)
 	}
 }
 
-object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale)
+object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
 
@@ -64,6 +64,7 @@ object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId,
 	pObject->angles.Init(angles.x, angles.y, angles.z);
 	pObject->spawned = false;
 	pObject->scale = scale;
+	pObject->slave = slave;
 
 	m_objects[goodObjectId] = pObject;
 
@@ -122,7 +123,7 @@ bool C_InstanceManager::SpawnNearestObject()
 
 void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds)
 {
-	DevMsg("Add instance for mapid %s with title %s and with file %s\n", mapId.c_str(), title.c_str(), file.c_str());
+	//DevMsg("Add instance for mapid %s with title %s and with file %s\n", mapId.c_str(), title.c_str(), file.c_str());
 	instance_t* pInstance = new instance_t();
 	pInstance->id = instanceId;
 	pInstance->mapId = mapId;
@@ -323,6 +324,15 @@ void C_InstanceManager::SpawnActionPressed()
 	}
 }
 
+void C_InstanceManager::ChangeModel(C_BaseEntity* pEntity, std::string in_modelFile)
+{
+	std::string modelFile = in_modelFile;
+	if (!g_pFullFileSystem->FileExists(modelFile.c_str()))
+		modelFile = "models/icons/missing.mdl";
+
+	engine->ServerCmd(VarArgs("switchmodel \"%s\" %i;\n", modelFile.c_str(), pEntity->entindex()));
+}
+
 
 /*
 void C_InstanceManager::SpawnItem(std::string id)
@@ -412,7 +422,7 @@ void C_InstanceManager::LevelShutdownPostEntity()
 
 void C_InstanceManager::Update()
 {
-	if (engine->IsInGame() && g_pAnarchyManager->GetInstanceId() != "")
+	if (engine->IsInGame() && !g_pAnarchyManager->GetSuspendEmbedded() && g_pAnarchyManager->GetInstanceId() != "")
 	{
 	//	DevMsg("Letters callback\n");
 
@@ -510,7 +520,30 @@ void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
 				testBuf = sub->GetString("itemfile");
 				size_t foundExt = testBuf.find(".mdl");
 				if (foundExt != testBuf.length() - 4)
-					itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));
+				{
+					KeyValues* pSearchInfo = new KeyValues("search");
+					pSearchInfo->SetString("file", sub->GetString("itemfile"));
+
+					KeyValues* foundActive = null;
+					KeyValues* foundItem = g_pAnarchyManager->GetMetaverseManager()->FindLibraryItem(pSearchInfo);
+					if (foundItem)
+					{
+						foundActive = foundItem->FindKey("current");
+						if (!foundActive)
+							foundActive = foundItem->FindKey("local");
+
+						if (foundActive)
+							itemId = foundActive->GetString("info/id");
+					}
+
+					if (!foundActive)
+					{
+						DevMsg("Instance failed to resolve item with itemfile: %s\n", sub->GetString("itemfile"));
+						itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));
+					}
+				//	else
+				//		DevMsg("Resolved it to: %s\n", itemId.c_str());
+				}
 			}
 
 			modelId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("model"));
@@ -525,7 +558,9 @@ void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
 
 			float scale = sub->GetFloat("scale", 1.0f);
 
-			this->AddObject("", itemId, modelId, origin, angles, scale);
+			bool slave = (sub->GetInt("slave") > 0);
+
+			this->AddObject("", itemId, modelId, origin, angles, scale, slave);
 			/*
 			item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 			if (item)

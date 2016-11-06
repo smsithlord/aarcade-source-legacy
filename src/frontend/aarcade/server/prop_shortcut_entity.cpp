@@ -18,11 +18,13 @@
 LINK_ENTITY_TO_CLASS( prop_shortcut, CPropShortcutEntity );
 
 BEGIN_DATADESC(CPropShortcutEntity)
+	DEFINE_KEYFIELD(m_bSlave, FIELD_BOOLEAN, "slave"),
 	DEFINE_KEYFIELD(m_itemId, FIELD_STRING, "itemId"),
-	DEFINE_USEFUNC( UseFunc )
+	DEFINE_USEFUNC( UseFunc ),
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST(CPropShortcutEntity, DT_PropShortcutEntity)
+	SendPropBool(SENDINFO(m_bSlave)),
 	SendPropStringT(SENDINFO(m_itemId)),
 END_SEND_TABLE()
 

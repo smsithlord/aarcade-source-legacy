@@ -22,8 +22,11 @@ long CInputSlate::m_fPreviousTime = 0;
 //IMaterial* CInputSlate::s_pMaterial = null;
 CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 {
+
+	DevMsg("Input slate created\n");
 	SetParent( parent );
-	// automatically pin the input slate open if it was just opened a moment ago
+
+	// automatically pin the input slate open if it was just opened a moment ago (double-tap to stick functionality)
 	long currentTime = system()->GetTimeMillis();
 	if (m_fPreviousTime > 0 && currentTime - m_fPreviousTime < 200)
 		g_pAnarchyManager->GetInputManager()->ForceInputMode();
@@ -36,8 +39,18 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	m_pOriginalTexture = null;
 	m_pMaterial = null;
 
-	SetKeyBoardInputEnabled( true );
-	SetMouseInputEnabled( true );
+	m_bOverlay = g_pAnarchyManager->GetInputManager()->GetOverlayMode();
+
+	if (!m_bOverlay)
+	{
+		SetKeyBoardInputEnabled(true);
+		SetMouseInputEnabled(true);
+	}
+	else
+	{
+		SetKeyBoardInputEnabled(false);
+		SetMouseInputEnabled(false);
+	}
 
 	m_pCanvasTexture = null;
 	m_bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
@@ -156,7 +169,9 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	if ( !m_bFullscreen )
 	{
 		m_bCursorHidden = true;
-		ShowCursor(false);
+
+		if (!m_bOverlay)
+			ShowCursor(false);
 	}
 
 	// for opacity
@@ -183,8 +198,8 @@ void CInputSlate::SelfDestruct()
 	bool found;
 	IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
 	if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
-		DevMsg("ERROR: Material not found 22!!\n");
-	else
+		DevMsg("ERROR: Material not found 222222222222222222222222222222222222222!!\n");
+	else if ( m_pOriginalTexture )
 		pMaterialVar->SetTextureValue(m_pOriginalTexture);
 }
 
@@ -211,7 +226,8 @@ void CInputSlate::OnTick()
 			if (!m_bCursorHidden)
 			{
 				m_bCursorHidden = true;
-				ShowCursor(false);
+				if( !m_bOverlay )
+					ShowCursor(false);
 			}
 		}
 	}
@@ -223,7 +239,8 @@ void CInputSlate::OnTick()
 		if (m_bCursorHidden)
 		{
 			m_bCursorHidden = false;
-			ShowCursor(true);
+			if (!m_bOverlay)
+				ShowCursor(true);
 		}
 	}
 	//else
@@ -235,9 +252,9 @@ void CInputSlate::OnMouseWheeled(int delta)
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	DevMsg("Disbaled for testing!\n");
-	return;
-//	g_pAnarchyManager->GetWebManager()->OnMouseWheel(delta);
+	//DevMsg("Disbaled for testing!\n");
+	//return;
+	g_pAnarchyManager->GetInputManager()->OnMouseWheeled(delta);
 }
 
 void CInputSlate::OnCursorMoved(int x, int y)
@@ -326,6 +343,31 @@ void CInputSlate::SetFullscreenMode(bool bFullscreenMode)
 		}
 
 		m_bFullscreen = bFullscreenMode;
+	}
+
+}
+
+// wtf does this function even exist for. fuck it and remove it asap.  i created it when adding overlay mode overwhere that fullscreen mode was at in the code.....
+void CInputSlate::SetOverlayMode(bool bOverlayMode)
+{
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
+	DevMsg("Fullscreen transition canceled!\n");
+	return;
+
+	if (m_bOverlay != bOverlayMode)
+	{
+		if (bOverlayMode)
+		{
+			// change us from non-fullscreen to fullscreen
+		}
+		else
+		{
+			// change us from fullscreen to non-fullscreen
+		}
+
+		m_bOverlay = bOverlayMode;
 	}
 
 }
@@ -425,10 +467,13 @@ CInputSlate::~CInputSlate()
 	}
 	*/
 
+	this->SelfDestruct();
+
 	if (m_bCursorHidden)
 	{
 		m_bCursorHidden = false;
-		ShowCursor(true);
+		if (!m_bOverlay)
+			ShowCursor(true);
 		DevMsg("showing cursor\n");
 	}
 }
@@ -458,12 +503,17 @@ public:
 		InputSlate->SetFullscreenMode(bFullscreenMode);
 	}
 
+	void SetOverlayMode(bool bOverlayMode)
+	{
+		InputSlate->SetOverlayMode(bOverlayMode);
+	}
+
 	void Destroy()
 	{
 		if (InputSlate)
 		{
 			InputSlate->SetParent((vgui::Panel *)NULL);
-			InputSlate->SelfDestruct();
+			//InputSlate->SelfDestruct();
 			delete InputSlate;
 		}
 	}

@@ -14,6 +14,8 @@ public:
 
 	void Update();
 
+	void CloseAllInstances();
+
 	C_SteamBrowserInstance* CreateSteamBrowserInstance();
 	bool FocusSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);
 	bool SelectSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);

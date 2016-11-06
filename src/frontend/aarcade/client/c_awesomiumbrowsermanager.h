@@ -20,6 +20,7 @@ public:
 	~C_AwesomiumBrowserManager();
 
 	void Update();
+	void CloseAllInstances(bool bDeleteHudAndImages = false);
 
 	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", bool alpha = false);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(std::string id);

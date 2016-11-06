@@ -74,6 +74,9 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	LocalDataSource* pLocalDataSource = new LocalDataSource();
 	m_pWebSession->AddDataSource(WSLit("local"), pLocalDataSource);
 
+	CacheDataSource* pCacheDataSource = new CacheDataSource();
+	m_pWebSession->AddDataSource(WSLit("cache"), pCacheDataSource);
+
 	// MASTER
 	m_pMasterLoadListener = new MasterLoadListener;
 	m_pMasterViewListener = new MasterViewListener;
@@ -100,6 +103,15 @@ C_AwesomiumBrowserManager::~C_AwesomiumBrowserManager()
 {
 	DevMsg("AwesomiumBrowserManager: Destructor\n");
 
+	this->CloseAllInstances(true);
+
+	m_pMasterWebView->Destroy();
+	m_pMasterWebView = null;
+
+	if (m_pInputListener)
+		delete m_pInputListener;
+
+	/*
 	// iterate over all web tabs and call their destructors
 	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
 	{
@@ -133,9 +145,10 @@ C_AwesomiumBrowserManager::~C_AwesomiumBrowserManager()
 
 	m_pMasterWebView->Destroy();
 	m_pMasterWebView = null;
+	*/
 
-	if ( m_pInputListener )
-		delete m_pInputListener;
+	//if ( m_pInputListener )
+//		delete m_pInputListener;
 
 	WebCore::Shutdown();
 }
@@ -290,12 +303,15 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("simpleImageReady"), false);
 	systemObject.SetCustomMethod(WSLit("getMapInstances"), true);
+	systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
 	systemObject.SetCustomMethod(WSLit("spawnNearestObject"), false);
 	systemObject.SetCustomMethod(WSLit("setNearestObjectDist"), false);
 	systemObject.SetCustomMethod(WSLit("fileBrowse"), false);
 	systemObject.SetCustomMethod(WSLit("metaSearch"), false);
 	systemObject.SetCustomMethod(WSLit("getDOM"), false);
 	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
+	systemObject.SetCustomMethod(WSLit("viewStream"), false);
+	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -315,6 +331,11 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
+
+	libraryObject.SetCustomMethod(WSLit("getFirstLibraryModel"), true);
+	libraryObject.SetCustomMethod(WSLit("getNextLibraryModel"), true);
+	libraryObject.SetCustomMethod(WSLit("findFirstLibraryModel"), true);
+	libraryObject.SetCustomMethod(WSLit("findNextLibraryModel"), true);
 
 	// CALLBACKS
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.callbacks"));
@@ -488,6 +509,59 @@ void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std
 			g_pAnarchyManager->IncrementState();
 	}
 	*/
+}
+
+
+
+void C_AwesomiumBrowserManager::CloseAllInstances(bool bDeleteHudAndImages)
+{
+	std::vector<std::map<std::string, C_AwesomiumBrowserInstance*>::iterator> doomedIts;
+
+	// iterate over all web tabs and call their destructors
+	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
+	{
+		C_AwesomiumBrowserInstance* pInstance = it->second;
+		if (pInstance == m_pSelectedAwesomiumBrowserInstance)
+		{
+			this->SelectAwesomiumBrowserInstance(null);
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		}
+
+		//std::string nameTest = "";
+		//nameTest += pInstance->GetId();
+
+		//DevMsg("Remove awesomium instance %s\n", nameTest.c_str());
+		//		if (pInstance->GetTexture() && g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
+
+		if (bDeleteHudAndImages || (pInstance->GetId() != "hud" && pInstance->GetId() != "images"))
+		{
+			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			{
+				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+				//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
+				//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
+			}
+
+			//		auto foundAwesomiumBrowserInstance = m_awesomiumBrowserInstances.find(pInstance->GetId());
+			//		if (foundAwesomiumBrowserInstance != m_awesomiumBrowserInstances.end())
+			//			m_awesomiumBrowserInstances.erase(foundAwesomiumBrowserInstance);
+
+			pInstance->SelfDestruct();
+
+			if (!bDeleteHudAndImages)
+				doomedIts.push_back(it);
+		}
+	}
+
+	if (!bDeleteHudAndImages)
+	{
+		unsigned int max = doomedIts.size();
+		DevMsg("Removing %u Awesomium instances...\n", max);
+		for (unsigned int i = 0; i < max; i++)
+			m_awesomiumBrowserInstances.erase(doomedIts[i]);
+	}
+	else
+		m_awesomiumBrowserInstances.clear();
 }
 
 void C_AwesomiumBrowserManager::Update()

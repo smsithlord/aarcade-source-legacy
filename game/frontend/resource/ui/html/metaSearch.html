@@ -80,7 +80,7 @@
 			<select id="fieldSelect" style="width: 100%; font-size: 20px;"></select>
 			<input id="term" style="width: 100%; font-size: 20px;" placeholder="Search Term"></input>
 			<div id="searchTagsContainer">
-				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
+				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+boxart</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="preview">+gameplay</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
 			</div>
 		</div>
 
@@ -99,6 +99,10 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+
+		var givenField = getParameterByName("field");
+		console.log(givenField);
+		console.log("booooi");
 
 		var termInput = document.querySelector("#term");
 		var fieldSelect = document.querySelector("#fieldSelect");
@@ -133,66 +137,75 @@ function getParameterByName(name, url) {
 					}
 					else
 						termInput.value = termInput.placeholder;
-				}.bind(termElem), true);
-			}
 
-			function addSearchTag(e)
-			{
-				console.log("har it is:");
-				console.log(e);
+					generateScraperList();
+				}.bind(termElem), true);
 			}
 		}
 
 		// tac it onto the hudcontent
 		//<div class="mainButton" onclick="play();">Playx</div>
-		var hudContent = document.querySelector("#scraperButtonsContainer");
-		var button;
-		var scraper;
-		var x;
-		for( x in arcadeHud.scrapers )
+		function generateScraperList()
 		{
-			scraper = arcadeHud.scrapers[x];
+			var selectElem = document.body.querySelector("#fieldSelect");
+			var field = selectElem.options[selectElem.selectedIndex].value;
+			var hudContent = document.querySelector("#scraperButtonsContainer");
+			hudContent.innerHTML = "";
 
-			if( !!!scraper.fields["all"] )
-				continue;
-
-			button = document.createElement("div");
-			button.className = "mainbutton";
-			button.scraper = scraper;
-			button.addEventListener("click", function(e)
+			var button;
+			var scraper;
+			var x;
+			for( x in arcadeHud.scrapers )
 			{
-				//var item =  aaapi.system.getSelectedItem();
-				//var item = aaapi.library.getSelectedLibraryItem();
-				//var item = aaapi.library.getLibraryItem(itemId);
-				if( !!item )
+				scraper = arcadeHud.scrapers[x];
+
+				//if( !!!scraper.fields["all"] )
+				if( !!!scraper.fields[field] )
+					continue;
+
+				button = document.createElement("div");
+				button.className = "mainbutton";
+				button.scraper = scraper;
+				button.addEventListener("click", function(e)
 				{
-					//console.log("Clicked " + this.scraper.title);
-					/*
-					var term = item["title"];
-					var dateCull = term.indexOf(" (");
-					if( dateCull >= 0 )
-						term = term.substring(0, dateCull);
-					*/
-
-					var term = document.querySelector("#term").value;
-
-					var field = fieldSelect.options[fieldSelect.selectedIndex].value;
-
-					var dummy = {"itemId": itemId, "field": field, "scraperId": this.scraper.id, "term": term};
-					setTimeout(function()
+					//var item =  aaapi.system.getSelectedItem();
+					//var item = aaapi.library.getSelectedLibraryItem();
+					//var item = aaapi.library.getLibraryItem(itemId);
+					if( !!item )
 					{
-						//console.log("testing " + this.itemId + " " + this.field + " " + this.scraperId + " " + this.term);
-						arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
-						document.location = "asset://ui/blank.html";
-					}.bind(dummy), 10);
-				}
-			}.bind(button), true);
-			button.innerHTML = this.scraper.title;
-			hudContent.appendChild(button);
+						//console.log("Clicked " + this.scraper.title);
+						/*
+						var term = item["title"];
+						var dateCull = term.indexOf(" (");
+						if( dateCull >= 0 )
+							term = term.substring(0, dateCull);
+						*/
+
+						var term = document.querySelector("#term").value;
+
+						var field = fieldSelect.options[fieldSelect.selectedIndex].value;
+
+						var dummy = {"itemId": itemId, "field": field, "scraperId": this.scraper.id, "term": term};
+						setTimeout(function()
+						{
+							//console.log("testing " + this.itemId + " " + this.field + " " + this.scraperId + " " + this.term);
+							arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
+							document.location = "asset://ui/blank.html";
+						}.bind(dummy), 10);
+					}
+				}.bind(button), true);
+				button.innerHTML = scraper.title;
+				hudContent.appendChild(button);
+			}
 		}
 
 		var fields = ["all", "preview", "screen", "marquee", "stream", "file", "download", "reference"];
 		var selectElem = document.body.querySelector("#fieldSelect");
+		selectElem.addEventListener("change", function()
+		{
+			generateScraperList();
+		}, true);
+
 		var field;
 		var elem;
 		var i;
@@ -203,10 +216,16 @@ function getParameterByName(name, url) {
 			elem = document.createElement("option");
 			elem.value = field;
 			elem.text = field;
+
+			if( field === givenField || (!givenField && i === 0))
+				elem.selected = true;
+
 			//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
 
 			selectElem.appendChild(elem);
 		}
+
+		generateScraperList();
 		</script>
 	</body>
 </html>

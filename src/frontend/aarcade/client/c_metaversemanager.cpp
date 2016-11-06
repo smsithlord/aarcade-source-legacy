@@ -14,6 +14,9 @@ C_MetaverseManager::C_MetaverseManager()
 	DevMsg("MetaverseManager: Constructor\n");
 	m_pWebTab = null;
 	m_pPreviousSearchInfo = null;
+	m_pPreviousModelSearchInfo = null;
+	m_pSpawningObject = null;
+	m_pSpawningObjectEntity = null;
 }
 
 C_MetaverseManager::~C_MetaverseManager()
@@ -30,6 +33,9 @@ C_MetaverseManager::~C_MetaverseManager()
 
 	if (m_pPreviousSearchInfo)
 		m_pPreviousSearchInfo->deleteThis();
+
+	if (m_pPreviousModelSearchInfo)
+		m_pPreviousModelSearchInfo->deleteThis();
 
 	// m_apps
 	while (!m_apps.empty())
@@ -65,6 +71,66 @@ void C_MetaverseManager::OnWebTabCreated(C_WebTab* pWebTab)
 	m_pWebTab = pWebTab;
 }
 */
+
+void C_MetaverseManager::Update()
+{
+	// FIXME: all this spawning object stuff should be done in instance manager, not here....
+	if (m_pSpawningObjectEntity)
+	{
+		// Figure out where to place it
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+
+		trace_t tr;
+		UTIL_TraceLine(pPlayer->EyePosition(),
+			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+			pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		// No hit? We're done.
+		if (tr.fraction == 1.0)
+			return;
+
+		VMatrix entToWorld;
+		Vector xaxis;
+		Vector yaxis;
+
+		if (tr.plane.normal.z == 0.0f)
+		{
+			yaxis = Vector(0.0f, 0.0f, 1.0f);
+			CrossProduct(yaxis, tr.plane.normal, xaxis);
+			entToWorld.SetBasisVectors(tr.plane.normal, xaxis, yaxis);
+		}
+		else
+		{
+			Vector ItemToPlayer;
+			VectorSubtract(pPlayer->GetAbsOrigin(), Vector(tr.endpos.x, tr.endpos.y, tr.endpos.z), ItemToPlayer);
+
+			xaxis = Vector(ItemToPlayer.x, ItemToPlayer.y, ItemToPlayer.z);
+
+			CrossProduct(tr.plane.normal, xaxis, yaxis);
+			if (VectorNormalize(yaxis) < 1e-3)
+			{
+				xaxis.Init(0.0f, 0.0f, 1.0f);
+				CrossProduct(tr.plane.normal, xaxis, yaxis);
+				VectorNormalize(yaxis);
+			}
+			CrossProduct(yaxis, tr.plane.normal, xaxis);
+			VectorNormalize(xaxis);
+
+			entToWorld.SetBasisVectors(xaxis, yaxis, tr.plane.normal);
+		}
+
+		QAngle angles;
+		MatrixToAngles(entToWorld, angles);
+
+//		UTIL_SetOrigin(m_pSpawningObjectEntity, tr.endpos);
+//		m_pSpawningObjectEntity->SetAbsAngles(angles);
+
+		// FIXME: that stuff should be done server-side so collision boxes are updated properly...
+		engine->ServerCmd(VarArgs("setcabpos %i %f %f %f %f %f %f \"%s\";\n", m_pSpawningObjectEntity->entindex(), tr.endpos.x, tr.endpos.y, tr.endpos.z, angles.x, angles.y, angles.z, ""), false);
+	}
+}
 
 void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 {
@@ -1114,7 +1180,7 @@ KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string fileP
 		{
 			std::string id = pActive->GetString("info/id");
 			m_types[id] = pType;
-			DevMsg("adding type: %s\n", id.c_str());
+			//DevMsg("adding type: %s\n", id.c_str());
 		}
 		else
 		{
@@ -1418,8 +1484,30 @@ KeyValues* C_MetaverseManager::GetNextLibraryItem()
 	{
 		m_previousGetItemIterator++;
 
-		if (m_previousGetItemIterator != m_types.end())
+		if (m_previousGetItemIterator != m_items.end())
 			return m_previousGetItemIterator->second;
+	}
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::GetFirstLibraryModel()
+{
+	m_previousGetModelIterator = m_models.begin();
+	if (m_previousGetModelIterator != m_models.end())
+		return m_previousGetModelIterator->second;
+
+	return null;
+}
+
+KeyValues* C_MetaverseManager::GetNextLibraryModel()
+{
+	if (m_previousGetModelIterator != m_models.end())
+	{
+		m_previousGetModelIterator++;
+
+		if (m_previousGetModelIterator != m_models.end())
+			return m_previousGetModelIterator->second;
 	}
 
 	return null;
@@ -1443,6 +1531,210 @@ KeyValues* C_MetaverseManager::GetLibraryModel(std::string id)
 		return null;
 }
 
+KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	//unsigned int i, numTokens;
+	bool bFoundMatch;
+	while (it != m_models.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = potential->FindKey("current");
+		if (!active)
+			active = potential->FindKey("local");
+		if (active)
+		{
+			// active has the potential model data
+			// pSearchInfo has the search criteria
+			bool bGood = false;
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "title")
+				{
+					if (!Q_strcmp(searchField->GetString(), ""))
+						bGood = true;
+					else
+					{
+						potentialBuf = active->GetString("title");
+						std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+						searchBuf = searchField->GetString();
+						std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+						/*
+						searchTokens.clear();
+						g_pAnarchyManager->Tokenize(searchBuf, searchTokens, " ");
+						numTokens = searchTokens.size();
+
+						for (i = 0; i < numTokens; i++)
+						{
+						if (searchTokens[i].length() < 2)
+						continue;
+
+						if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+						{
+						bFoundMatch = true;
+						break;
+						}
+						}
+						*/
+
+						if (potentialBuf.find(searchBuf) != std::string::npos)
+							bGood = true;
+						else
+							bGood = false;
+					}
+				}
+				else if (fieldName == "dynamic")
+				{
+					if (!Q_strcmp(searchField->GetString(), "") || !Q_strcmp(active->GetString("dynamic"), searchField->GetString()))
+						bGood = true;
+					else
+						bGood = false;
+				}
+
+				if (!bGood)
+					break;
+			}
+
+			if (bGood)
+			{
+				bFoundMatch = true;
+				break;
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	unsigned int i, numTokens;
+	bool bFoundMatch;
+	std::map<std::string, KeyValues*>::iterator it = m_models.begin();
+	while (it != m_models.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = potential->FindKey("current");
+		if (!active)
+			active = potential->FindKey("local");
+		if (active)
+		{
+			// active has the potential model data
+			// pSearchInfo has the search criteria
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "title")
+				{
+					potentialBuf = searchField->GetString();	// FIXME: Does this work? seems to work... but how?
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = pSearchInfo->GetString(fieldName.c_str());
+					searchTokens.clear();
+					g_pAnarchyManager->Tokenize(searchBuf, searchTokens, ", ");
+					numTokens = searchTokens.size();
+
+					for (i = 0; i < numTokens; i++)
+					{
+						if (searchTokens[i].length() < 2)
+							continue;
+
+						if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+						{
+							bFoundMatch = true;
+							break;
+						}
+					}
+
+					if (bFoundMatch)
+						break;
+				}
+				else
+				{
+					potentialBuf = active->GetString(fieldName.c_str());
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = searchField->GetString();
+					std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+					if (potentialBuf == searchBuf)
+					{
+						//	DevMsg("Found match with %s = %s\n", potentialBuf.c_str(), searchBuf.c_str());
+						bFoundMatch = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	// Do this here because we MUST handle the deletion for findNext and findFirst, so this usage should match!!
+	pSearchInfo->deleteThis();
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindFirstLibraryModel(KeyValues* pSearchInfo)
+{
+	// remember this search query
+	if (!m_pPreviousModelSearchInfo)
+		m_pPreviousModelSearchInfo = pSearchInfo;// new KeyValues("search");
+	else if (m_pPreviousModelSearchInfo != pSearchInfo)	// this should never be called!!!
+	{
+		m_pPreviousModelSearchInfo->deleteThis();
+		m_pPreviousModelSearchInfo = pSearchInfo;
+	}
+
+	m_previousFindModelIterator = m_models.begin();
+
+	// start the search
+	KeyValues* response = this->FindLibraryModel(m_pPreviousModelSearchInfo, m_previousFindModelIterator);
+	return response;
+}
+
+KeyValues* C_MetaverseManager::FindNextLibraryModel()
+{
+	// continue the search
+	KeyValues* response = null;
+	m_previousFindModelIterator++;
+	if (m_previousFindModelIterator != m_models.end())
+		response = this->FindLibraryModel(m_pPreviousModelSearchInfo, m_previousFindModelIterator);
+	return response;
+}
+
+/*
 KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly)
 {
 	KeyValues* potential;
@@ -1529,6 +1821,7 @@ KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo, bool bEx
 	else
 		return null;
 }
+*/
 
 KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
 {
@@ -1649,7 +1942,7 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 				fieldName = searchField->GetName();
 				if (fieldName == "title")
 				{
-					potentialBuf = searchField->GetString();
+					potentialBuf = searchField->GetString();	// FIXME: Does this work? seems to work... but how?
 					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
 
 					searchBuf = pSearchInfo->GetString(fieldName.c_str());
@@ -1671,7 +1964,21 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 
 					if (bFoundMatch)
 						break;
+				}
+				else
+				{
+					potentialBuf = active->GetString(fieldName.c_str());
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
 
+					searchBuf = searchField->GetString();
+					std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+					if (potentialBuf == searchBuf)
+					{
+					//	DevMsg("Found match with %s = %s\n", potentialBuf.c_str(), searchBuf.c_str());
+						bFoundMatch = true;
+						break;
+					}
 				}
 			}
 		}
@@ -1864,6 +2171,28 @@ void C_MetaverseManager::OnDetectAllMapsCompleted()
 
 	g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
 	g_pAnarchyManager->OnDetectAllMapsComplete();
+}
+
+void C_MetaverseManager::FlagDynamicModels()
+{
+	std::string buf;
+	KeyValues* active;
+	std::map<std::string, KeyValues*>::iterator it = m_models.begin();
+	while (it != m_models.end())
+	{
+		active = it->second->FindKey("current");
+		if (!active)
+			active = it->second->FindKey("local", true);
+
+		buf = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+		if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0)
+		{
+			active->SetInt("dynamic", 1);
+			DevMsg("Flagged %s as dynamic model\n", buf.c_str());
+		}
+
+		it++;
+	}
 }
 
 KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
@@ -2190,6 +2519,8 @@ KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string file
 
 		m_models[id] = pModel;
 	}
+
+	return pModel;
 }
 
 unsigned int C_MetaverseManager::LoadAllLocalModels(std::string filePath)

@@ -70,13 +70,19 @@ void C_CanvasManager::Update()
 CCanvasRegen* C_CanvasManager::GetOrCreateRegen()
 {
 	if (!m_pCanvasRegen)
+	{
 		m_pCanvasRegen = new CCanvasRegen;
+		DevMsg("Creating NEW regen...\n");
+	}
 
 	return m_pCanvasRegen;
 }
 
 bool C_CanvasManager::IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
 {
+	if (pEmbeddedInstance->GetId() == "images")
+		return false;
+
 	//if (pEmbeddedInstance == (C_EmbeddedInstance*)g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") || pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
 	if (pEmbeddedInstance->GetId() == "hud" && g_pAnarchyManager->GetInputManager()->GetInputMode())
 		return true;
@@ -395,8 +401,26 @@ C_EmbeddedInstance* C_CanvasManager::FindEmbeddedInstance(std::string id)
 	return null;
 }
 
+void C_CanvasManager::CloseAllInstances()
+{
+	// all instances other than HUD and IMAGES should be removed at this time (until cross-map background item play gets re-enabled.)
+	DevMsg("Closing instances...\n");
+	g_pAnarchyManager->GetAwesomiumBrowserManager()->CloseAllInstances();	// but not hud and images
+	DevMsg("Awesomium Browser instances closed.\n");
+	g_pAnarchyManager->GetSteamBrowserManager()->CloseAllInstances();
+	DevMsg("Steam Browser instances closed.\n");
+	g_pAnarchyManager->GetLibretroManager()->CloseAllInstances();
+	DevMsg("Librertro instances closed.\n");
+}
+
 void C_CanvasManager::LevelShutdownPreEntity()
 {
+	// all instances other than HUD and IMAGES should be removed at this time (until cross-map background item play gets re-enabled.)
+	this->CloseAllInstances();
+	//g_pAnarchyManager->GetSteamBrowserManager()->CloseAllInstances();
+	//g_pAnarchyManager->GetAwesomiumBrowserManager()->CloseAllInstances();	// but not hud and images
+	//g_pAnarchyManager->GetLibretroManager()->CloseAllInstances();
+
 	// empty out the static stuff
 	unsigned int max = m_webSurfaceProxies.size();
 
@@ -404,11 +428,29 @@ void C_CanvasManager::LevelShutdownPreEntity()
 	for (unsigned int i = 0; i < max; i++)
 		m_webSurfaceProxies[i]->ReleaseCurrent();
 
+	/*
 	// call the static cleanup method
 	for (unsigned int i = 0; i < max; i++)
 	{
-		m_webSurfaceProxies[i]->StaticLevelShutdownPreEntity();
+		m_webSurfaceProxies[i]->StaticLevelShutdownPostEntity();
 		break;
+	}
+	*/
+}
+
+void C_CanvasManager::LevelShutdownPostEntity()
+{
+	// empty out the static stuff
+	unsigned int max = m_webSurfaceProxies.size();
+
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->ReleaseStuff();
+		if (i == max - 1)
+		{
+			// call the static cleanup method
+			m_webSurfaceProxies[i]->StaticLevelShutdownPostEntity();
+		}
 	}
 }
 

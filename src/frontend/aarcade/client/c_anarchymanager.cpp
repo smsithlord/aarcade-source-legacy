@@ -21,6 +21,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	DevMsg("AnarchyManager: Constructor\n");
 	m_state = AASTATE_NONE;
 	m_iState = 0;
+	m_bSuspendEmbedded = false;
 	m_bIncrementState = false;
 	m_bPaused = false;
 	m_pCanvasManager = null;
@@ -50,6 +51,71 @@ bool C_AnarchyManager::Init()
 void C_AnarchyManager::PostInit()
 {
 	DevMsg("AnarchyManager: PostInit\n");
+
+	/*
+	// allow for 2 instances of the Source engine to run
+	// NOTE: There are conflicts with older Source engine games that use the default VGUI main menu, but other than that they work fine as well.
+	bool keepGoing;
+
+	// Disable mutexes
+	keepGoing = true;
+	while (keepGoing)
+	{
+		HANDLE myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "hl2_singleton_mutex");
+
+		if (myHandle)
+		{
+			if (!ReleaseMutex(myHandle))
+				myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "hl2_singleton_mutex");
+			else
+			{
+				CloseHandle(myHandle);
+				keepGoing = false;
+			}
+		}
+		else
+			keepGoing = false;
+	}
+
+	keepGoing = true;
+	while (keepGoing)
+	{
+		HANDLE myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "ValvePlatformUIMutex");
+
+		if (myHandle)
+		{
+			if (!ReleaseMutex(myHandle))
+				myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "ValvePlatformUIMutex");
+			else
+			{
+				CloseHandle(myHandle);
+				keepGoing = false;
+			}
+		}
+		else
+			keepGoing = false;
+	}
+
+
+	//	keepGoing = true;
+	//	while (keepGoing)
+	{
+		HANDLE myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "ValvePlatformWaitMutex");
+
+		//		if (!ReleaseMutex(myHandle))
+		//			myHandle = OpenMutex(MUTEX_ALL_ACCESS, true, "ValvePlatformWaitMutex");
+		//		else
+		//		{
+
+		if (myHandle)
+		{
+			ReleaseMutex(myHandle);
+			CloseHandle(myHandle);
+		}
+		//			keepGoing = false;
+		//		}
+	}
+	*/
 }
 
 void C_AnarchyManager::Shutdown()
@@ -128,6 +194,8 @@ void C_AnarchyManager::LevelInitPreEntity()
 
 	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
 	pImagesBrowserInstance->ResetImagesSession();
+
+	DevMsg("Finished resetting image session.\n");
 }
 
 void C_AnarchyManager::LevelInitPostEntity()
@@ -137,7 +205,9 @@ void C_AnarchyManager::LevelInitPostEntity()
 	if (m_instanceId != "")
 		g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance(m_instanceId);
 
-	engine->ClientCmd("r_drawothermodels 1;");
+	m_bSuspendEmbedded = false;
+
+//	engine->ClientCmd("r_drawothermodels 1;");
 }
 
 void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
@@ -147,15 +217,19 @@ void C_AnarchyManager::LevelShutdownPreClearSteamAPIContext()
 
 void C_AnarchyManager::LevelShutdownPreEntity()
 {
-	engine->ClientCmd("r_drawothermodels 0;");
+	//engine->ClientCmd("r_drawothermodels 0;");	// FIXME: obsolete??
 
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
+	m_bSuspendEmbedded = true;
+
 	C_BaseEntity* pEntity = this->GetSelectedEntity();
 	if (pEntity)
 		this->DeselectEntity();
 
 	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
 	pImagesBrowserInstance->ResetImagesSession();
+
+///////	// all instances other than HUD and IMAGES should be removed at this time (until cross-map background item play gets re-enabled.)
 	m_pCanvasManager->LevelShutdownPreEntity();
 
 	/*
@@ -177,6 +251,8 @@ void C_AnarchyManager::LevelShutdownPostEntity()
 	m_instanceId = "";	// wtf is this??  (its the name of the currently loaded instance, which *should* actually be held inside of the isntance manager.
 
 	// Clear out the simple images
+	// all instances other than HUD and IMAGES should be removed at this time (until cross-map background item play gets re-enabled.)
+	m_pCanvasManager->LevelShutdownPostEntity();
 }
 
 void C_AnarchyManager::OnSave()
@@ -323,6 +399,9 @@ void C_AnarchyManager::Update(float frametime)
 
 			if (m_pInstanceManager)
 				m_pInstanceManager->Update();
+
+			if (m_pMetaverseManager)
+				m_pMetaverseManager->Update();
 			/*
 			if (m_pWebManager)
 				m_pWebManager->Update();
@@ -564,9 +643,42 @@ void C_AnarchyManager::Unpause()
 	m_pInputManager->DeactivateInputMode(true);
 }
 
+void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands)
+{
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+
+	// set the size of the structures
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	char pCommands[AA_MAX_STRING];
+	Q_strcpy(pCommands, masterCommands.c_str());
+
+	DevMsg("Launching Item: \n\tExecutable: %s\n\tDirectory: %s\n\tMaster Commands: %s\n", executable.c_str(), executableDirectory.c_str(), masterCommands.c_str());
+
+	if (executableDirectory == "" && masterCommands == "")
+		g_pVGuiSystem->ShellExecuteA("open", executable.c_str());
+	else
+	{
+		// start the program up
+		CreateProcess(executable.c_str(),   // the path
+			pCommands,        // Command line
+			NULL,           // Process handle not inheritable
+			NULL,           // Thread handle not inheritable
+			FALSE,          // Set handle inheritance to FALSE
+			0,              // No creation flags
+			NULL,           // Use parent's environment block
+			executableDirectory.c_str(),           // Use parent's starting directory 
+			&si,            // Pointer to STARTUPINFO structure
+			&pi);           // Pointer to PROCESS_INFORMATION structure
+	}
+}
+
 void C_AnarchyManager::RunAArcade()
 {
-	engine->ClientCmd("r_drawothermodels 0;");
+	//engine->ClientCmd("r_drawothermodels 0;");
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
@@ -734,8 +846,19 @@ std::string C_AnarchyManager::ExtractLegacyId(std::string itemFile, KeyValues* i
 	return nameSnip;
 }
 
+const char* C_AnarchyManager::GenerateCRC32Hash(const char* text)
+{
+	char protectedHash[9];
+
+	CRC32_t protectedCRC = CRC32_ProcessSingleBuffer((void*)text, strlen(text));
+	Q_snprintf(protectedHash, 9, "%08x", protectedCRC);
+
+	return VarArgs("%s", protectedHash);
+}
+
 const char* C_AnarchyManager::GenerateLegacyHash(const char* text)
 {
+//	DevMsg("hashing: %\s", text);
 	char input[AA_MAX_STRING];
 	Q_strcpy(input, text);
 
@@ -744,7 +867,7 @@ const char* C_AnarchyManager::GenerateLegacyHash(const char* text)
 	for (int i = 0; input[i] != '\0'; i++)
 		input[i] = tolower(input[i]);
 
-	char lower[256];
+	char lower[AA_MAX_STRING];
 	unsigned m_crc = 0xffffffff;
 
 	int inputLength = strlen(input);
@@ -772,6 +895,7 @@ const char* C_AnarchyManager::GenerateLegacyHash(const char* text)
 		}
 	}
 
+//	DevMsg(" Hash was %08x\n", m_crc);
 	return VarArgs("%08x", m_crc);
 }
 
@@ -904,45 +1028,55 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 
 bool C_AnarchyManager::AttemptSelectEntity()
 {
-	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
-	if (!pPlayer)
-		return false;
-
-	if (pPlayer->GetHealth() <= 0)
-		return false;
-
-	// fire a trace line
-	trace_t tr;
-	Vector forward;
-	pPlayer->EyeVectors(&forward);
-	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
-
-	C_BaseEntity *pEntity = tr.m_pEnt;
-	
-	// only allow prop shortcuts
-	C_PropShortcutEntity* pShortcut = null;
-	if ( pEntity )
-		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
-
-	if (pShortcut && tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+	C_PropShortcutEntity* pShortcut = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
+	if (pShortcut)
 	{
-		pEntity = tr.m_pEnt;
-
-		if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
-		{
-			//m_pInputManager->SetFullscreenMode(true);
-			C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
-			m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
-		}
-		else
-			return SelectEntity(pEntity);
+		// finished positioning & choosing model, ie: changes confirmed
+		DevMsg("CHANGES CONFIRMED\n");
+		g_pAnarchyManager->DeactivateObjectPlacementMode();
+		return SelectEntity(pShortcut);
 	}
 	else
 	{
-		if (m_pSelectedEntity)
-			return DeselectEntity();
-		else
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		if (!pPlayer)
 			return false;
+
+		if (pPlayer->GetHealth() <= 0)
+			return false;
+
+		// fire a trace line
+		trace_t tr;
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		C_BaseEntity *pEntity = tr.m_pEnt;
+
+		// only allow prop shortcuts
+		if (pEntity)
+			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+		if (pShortcut && tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+		{
+			pEntity = tr.m_pEnt;
+
+			if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
+			{
+				//m_pInputManager->SetFullscreenMode(true);
+				C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+				m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
+			}
+			else
+				return SelectEntity(pEntity);
+		}
+		else
+		{
+			if (m_pSelectedEntity)
+				return DeselectEntity();
+			else
+				return false;
+		}
 	}
 
 	return false;
@@ -1047,23 +1181,30 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 						//std::string dumbUrl = active->GetString("file");
 
 						// If this is a video file, play it in libretro instead of the browser
-						std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
-						std::string fileExt = active->GetString("file");
-						
-						size_t found = fileExt.find_last_of(".");
-						if (found != std::string::npos)
-							fileExt = fileExt.substr(found + 1);
-
-						found = exts.find("::" + fileExt + "::");
-						if (found != std::string::npos && g_pFullFileSystem->FileExists(active->GetString("file")))
+						bool bDoAutoInspect = true;
+						if (m_pLibretroManager->GetInstanceCount() == 0)
 						{
-							C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
-							pLibretroInstance->Init(tabTitle);
-							pLibretroInstance->LoadCore();
-							pLibretroInstance->SetGame(active->GetString("file"));
-							pEmbeddedInstance = pLibretroInstance;
+							std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
+							std::string fileExt = active->GetString("file");
+
+							size_t found = fileExt.find_last_of(".");
+							if (found != std::string::npos)
+								fileExt = fileExt.substr(found + 1);
+
+							found = exts.find("::" + fileExt + "::");
+							if (found != std::string::npos && g_pFullFileSystem->FileExists(active->GetString("file")))
+							{
+								C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
+								pLibretroInstance->Init(tabTitle);
+								pLibretroInstance->SetOriginalGame(active->GetString("file"));
+								//pLibretroInstance->SetGame(active->GetString("file"));
+								pLibretroInstance->LoadCore();
+								pEmbeddedInstance = pLibretroInstance;
+								bDoAutoInspect = false;
+							}
 						}
-						else
+
+						if ( bDoAutoInspect)
 						{
 							std::string uri = "file://";
 							uri += engine->GetGameDirectory();
@@ -1271,6 +1412,92 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 	g_pFullFileSystem->FindClose(findHandle);
 }
 
+void C_AnarchyManager::DeactivateObjectPlacementMode()
+{
+	C_PropShortcutEntity* pShortcut = m_pMetaverseManager->GetSpawningObjectEntity();
+	if (pShortcut)
+	{
+		pShortcut->SetRenderColorA(255);
+		pShortcut->SetRenderMode(kRenderNormal);
+
+		// make the prop solid
+		pShortcut->SetSolid(SOLID_VPHYSICS);
+		pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
+
+		if (pShortcut->CreateVPhysics())
+		{
+			IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
+			if (pPhysics)
+			{
+				pPhysics->EnableMotion(false);
+			}
+		}
+
+		m_pMetaverseManager->SetSpawningObjectEntity(null);
+	}
+
+	m_pMetaverseManager->SetSpawningObject(null);
+}
+
+void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut)
+{
+	m_pMetaverseManager->SetSpawningObjectEntity(pShortcut);
+
+	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, true);
+
+	/*
+	// Figure out where to place it
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	Vector forward;
+	pPlayer->EyeVectors(&forward);
+
+	trace_t tr;
+	UTIL_TraceLine(pPlayer->EyePosition(),
+		pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+		pPlayer, COLLISION_GROUP_NONE, &tr);
+
+	// No hit? We're done.
+	if (tr.fraction == 1.0)
+		return;
+
+	VMatrix entToWorld;
+	Vector xaxis;
+	Vector yaxis;
+
+	if (tr.plane.normal.z == 0.0f)
+	{
+		yaxis = Vector(0.0f, 0.0f, 1.0f);
+		CrossProduct(yaxis, tr.plane.normal, xaxis);
+		entToWorld.SetBasisVectors(tr.plane.normal, xaxis, yaxis);
+	}
+	else
+	{
+		Vector ItemToPlayer;
+		VectorSubtract(pPlayer->GetAbsOrigin(), Vector(tr.endpos.x, tr.endpos.y, tr.endpos.z), ItemToPlayer);
+
+		xaxis = Vector(ItemToPlayer.x, ItemToPlayer.y, ItemToPlayer.z);
+
+		CrossProduct(tr.plane.normal, xaxis, yaxis);
+		if (VectorNormalize(yaxis) < 1e-3)
+		{
+			xaxis.Init(0.0f, 0.0f, 1.0f);
+			CrossProduct(tr.plane.normal, xaxis, yaxis);
+			VectorNormalize(yaxis);
+		}
+		CrossProduct(yaxis, tr.plane.normal, xaxis);
+		VectorNormalize(xaxis);
+
+		entToWorld.SetBasisVectors(xaxis, yaxis, tr.plane.normal);
+	}
+
+	QAngle angles;
+	MatrixToAngles(entToWorld, angles);
+	*/
+}
+
 void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
 	if (!m_pMountManager)	// it is our first time here
@@ -1361,6 +1588,10 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	if (m_iState < 1)
 	{
 		m_iState = 1;
+
+		// iterate through all models and assign the dynamic property to them
+		// FIXME: THIS SHOULD BE DONE UPON MODEL IMPORT/LOADING!!
+		m_pMetaverseManager->FlagDynamicModels();
 
 		// restart the sound system so that mounted paths can play sounds
 		engine->ClientCmd("snd_restart");

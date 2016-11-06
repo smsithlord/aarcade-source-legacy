@@ -66,6 +66,7 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 void C_AwesomiumBrowserInstance::SelfDestruct()
 {
 	DevMsg("AwesomiumBrowserInstance: SelfDestruct\n");
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->NotifyInstanceAboutToDie(this);
 	m_pWebView->Destroy();
 	//steamapicontext->SteamHTMLSurface()->RemoveBrowser(m_unBrowserHandle);
 
@@ -239,6 +240,12 @@ void C_AwesomiumBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 		iButtonId = 2;
 	
 	m_pWebView->InjectMouseUp((MouseButton)iButtonId);
+}
+
+void C_AwesomiumBrowserInstance::OnMouseWheeled(int delta)
+{
+	DevMsg("Awesomium instance mouse wheeled: %i\n", delta);
+	m_pWebView->InjectMouseWheel(20 * delta, 0);
 }
 
 void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
@@ -976,6 +983,9 @@ void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code)
 
 void C_AwesomiumBrowserInstance::Update()
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	//if (m_info->state == 1)
 		this->OnProxyBind(null);
 }
@@ -1177,7 +1187,7 @@ void C_AwesomiumBrowserInstance::ResizeFrameFromXRGB8888(const void* pSrc, void*
 
 void C_AwesomiumBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth)
 {
-	if (m_bCopyingFrame || !m_bReadyToCopyFrame)
+	if (m_bCopyingFrame || !m_bReadyToCopyFrame || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
 	m_bCopyingFrame = true;
@@ -1250,6 +1260,9 @@ void C_AwesomiumBrowserInstance::Close()
 
 void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	if (m_id == "images")
 		return;
 
@@ -1270,11 +1283,9 @@ void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 			g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
 		else
 			g_pAnarchyManager->GetCanvasManager()->IncrementVisiblePriorityCanvasesCurrentFrame();
-	}
-	m_iLastVisibleFrame = gpGlobals->framecount;
 
-	if (m_iLastRenderedFrame < gpGlobals->framecount)
-	{
+		m_iLastVisibleFrame = gpGlobals->framecount;
+	//if (m_iLastRenderedFrame < gpGlobals->framecount)
 		/*
 		if (!g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(this))
 			g_pAnarchyManager->GetCanvasManager()->IncrementVisibleCanvasesCurrentFrame();
@@ -1292,7 +1303,9 @@ void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 		if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(this) && bIsDirty)//&& m_bIsDirty)
 		{
+			//DevMsg("Do a renderr...\n");
 			Render();
+			//DevMsg("did it.\n");
 
 		//	if (m_id == "hud")
 		//		DevMsg("Render PRIORITY (HUD)!\n");
@@ -1314,8 +1327,10 @@ void C_AwesomiumBrowserInstance::Render()
 	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
 	//	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
 	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
+//	DevMsg("Start dl ... ");
 	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
 	m_pTexture->Download();
+	//DevMsg("done\n");
 
 	m_iLastRenderedFrame = gpGlobals->framecount;
 
@@ -1327,7 +1342,7 @@ void C_AwesomiumBrowserInstance::Render()
 
 void C_AwesomiumBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
-	if (!m_pWebView)
+	if (!m_pWebView || g_pAnarchyManager->GetSuspendEmbedded() )
 		return;
 
 	if (!pTexture || !pTexture->IsProcedural())
@@ -1336,8 +1351,8 @@ void C_AwesomiumBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFT
 		return;
 	}
 
-	if (m_id == "images")
-		DevMsg("Regenerating hud bits...\n");
+//	if (m_id == "images")
+//		DevMsg("Regenerating image bits...\n");
 
 	Awesomium::BitmapSurface* surface = static_cast<Awesomium::BitmapSurface*>(m_pWebView->surface());
 	if (surface != 0)
@@ -1439,6 +1454,32 @@ void C_AwesomiumBrowserInstance::OnSimpleImageReady(std::string sessionId, std::
 		this->DispatchJavaScriptMethod("imageLoader", "onImageRender", args);
 	}
 	//m_bReadyForNextSimpleImage = true;
+}
+
+void C_AwesomiumBrowserInstance::SaveImageToCache(std::string fieldVal)
+{
+	std::string filename = engine->GetGameDirectory();
+	filename = filename.substr(0, filename.length() - 9);
+	//DevMsg("Tester filename here is: %s\n", filename.c_str());
+	filename += "/aarcade_user/imagecache/";
+	//filename += g_pAnarchyManager->GenerateCRC32Hash(fieldVal.c_str());
+	filename += g_pAnarchyManager->GenerateLegacyHash(fieldVal.c_str());
+	filename += ".jpg";
+
+	char* filenameFixed = new char[AA_MAX_STRING];
+	Q_strcpy(filenameFixed, filename.c_str());
+	V_FixSlashes(filenameFixed, '/');
+
+	//DevMsg("AAAaannnnnd here it's: %s\n", filenameFixed);
+
+	Awesomium::BitmapSurface* surface = static_cast<Awesomium::BitmapSurface*>(m_pWebView->surface());
+	if (surface != 0)
+	{
+	//	DevMsg("Saving to JPG...\n");
+		surface->SaveToJPEG(WSLit(filenameFixed), 90);
+		//if (!surface->SaveToJPEG(WSLit(filenameFixed), 90))
+		//	DevMsg("Failed to save to JPG!\n");
+	}
 }
 
 C_EmbeddedInstance* C_AwesomiumBrowserInstance::GetParentSelectedEmbeddedInstance()

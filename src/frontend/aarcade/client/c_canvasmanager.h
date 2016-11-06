@@ -34,6 +34,8 @@ public:
 	void IncrementVisiblePriorityCanvasesCurrentFrame() { m_iVisiblePriorityCanvasesCurrentFrame++; }
 
 	void LevelShutdownPreEntity();
+	void LevelShutdownPostEntity();
+	void CloseAllInstances();
 
 	void RefreshItemTextures(std::string itemId, std::string channel);
 

@@ -31,6 +31,7 @@ public:
 	void PrepForTransit(char* &memberBuf, const char* value);
 
 private:
+	CNetworkVar(bool, m_bSlave);
 	CNetworkVar(string_t, m_itemId);
 	char* m_itemIdBuf;
 };

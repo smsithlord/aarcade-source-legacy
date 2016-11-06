@@ -7,6 +7,7 @@
 #include "c_inputlistenerlibretro.h"
 #include <string>
 #include <vector>
+#include <map>
 //#include <mutex>
 //#include "c_libretrosurfaceregen.h"
 //#include <map>
@@ -97,6 +98,7 @@ struct LibretroInstanceInfo_t
 	//unsigned int safebuffersize;
 	//unsigned int safebufferpos;
 	bool processingaudio;
+	std::map<int, bool> inputstate;
 };
 
 class C_LibretroInstance : public C_EmbeddedInstance
@@ -118,6 +120,10 @@ public:
 	static bool BuildInterface(libretro_raw* raw, void* pLib);
 	static void CreateAudioStream();
 	static void DestroyAudioStream();
+
+	bool HasInfo() { return (m_info != null); }
+	std::vector<libretro_core_option*>& GetAllOptions() { return m_info->options; }	// others should always check if m_info exists first themselves!!
+	int GetOptionCurrentValue(unsigned int index);
 
 	bool IsSelected();
 	bool HasFocus();
@@ -159,11 +165,14 @@ public:
 	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
 	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;
+	std::string GetOriginalGame() { return m_originalGame; }
 
 	// mutators
 	bool SetGame(std::string file);
+	void SetOriginalGame(std::string file) { m_originalGame = file; }
 
 private:
+	std::string m_originalGame;
 	int m_iLastVisibleFrame;
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;

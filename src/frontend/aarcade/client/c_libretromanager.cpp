@@ -21,11 +21,27 @@ C_LibretroManager::C_LibretroManager()
 C_LibretroManager::~C_LibretroManager()
 {
 	DevMsg("LibretroManager: Destructor\n");
+	this->CloseAllInstances();
 
+	if (m_pInputListener)
+		delete m_pInputListener;
+}
+
+void C_LibretroManager::CloseAllInstances()
+{
+	unsigned int count = 0;
 	// iterate over all web tabs and call their destructors
 	for (auto it = m_libretroInstances.begin(); it != m_libretroInstances.end(); ++it)
 	{
 		C_LibretroInstance* pInstance = it->second;
+
+		if (pInstance->GetId() == "hud" || pInstance->GetId() == "images")
+		{
+			DevMsg("ERROR: Libretro Browser instance detected that is NOT of type Awesomium Browser!!\n");
+			continue;
+		}
+
+		DevMsg("Removing 1 Libretro instance...\n");
 
 		if (pInstance == m_pSelectedLibretroInstance)
 		{
@@ -49,9 +65,6 @@ C_LibretroManager::~C_LibretroManager()
 	}
 
 	m_libretroInstances.clear();
-
-	if (m_pInputListener)
-		delete m_pInputListener;
 }
 
 void C_LibretroManager::Update()
@@ -122,15 +135,23 @@ bool C_LibretroManager::SelectLibretroInstance(C_LibretroInstance* pLibretroInst
 	return true;
 }
 
-void C_LibretroManager::OnLibretroInstanceCreated(C_LibretroInstance* pLibretroInstance)
+void C_LibretroManager::OnLibretroInstanceCreated(LibretroInstanceInfo_t* pInfo)//C_LibretroInstance* pLibretroInstance)
 {
-	CSysModule* pModule = pLibretroInstance->GetInfo()->module;
-	m_libretroInstances[pModule] = pLibretroInstance;
+	// FIXME: If you un-click fast after selecting something, u might trigger a crash here...
+	//LibretroInstanceInfo_t* pInfo = (pLibretroInstance) ? pLibretroInstance->GetInfo() : null;
+	if (!pInfo || pInfo->close || !pInfo->libretroinstance)
+	{
+		DevMsg("Extinct libretro instance ignored.\n");
+		return;
+	}
 
-	uint uId = pLibretroInstance->GetInfo()->threadid;
+	CSysModule* pModule = pInfo->module;
+	m_libretroInstances[pModule] = pInfo->libretroinstance;
+
+	uint uId = pInfo->threadid;
 	m_libretroInstancesModules[uId] = pModule;
 
-	pLibretroInstance->GetInfo()->state = 1;
+	pInfo->state = 3;
 }
 
 C_LibretroInstance* C_LibretroManager::FindLibretroInstance(CSysModule* pModule)
@@ -195,4 +216,18 @@ void C_LibretroManager::RunEmbeddedLibretro(std::string file)
 
 	// load a file
 	pLibretroInstance->SetGame(file);
+}
+
+unsigned int C_LibretroManager::GetInstanceCount()
+{
+	unsigned int count = 0;
+
+	auto it = m_libretroInstances.begin();
+	while (it != m_libretroInstances.end())
+	{
+		count++;
+		it++;
+	}
+
+	return count;
 }

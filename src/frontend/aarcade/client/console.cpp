@@ -31,15 +31,42 @@ void TestFunction( const CCommand &args )
 	//webviewinput->Create();
 	//DevMsg("Planel created.\n");
 
-	g_pAnarchyManager->TestSQLite();
+//	g_pAnarchyManager->TestSQLite();
+
+	DevMsg("Setting url to overlay test...\n");
+	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, true);
 }
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
+
+void TestFunctionOff(const CCommand &args)
+{
+
+	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+	//g_pAnarchyManager->GetHUDManager
+}
+ConCommand test_function_off("testfuncoff", TestFunctionOff, "Usage: executes an arbitrary hard-coded C++ routine");
+
+void WheelUp(const CCommand &args)
+{
+	g_pAnarchyManager->GetInputManager()->OnMouseWheeled(1);
+}
+ConCommand wheel_up("wheelup", WheelUp, "Usage: mouse wheel up");
+
+void WheelDown(const CCommand &args)
+{
+	g_pAnarchyManager->GetInputManager()->OnMouseWheeled(-1);
+}
+ConCommand wheel_down("wheeldown", WheelDown, "Usage: mouse wheel down");
 
 void RunEmbeddedLibretro(const CCommand &args)
 {
 	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
 	if ( pLibretroManager )
-		pLibretroManager->RunEmbeddedLibretro("V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		pLibretroManager->RunEmbeddedLibretro("V:/Movies/Flash Gordon (1980).avi");
+	
+		//pLibretroManager->RunEmbeddedLibretro("V:/Movies/Jay and silent Bob Strike Back (2001).avi");
 }
 ConCommand run_embedded_libretro("run_embedded_libretro", RunEmbeddedLibretro, "Usage: runs embedded apps");
 
@@ -90,6 +117,12 @@ void SetContinuous(const CCommand &args)
 }
 ConCommand setcontinuous("setcontinuous", SetContinuous, "Usage: sets the selected entity as continuous play.");
 
+void CloseAll(const CCommand &args)
+{
+	g_pAnarchyManager->GetCanvasManager()->CloseAllInstances();
+}
+ConCommand closeall("closeall", CloseAll, "Usage: closes all open instaces (execpt for important game system ones)");
+
 void RememberWrapper(const CCommand &args)
 {
 	engine->ClientCmd("setcontinuous\n");
@@ -137,6 +170,7 @@ ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy 
 
 void ActivateInputMode(const CCommand &args)
 {
+	// FIXME: Need to reject commands that are sent before the AArcade system is ready.
 	//bool fullscreen = (args.ArgC() > 1);
 	C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 	if (pSelectedEmbeddedInstance)

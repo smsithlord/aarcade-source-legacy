@@ -49,6 +49,7 @@ public:
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
+	void OnMouseWheeled(int delta);
 	void OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	void OnKeyReleased(vgui::KeyCode code);
 
@@ -70,6 +71,7 @@ public:
 	void SetNumImagesLoading(int num) { m_iNumImagesLoading = num; }
 	bool RequestLoadSimpleImage(std::string channel, std::string itemId);	// images web-views only!
 	void OnSimpleImageReady(std::string sessionId, std::string channel, std::string itemId, std::string field, ITexture* pTexture);	// images web-views only!
+	void SaveImageToCache(std::string fieldVal);
 
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 

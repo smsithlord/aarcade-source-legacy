@@ -27,6 +27,9 @@ public:
 	virtual void OnBind(C_BaseEntity *pC_BaseEntity = null);
 	virtual void Release();
 
+	void ReleaseStuff();
+
+	void StaticLevelShutdownPostEntity();
 	void StaticLevelShutdownPreEntity();
 	void LevelShutdownPreEntity();
 	void ReleaseCurrent();
@@ -46,7 +49,7 @@ public:
 
 private:
 	int				m_iState;
-	std::string		m_id;
+	//std::string		m_id;
 	C_EmbeddedInstance*		m_pCurrentEmbeddedInstance;
 	C_EmbeddedInstance*		m_pEmbeddedInstance;
 	IMaterial*		m_pMaterial;

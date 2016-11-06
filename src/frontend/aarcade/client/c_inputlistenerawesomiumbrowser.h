@@ -18,6 +18,7 @@ public:
 	void OnMouseMove(float x, float y, C_AwesomiumBrowserInstance* pBrowserInstance);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
+	void OnMouseWheeled(int delta);
 
 	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
 	void OnKeyCodeReleased(vgui::KeyCode code);

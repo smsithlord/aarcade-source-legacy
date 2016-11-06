@@ -41,7 +41,8 @@ C_LibretroInstance::~C_LibretroInstance()
 void C_LibretroInstance::SelfDestruct()
 {
 	DevMsg("LibretroInstance: SelfDestruct\n");
-
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->NotifyInstanceAboutToDie(this);
+	m_info->libretroinstance = null;
 	m_info->close = true;
 	/*
 	if (m_pLastFrameData)
@@ -91,10 +92,27 @@ void C_LibretroInstance::Init(std::string id)
 
 void C_LibretroInstance::Update()
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	if (m_info->state == 2)
 		OnCoreLoaded();
-	else if (m_info->state == 5)
+	else if (m_info->state == 5 && m_info->audiostream)	// added m_info to try and detect failed video loads!! (FIXME: Should be removed after proper failed video load is added elsewhere.
 	{
+		// update input state
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_SELECT] = vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_START] = vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_UP] = vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_DOWN] = vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_LEFT] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_RIGHT] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_A] = vgui::input()->IsKeyDown(KEY_XBUTTON_B);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_B] = vgui::input()->IsKeyDown(KEY_XBUTTON_A);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_X] = vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_Y] = vgui::input()->IsKeyDown(KEY_XBUTTON_X);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_L] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_R] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
+
 		this->OnProxyBind(null);
 
 		/*
@@ -235,7 +253,9 @@ bool C_LibretroInstance::LoadGame()
 
 	DevMsg("libretro: LOAD GAME %s\n", filename.c_str());
 
-	info->raw->init();
+	info->raw->init();	// could take a while
+	if (info->close)
+		return false;
 
 	/*
 	if (!g_pFullFileSystem->FileExists(pFilename))
@@ -266,9 +286,18 @@ bool C_LibretroInstance::LoadGame()
 		game.meta = NULL;
 
 		DevMsg("loading game\n");
-		info->raw->load_game(&game);
-		DevMsg("done loading game\n");
-		info->state = 5;		
+		if (!info->raw->load_game(&game))	// this could take a while
+		{
+			DevMsg("ERROR LOADING LIBRETRO GAME!!\n");
+		}
+		else
+		{
+			DevMsg("done loading game\n");
+			if (!info->close)
+				info->state = 5;
+			else
+				DevMsg("However, the instance already wants to close. :(\n");
+		}
 
 		//pLibretroInstance->OnGameLoaded();
 		//bDidItWork = s_raw->load_game(&game);
@@ -570,132 +599,154 @@ unsigned MyThread(void *params)
 {
 	LibretroInstanceInfo_t* info = (LibretroInstanceInfo_t*)params; // always use a struct!
 
-	//DevMsg("Cannot print to console from this threaded function\n");
-
-	CSysModule* pModule = Sys_LoadModule(info->core.c_str());
-	if (!pModule)
+	if (info->libretroinstance && !info->close)
 	{
-	//	Msg("Failed to load %s\n", info->core.c_str());
-		// FIXME FIX ME Probably need to clean up!
-		return 0;
-	}
+		//DevMsg("Cannot print to console from this threaded function\n");
 
-	HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
-	if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
-	{
-		//DevMsg("libretro: Failed to build interface!\n");
-		return 0;
-	}
-
-	info->module = pModule;
-	info->threadid = ThreadGetCurrentId();
-	g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info->libretroinstance);
-
-//	C_LibretroInstance* pLibretroInstance;
-	libretro_raw* raw = info->raw;
-	int state;
-	unsigned int lastFrameNumber = 0;
-	while (!info->close)
-	{
-		state = info->state;
-		//pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
-		//raw = pLibretroInstance->GetRaw();
-		//if (!raw)
-//			continue;
-
-		if (state == 1)
+		CSysModule* pModule = Sys_LoadModule(info->core.c_str());
+		if (!pModule)
 		{
-			CSysModule* myModule = Sys_LoadModule(VarArgs("%s\\bin\\portaudio_x86.dll", engine->GetGameDirectory()));
-			if (myModule)
-			{
-				DevMsg("portaudio_x86.dll loaded successfully.\n");
+			//	Msg("Failed to load %s\n", info->core.c_str());
+			// FIXME FIX ME Probably need to clean up!
+			return 0;
+		}
 
-				PaError err = Pa_Initialize();
-				if (err != paNoError)
-					DevMsg("Failed to initialize PA.\n");
+		HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
+		if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
+		{
+			//DevMsg("libretro: Failed to build interface!\n");
+			return 0;
+		}
+		else
+			info->module = pModule;
+
+		info->threadid = ThreadGetCurrentId();
+
+		//	C_LibretroInstance* pLibretroInstance;
+		libretro_raw* raw = info->raw;
+		int state = info->state;
+		unsigned int lastFrameNumber = 0;
+		bool bDidNotify = false;
+
+		//while (state != 666)
+		while (!info->close)
+		{
+		//	if ( info->close )
+			state = info->state;
+			//pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
+			//raw = pLibretroInstance->GetRaw();
+			//if (!raw)
+			//			continue;
+
+			if (state == 0)
+			{
+				CSysModule* myModule = Sys_LoadModule(VarArgs("%s\\bin\\portaudio_x86.dll", engine->GetGameDirectory()));
+				if (myModule)
+				{
+					DevMsg("portaudio_x86.dll loaded successfully.\n");
+
+					PaError err = Pa_Initialize();
+					if (err != paNoError)
+						DevMsg("Failed to initialize PA.\n");
+					else
+						DevMsg("Initialized PA successfuly!\n");
+				}
 				else
-					DevMsg("Initialized PA successfuly!\n");
-			}
-			else
-				DevMsg("Failed to load portaudio_x86.dll.\n");
+					DevMsg("Failed to load portaudio_x86.dll.\n");
 
-			// this should be done in the manager class.
-			raw->set_environment(C_LibretroInstance::cbEnvironment);
-			raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
-			raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
-			raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
-			raw->set_input_poll(C_LibretroInstance::cbInputPoll);
-			raw->set_input_state(C_LibretroInstance::cbInputState);
+				// this should be done in the manager class.
+				raw->set_environment(C_LibretroInstance::cbEnvironment);
+				raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
+				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
+				raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
+				raw->set_input_poll(C_LibretroInstance::cbInputPoll);
+				raw->set_input_state(C_LibretroInstance::cbInputState);
 
-			/*
-			if (s_raw->api_version() != RETRO_API_VERSION)
-			{
+				/*
+				if (s_raw->api_version() != RETRO_API_VERSION)
+				{
 				DevMsg("libretro: Failed version check!\n");
 				// FIXME FIX ME Probably need to clean up!
 				return false;
-			}
-			*/
+				}
+				*/
 
-			info->state = 2;
-		}
-		else if (state == 3)
-		{
-			// load a game if we have one
-			if (info->game != "")
-			{
-			//	DevMsg("Load the game next!!\n");
-			//	info->state = 4;
-				C_LibretroInstance::LoadGame();
-			//	DevMsg("cuatro\n");
+				// skip state 2
+				info->state = 1;
+				g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
 			}
-		}
-		else if (state == 5)
-		{
-			/*
-			if (!info->processingaudio)
+			else if (state == 3)
 			{
+				// load a game if we have one
+				if (info->game != "")
+				{
+					//	DevMsg("Load the game next!!\n");
+					info->state = 4;
+					C_LibretroInstance::LoadGame();
+					info->raw->run();
+					//	DevMsg("cuatro\n");
+				}
+			}
+			else if (state == 5)
+			{
+				/*
+				if (!info->processingaudio)
+				{
 				info->processingaudio = true;
 				info->raw->run();
-			}
-			*/
+				}
+				*/
 
-			info->raw->run();
+				info->raw->run();
 
-			/*
-			bool bShouldRender = false;
-			if (lastFrameNumber != gpGlobals->framecount)
-			{
+				/*
+				bool bShouldRender = false;
+				if (lastFrameNumber != gpGlobals->framecount)
+				{
 				lastFrameNumber = gpGlobals->framecount;
 
 				if (info->framerate == 0)
-					bShouldRender = true;
+				bShouldRender = true;
 				else
 				{
-					float dif = 1 / (info->framerate * 1.0);
-					if (gpGlobals->curtime - info->lastrendered >= dif * 1.5 || true)	// sense the blocking audio API is being used, we should render every chance we get to be synced to audio.
-						bShouldRender = true;
+				float dif = 1 / (info->framerate * 1.0);
+				if (gpGlobals->curtime - info->lastrendered >= dif * 1.5 || true)	// sense the blocking audio API is being used, we should render every chance we get to be synced to audio.
+				bShouldRender = true;
 				}
 
 				if (bShouldRender)
 				{
-					//				info->lastrendered = gpGlobals->curtime;
-					//				if (info->readyfornextframe)
-					info->raw->run();
+				//				info->lastrendered = gpGlobals->curtime;
+				//				if (info->readyfornextframe)
+				info->raw->run();
 				}
+				}
+				*/
 			}
-			*/
 		}
 	}
 
-	// clean up the memory
-	Sys_UnloadModule(info->module);
+	if (info)
+	{
+		// clean up the memory
+		if (info->module)
+			Sys_UnloadModule(info->module);
 
-	if (info->lastframedata)
-		free(info->lastframedata);
+		if (info->lastframedata)
+			free(info->lastframedata);
 
-	delete info;
+		delete info;
+	}
 
 	return 0;
+}
+
+int C_LibretroInstance::GetOptionCurrentValue(unsigned int index)
+{
+	if (m_info && index < m_info->optionscurrentvalues.size())
+		return m_info->optionscurrentvalues[index];
+	else
+		return 0;
 }
 
 bool C_LibretroInstance::IsSelected()
@@ -773,7 +824,7 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->threadid = 0;
 	m_info->libretroinstance = this;
 	m_info->core = core;
-	m_info->game = "";
+	m_info->game = m_originalGame;
 	m_info->lastframedata = null;
 	m_info->lastframewidth = 0;
 	m_info->lastframeheight = 0;
@@ -929,8 +980,8 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	if (cmd == RETRO_ENVIRONMENT_GET_CAN_DUPE) //3
 	{
 		DevMsg("libretro: Asking backend if CAN_DUPE.\n");
-		*(bool*)data = true;
-		return true;
+		//*(bool*)data = true;
+		return false;
 	}
 
 	//4 was removed and can safely be ignored.
@@ -1027,7 +1078,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		variable->value = NULL;
 		unsigned int numOptions = info->options.size();
 
-		//		DevMsg("Requesting variable: %s and numOptions are %i\n", variable->key, numOptions);
+		DevMsg("Requesting variable: %s and numOptions are %i\n", variable->key, numOptions);
 		/*
 		for (unsigned int i = 0; i < s_options.size(); i++)
 		{
@@ -1076,6 +1127,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 	if (cmd == RETRO_ENVIRONMENT_SET_VARIABLES)//16
 	{
+		DevMsg("libretro: RETRO_ENVIRONMENT_SET_VARIABLES\n");
 		const struct retro_variable * variables = (const struct retro_variable*)data;
 
 		while (!info->options.empty())
@@ -1152,6 +1204,13 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		return true;
 	}
 
+	if (cmd == RETRO_ENVIRONMENT_SHUTDOWN)
+	{
+		info->close = true;
+		// should probably show some kind of related items screen when a video ends.
+		return true;
+	}
+
 	const char * const names[] = {
 		"(invalid)",
 		"SET_ROTATION",
@@ -1215,6 +1274,9 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 		return;
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+	if (info->close)
+		return;
+
 	info->lastrendered = gpGlobals->curtime;
 
 	if (!info->readyfornextframe || info->copyingframe )
@@ -1316,7 +1378,7 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 		}
 	}
 
-	if (info->samplerate <= 0 || frames <= 0) // || s_threadAudioParams.frames
+	if (info->samplerate <= 0 || frames <= 0 || !info->audiostream ) // || s_threadAudioParams.frames
 		return 0;
 
 	PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
@@ -1345,6 +1407,14 @@ void C_LibretroInstance::cbInputPoll(void)
 
 int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigned index, unsigned id)
 {
+	uint uId = ThreadGetCurrentId();
+	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
+
+	if (!pLibretroInstance)
+		return false;
+
+	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+
 	/*
 	#define RETRO_DEVICE_ID_JOYPAD_B        0
 	#define RETRO_DEVICE_ID_JOYPAD_Y        1
@@ -1366,70 +1436,13 @@ int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigne
 	//DevMsg("libretro: Input State called.\n");
 	//DevMsg("libretro: Input State called with port %u, device %u, index %u, and ID %u.\n", port, device, index, id);
 
-	if (port != 0 || device != 1 || index != 0 || true)
+	//if (port != 0 || device != 1 || index != 0 || true)
+	//	return (int16_t)0;
+
+	if (info->inputstate.find(id) != info->inputstate.end() )
+		return (int16_t)info->inputstate[id];
+	else
 		return (int16_t)0;
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_B)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_A);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_Y)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_X);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_SELECT)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_START)
-	{
-		return (int16_t)(vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER));
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_UP)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_DOWN)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_LEFT)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_RIGHT)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_A)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_B);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_X)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_L)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
-	}
-
-	if (id == RETRO_DEVICE_ID_JOYPAD_R)
-	{
-		return (int16_t)vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
-	}
-
-	return (int16_t)0;
 }
 
 void C_LibretroInstance::ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth)
@@ -1628,7 +1641,7 @@ void C_LibretroInstance::ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, u
 
 void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth)
 {
-	if (m_info->copyingframe || !m_info->readytocopyframe)
+	if (m_info->copyingframe || !m_info->readytocopyframe || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
 	m_info->copyingframe = true;
@@ -1652,6 +1665,9 @@ void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, 
 
 void C_LibretroInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 //	if (m_id == "images")
 //		return;
 
@@ -1706,6 +1722,9 @@ void C_LibretroInstance::Render()
 
 void C_LibretroInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	if (m_info->state == 5)
 		this->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
 }
@@ -1717,7 +1736,7 @@ C_InputListener* C_LibretroInstance::GetInputListener()
 
 bool C_LibretroInstance::SetGame(std::string file)
 {
-	if (!m_info || m_info->gameloaded)
+	if (!m_info || m_info->gameloaded || m_info->close)
 		return false;
 
 	m_info->game = file;

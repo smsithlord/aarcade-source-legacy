@@ -13,6 +13,8 @@ public:
 	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect );
 	void Release();
 
+	void NotifyInstanceAboutToDie(C_EmbeddedInstance* pInstance);
+
 	// mutators
 	void SetEmbeddedInstance(C_EmbeddedInstance* pInstance);
 

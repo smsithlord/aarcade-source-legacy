@@ -15,6 +15,7 @@ struct object_t
 	Vector angles;
 	bool spawned;
 	float scale;
+	bool slave;
 };
 
 struct instance_t
@@ -40,7 +41,7 @@ public:
 	void LoadLegacyInstance(std::string instanceId);
 
 	void SpawnObject(object_t* object);
-	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale);
+	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave);
 	bool SpawnNearestObject();
 	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 
@@ -51,6 +52,7 @@ public:
 	void LegacyMapIdFix(std::string legacyMapName, std::string mapId);
 
 	void SpawnActionPressed();
+	void ChangeModel(C_BaseEntity* pEntity, std::string in_modelFile);
 	//void SpawnItem(std::string id);
 
 	// accessors

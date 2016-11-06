@@ -69,6 +69,24 @@ void C_InputListenerAwesomiumBrowser::OnMouseReleased(vgui::MouseCode code)
 	g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->OnMouseReleased(code);
 }
 
+void C_InputListenerAwesomiumBrowser::OnMouseWheeled(int delta)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (pHudBrowserInstance->HasFocus())//&& g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
+		pHudBrowserInstance->OnMouseWheeled(delta);
+	else if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
+	{
+		C_AwesomiumBrowserInstance* pOtherAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pOtherAwesomiumBrowserInstance)
+		{
+			if (!pOtherAwesomiumBrowserInstance->HasFocus())
+				pOtherAwesomiumBrowserInstance->Focus();	// make sure we are focused
+
+			pOtherAwesomiumBrowserInstance->OnMouseWheeled(delta);
+		}
+	}
+}
+
 void C_InputListenerAwesomiumBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");

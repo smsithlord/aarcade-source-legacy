@@ -22,7 +22,14 @@ CCanvasRegen::CCanvasRegen()
 
 void CCanvasRegen::Release()
 {
-	DevMsg("CanvasRegen: Release\n");
+	//DevMsg("CanvasRegen: Release\n");
+}
+
+void CCanvasRegen::NotifyInstanceAboutToDie(C_EmbeddedInstance* pInstance)
+{
+	// only need to handle the case of this being the active instance.
+	if (m_pEmbeddedInstance == pInstance)
+		m_pEmbeddedInstance = null;
 }
 
 void CCanvasRegen::SetEmbeddedInstance(C_EmbeddedInstance* pInstance)

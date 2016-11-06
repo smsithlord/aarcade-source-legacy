@@ -530,6 +530,18 @@ function getParameterByName(name, url) {
 
 			function metaSearchButtonClicked(e)
 			{
+				// just load the meta search page instead
+				/*
+				var term = item["title"];
+				var dateCull = term.indexOf(" (");
+				if( dateCull >= 0 )
+					term = term.substring(0, dateCull);
+				*/
+
+//				arcadeHud.metaSearch(id, this.field, selectedOption, term);
+				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(this.field);
+				return;
+
 				console.log("enterprisexx:");
 				console.log(e.target.tagName);
 

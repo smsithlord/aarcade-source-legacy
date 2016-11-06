@@ -3,6 +3,7 @@
 
 #include "c_webtab.h"
 #include "filesystem.h"
+#include "c_instancemanager.h"
 //#include <string>
 //#include <vector>
 
@@ -12,6 +13,8 @@ public:
 	C_MetaverseManager();
 	~C_MetaverseManager();
 	
+	void Update();
+
 	//void OnWebTabCreated(C_WebTab* pWebTab);
 	void OnMountAllWorkshopsCompleted();
 
@@ -51,8 +54,15 @@ public:
 	KeyValues* GetNextLibraryItem();
 	KeyValues* GetLibraryItem(std::string id);
 
+	KeyValues* GetFirstLibraryModel();
+	KeyValues* GetNextLibraryModel();
+	KeyValues* FindFirstLibraryModel(KeyValues* pSearchInfo);
+	KeyValues* FindNextLibraryModel();
+	KeyValues* FindLibraryModel(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
+	KeyValues* FindLibraryModel(KeyValues* pSearchInfo);
+
 	KeyValues* GetLibraryModel(std::string id);
-	KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
+	//KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
 
 	KeyValues* FindFirstLibraryItem(KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryItem();
@@ -78,16 +88,27 @@ public:
 	KeyValues* DetectFirstMap(bool& bAlreadyExists);
 	KeyValues* DetectNextMap(bool& bAlreadyExists);
 	void OnDetectAllMapsCompleted();
+	void FlagDynamicModels();
+
 	//void DetectMapClose();
 
 	// accessors
+	// FIXME: All of these spawning stuff should be in INSTANCE MANAGER not here!!
+	C_PropShortcutEntity* GetSpawningObjectEntity() { return m_pSpawningObjectEntity; }
+	object_t* GetSpawningObject() { return m_pSpawningObject; }
+
 	KeyValues* GetPreviousSearchInfo() { return m_pPreviousSearchInfo; }
+	KeyValues* GetPreviousModelSearchInfo() { return m_pPreviousModelSearchInfo; }
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 
 	// mutators
+	void SetSpawningObjectEntity(C_PropShortcutEntity* pShortcut) { m_pSpawningObjectEntity = pShortcut; }
+	void SetSpawningObject(object_t* pObject) { m_pSpawningObject = pObject; }
 	void SetPreviousLocaLocalItemLegacyWorkshopIds(std::string value) { m_previousLocaLocalItemLegacyWorkshopIds = value; }	// SHOULDN'T EVER BE USED EXCEPT FOR IN CASE OF HACKMERGENCY
 	
 private:
+	object_t* m_pSpawningObject;
+	C_PropShortcutEntity* m_pSpawningObjectEntity;
 	C_WebTab* m_pWebTab;
 	std::map<std::string, std::string> m_mapScreenshots;
 
@@ -98,9 +119,13 @@ private:
 	std::map<std::string, KeyValues*> m_types;
 	std::map<std::string, KeyValues*>::iterator m_previousGetTypeIterator;
 	std::map<std::string, KeyValues*>::iterator m_previousGetAppIterator;
+
 	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;	// are these used yet?????
 	std::map<std::string, KeyValues*>::iterator m_previousFindItemIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousGetModelIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousFindModelIterator;
 	KeyValues* m_pPreviousSearchInfo;
+	KeyValues* m_pPreviousModelSearchInfo;
 
 	FileFindHandle_t m_previousLoadLocalAppFileHandle;
 	std::string m_previousLoadLocalAppFilePath;

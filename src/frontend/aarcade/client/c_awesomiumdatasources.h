@@ -39,5 +39,13 @@ public:
 	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
 };
 
+class CacheDataSource : public DataSource
+{
+public:
+	CacheDataSource();
+	virtual ~CacheDataSource();
+	virtual void OnRequest(int request_id, const ResourceRequest& request, const WebString& path);
+};
+
 
 #endif

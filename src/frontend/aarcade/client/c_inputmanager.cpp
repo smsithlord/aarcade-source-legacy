@@ -15,6 +15,7 @@ C_InputManager::C_InputManager()
 	m_bForcedInputMode = false;
 	m_bWasForcedInputMode = false;
 	m_bFullscreenMode = false;
+	m_bOverlayMode = false;
 	m_bMainMenuMode = false;
 	//m_pInputListener = null;
 	//m_pInputCanvasTexture = null;
@@ -24,12 +25,6 @@ C_InputManager::C_InputManager()
 C_InputManager::~C_InputManager()
 {
 	DevMsg("InputManager: Destructor\n");
-}
-
-void C_InputManager::SetFullscreenMode(bool value)
-{
-	m_bFullscreenMode = value;
-//	m_pInputSlate
 }
 
 /*
@@ -49,13 +44,13 @@ void C_InputManager::ForceInputMode()
 	m_bWasForcedInputMode = true;
 }
 
-void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_EmbeddedInstance* pEmbeddedInstance)//C_InputListener* pListener)
+void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_EmbeddedInstance* pEmbeddedInstance, bool bOverlay)//C_InputListener* pListener)
 {
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
 //	/*
-	if (m_bInputMode || (!bFullscreen && !g_pAnarchyManager->GetSelectedEntity()))
+	if (m_bInputMode || (!bFullscreen && !g_pAnarchyManager->GetSelectedEntity() && !bOverlay))
 		return;
 //	*/
 
@@ -72,7 +67,8 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 	m_bFullscreenMode = (bFullscreen || !g_pAnarchyManager->GetSelectedEntity());	// !g_pAnarchyManager->GetSelectedEntity();// (bFullscreen || !g_pAnarchyManager->GetSelectedEntity());	// Only allow non-fullscreen mode if there is an entity selected
 //	*/
 
-	m_bFullscreenMode = bFullscreen;
+	//m_bFullscreenMode = bFullscreen;	// this is probably not supposed to be here.  delete it & this comment.
+	m_bOverlayMode = bOverlay;
 
 	//m_pInputListener = pListener;
 	m_pEmbeddedInstance = pEmbeddedInstance;
@@ -165,7 +161,7 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 		g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
 //		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
-	if (m_bFullscreenMode)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
+	if (m_bFullscreenMode && !m_bOverlayMode)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
 	{
 	//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
 		//if (pWebManager->GetSelectedWebTab() && !g_pAnarchyManager->GetSelectedEntity())
@@ -185,6 +181,7 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 	m_bForcedInputMode = false;
 	m_bWasForcedInputMode = false;
 	m_bFullscreenMode = false;
+	m_bOverlayMode = false;
 	m_bMainMenuMode = false;
 	//m_pEmbeddedInstance = null;
 	//ShowCursor(false);
@@ -298,6 +295,36 @@ void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool b
 	*/
 }
 
+void C_InputManager::OnMouseWheeled(int delta)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (pHudBrowserInstance->HasFocus())
+	{
+		C_InputListener* pInputListener = pHudBrowserInstance->GetInputListener();
+		pInputListener->OnMouseWheeled(delta);
+	}
+	else if (m_pEmbeddedInstance)
+	{
+		C_InputListener* pInputListener = m_pEmbeddedInstance->GetInputListener();
+		pInputListener->OnMouseWheeled(delta);
+	}
+}
+
+void C_InputManager::MouseWheelDown()
+{
+	if (!this->GetInputMode())
+		return; // DO DEFAULT MAPPED MOUSE WHEEL DOWN ACTION!!
+
+	this->OnMouseWheeled(-10);
+}
+
+void C_InputManager::MouseWheelUp()
+{
+	if (!this->GetInputMode())
+		return; // DO DEFAULT MAPPED MOUSE WHEEL DOWN ACTION!!
+
+	this->OnMouseWheeled(10);
+}
 
 void C_InputManager::KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {

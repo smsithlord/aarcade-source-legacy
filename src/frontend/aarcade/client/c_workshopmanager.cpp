@@ -79,7 +79,7 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 			{
 				//m_details[pDetails->m_nPublishedFileId] = pDetails;
 				g_pAnarchyManager->GetWorkshopManager()->AddWorkshopDetails(pDetails);
-				DevMsg("Added %s\n", pDetails->m_rgchTitle);// %llu\n", pDetails->m_nPublishedFileId);
+			//	DevMsg("Added %s\n", pDetails->m_rgchTitle);// %llu\n", pDetails->m_nPublishedFileId);
 
 				///*
 				std::string num = VarArgs("%u", i + previousNum + 1);

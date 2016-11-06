@@ -20,21 +20,80 @@
 #include "tier0/memdbgon.h"
 
 IMPLEMENT_CLIENTCLASS_DT(C_PropShortcutEntity, DT_PropShortcutEntity, CPropShortcutEntity)
-	RecvPropString(RECVINFO(m_itemId))
+	RecvPropBool(RECVINFO(m_bSlave)),
+	RecvPropString(RECVINFO(m_itemId)),
 END_RECV_TABLE()
 
 C_PropShortcutEntity::C_PropShortcutEntity()
 {
+	m_bInitialized = false;
 }
 
 C_PropShortcutEntity::~C_PropShortcutEntity()
 {
 }
 
+void C_PropShortcutEntity::Initialize()
+{
+	Vector absOrigin = this->GetAbsOrigin();
+	object_t* pSpawningObject = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject();
+	if (pSpawningObject)
+		DevMsg("Abs origin (dist %f) is: %f %f %f vs %f %f %f\n", pSpawningObject->origin.DistTo(absOrigin), absOrigin.x, absOrigin.y, absOrigin.z, absOrigin.x, absOrigin.y, absOrigin.z);
+
+	if (pSpawningObject->origin.DistTo(absOrigin) < 1.0)// GEEZ! not even position is set yet.  defer //&& !Q_strcmp(pSpawningObject->itemId.c_str(), m_itemId) )	// FIXME: accounts for rounding errors, but can produce false-positives!! // FIXME2: m_itemId isn't set until the 1st data update, der.  so this check is probably very unqualified.  too many false positive posibilities.
+	{
+		// THIS IS THE OBJECT THE CURRENT USER IS SPAWNING!!
+		//Precache();
+		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		SetSolid(SOLID_NONE);
+		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		//SetRenderMode(kRenderTransTexture);
+		SetRenderMode(kRenderTransColor);
+		SetRenderColorA(160);
+		g_pAnarchyManager->ActivateObjectPlacementMode(this);
+	}
+	else
+	{
+		// This is a regular object that already existed or somebody else spawned
+		//Precache();
+		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		//SetSolid(SOLID_NONE);
+		SetSolid(SOLID_VPHYSICS);
+		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		SetMoveType(MOVETYPE_VPHYSICS);
+
+		SetRenderColorA(255);
+		SetRenderMode(kRenderNormal);
+
+		if (CreateVPhysics())
+		{
+			IPhysicsObject *pPhysics = this->VPhysicsGetObject();
+			if (pPhysics)
+			{
+				pPhysics->EnableMotion(false);
+			}
+		}
+	}
+
+	m_bInitialized = true;
+}
+
 void C_PropShortcutEntity::OnPreDataChanged(DataUpdateType_t updateType)
 {
-	//DevMsg("PreDataChangedUpdate: ")
 	BaseClass::OnPreDataChanged(updateType);
+}
+
+void C_PropShortcutEntity::OnDataChanged(DataUpdateType_t updateType)
+{
+	//DevMsg("PreDataChangedUpdate: ")//DATA_UPDATE_DATATABLE_CHANGED
+	if (!m_bInitialized )
+		this->Initialize();
+	else
+	{
+		// do nada
+	}
+
+	BaseClass::OnDataChanged(updateType);
 }
 
 void C_PropShortcutEntity::Release()
@@ -50,27 +109,45 @@ void C_PropShortcutEntity::Precache(void)
 
 void C_PropShortcutEntity::Spawn()
 {
-	DevMsg("SPAWNING!!\n");
-
+	m_bInitialized = false;
 	Precache();
-	SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
-	//SetSolid(SOLID_NONE);
-	SetSolid(SOLID_VPHYSICS);
-	SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
-	SetMoveType(MOVETYPE_VPHYSICS);
 
-	//	SetRenderMode(kRenderNormal);
-
-	//SetUse(&CPropHotlinkEntity::UseFunc);
-
-	if (CreateVPhysics())
+	//	DevMsg("SPAWNING!!\n");
+	/*
+	object_t* pSpawningObject = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject();
+	if (false && pSpawningObject->origin.DistTo(this->GetAbsOrigin()) < 1.0 )// GEEZ! not even position is set yet.  defer //&& !Q_strcmp(pSpawningObject->itemId.c_str(), m_itemId) )	// FIXME: accounts for rounding errors, but can produce false-positives!! // FIXME2: m_itemId isn't set until the 1st data update, der.  so this check is probably very unqualified.  too many false positive posibilities.
 	{
-		IPhysicsObject *pPhysics = this->VPhysicsGetObject();
-		if (pPhysics)
+		// THIS IS THE OBJECT THE CURRENT USER IS SPAWNING!!
+		Precache();
+		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		SetSolid(SOLID_NONE);
+		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		SetRenderMode(kRenderTransTexture);
+		g_pAnarchyManager->ActivateObjectPlacementMode(this);
+		BaseClass::Spawn();
+	}
+	else
+	{
+		// This is a regular object that already existed or somebody else spawned
+		Precache();
+		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		//SetSolid(SOLID_NONE);
+		SetSolid(SOLID_VPHYSICS);
+		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		SetMoveType(MOVETYPE_VPHYSICS);
+
+		if (CreateVPhysics())
 		{
-			pPhysics->EnableMotion(false);
+			IPhysicsObject *pPhysics = this->VPhysicsGetObject();
+			if (pPhysics)
+			{
+				pPhysics->EnableMotion(false);
+			}
 		}
 	}
+	*/
+	//	SetRenderMode(kRenderNormal);
+	//SetUse(&CPropHotlinkEntity::UseFunc);
 
 	BaseClass::Spawn();
 }
@@ -78,6 +155,12 @@ void C_PropShortcutEntity::Spawn()
 std::string C_PropShortcutEntity::GetItemId()
 {
 	return std::string(m_itemId);
+}
+
+bool C_PropShortcutEntity::GetSlave()
+{
+	//DevMsg("Returning %i\n", m_bSlave);
+	return m_bSlave;
 }
 
 void C_PropShortcutEntity::GetEmbeddedInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)

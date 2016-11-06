@@ -13,18 +13,21 @@ public:
 	~C_LibretroManager();
 
 	void Update();
+	void CloseAllInstances();
 
 	C_LibretroInstance* CreateLibretroInstance();
 	void DestroyLibretroInstance(C_LibretroInstance* pInstance);
 
 	bool FocusLibretroInstance(C_LibretroInstance* pLibretroInstance);
 	bool SelectLibretroInstance(C_LibretroInstance* pLibretroInstance);
-	void OnLibretroInstanceCreated(C_LibretroInstance* pLibretroInstance);
+	void OnLibretroInstanceCreated(LibretroInstanceInfo_t* pInfo);//C_LibretroInstance* pLibretroInstance);
 	C_LibretroInstance* FindLibretroInstance(CSysModule* pModule);
 	C_LibretroInstance* FindLibretroInstance(uint uId);
 	C_LibretroInstance* FindLibretroInstance(std::string id);
 
 	void RunEmbeddedLibretro(std::string file);
+
+	unsigned int GetInstanceCount();
 
 	// accessors
 	C_LibretroInstance* GetFocusedLibretroInstance() { return m_pFocusedLibretroInstance; }

@@ -1,0 +1,548 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="hud.css"></link>
+		<script src="hud.js"></script>
+
+		<style>
+			.hudSideContainer
+			{
+				position: fixed;
+				left: 0;
+				top: 50%;
+				-webkit-transform: translate(0, -50%);
+			}
+
+			.hudSideContainerRow
+			{
+				display: block;
+			}
+
+			.hudSideContainerButton
+			{
+				font-size: 40px;
+				background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+				border-radius: 0 10px 10px 0;
+				border: 2px solid #000;
+				border-left: 0;
+				padding-right: 5px;
+				padding-left: 5px;
+				font-family: Arial;
+				font-weight: 900;
+				display: inline-block;
+				height: 50px;
+				/*width: 40px;*/
+				text-align: center;
+				white-space: nowrap;
+				width: 40px;
+				overflow: hidden;
+				cursor: pointer;
+				-webkit-transition: width 0.3s;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: none;
+				width: 1px;
+			}
+
+			.hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: none;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton
+			{
+				pointer-events: all;
+				width: 40px;
+			}
+
+			.activeHudRow .hudSideContainerButton ~ .hudSideContainerButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton:hover ~ .hudSideContainerButton
+			{
+				width: 40px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton ~ .hudSideContainerButton:hover
+			{
+				width: 200px;
+				pointer-events: all;
+			}
+
+			.hudSideContainerButton:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+				width: 200px;
+			}
+
+			.hudSideContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+/*
+			.hudSideContainerRow .hudSideContainerButton img
+			{
+				display: inline;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton img
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow .hudSideContainerButton .buttonText
+			{
+				display: none;
+			}
+
+			.hudSideContainerRow:hover .hudSideContainerButton .buttonText
+			{
+				display: inline;
+			}
+
+			.hudSideContainerButton:hover .buttonText
+			{
+				display: inline;
+			}
+			*/
+/*
+			.hudSideContainerButton + #metaSearchButton table
+			{
+				display: none;
+			}
+
+			.hudSideContainerButton:hover + #metaSearchButton table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton + #metaSearchButton:hover table
+			{
+				display: table;
+			}
+
+			.hudSideContainerButton buttonText
+			{
+				display: inline-block;
+			}
+*/
+			#hudSideScrapeContainer
+			{
+				display: none;
+				position: fixed;
+				bottom: 15%;
+				left: 0;
+				color: #fff;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				font-family: Arial;
+				text-align: center;
+
+				/*
+				border: 3px solid rgba(0, 0, 0, 1.0);
+				border-top-left-radius: 10px;
+				border-top-right-radius: 10px;
+				background-color: rgba(50, 50, 50, 0.95);
+				padding-bottom: 30px;
+				padding: 6px;
+				border: 20px solid pink;
+				*/
+			}
+
+			.hudSideScrapeContainerButton
+			{
+				display: table-cell;
+				pointer-events: auto;
+				vertical-align: middle;
+				font-size: 20px;
+				white-space: nowrap;
+				/*background-color: rgba(150, 150, 150, 0.5);*/
+				background-color: rgba(0, 0, 255, 0.9);
+				border-radius: 0 10px 10px 0 !important;
+				border: 2px solid #000;
+				border-left: 0;
+				text-align: center;
+				padding-left: 15px;
+				padding-right: 15px;
+				padding-top: 2px;
+				padding-bottom: 4px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				-webkit-box-shadow: 3px 5px 8px #000;
+			}
+
+			.hudSideScrapeContainerButton .buttonText
+			{
+				display: none;
+				white-space: nowrap;
+				font-size: 26px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
+	</head>
+	<body style="background-color: transparent;">
+		<style>
+			#modelContainer::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#modelContainer::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
+				border-radius: 10px;
+				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
+			}
+
+			#modelContainer::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			#modelContainer::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.namePlate
+			{
+				color: rgba(255, 255, 255, 0.5);
+				display: inline-block;
+				padding: 8px;
+				background-color: rgba(0, 0, 0, 0.99);
+				border-top-left-radius: 10px;
+				border-bottom-left-radius: 10px;
+				border: 2px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
+				border-right: 1px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
+				margin-bottom: 4px;
+				margin-top: 4px;
+				border-left: 20px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
+				letter-spacing: 0.1em;
+				font-style: italic;
+				opacity: 0.8;
+				-webkit-transition: border 0.5s ease-in-out, border-right 0.5s ease-in-out;
+			}
+
+			.selectedNamePlate
+			{
+				color: #fff;
+				-webkit-transition-delay: 0s, 0.5s;
+				opacity: 1.0;
+				border: 2px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
+				border-left: 40px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
+				border-right: 80px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
+			}
+
+			#title
+			{
+				line-height: 74px;
+				font-family: Arial;
+				font-size: 50px;
+				padding-right: 10px;
+				font-weight: 900;
+				-webkit-text-stroke: 2px black;
+				text-shadow:
+       3px 3px 0 #000,
+     -1px -1px 0 #000,  
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+       1px 1px 0 #000;
+/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#000000+0,000000+100&0+0,0.5+25,0.9+75 */
+background: -moz-linear-gradient(left,  rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.9) 75%, rgba(0,0,0,0.9) 100%); /* FF3.6-15 */
+background: -webkit-linear-gradient(left,  rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 25%,rgba(0,0,0,0.9) 75%,rgba(0,0,0,0.9) 100%); /* Chrome10-25,Safari5.1-6 */
+background: linear-gradient(to right,  rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 25%,rgba(0,0,0,0.9) 75%,rgba(0,0,0,0.9) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#e6000000',GradientType=1 ); /* IE6-9 */
+
+			}
+
+			#titleRule
+			{
+				position: fixed;
+				top: 74px;
+				right: 0;
+				height: 4px;
+				width: 50%;
+				/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#fa3232+0,fa3232+100&0+0,0.5+25,0.9+75 */
+background: -moz-linear-gradient(left,  rgba(250,50,50,0) 0%, rgba(250,50,50,0.5) 25%, rgba(250,50,50,0.9) 75%, rgba(250,50,50,0.9) 100%); /* FF3.6-15 */
+background: -webkit-linear-gradient(left,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%); /* Chrome10-25,Safari5.1-6 */
+background: linear-gradient(to right,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', endColorstr='#e6fa3232',GradientType=1 ); /* IE6-9 */
+
+			}
+		</style>
+		<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;">CABINETS</div>
+		<div id="titleRule"></div>
+		<div id="modelContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+
+		<script>
+			document.addEventListener("keypress", function(e)
+			{
+				console.log(e);
+			});
+			/*
+			namePlateElem.style.opacity = "1.0";
+					namePlateElem.style.border = "2px solid rgb(255, 255, 255)";
+					namePlateElem.style.borderLeft = "20px solid rgb(255, 255, 255)";
+					namePlateElem.style.borderRight = "80px solid rgb(255, 255, 255)";
+			*/
+
+			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+
+			var modelContainerElem = document.querySelector("#modelContainer");
+			function selectNone()
+			{
+				// deselect everything
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+				{
+					selected.className = "namePlate";
+					return selected;
+				}
+
+				return;
+			}
+
+			function selectNext()
+			{
+				var next;
+				var old = selectNone();
+				if( !!old )
+				{
+					if( !!old.parentNode.timerHandle )
+						clearTimeout(old.parentNode.timerHandle);
+
+					next = old.parentNode.nextSibling;
+				}
+
+				if( !!!next )
+				{
+					next = modelContainerElem.firstChild;//childNodes[0];
+					modelContainerElem.scrollTop = 0;
+				}
+
+				if( !!next )
+				{
+					next.querySelector(".namePlate").className += " selectedNamePlate";
+					if( (old && next === old.parentNode.nextSibling) || !!!old )
+						updateScroll();
+
+					// load this model in 1 second, after its animation is finished.
+					// (this allows you to skip past models you don't want to load)
+					next.timerHandle = setTimeout(function()
+					{
+						aaapi.system.cabinetSelected(this.model.info.id);
+					}.bind(next), 1000);
+				}
+			}
+
+			function selectPrev()
+			{
+				var prev;
+				var old = selectNone();
+				if( !!old )
+				{
+					if( !!old.parentNode.timerHandle )
+						clearTimeout(old.parentNode.timerHandle);
+
+					prev = old.parentNode.previousSibling;
+				}
+
+				if( !!!prev )
+				{
+					prev = modelContainerElem.lastChild;
+					modelContainerElem.scrollTop = modelContainerElem.scrollHeight;
+				}
+
+				if( !!prev )
+				{
+					prev.querySelector(".namePlate").className += " selectedNamePlate";
+
+					if( (old && prev === old.parentNode.previousSibling) || !!!old )
+						updateScroll();
+
+					// load this model in 1 second, after its animation is finished.
+					// (this allows you to skip past models you don't want to load)
+					prev.timerHandle = setTimeout(function()
+					{
+						aaapi.system.cabinetSelected(this.model.info.id);
+					}.bind(prev), 1000);
+				}
+			}
+
+			function updateScroll()
+			{
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+				{
+					var offset = selected.parentNode.offsetTop - modelContainerElem.scrollTop;
+					var elemOffset = selected.parentNode.offsetHeight;
+					var containerHeight = modelContainerElem.offsetHeight;	//window.innerHeight
+					if(offset > (containerHeight / 3.0) * 2.0)
+					{
+						if( modelContainerElem.scrollTop + elemOffset <= modelContainerElem.scrollHeight )
+							modelContainerElem.scrollTop += elemOffset;
+						else
+							modelContainerElem.scrollTop = modelContainerElem.scrollHeight;
+					}
+					else if(offset < (containerHeight / 3.0) * 1.0)
+					{
+						if( modelContainerElem.scrollTop - elemOffset >= 0 )
+							modelContainerElem.scrollTop -= elemOffset;
+						else
+							modelContainerElem.scrollTop = 0;
+					}
+				}
+			}
+
+			//modelContainerElem.addEventListener("mousewheel", function(e)
+			document.addEventListener("mousewheel", function(e)
+			{
+				var direction = (e.wheelDelta > 0) ? -1 : 1;
+				if( direction > 0 )
+					selectNext();
+				else
+					selectPrev();
+
+				//modelContainerElem.scrollTop += 100 * direction;
+
+				e.preventDefault();
+				return false;
+			}, false);
+
+
+			var model = aaapi.library.findFirstLibraryModel("", 1);
+			var modelElem;
+			var prettyName;
+
+			var models = [];
+
+			while( model )
+			{
+				models.push(model);
+				model = aaapi.library.findNextLibraryModel();
+			}
+
+			models.sort(function(a, b)
+			{
+				var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+				var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+
+				if( letterA < letterB )
+					return -1;
+				else if( letterA > letterB )
+					return 1;
+				else
+					return 0;
+			});
+
+			var i;
+			var max = models.length;
+			for( i = 0; i < max; i++ )
+			{
+				model = models[i];
+				modelElem = document.createElement("div");
+				modelElem.model = model;
+
+				prettyName = model.platforms[sourcePlatformId].file;
+				prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+				prettyName = prettyName.substring(0, prettyName.length - 4);
+				prettyName = prettyName.replace(/_/g, " ");
+				prettyName = prettyName.toUpperCase();
+
+				namePlateElem = document.createElement("div");
+				namePlateElem.className = "namePlate";
+				namePlateElem.innerHTML = prettyName;
+
+				modelElem.appendChild(namePlateElem);
+
+				modelContainerElem.appendChild(modelElem);
+
+				//console.log(JSON.stringify(model));
+				//model = aaapi.library.findNextLibraryModel();
+			}
+
+			function randoSelect()
+			{
+				return;
+				// deselect everything
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+					selected.className = "namePlate";
+
+				// select a rando one
+				var potentials = document.querySelectorAll(".namePlate");
+				console.log(potentials.length);
+				var randoIndex = Math.floor(Math.random() * 10) + 0;
+				potentials[randoIndex].className += " selectedNamePlate";
+			}
+
+			setInterval(function()
+			{
+				randoSelect();
+			}, 2000);
+		</script>
+		<!--
+		<select id="modelContainer" size=20 style="font-size: 20px; font-weight: 900; position: fixed; top: 0; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; background-color: transparent;"></select>
+		<script>
+			//var model = aaapi.library.getFirstLibraryModel();
+			//console.log(JSON.stringify(model));
+
+			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+
+			var modelContainerElem = document.querySelector("#modelContainer");
+			var model = aaapi.library.findFirstLibraryModel("", 1);
+			var modelElem;
+			var prettyName;
+			while( model )
+			{
+				modelElem = document.createElement("option");
+				modelElem.value = model.info.id;
+
+				prettyName = model.platforms[sourcePlatformId].file;
+				prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+				prettyName = prettyName.substring(0, prettyName.length - 4);
+				prettyName = prettyName.replace(/_/g, " ");
+				prettyName = prettyName.toUpperCase();
+
+				modelElem.text = prettyName;
+				modelContainerElem.appendChild(modelElem);
+
+				console.log(JSON.stringify(model));
+				model = aaapi.library.findNextLibraryModel();
+			}
+		</script>
+		-->
+	</body>
+</html>

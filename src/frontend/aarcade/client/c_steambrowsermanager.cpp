@@ -24,36 +24,9 @@ C_SteamBrowserManager::C_SteamBrowserManager()
 C_SteamBrowserManager::~C_SteamBrowserManager()
 {
 	DevMsg("SteamBrowserManager: Destructor\n");
+	this->CloseAllInstances();
 
-	// iterate over all web tabs and call their destructors
-	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
-	{
-		C_SteamBrowserInstance* pSteamBrowserInstance = it->second;
-
-		if (pSteamBrowserInstance == m_pSelectedSteamBrowserInstance)
-		{
-			this->SelectSteamBrowserInstance(null);
-			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-		}
-
-//		if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pSteamBrowserInstance->GetTexture())
-		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pSteamBrowserInstance)
-		{
-			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
-			//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
-			//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
-		}
-
-//		auto foundSteamBrowserInstance = m_steamBrowserInstances.find(pSteamBrowserInstance->GetId());
-//		if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
-//			m_steamBrowserInstances.erase(foundSteamBrowserInstance);
-
-		pSteamBrowserInstance->SelfDestruct();
-	}
-
-	m_steamBrowserInstances.clear();
-
-	if ( m_pInputListener )
+	if (m_pInputListener)
 		delete m_pInputListener;
 }
 
@@ -87,6 +60,45 @@ void C_SteamBrowserManager::Update()
 			pSteamBrowserInstance->Update();
 	}
 	*/
+}
+
+void C_SteamBrowserManager::CloseAllInstances()
+{
+	// iterate over all web tabs and call their destructors
+	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = it->second;
+
+		if (pSteamBrowserInstance->GetId() == "hud" || pSteamBrowserInstance->GetId()== "images")
+		{
+			DevMsg("ERROR: Steam Browser instance detected that is NOT of type Awesomium Browser!!\n");
+			continue;
+		}
+
+		DevMsg("Removing 1 Steam instance...\n");
+
+		if (pSteamBrowserInstance == m_pSelectedSteamBrowserInstance)
+		{
+			this->SelectSteamBrowserInstance(null);
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		}
+
+		//		if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pSteamBrowserInstance->GetTexture())
+		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pSteamBrowserInstance)
+		{
+			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+			//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
+			//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
+		}
+
+		//		auto foundSteamBrowserInstance = m_steamBrowserInstances.find(pSteamBrowserInstance->GetId());
+		//		if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+		//			m_steamBrowserInstances.erase(foundSteamBrowserInstance);
+
+		pSteamBrowserInstance->SelfDestruct();
+	}
+
+	m_steamBrowserInstances.clear();
 }
 
 C_SteamBrowserInstance* C_SteamBrowserManager::CreateSteamBrowserInstance()

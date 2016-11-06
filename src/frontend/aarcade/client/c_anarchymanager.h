@@ -75,6 +75,8 @@ public:
 	void Pause();
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
+
+	void ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands);
 	
 	//void Run();
 	void RunAArcade();	// initializes AArcade's loading of libraries and stuff.
@@ -100,10 +102,14 @@ public:
 
 	void ScanForLegacySaveRecursive(std::string path);
 
+	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut);
+	void DeactivateObjectPlacementMode();
+
 	// helpers
 	std::string GenerateUniqueId();
 	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);
 	const char* GenerateLegacyHash(const char* text);
+	const char* GenerateCRC32Hash(const char* text);
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 	std::string C_AnarchyManager::encodeURIComponent(const std::string &s);
 
@@ -112,6 +118,7 @@ public:
 	void TestSQLite();
 
 	// accessors
+	bool GetSuspendEmbedded() { return m_bSuspendEmbedded; }
 	bool IsInitialized() { return m_bInitialized; }
 	aaState GetState() { return m_state; }
 	std::string GetInstanceId() { return m_instanceId; }
@@ -140,6 +147,7 @@ private:
 	//ThreadedFileBrowseParams_t* m_pFileParams;
 	//ThreadedFolderBrowseParams_t* m_pFolderParams;
 
+	bool m_bSuspendEmbedded;
 	bool m_bInitialized;
 	bool m_bIncrementState;
 	aaState m_state;

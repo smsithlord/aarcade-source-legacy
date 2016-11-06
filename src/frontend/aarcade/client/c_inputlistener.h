@@ -17,6 +17,7 @@ public:
 	virtual void OnMouseReleased(vgui::MouseCode code) {};
 	virtual void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState) {};
 	virtual void OnKeyCodeReleased(vgui::KeyCode code) {};
+	virtual void OnMouseWheeled(int delta) {};
 
 	// accessors
 	// mutators

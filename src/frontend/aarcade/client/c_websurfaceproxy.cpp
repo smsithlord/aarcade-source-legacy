@@ -17,7 +17,7 @@ CCanvasRegen* CWebSurfaceProxy::s_pCanvasRegen = null;
 
 void CWebSurfaceProxy::OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
 {
-	DevMsg("WebSurfaceProxy: OnSimpleImageRendered %s %s %s\n", channel.c_str(), itemId.c_str(), field.c_str());
+//	DevMsg("WebSurfaceProxy: OnSimpleImageRendered %s %s %s\n", channel.c_str(), itemId.c_str(), field.c_str());
 	s_simpleImages[channel][itemId] = pTexture;
 
 	if (field != "" && field != channel && field != "file")	// FIXME: more intellegent look-ahead before requesting images be rendered would speed stuff up a lot.
@@ -28,7 +28,7 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 {
 	DevMsg("WebSurfaceProxy: Constructor\n");
 	m_iState = 0;
-	m_id = "";
+	//m_id = "";
 	m_pCurrentEmbeddedInstance = null;
 	m_pMaterial = null;
 	m_pCurrentTexture = null;
@@ -116,7 +116,7 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 			if (pTexture)
 			{
 				usedTextures[pTexture] = true;
-				pTexture->DecrementReferenceCount();
+			//	pTexture->DecrementReferenceCount();	// FIXME: Disabled on 10/21/2016 for testing
 			}
 
 			/*
@@ -161,6 +161,7 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 		pTexture = usedIt->first;
 		if (pTexture)
 		{
+			pTexture->DecrementReferenceCount();	// FIXME: Disabled on 10/21/2016 for testing
 			pTexture->SetTextureRegenerator(null);
 			pTexture->DeleteIfUnreferenced();
 		}
@@ -182,6 +183,12 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 void CWebSurfaceProxy::StaticLevelShutdownPreEntity()
 {
 	// THIS SHOULD ONLY BE CALLED ONCE!!!!
+	//ReleaseSimpleImages(s_simpleImages);
+}
+
+void CWebSurfaceProxy::StaticLevelShutdownPostEntity()
+{
+	// THIS SHOULD ONLY BE CALLED ONCE!!!!
 	ReleaseSimpleImages(s_simpleImages);
 }
 
@@ -191,16 +198,22 @@ void CWebSurfaceProxy::LevelShutdownPreEntity()
 
 void CWebSurfaceProxy::ReleaseCurrent()
 {
-	if (m_pCurrentTexture && m_pCurrentTexture != m_pOriginalTexture)
+	if (m_pMaterialTextureVar && m_pCurrentTexture && m_pCurrentTexture != m_pOriginalTexture)
 		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 }
 
-void CWebSurfaceProxy::Release()
+void CWebSurfaceProxy::ReleaseStuff()
 {
-	DevMsg("WebSurfaceProxy: Release\n");
+	DevMsg("WebSurfaceProxy: Release Stuff\n");
+	if (m_pMaterialTextureVar && m_pOriginalTexture && m_pCurrentTexture && m_pOriginalTexture != m_pCurrentTexture)
+	{
+		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+	}
+
+	//if ( m_pOriginalTexture )
 
 	m_iState = 0;
-	m_id = "";
+	//m_id = "";
 	m_pCurrentEmbeddedInstance = null;
 	m_pMaterial = null;
 	m_pCurrentTexture = null;
@@ -212,6 +225,34 @@ void CWebSurfaceProxy::Release()
 	m_iOriginalAutoCreate = 1;
 	m_originalUrl = "";
 	m_originalSimpleImageChannel = "";
+}
+
+void CWebSurfaceProxy::Release()
+{
+	DevMsg("WebSurfaceProxy: Release\n");	// FIXME: This is causing some fucked up issues.  wtf is going on bra, fix it.
+//	if (g_pAnarchyManager->GetSuspendEmbedded())	// hmmm, does this ever get triggered when embeds ARE NOT suspended?
+//		return;	// FIXME: disabled for resting on 10/4/2016 and again on 10/21/2016
+//	else
+//		DevMsg("Embededs ARE NOT suspended %s\n", this->m_originalId.c_str());	// well that'll answer that.
+
+	/*
+	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture() && m_pOriginalTexture && m_pCurrentTexture && m_pOriginalTexture != m_pCurrentTexture)
+		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+
+	m_iState = 0;
+	//m_id = "";
+	m_pCurrentEmbeddedInstance = null;
+	m_pMaterial = null;
+	m_pCurrentTexture = null;
+	m_pOriginalTexture = null;
+	m_pMaterialTextureVar = null;
+	m_pMaterialDetailBlendFactorVar = null;
+	m_pEmbeddedInstance = null;
+	m_originalId = "";
+	m_iOriginalAutoCreate = 1;
+	m_originalUrl = "";
+	m_originalSimpleImageChannel = "";
+	*/
 
 	/*
 	// Iterate through all our SimpleImages
@@ -234,6 +275,9 @@ void CWebSurfaceProxy::Release()
 
 	// release the simple images
 	//ReleaseSimpleImages(s_simpleImages);
+
+	//if (g_pAnarchyManager->GetSuspendEmbedded())
+	//	s_simpleImages.clear();
 }
 
 //ITexture* CWebSurfaceProxy::CreateTexture(C_BaseEntity* pEntity = null)
@@ -282,7 +326,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 				// does a web tab for this id already exist?
 				//C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->FindWebTab(m_originalId);
 				//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
-				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(m_originalId);
+				C_EmbeddedInstance* pEmbeddedInstance = (m_originalId == "images") ? g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("images") : g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(m_originalId);
 				if (pEmbeddedInstance)
 				{
 					m_pEmbeddedInstance = pEmbeddedInstance;
@@ -295,7 +339,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			if (!m_pEmbeddedInstance)
 			{
 				// check if we should create a web tab
-				if (m_iOriginalAutoCreate == 1 && m_iState == 0)
+				if (m_iOriginalAutoCreate == 1 && m_iState == 0 )
 				{
 					// create a web tab
 					//m_pEmbeddedInstance = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
@@ -346,90 +390,86 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		}
 		else
 		{
-		//	if (m_pMaterialDetailBlendFactorVar && pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity )
 			if (m_pMaterialDetailBlendFactorVar && ((pC_BaseEntity && g_pAnarchyManager->GetSelectedEntity() != pC_BaseEntity) || !pSelectedEmebeddedInstance || !g_pAnarchyManager->GetInputManager()->GetInputMode()))
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 			else if (m_pMaterialDetailBlendFactorVar)
 				m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
-			/*
-			C_BaseEntity* pSelectedEntity = g_pAnarchyManager->GetSelectedEntity();
-			if (pSelectedEntity && pSelectedEntity == pC_BaseEntity && m_originalSimpleImageChannel == "screen" && pSelectedEmebeddedInstance)
+
+			bool bSwappedEmbeddedInstanceIn = false;
+			// if a texture exists for this shortcut's item's id for this channel, then we're done already.
+			// otherwise, we have to request the web tab to render us, which will be ignored 90% of the time, but thats OK.
+			bool bTextureExists = false;
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pC_BaseEntity);
+			if (pShortcut)
 			{
-				ITexture* pTexture = pSelectedEmebeddedInstance->GetTexture();
-				if (pTexture)
-					m_pMaterialTextureVar->SetTextureValue(pTexture);	// no need to increment reference, because the selected web tab is always priority
-				else
+				std::string itemId = pShortcut->GetItemId();
+				if (true)//itemId != "")
 				{
-					DevMsg("ERROR: Web tab has no texture!\n");
-					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
-				}
-			}else*/
-			if(true)
-			{
-				bool bSwappedEmbeddedInstanceIn = false;
-				// if a texture exists for this shortcut's item's id for this channel, then we're done already.
-				// otherwise, we have to request the web tab to render us, which will be ignored 90% of the time, but thats OK.
-				bool bTextureExists = false;
-				C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pC_BaseEntity);
-				if (pShortcut)
-				{
-					std::string itemId = pShortcut->GetItemId();
-					if (itemId != "")
+					// we're swapping in the web browser tab even if no simple image is anywhere.
+					if (m_originalSimpleImageChannel == "screen" || itemId == "" )
 					{
-						// we're swapping in the web browser tab even if no simple image is anywhere.
-						if (m_originalSimpleImageChannel == "screen")
+						C_EmbeddedInstance* testerInstance = null;	// if initialized to null, this might work still!!!
+						std::string tabTitle;
+
+						if (itemId != "")
+							testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
+
+						tabTitle = (g_pAnarchyManager->GetSelectedEntity()) ? "auto" + static_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity())->GetItemId() : "";
+
+						C_EmbeddedInstance* selectedInstance = (g_pAnarchyManager->GetSelectedEntity()) ? g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(tabTitle) : null;
+
+						// FIXME: This should be a required method of all embedded instances!!
+					//	bool bInstanceTextureReady = true;
+						//C_LibretroInstance* pLibretroInstance = (selectedInstance) ? dynamic_cast<C_LibretroInstance*>(selectedInstance) : null;
+					//	if (pLibretroInstance)
+						//	bInstanceTextureReady = (pLibretroInstance->GetInfo()->state == 5);
+
+							if (g_pAnarchyManager->GetSelectedEntity() && !testerInstance && selectedInstance && (pShortcut->GetSlave() || itemId == ""))//g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
 						{
-							C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
-							if (m_pMaterialTextureVar && testerInstance && testerInstance->GetTexture())
-							{
-								m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
-								testerInstance->Update();
-								bSwappedEmbeddedInstanceIn = true;
-							}
+							//	DevMsg("Swapped slave in!\n");
+							testerInstance = selectedInstance;
+
+							if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetInputManager()->GetInputMode() || m_originalSimpleImageChannel != "screen"))
+								m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
+							else if (m_pMaterialDetailBlendFactorVar)
+								m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
 						}
 
+						if (m_pMaterialTextureVar && testerInstance && testerInstance->GetTexture())
+						{
+							m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
+							testerInstance->Update();
+							bSwappedEmbeddedInstanceIn = true;
+						}
+					}
+
+					if ( itemId != "")
+					{
 						// we still need to find the texture so we can process the image loading still.
-						//std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalId);
 						std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalSimpleImageChannel);
 						if (it != s_simpleImages.end())
 						{
 							std::map<std::string, ITexture*>::iterator it2 = it->second.find(itemId);
-							if (it2 != it->second.end() )
+							if (it2 != it->second.end())
 							{
 								if (!bSwappedEmbeddedInstanceIn && m_pMaterialTextureVar)
 								{
 									// we have found our texture.  swap it in and we're done.
-									if (it2->second)	// only use it if it's non-null
+									if (it2->second)
 									{
-										/*
-										if (m_originalSimpleImageChannel == "screen")
-										{
-											C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
-											if (testerInstance && testerInstance->GetTexture())
-											{
-												m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
-												testerInstance->Update();
-											}
-											else
-												m_pMaterialTextureVar->SetTextureValue(it2->second);
-										}
-										else*/
-											m_pMaterialTextureVar->SetTextureValue(it2->second);
+										m_pMaterialTextureVar->SetTextureValue(it2->second);
 									}
 									else
 										m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 								}
 
-								//if( it2->second )
-									bTextureExists = true;
+								bTextureExists = true;
 							}
 						}
 
 						if (!bTextureExists)
 						{
 							C_AwesomiumBrowserInstance* pImagesBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("images");
-							//if (m_pEmbeddedInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
-							//if (pAwesomiumBrowserInstance && pAwesomiumBrowserInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
 							if (pImagesBrowserInstance && pImagesBrowserInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
 							{
 								// If the request was accepted, then we need to get rdy to get the result.
@@ -438,10 +478,10 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 						}
 					}
 				}
-
-				if (!bTextureExists && !bSwappedEmbeddedInstanceIn)
-					m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);	// Note that there is 1 case where bTextureExists can be true but the original texture still gets swapped in.
 			}
+
+			if (!bTextureExists && !bSwappedEmbeddedInstanceIn)
+				m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);	// Note that there is 1 case where bTextureExists can be true but the original texture still gets swapped in.
 		}
 	}
 
@@ -490,8 +530,11 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 
 void CWebSurfaceProxy::UnreferenceTexture(ITexture* pTexture)
 {
-	if (m_pMaterialTextureVar && m_pMaterialTextureVar->GetTextureValue() == pTexture)
-		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture())
+	{
+		if( m_pMaterialTextureVar->GetTextureValue() == pTexture )
+			m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+	}
 }
 
 void CWebSurfaceProxy::RefreshItemTextures(std::string itemId, std::string channel)

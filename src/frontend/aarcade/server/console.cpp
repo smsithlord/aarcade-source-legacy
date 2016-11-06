@@ -97,6 +97,7 @@ void SpawnShortcut(const CCommand &args)
 	pShortcut->KeyValue("MaxAnimTime", "10");
 	pShortcut->KeyValue("spawnflags", "8");
 	pShortcut->KeyValue("itemId", args[1]);
+	pShortcut->KeyValue("slave", args[10]);
 
 	pShortcut->Precache();
 	DispatchSpawn(pShortcut);
@@ -319,4 +320,278 @@ void Create_Hotlink(const CCommand &args)
 }
 
 ConCommand prop_hotlink_create("prop_hotlink_create", Create_Hotlink, "Create a dynamic item under your crosshairs.");
+*/
+
+void SetCabPos(const CCommand &args)
+{
+	int TheEntity = Q_atoi(args.Arg(1));
+
+	edict_t *pEdict = INDEXENT(TheEntity);
+	if (pEdict && !pEdict->IsFree())
+	{
+		CBaseEntity* pEntity = GetContainingEntity(pEdict);
+		//CPropHotlinkEntity* pEntity = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
+		Vector origin = Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)));
+		QAngle angles = QAngle(Q_atof(args.Arg(5)), Q_atof(args.Arg(6)), Q_atof(args.Arg(7)));
+
+		UTIL_SetOrigin(pEntity, origin, true);
+		pEntity->SetAbsAngles(angles);
+
+		Vector vel = Vector(0, 0, 0);
+		pEntity->Teleport(&origin, &angles, &vel);
+	}
+}
+
+ConCommand setcabpos("setcabpos", SetCabPos, "For internal use only.");
+
+void SwitchModel(const CCommand &args)
+{
+	const char *TheModel = args[1];
+	int TheEntity = Q_atoi(args.Arg(2));
+
+	edict_t *pHotlinkEdict = INDEXENT(TheEntity);
+	if (pHotlinkEdict && !pHotlinkEdict->IsFree())
+	{
+		//CPropHotlinkEntity* pHotlink = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
+		CBaseEntity* pHotlink = GetContainingEntity(pHotlinkEdict);
+
+		//CDynamicProp* pEntity = dynamic_cast<CDynamicProp*>(pHotlink);
+
+		if (!engine->IsModelPrecached(TheModel))
+		{
+			int result = pHotlink->PrecacheModel(TheModel);
+			DevMsg("Cache result for %s is: %i\n\n\n", TheModel, result);
+
+			//			IMaterial* pMaterial;
+			//		modelinfo->GetModelMaterials(modelinfo->FindOrLoadModel(TheModel), 1, &pMaterial);
+		}
+
+		UTIL_SetModel(pHotlink, TheModel);
+		pHotlink->SetModel(TheModel);
+	}
+}
+
+ConCommand switchmodel("switchmodel", SwitchModel, "For internal use only.");
+
+/*
+void SwitchModel(const CCommand &args)
+{
+	const char *TheModel = args[1];
+	int TheEntity = Q_atoi(args.Arg(2));
+	std::string itemValue = args.Arg(3);
+	int itemValueLength = itemValue.length();
+	char bufItemValue[1024];
+	Q_strcpy(bufItemValue, itemValue.c_str());
+
+
+	CURL* easyhandle = curl_easy_init();
+	std::string commands = curl_easy_escape(easyhandle, bufItemValue, itemValueLength);
+	curl_easy_cleanup(easyhandle);
+
+
+	edict_t *pHotlinkEdict = INDEXENT(TheEntity);
+	if (pHotlinkEdict && !pHotlinkEdict->IsFree())
+	{
+		CPropHotlinkEntity* pHotlink = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
+
+		//CDynamicProp* pEntity = dynamic_cast<CDynamicProp*>(pHotlink);
+
+		if (!engine->IsModelPrecached(TheModel))
+		{
+			int result = pHotlink->PrecacheModel(TheModel);
+			DevMsg("Cache result for %s is: %i\n\n\n", TheModel, result);
+
+			//			IMaterial* pMaterial;
+			//		modelinfo->GetModelMaterials(modelinfo->FindOrLoadModel(TheModel), 1, &pMaterial);
+		}
+
+		ConVar* pMPModeVar = cvar->FindVar("mp_mode");
+
+		if (!pMPModeVar->GetBool())
+		{
+			pHotlink->CleanupCameraEntities();
+			pHotlink->CleanupSequenceEntities();
+		}
+
+		UTIL_SetModel(pHotlink, TheModel);
+		pHotlink->SetModel(TheModel);
+
+		//pHotlink->ResetSequenceInfo();
+
+		std::string realSequenceName = "activated";
+		int index = pHotlink->LookupSequence(realSequenceName.c_str());
+
+		if (index == ACT_INVALID)
+		{
+			realSequenceName = "activeidle";
+			index = pHotlink->LookupSequence(realSequenceName.c_str());
+		}
+
+		if (index != ACT_INVALID)
+		{
+			CBasePlayer* pRequestingPlayer = UTIL_GetCommandClient();
+
+			if (!pRequestingPlayer)
+				return;
+
+			edict_t *pClient = engine->PEntityOfEntIndex(pRequestingPlayer->entindex());
+
+			pHotlink->ResetSequenceInfo();
+
+			//engine->ClientCommand(pClient, "nextsequenceready %i \"activated\" 1\n", pHotlink->entindex());
+			engine->ClientCommand(pClient, "nextsequenceready %i \"%s\" 1;\n", pHotlink->entindex(), realSequenceName.c_str());
+		}
+	}
+}
+
+ConCommand switchmodel("switchmodel", SwitchModel, "For internal use only.");
+*/
+
+
+
+
+
+
+/*
+void SetCabPos(const CCommand &args)
+{
+	int TheEntity = Q_atoi(args.Arg(1));
+
+	edict_t *pHotlinkEdict = INDEXENT(TheEntity);
+	if (pHotlinkEdict && !pHotlinkEdict->IsFree())
+	{
+		CPropHotlinkEntity* pEntity = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
+		Vector origin = Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)));
+		QAngle angles = QAngle(Q_atof(args.Arg(5)), Q_atof(args.Arg(6)), Q_atof(args.Arg(7)));
+
+		CArcadeResources* pArcadeResources = CArcadeResources::GetSelf();
+
+		// Cycle through all trigger_multiple and test if our point is inside of them...
+		CTriggerMultiple* pTriggerMultiple;
+		CNodeInfoEntity* pNodeInfo;
+
+		// Check if we have a most-likely trigger to test first...
+		CBaseEntity* pBaseMostRecentTrigger = pArcadeResources->GetMostRecentHubTrigger();
+		CBaseEntity* pBaseMostRecentNodeInfo = pArcadeResources->GetMostRecentHubNodeInfo();
+		if (pBaseMostRecentTrigger)
+		{
+			// If we have a most recent trigger, then test against it.  If we are, in fact, inside of it, then just return.
+			pTriggerMultiple = dynamic_cast<CTriggerMultiple*>(pBaseMostRecentTrigger);
+			if (pTriggerMultiple != NULL && pTriggerMultiple->GetEnabled() && pTriggerMultiple->PointIsWithin(Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)))))
+			{
+				pNodeInfo = dynamic_cast<CNodeInfoEntity*>(pBaseMostRecentNodeInfo);
+
+				if (pNodeInfo && pEntity->GetAbsOrigin() == pNodeInfo->GetAbsOrigin())
+					return;
+			}
+			else
+			{
+				// If we aren't in that volume anymore, clear it.
+				pArcadeResources->SetMostRecentHubTrigger(NULL);
+				pArcadeResources->SetMostRecentHubNodeInfo(NULL);
+			}
+
+			// Otherwise, fall through.
+		}
+
+		bool bVolumeOccupied = false;	// We don't want to spawn 2 hubs in the same volume!
+		bool bVolumeIsMatch = false;
+		bool bMatchIsLearnVolume = false;
+
+		std::string nameBuf;
+
+		CBaseEntity* pBaseTriggerMultiple = gEntList.FindEntityByClassname(gEntList.FirstEnt(), "trigger_multiple");
+		while (pBaseTriggerMultiple)
+		{
+			pTriggerMultiple = dynamic_cast<CTriggerMultiple*>(pBaseTriggerMultiple);
+			if (pTriggerMultiple != NULL && pTriggerMultiple->GetEnabled() && pTriggerMultiple->PointIsWithin(Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)))))
+			{
+				// Check if the name of this entity is the match to our nodestyle.
+				nameBuf = UTIL_VarArgs("%s", pTriggerMultiple->GetEntityName());
+
+				if (!Q_stricmp(UTIL_VarArgs("%s", pTriggerMultiple->GetEntityName()), args.Arg(8)) || nameBuf.find("snap") == 0 || nameBuf.find("autospawn") != std::string::npos)
+				{
+					// Cycle through all node_info and test if they are inside of this trigger.
+					CBaseEntity* pBaseNodeInfo = gEntList.FindEntityByClassname(gEntList.FirstEnt(), "node_info");
+					while (pBaseNodeInfo)
+					{
+						pNodeInfo = dynamic_cast<CNodeInfoEntity*>(pBaseNodeInfo);
+						//if (pNodeInfo && pTriggerMultiple->IsTouching(pNodeInfo))
+						if (pNodeInfo && pTriggerMultiple->PointIsWithin(pNodeInfo->GetAbsOrigin()))
+						{
+							if (nameBuf.find("autospawn") != std::string::npos)
+								bMatchIsLearnVolume = true;
+
+							bVolumeIsMatch = true;
+
+							// Cycle through all prop_hotlinks and test if any are at the exact same origin and angles as the NodeInfo...
+							CBaseEntity* pBaseHotlink = gEntList.FindEntityByClassname(gEntList.FirstEnt(), "prop_hotlink");
+							while (pBaseHotlink)
+							{
+								CPropHotlinkEntity* pHotlink = dynamic_cast<CPropHotlinkEntity*>(pBaseHotlink);
+								//if (pHotlink && pTriggerMultiple->IsTouching(pHotlink) && pHotlink->GetAbsOrigin() == pNodeInfo->GetAbsOrigin())	// This is assuming that IsTouching is less expensive than comparing origins.
+								if (pHotlink && pHotlink->GetAbsOrigin() == pNodeInfo->GetAbsOrigin())	// This is assuming that IsTouching is less expensive than comparing origins.
+								{
+									bVolumeOccupied = true;
+									break;
+								}
+
+								pBaseHotlink = gEntList.FindEntityByClassname(pBaseHotlink, "prop_hotlink");
+							}
+
+							break;
+						}
+
+						pBaseNodeInfo = gEntList.FindEntityByClassname(pBaseNodeInfo, "node_info");
+					}
+
+					if (bVolumeIsMatch)
+						break;
+				}
+			}
+
+			pBaseTriggerMultiple = gEntList.FindEntityByClassname(pBaseTriggerMultiple, "trigger_multiple");
+		}
+
+		if (bVolumeOccupied || !bVolumeIsMatch)
+		{
+			// Otherwise, proceed as usual...
+			//		pEntity->SetLocalOrigin(origin);
+			//			pEntity->SetAbsOrigin(origin);
+
+			UTIL_SetOrigin(pEntity, origin, true);
+			pEntity->SetAbsAngles(angles);
+
+			Vector vel = Vector(0, 0, 0);
+			pEntity->Teleport(&origin, &angles, &vel);
+		}
+		else
+		{
+			// Otherwise, do some work with pTriggerMultiple, pNodeInfo, and other stuff.
+			pArcadeResources->SetMostRecentHubTrigger((CBaseEntity*)pTriggerMultiple);
+			pArcadeResources->SetMostRecentHubNodeInfo((CBaseEntity*)pNodeInfo);
+
+			UTIL_SetOrigin(pEntity, pNodeInfo->GetAbsOrigin(), true);
+			pEntity->SetAbsAngles(pNodeInfo->GetAbsAngles());
+
+			Vector vel2 = Vector(0, 0, 0);
+			Vector origin2 = pNodeInfo->GetAbsOrigin();
+			QAngle angle2 = pNodeInfo->GetAbsAngles();
+
+			pEntity->Teleport(&origin2, &angle2, &vel2);
+
+			if (bMatchIsLearnVolume)
+			{
+				DevMsg("SHOULD AUTO SPAWN!!\n");
+
+				CBasePlayer* pRequestingPlayer = UTIL_GetCommandClient();
+
+				edict_t *pClient = engine->PEntityOfEntIndex(pRequestingPlayer->entindex());
+				engine->ClientCommand(pClient, "doautospawn;\n");
+			}
+		}
+	}
+}
+
+ConCommand setcabpos("setcabpos", SetCabPos, "For internal use only.");
 */

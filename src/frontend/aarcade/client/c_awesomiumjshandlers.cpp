@@ -73,7 +73,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		MatrixToAngles(entToWorld, angles);
 
 		std::string modelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
-		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f);
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f, false);
+		g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(pObject);
 		g_pAnarchyManager->GetInstanceManager()->SpawnObject(pObject);
 
 		//char buf[512];
@@ -102,171 +103,280 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("launchItem"))
 	{
+		/*
+		// these items need improvements on how they are launched (they didn't work):
+		Launching Item: 
+			Executable: C:\Users\Owner\Desktop\launcher - Shortcut.lnk
+			Directory: 
+			Master Commands: 
+
+			ALSO roms with full file locations as their file instead of just the short filename.
+		*/
 		DevMsg("LAUNCH THE SHIT!\n");
+
+		// genereate the executable, executableDirectory, and masterCommands values.
+		// then give these to the actual launch method.
+
+		bool bUnknownError = false;
+
+		// user resolvable errors to catch
+		bool bItemGood = false;
+		bool bItemFileGood = false;
+		bool bAppGood = false;
+		bool bAppExecutableGood = false;
+		bool bAppFilepathGood = false;
+		bool bAtLeastOneAppFilepathExists = false;
+		bool bReadyToActuallyLaunch = false;
+
+		// required fields for ArcadeCreateProcess
+		std::string executable;
+		std::string executableDirectory;
+		std::string masterCommands;
+
+		// other fields used to generate the required fields
+		bool bHasApp = false;
+		bool bHasAppFilepath = false;
 		std::string id = WebStringToCharString(args[0].ToString());
-
-		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
-		if (pItem)
+		KeyValues* item = null;	// the KV of the item being used.
+		KeyValues* itemActive = null;	// the active node of the item KV.
+		std::string file;
+		std::string composedFile;
+		KeyValues* app = null;
+		KeyValues* appActive = null;
+		std::string appExecutable;
+		std::string appFilepath;
+		std::string appCommands;
+		
+		// attempt to get the item
+		item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+		if (item)
 		{
-			KeyValues* active = pItem->FindKey("current");
-			if (!active)
-				active = pItem->FindKey("local", true);
+			// if there is an item, attempt to get the active node kv
+			itemActive = item->FindKey("current");
+			if (!itemActive)
+				itemActive = item->FindKey("local", true);
 
-			if (active)
+			if (itemActive)
 			{
-				std::string executable = "";
-				std::string params = "";
-				if (Q_strcmp(active->GetString("app"), ""))
+				bItemGood = true;
+
+				// if there is an active node kv for the item, attempt to get file
+				file = itemActive->GetString("file");
+				if (file != "")
 				{
-					KeyValues* pApp = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(active->GetString("app"));
-					KeyValues* activeApp = pApp->FindKey("current");
-					if (!activeApp)
-						activeApp = pApp->FindKey("local", true);
-
-					if (activeApp)
+					// does it have an app?
+					if (Q_strcmp(itemActive->GetString("app"), ""))
 					{
-						executable = activeApp->GetString("file");
+						bHasApp = true;
 
-						std::string filepath = "";
-						KeyValues* filepaths = activeApp->FindKey("filepaths", true);
-						for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+						app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
+						appActive = app->FindKey("current");
+						if (!appActive)
+							appActive = app->FindKey("local", true);
+
+						if (appActive)
 						{
-							filepath = sub->GetString("path");
-							break;
-						}
+							bAppGood = true;
 
-						params = activeApp->GetString("commandformat");
-						if (params == "")
-							params = "\"" + filepath + std::string(active->GetString("file")) + "\"";
-						else
-						{
-							// replace $FILE with active->GetString("file")
-							// replace $QUOTE with a double quote
-							// replace $SHORTFILE with active->GetString("file")'s filename only
-							// replace etc.
-
-							size_t found = params.find("$FILE");
-							while (found != std::string::npos)
+							// if there is an app, attempt to get its executable
+							appExecutable = appActive->GetString("file");
+							if (appExecutable != "")
 							{
-								params.replace(found, 5, filepath + active->GetString("file"));
-								found = params.find("$FILE");
-							}
+								bAppExecutableGood = true;
 
-							found = params.find("$QUOTE");
-							while (found != std::string::npos)
-							{
-								params.replace(found, 6, "\"");
-								found = params.find("$QUOTE");
+								// just grab the FIRST filepath for now.
+								// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+								// Note: Apps are not required to have a filepath specified.
+								std::string testFile;
+								std::string testPath;
+								KeyValues* filepaths = appActive->FindKey("filepaths", true);
+								for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+								{
+									// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+									// (because in that case the local user probably needs to specify a correct location for it.)
+									bHasAppFilepath = true;
+
+									testPath = sub->GetString("path");
+
+									// test if this path exists
+									// FIXME: always assume it exists for now
+									if (true)
+									{
+										bAtLeastOneAppFilepathExists = true;
+
+										// test if the file exists inside of this filepath
+										testFile = testPath + file;
+
+										// FIXME: always assume the file exists in this path for now.
+										if (true)
+										{
+											composedFile = testFile;
+											appFilepath = testPath;
+											bAppFilepathGood = true;
+											bItemFileGood = true;
+											break;
+										}
+									}
+								}
+
+								// resolve the composedFile now
+								if (!bAppFilepathGood)
+									composedFile = file;
+
+								// generate the commands
+								// try to apply a command format
+								appCommands = appActive->GetString("commandformat");
+								if (appCommands != "")
+								{
+									// if the app has a command syntax, replace item variables with their values.
+
+									// replace $FILE with active->GetString("file")
+									// replace $QUOTE with a double quote
+									// replace $SHORTFILE with active->GetString("file")'s filename only
+									// replace etc.
+
+									size_t found = appCommands.find("$FILE");
+									while (found != std::string::npos)
+									{
+										appCommands.replace(found, 5, composedFile);
+										found = appCommands.find("$FILE");
+									}
+
+									found = appCommands.find("$QUOTE");
+									while (found != std::string::npos)
+									{
+										appCommands.replace(found, 6, "\"");
+										found = appCommands.find("$QUOTE");
+									}
+								}
+								else
+								{
+									// otherwise, apply the default Windows command syntax for "open with"
+									appCommands = "\"" + composedFile + "\"";
+								}
 							}
 						}
 					}
+
+					if (!bAppExecutableGood)
+						composedFile = file;
+
+					if (!bAppFilepathGood)
+					{
+						// check if the file exists.
+						// (file could also be an HTTP or STEAM protocol address at this point.)
+
+						// are we a web address missing an http?
+						if (composedFile.find("www.") == 0)
+							composedFile = "http://" + composedFile;
+
+						// is it a steam appid?
+						if (!Q_strcmp(VarArgs("%llu", Q_atoui64(composedFile.c_str())), composedFile.c_str()))
+						{
+							composedFile = "steam://run/" + composedFile;
+							bItemFileGood = true;
+						}
+						else if (composedFile.find("http") == 0 )
+							bItemFileGood = true;
+						else if (true)	// check if local file exists // FIXME: assume it always exists for now
+							bItemFileGood = true;
+					}
 				}
-				
-				if (executable == "")
-					executable = active->GetString("file");
-
-				if (!Q_strcmp(VarArgs("%i", Q_atoi(executable.c_str())), executable.c_str()))
-				{
-					// we are just an integer!! (probably a Steam game)
-					executable = "steam://run/" + executable;
-				}
-
-//				DevMsg("Item to launch: %s %s\n", executable.c_str(), params.c_str());
-				//vgui::system()->ShellExecuteA("open", executable.c_str());
-				//vgui::system()->ShellExecuteEx("open", executable.c_str(), params.c_str());
-
-
-
-				// new, more advanced way...
-				std::string executableDirectory = executable;
-				size_t found = executableDirectory.find_last_of("/\\");
-				if (found != std::string::npos)
-					executableDirectory = executableDirectory.substr(0, found+1);
-
-				/*
-				found = executableDirectory.find(".");
-				if (found != std::string::npos)
-					executableDirectory = executableDirectory.substr(0, found);
-				*/
-
-				STARTUPINFO si;
-				PROCESS_INFORMATION pi;
-
-				// set the size of the structures
-				ZeroMemory(&si, sizeof(si));
-				si.cb = sizeof(si);
-				ZeroMemory(&pi, sizeof(pi));
-
-				std::string executableFile = executable;
-				found = executableFile.find_last_of("/\\");
-				if (found != std::string::npos)
-					executableFile = executableFile.substr(found + 1);
-
-				//std::string masterCommand = "\"" + executable + "\" " + params;
-				std::string masterCommand = "\"" + executableFile + "\" " + params;
-				//std::string masterCommand = "Application " + params;
-
-				char pCommands[AA_MAX_STRING];
-				Q_strcpy(pCommands, masterCommand.c_str());
-			//	Q_strcpy(pCommands, params.c_str());
-				
-
-				//pSelectedEmbeddedInstance->Deselect();
-				//m_pInputManager->SetEmbeddedInstance(null);
-
-				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-
-				if (g_pAnarchyManager->GetSelectedEntity())
-					g_pAnarchyManager->DeselectEntity("none");
-
-				// > SetFullscreenMode(false);
-				C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-				C_EmbeddedInstance* pOldEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
-				
-				if (pOldEmbeddedInstance && pOldEmbeddedInstance != pHudBrowserInstance)
-					pOldEmbeddedInstance->Close();
-
-				g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
-
-				DevMsg("Launching Item: \n\tExecutable: %s\n\tExecutable File: %s\n\tCommands: %s\n\tDirectory: %s\n", executable.c_str(), executableFile.c_str(), params.c_str(), executableDirectory.c_str());
-				DevMsg("Maser Command:\n\t%s\n", masterCommand.c_str());
-
-				// start the program up
-				CreateProcess(executable.c_str(),   // the path
-					pCommands,        // Command line
-					NULL,           // Process handle not inheritable
-					NULL,           // Thread handle not inheritable
-					FALSE,          // Set handle inheritance to FALSE
-					0,              // No creation flags
-					NULL,           // Use parent's environment block
-					executableDirectory.c_str(),           // Use parent's starting directory 
-					&si,            // Pointer to STARTUPINFO structure
-					&pi);           // Pointer to PROCESS_INFORMATION structure
-				
-
-				/*
-				
-				typedef struct _SHELLEXECUTEINFOA
-				{
-				DWORD cbSize;               // in, required, sizeof of this structure
-				ULONG fMask;                // in, SEE_MASK_XXX values
-				HWND hwnd;                  // in, optional
-				LPCSTR   lpVerb;            // in, optional when unspecified the default verb is choosen
-				LPCSTR   lpFile;            // in, either this value or lpIDList must be specified
-				LPCSTR   lpParameters;      // in, optional
-				LPCSTR   lpDirectory;       // in, optional
-				int nShow;                  // in, required
-				HINSTANCE hInstApp;         // out when SEE_MASK_NOCLOSEPROCESS is specified
-				void *lpIDList;             // in, valid when SEE_MASK_IDLIST is specified, PCIDLIST_ABSOLUTE, for use with SEE_MASK_IDLIST & SEE_MASK_INVOKEIDLIST
-				LPCSTR   lpClass;           // in, valid when SEE_MASK_CLASSNAME is specified
-				HKEY hkeyClass;             // in, valid when SEE_MASK_CLASSKEY is specified
-				DWORD dwHotKey;             // in, valid when SEE_MASK_HOTKEY is specified
-
-				*/
 			}
 		}
 
-		g_pAnarchyManager->Pause();
+		// all variables are resolved, now do some logic.
+		if (bItemGood)
+		{
+			// check for a good app first, because that determines if the item file can be resolved.
+			if (bHasApp)
+			{
+				if (bAppGood)
+				{
+					if (bAppExecutableGood)
+					{
+						if (bItemFileGood)
+						{
+							// executable
+							executable = appExecutable;
+
+							// executableDirectory
+							std::string dir = appExecutable;
+							size_t found = dir.find_last_of("/\\");
+							if (found != std::string::npos)
+								executableDirectory = dir.substr(0, found + 1);
+
+							// masterCommands
+							std::string shortAppFile = appExecutable;
+							found = shortAppFile.find_last_of("/\\");
+							if (found != std::string::npos)
+								shortAppFile = shortAppFile.substr(found + 1);
+
+							masterCommands = "\"" + shortAppFile + "\" " + appCommands;
+							bReadyToActuallyLaunch = true;
+						}
+						else
+						{
+							DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+							return;
+						}
+					}
+					else
+					{
+						DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+						return;
+					}
+				}
+				else
+				{
+					DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+					return;
+				}
+			}
+			else
+			{
+				if (bItemFileGood)
+				{
+					// doesn't use an app
+					executable = composedFile;
+					executableDirectory = "";
+					masterCommands = "";
+					bReadyToActuallyLaunch = true;
+				}
+				else
+				{
+					DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+					return;
+				}
+			}
+		}
+		else
+		{
+			DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+			return;
+		}
+
+		if (bReadyToActuallyLaunch)
+		{
+			// deslect any entity
+			if (g_pAnarchyManager->GetSelectedEntity())
+				g_pAnarchyManager->DeselectEntity("none");
+
+			// clear the embedded instance (to stop YT videos from playing, for example)
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			C_EmbeddedInstance* pOldEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			if (pOldEmbeddedInstance && pOldEmbeddedInstance != pHudBrowserInstance)
+				pOldEmbeddedInstance->Close();
+			g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
+
+			// pause AArcade
+			g_pAnarchyManager->Pause();
+
+			// launch the item
+			g_pAnarchyManager->ArcadeCreateProcess(executable, executableDirectory, masterCommands);
+		}
+		else
+			DevMsg("ERROR: Could not launch item.\n");
 	}
 	else if (method_name == WSLit("loadNextLocalAppCallback"))
 	{
@@ -553,6 +663,77 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			}
 		}
 	}
+	else if (method_name == WSLit("cabinetSelected"))
+	{
+		C_BaseEntity* pEntity = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
+		if (pEntity)
+		{
+			std::string modelId = WebStringToCharString(args[0].ToString());
+			KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(modelId);
+			if (model)
+			{
+				KeyValues* active = model->FindKey("current");
+				if (!active)
+					active = model->FindKey("local", true);
+
+				std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelFile);
+			}
+		}
+
+	}
+	else if (method_name == WSLit("viewStream"))
+	{
+		std::string itemId = WebStringToCharString(args[0].ToString());
+		KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+		if (item)
+		{
+			KeyValues* active = item->FindKey("current");
+			if (!active)
+				active = item->FindKey("local", true);
+
+			std::string streamUri = active->GetString("stream");
+			if (streamUri.find("http") != 0)
+				streamUri = active->GetString("file");
+
+			if (streamUri.find("http") != 0)
+				streamUri = active->GetString("preview");
+
+			if (streamUri.find("http") != 0)
+				return;
+
+			// the active embeded instance might not be the right type, so get rdy to re-make it if needed...
+			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+			if (!pBrowserInstance)
+			{
+				std::string oldId;
+				if (pEmbeddedInstance)
+				{
+					oldId = pEmbeddedInstance->GetId();
+
+					// close this instance
+					DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
+
+					pEmbeddedInstance->Blur();
+					pEmbeddedInstance->Deselect();
+					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+					pEmbeddedInstance->Close();
+				}
+
+				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+				pBrowserInstance->Init(oldId, streamUri.c_str(), null);
+			}
+			else
+				pBrowserInstance->SetUrl(streamUri);	// reuse the current focused steam browser if it exists
+
+			pBrowserInstance->SetActiveScraper("", "", "");
+			pBrowserInstance->Select();
+			pBrowserInstance->Focus();
+
+			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+		}
+	}
 	else if (method_name == WSLit("getDOM"))
 	{
 		// get the embedded instance
@@ -686,6 +867,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("simpleImageReady"))
 	{
+		//DevMsg("Simple image ready msg recieved.\n");
 	//	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 		//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 
@@ -693,7 +875,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 //		C_WebTab* pWebTab = g_pAnarchyManager->GetWebManager()->GetWebBrowser()->FindWebTab(caller);
 		//if (pWebTab->GetId() != "images")
-		if (pImagesBrowserInstance->GetWebView() != caller)
+		if (pImagesBrowserInstance->GetWebView() != caller || g_pAnarchyManager->GetSuspendEmbedded())
 			return;// JSValue(false);
 
 		std::string sessionId = WebStringToCharString(args[0].ToString());
@@ -703,13 +885,15 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string channel = WebStringToCharString(args[1].ToString());
 		std::string itemId = WebStringToCharString(args[2].ToString());
 		std::string field = WebStringToCharString(args[3].ToString());
+		std::string imageUrl = WebStringToCharString(args[4].ToString());
+		bool bFromCache = args[5].ToBoolean();
 
 		if (channel == "" && itemId == "" && field == "")
 		{
 			pImagesBrowserInstance->SetNumImagesLoading(0);
 			//pWebTab->DecrementNumImagesLoading();
 		}
-		else if (channel != "" && itemId != "" && field != "")
+		else if (channel != "" && itemId != "" && field != "" && imageUrl != "")
 		{
 		//	DevMsg("Given: %s, %s, %s\n", field.c_str(), itemId.c_str(), channel.c_str());
 			KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
@@ -722,7 +906,16 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				KeyValues* fieldKv = active->FindKey(field.c_str());
 				if (fieldKv)
 				{
+				//	DevMsg("Entry A\n");
+				//	DevMsg("Field val is: %s\n", fieldKv->GetString());
 					std::string imageId = g_pAnarchyManager->GenerateLegacyHash(fieldKv->GetString());
+				//	DevMsg("Post hash\n");
+
+					if (!bFromCache)
+					{
+						C_AwesomiumBrowserInstance* pImagesTab = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("images");
+						pImagesTab->SaveImageToCache(imageUrl);// fieldKv->GetString());
+					}
 
 					// URLs that are already loaded would have been provided in the blacklist, so the rendered URL should always be fresh at this point.
 					std::string textureName = "image_";
@@ -747,9 +940,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					
 					pRegen->SetEmbeddedInstance(pImagesBrowserInstance);
 
-					DevMsg("Prepare\n");
+					//DevMsg("Exit A\n");
+				//	DevMsg("Prepare\n");
 					pTexture->Download();
-					DevMsg("Download\n");
+				//	DevMsg("Checkpiont A\n");
+				//	DevMsg("Download\n");
 					
 					pImagesBrowserInstance->OnSimpleImageReady(sessionId, channel, itemId, field, pTexture);
 				}
@@ -1147,6 +1342,101 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		else
 			return JSValue(0);
 	}
+	else if (method_name == WSLit("getFirstLibraryModel"))
+	{
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->GetFirstLibraryModel();
+
+		if (pModel)
+		{
+			KeyValues* active = pModel->FindKey("current");
+			if (!active)
+				active = pModel->FindKey("local", true);
+			if (active)
+			{
+				JSObject model;
+				AddSubKeys(active, model);
+				return model;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("getNextLibraryModel"))
+	{
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->GetNextLibraryModel();
+		if (pModel)
+		{
+			KeyValues* active = pModel->FindKey("current");
+			if (!active)
+				active = pModel->FindKey("local", true);
+			if (active)
+			{
+				JSObject model;
+				AddSubKeys(active, model);
+				return model;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("findFirstLibraryModel"))
+	{
+		// build the search info
+		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else if (numArgs > 0)
+			pSearchInfo->SetString("title", WebStringToCharString(args[0].ToString()));
+
+		if (numArgs > 1)
+			pSearchInfo->SetString("dynamic", WebStringToCharString(args[1].ToString()));
+
+		// start the search
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->FindFirstLibraryModel(pSearchInfo);
+
+		if (pModel)
+		{
+			KeyValues* active = pModel->FindKey("current");
+			if (!active)
+				active = pModel->FindKey("local", true);
+			if (active)
+			{
+				JSObject model;
+				AddSubKeys(active, model);
+				return model;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("findNextLibraryModel"))
+	{
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->FindNextLibraryModel();
+		if (pModel)
+		{
+			KeyValues* active = pModel->FindKey("current");
+			if (!active)
+				active = pModel->FindKey("local", true);
+			if (active)
+			{
+				JSObject model;
+				AddSubKeys(active, model);
+				return model;
+			}
+			else
+				return JSValue(0);
+		}
+		else
+			return JSValue(0);
+	}
 	else if (method_name == WSLit("detectAllMapScreenshots"))
 	{
 		JSObject response;
@@ -1211,6 +1501,55 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		
 		return JSValue(null);
+	}
+	else if (method_name == WSLit("getLibretroOptions"))
+	{
+		JSObject response;
+
+		C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();//dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->)
+		if (pLibretroInstance)
+		{
+			if (pLibretroInstance->HasInfo())
+			{
+				LibretroInstanceInfo_t* pInfo = pLibretroInstance->GetInfo();
+				
+				DevMsg("Adding libretro options to response...\n");
+				//std::vector<libretro_core_option*>& libretroOptions = pLibretroInstance->GetAllOptions();
+				JSArray options;
+
+				unsigned int valuesMax;
+				unsigned int j;
+
+				libretro_core_option* libretroOption;
+				unsigned int max = pInfo->options.size();// libretroOptions.size();
+				for (unsigned int i = 0; i < max; i++)
+				{
+					libretroOption = pInfo->options[i];// libretroOptions[i];
+
+					JSObject option;
+					option.SetProperty(WSLit("name_internal"), WSLit(libretroOption->name_internal));
+					option.SetProperty(WSLit("name_display"), WSLit(libretroOption->name_display));
+					option.SetProperty(WSLit("current"), WSLit(VarArgs("%i", pLibretroInstance->GetOptionCurrentValue(i))));
+
+					DevMsg("Adding %s (%s) w/ current value %i\n", libretroOption->name_display, libretroOption->name_internal, pLibretroInstance->GetOptionCurrentValue(i));
+
+					JSArray values;
+					valuesMax = libretroOption->values.size();
+					for (j = 0; j < valuesMax; j++)
+					{
+						DevMsg("\tAdding value definition %i: %s\n", i, libretroOption->values[j].c_str());
+						values.Push(WSLit(libretroOption->values[j].c_str()));
+					}
+
+					option.SetProperty(WSLit("values"), values);
+					options.Push(option);
+				}
+
+				response.SetProperty(WSLit("options"), options);
+			}
+		}
+
+		return response;
 	}
 	else if (method_name == WSLit("getMapInstances"))
 	{

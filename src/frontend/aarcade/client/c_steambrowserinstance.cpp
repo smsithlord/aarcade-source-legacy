@@ -91,12 +91,19 @@ m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged)
 C_SteamBrowserInstance::~C_SteamBrowserInstance()
 {
 	DevMsg("SteamBrowserInstance: Destructor\n");
+
+	if (m_id == "images" || m_id == "hud")
+	{
+		DevMsg("ERROR: C_SteamBrowserInstance with a reserved or invalid name!!\n");
+		return;
+	}
 	
 	if (m_pTexture)
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
 		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
+		//m_pTexture->SetTextureRegenerator(null);
 		m_pTexture->DecrementReferenceCount();
 		m_pTexture->DeleteIfUnreferenced();
 		m_pTexture = null;
@@ -106,9 +113,12 @@ C_SteamBrowserInstance::~C_SteamBrowserInstance()
 void C_SteamBrowserInstance::SelfDestruct()
 {
 	DevMsg("SteamBrowserInstance: SelfDestruct %s\n", m_id.c_str());
-
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->NotifyInstanceAboutToDie(this);
 	steamapicontext->SteamHTMLSurface()->RemoveBrowser(m_unHandle);// m_unBrowserHandle);
 
+	m_bReadyForNextFrame = false;
+	m_bReadyToCopyFrame = false;
+	
 	if (m_pLastFrameData)
 		free(m_pLastFrameData);
 
@@ -469,6 +479,8 @@ void C_SteamBrowserInstance::OnNeedsPaint(const void* data, unsigned int width, 
 	if (!m_bReadyForNextFrame || m_bCopyingFrame)
 		return;
 
+	//DevMsg("SteamBrowserInstance: OnNeedsPaint started\n");
+
 	m_bIsDirty = true;
 
 	m_bReadyForNextFrame = false;
@@ -496,6 +508,8 @@ void C_SteamBrowserInstance::OnNeedsPaint(const void* data, unsigned int width, 
 	*/
 
 	m_bReadyToCopyFrame = true;
+
+	//DevMsg("SteamBrowserInstance: OnNeedsPaint finished\n");
 
 	//this->CopyLastFrame()
 }
@@ -705,6 +719,9 @@ void C_SteamBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 
 void C_SteamBrowserInstance::Update()
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	if (!m_unHandle)
 		return;
 
@@ -910,12 +927,13 @@ void C_SteamBrowserInstance::ResizeFrameFromXRGB8888(const void* pSrc, void* pDs
 
 void C_SteamBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth)
 {
-	if (m_bCopyingFrame || !m_bReadyToCopyFrame)
+	if (m_bCopyingFrame || !m_bReadyToCopyFrame || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
+
+//	DevMsg("SteamBrowserInstance: Start copy\n");
 
 	m_bCopyingFrame = true;
 	m_bReadyToCopyFrame = false;
-	//DevMsg("Copied.\n");
 	memcpy(dest, m_pLastFrameData, pitch * height);
 
 //	if (m_info->videoformat == RETRO_PIXEL_FORMAT_RGB565)
@@ -928,10 +946,15 @@ void C_SteamBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int wid
 	m_bReadyForNextFrame = true;
 	m_bCopyingFrame = false;
 	m_bIsDirty = false;
+
+//	DevMsg("SteamBrowserInstance: Finish copy\n");
 }
 
 void C_SteamBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	if (!m_unHandle)
 		return;
 
@@ -997,8 +1020,13 @@ void C_SteamBrowserInstance::Render()
 
 void C_SteamBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
+	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
 	//if (m_info->state == 1)
+	//DevMsg("copy last frame\n");
 		this->CopyLastFrame(pVTFTexture->ImageData(0, 0, 0), pSubRect->width, pSubRect->height, pSubRect->width * 4, 4);
+//		DevMsg("Done copying frame.\n");
 }
 
 C_InputListener* C_SteamBrowserInstance::GetInputListener()
@@ -1013,6 +1041,10 @@ C_EmbeddedInstance* C_SteamBrowserInstance::GetParentSelectedEmbeddedInstance()
 
 void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
+	// don't send alt button for now (it can cause crashes sometimes?
+	if (code == KEY_LALT || code == KEY_RALT)
+		return;
+
 	steamapicontext->SteamHTMLSurface()->KeyDown(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
 
 	std::string s_output = this->GetCharTyped(code, bShiftState, bCtrlState, bAltState);
