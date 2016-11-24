@@ -3,6 +3,7 @@
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
 		<script>
+			var AA_PLATFORM_ID = "-KJvcne3IKMZQTaG7lPo";
 			var libraryContainer = null;
 		</script>
 		<style>
@@ -29,7 +30,7 @@
 						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Library Items
+						Library Models
 					</div>
 					<div class="hudContentHeaderCell">
 						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
@@ -50,7 +51,7 @@
 									</form>
 								</td>
 								<td align="right">
-									<select id="filterTypeSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
+									<select style="pointer-events: none; visibility: hidden;" id="filterTypeSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results.">
 										<option value="" selected>&lt;Any Type&gt;</option>
 									</select>
 								</td>
@@ -73,7 +74,7 @@
 									<table style="width: 80%;"><tr>
 										<td>
 											<nobr>
-												<div class="button disabledButton" onclick="spawnSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div>
+												<div class="button disabledButton" onclick="spawnSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 70%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Click BROWSE to add MDL files" /></form> <div class="button disabledButton" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div> <div class="button disabledButton" style="display: inline-block;">Detect Models</div>
 											</nobr>
 										</td>
 										
@@ -90,16 +91,13 @@
 								<td align="right">
 									<table><tr>
 										<td>
-											<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Launch the selected shortcut in Windows.">Launch</div>
-										</td>
-										<td>
 											<div class="button disabledButton">Delete</div>
 										</td>
 										<td>
-											<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected item.">Edit</div>
+											<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected model.">Edit</div>
 										</td>
 										<td>
-											<div class="button disabledButton">Inspect</div>
+											<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Examine the selected 3D model.">Inspect</div>
 										</td>
 									</tr></table>
 								</td>
@@ -152,12 +150,12 @@
 						libraryContainer.selectedItem = null;
 
 						var button = document.querySelector("#editButton");
-						if( button.className.indexOf("disabledButton") === -1 )
-							button.className += " disabledButton";
+						//if( button.className.indexOf("disabledButton") === -1 )
+						//	button.className += " disabledButton";
 
 						button = document.querySelector("#launchButton");
-						if( button.className.indexOf("disabledButton") === -1 )
-							button.className += " disabledButton";
+						//if( button.className.indexOf("disabledButton") === -1 )
+						//	button.className += " disabledButton";
 					}
 
 					//elem.oldBgColor = elem.style.backgroundColor;
@@ -227,9 +225,9 @@
 
 				var item;
 				if( filterTypeSelect.value === "" )
-					item = aaapi.library.findFirstLibraryItem("title", searchElem.value);
+					item = aaapi.library.findFirstLibraryModel(searchElem.value);
 				else
-					item = aaapi.library.findFirstLibraryItem("title", searchElem.value, "type", elem.value);
+					item = aaapi.library.findFirstLibraryModel(searchElem.value, elem.value);
 
 				if( item != 0 )
 				{
@@ -238,7 +236,7 @@
 					var count = 0;
 					var repeat = setInterval(function()
 					{
-						var item = aaapi.library.findNextLibraryItem();
+						var item = aaapi.library.findNextLibraryModel();
 						if( count < 100 && item != 0 )
 						{
 							appendItem(item);
@@ -282,9 +280,9 @@
 
 					var item;
 					if( filterTypeSelect.value === "" )
-						item = aaapi.library.findFirstLibraryItem("title", elem.value);
+						item = aaapi.library.findFirstLibraryModel(elem.value);
 					else
-						item = aaapi.library.findFirstLibraryItem("title", elem.value, "type", filterTypeSelect.value);
+						item = aaapi.library.findFirstLibraryModel(elem.value, filterTypeSelect.value);
 
 					if( item != 0 )
 					{
@@ -293,7 +291,7 @@
 						var count = 0;
 						var repeat = setInterval(function()
 						{
-							var item = aaapi.library.findNextLibraryItem();
+							var item = aaapi.library.findNextLibraryModel();
 							if( count < 100 && item != 0 )
 							{
 								appendItem(item);
@@ -363,14 +361,14 @@
 
 				itemContainer.addEventListener("mouseover", function(e)
 				{
-					var elem = e.srcElement;
-					arcadeHud.showCursorPreviewImage(elem.item.marquee, elem.item.screen);
+					//var elem = e.srcElement;
+					//arcadeHud.showCursorPreviewImage(elem.item.marquee, elem.item.screen);
 				}, true);
 
 				itemContainer.addEventListener("mouseout", function(e)
 				{
-					var elem = e.srcElement;
-					arcadeHud.hideCursorPreviewImage();
+					//var elem = e.srcElement;
+					//arcadeHud.hideCursorPreviewImage();
 				}, true);
 
 				itemContainer.addEventListener("click", function(e)
@@ -390,17 +388,17 @@
 					{
 						// Remove the disabledButton class
 						var button = document.querySelector("#editButton");
-						button.className = button.className.replace(/\bdisabledButton\b/,'');
+						//button.className = button.className.replace(/\bdisabledButton\b/,'');
 
 						button = document.querySelector("#launchButton");
-						button.className = button.className.replace(/\bdisabledButton\b/,'');
+						//button.className = button.className.replace(/\bdisabledButton\b/,'');
 					}
 
 					elem.oldBgColor = elem.style.backgroundColor;
 					elem.style.backgroundColor = "rgba(250, 50, 50, 0.7)";
 					libraryContainer.selectedItem = elem;
 
-					createNewInputElem.value = elem.item.file;
+					createNewInputElem.value = elem.item.platforms[AA_PLATFORM_ID].file;
 					onCreateNewChange(true);
 				}, true);				
 
@@ -410,7 +408,7 @@
 
 				var typeNode;
 				if(!!types[item.type])
-					typeNode = document.createTextNode(types[item.type].title);
+					typeNode = document.createTextNode(types[item.dynamic]);
 				else
 					typeNode = document.createTextNode("");
 
@@ -427,12 +425,12 @@
 				libraryContainer.appendChild(itemContainer);
 			}
 
-			appendItem(aaapi.library.getFirstLibraryItem());
+			appendItem(aaapi.library.getFirstLibraryModel());
 
 			var count = 0;
 			var repeat = setInterval(function()
 			{
-				var item = aaapi.library.getNextLibraryItem();
+				var item = aaapi.library.getNextLibraryModel();
 				if( count < 100 && item != 0 )
 				{
 					appendItem(item);

@@ -58,6 +58,8 @@ public:
 	void DispatchJavaScriptMethod(C_AwesomiumBrowserInstance* pBrowserInstance, std::string objectName, std::string objectMethod, std::vector<std::string> methodArguments);
 	void DispatchJavaScriptMethods(C_AwesomiumBrowserInstance* pBrowserInstance);
 	
+	void GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
+
 	// accessors
 	C_AwesomiumBrowserInstance* GetFocusedAwesomiumBrowserInstance() { return m_pFocusedAwesomiumBrowserInstance; }
 	C_AwesomiumBrowserInstance* GetSelectedAwesomiumBrowserInstance() { return m_pSelectedAwesomiumBrowserInstance; }
@@ -78,6 +80,7 @@ private:
 	LoadListener* m_pLoadListener;
 	ViewListener* m_pViewListener;
 	MenuListener* m_pMenuListener;
+	ProcessListener* m_pProcessListener;
 
 	JSHandler* m_pJSHandler;
 

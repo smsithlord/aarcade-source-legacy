@@ -13,6 +13,34 @@
 <!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;</a>
 		<script>
+
+		var kodiListener = {
+			"play": function(kodiInfo, file)
+			{
+				var kodiRequest = {
+					"jsonrpc": "2.0",
+					"id": "1",
+					"method": "Player.Open",
+					"params":
+					{
+						"item":
+						{
+							"file": file
+						}
+					}
+				};
+
+				var kodiUri = "http://" + kodiInfo + "/jsonrpc?request=" + encodeURIComponent(JSON.stringify(kodiRequest));
+
+				var iframe = document.createElement("iframe");
+				iframe.src = kodiUri;
+				document.body.appendChild(iframe);
+			}
+		};
+
+		console.log(kodiListener);
+
+
 		//PRESS ESCAPE TO RESUME
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
 function getParameterByName(name, url) {

@@ -301,9 +301,9 @@
 		<script>
 			function tester()
 			{
-				console.log("tester buuudy");
-				var response = aaapi.system.getLibretroOptions();
-				console.log(response.options.length);
+				window.location = "libretro.html";
+				//var response = aaapi.system.getLibretroOptions();
+				//console.log(response.options.length);
 			}
 		</script>
 
@@ -311,81 +311,6 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;</a>
 
 		<script>
-			/*
-			this.metaScrapeElem = document.createElement("div");
-		this.metaScrapeElem.className = "metaScrapeContainer";
-		this.metaScrapeElem.addEventListener("click", function()
-		{
-			arcadeHud.metaScrape(this.scraperId, this.field, function(scrapedData)
-			{
-				console.log("Scraped data is: ");
-				console.log(scrapedData);
-				var usedFields = [];
-				var args = [];
-				var x, field;
-				for( x in scrapedData)
-				{
-					field = scrapedData[x];
-					//if( field === "" || (this.field !== "all" && this.field !== x))
-					if( this.field !== "all" && this.field !== x)
-						continue;
-
-					if( x === "type" )
-					{
-						var allTypes = aaapi.library.getAllLibraryTypes();
-						var y;
-						for( y in allTypes )
-						{
-							console.log(allTypes[y].title);
-							if( allTypes[y].title === field )
-							{
-								field = allTypes[y].info.id;
-								break;
-							}
-						}
-					}
-					
-					var inputs = document.querySelectorAll("input, select");
-					var i;
-					for( i = 0; i < inputs.length; i++ )
-					{
-						if( inputs[i].field === x )
-						{
-							//inputs[i].focus();
-							inputs[i].value = field;
-							break;
-						}
-					}
-
-					args.push(x);
-					args.push(field);
-					usedFields.push(x);
-				}
-
-				var success = aaapi.library.updateItem(this.itemId, args);
-
-				if( success )
-				{
-					console.log("Item updated!");
-
-					var container = document.querySelector(".metaScrapeContainer");
-					container.style.display = "none";
-
-					aaapi.system.autoInspect(this.itemId);
-					aaapi.system.deactivateInputMode();
-				}
-				else
-					console.log("Item update rejected!");
-			}.bind(this));
-		}.bind(this.metaScrapeElem), true);
-		this.hudMetaScrapeContainer = document.createElement("div");
-		this.hudMetaScrapeContainer.className = "hudScrapeButton";//hudMetaScrapeContainer";
-		//this.hudMetaScrapeContainer.style = "";
-		this.hudMetaScrapeContainer.innerHTML = "<img src='scrapeicon.png' style='vertical-align: middle;' /><div class='buttonText'> Meta Scrape</div>";
-		this.metaScrapeElem.appendChild(this.hudMetaScrapeContainer);
-		document.body.appendChild(this.metaScrapeElem);
-			*/
-
 			var rows = document.querySelectorAll(".hudSideContainerRow");
 			var max = rows.length;
 			var row;
@@ -397,11 +322,11 @@
 				button = row.querySelector(".hudSideContainerButton");
 				{
 					if(button)
-					button.addEventListener("mouseover", function(e)
-					{
-						if( this.className.indexOf(" activeHudRow") === -1 )
-							this.className += " activeHudRow";
-					}.bind(row), true);
+						button.addEventListener("mouseover", function(e)
+						{
+							if( this.className.indexOf(" activeHudRow") === -1 )
+								this.className += " activeHudRow";
+						}.bind(row), true);
 
 					row.addEventListener("mouseout", function(e)
 					{

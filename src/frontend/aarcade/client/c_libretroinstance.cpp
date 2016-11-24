@@ -21,6 +21,7 @@ C_LibretroInstance::C_LibretroInstance()
 	m_pTexture = null;
 	m_iLastRenderedFrame = -1;
 	m_iLastVisibleFrame = -1;
+//	m_pOpenGLManager = null;
 }
 
 C_LibretroInstance::~C_LibretroInstance()
@@ -65,8 +66,8 @@ void C_LibretroInstance::Init(std::string id)
 	std::string textureName = "canvas_";
 	textureName += m_id;
 
-	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
-	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	int iWidth = (id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	int iHeight = (id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 	//int iWidth = 1920;
 	//int iHeight = 1080;
 
@@ -85,7 +86,18 @@ void C_LibretroInstance::Init(std::string id)
 	m_pTexture->SetTextureRegenerator(pRegen);
 	
 	m_corePath = engine->GetGameDirectory();
-	m_corePath += "/cores";
+	m_corePath += "\\libretro\\cores";
+
+	std::string userBase = engine->GetGameDirectory();// "libretro\\assets";
+	size_t found = userBase.find_last_of("/\\");
+	if (found != std::string::npos)
+		userBase = userBase.substr(0, found);
+
+	userBase += "\\aarcade_user";
+
+	m_assetsPath += userBase + "\\libretro\\assets";
+	m_systemPath += userBase + "\\libretro\\system";
+	m_savePath += userBase + "\\libretro\\save";
 
 	m_raw = new libretro_raw();
 }
@@ -95,23 +107,36 @@ void C_LibretroInstance::Update()
 	if (g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
-	if (m_info->state == 2)
+	if (m_info->state == 1)
 		OnCoreLoaded();
-	else if (m_info->state == 5 && m_info->audiostream)	// added m_info to try and detect failed video loads!! (FIXME: Should be removed after proper failed video load is added elsewhere.
+	else if (m_info->state == 5 )// && m_info->audiostream)	// added m_info to try and detect failed video loads!! (FIXME: Should be removed after proper failed video load is added elsewhere.
 	{
+		unsigned int numPorts = m_info->numports;
+		if (numPorts == 0)
+		{
+			// how the funnuck are we supposd to know how many input ports need to be held in the input back buffer if the core doesn't tell us??  just assume 1 for now.
+			//DevMsg("WARNING: zero retro ports are active.\n");
+			numPorts = 1;
+		}
+
+		for (unsigned int i = 0; i < numPorts; i++)
+			g_pAnarchyManager->GetLibretroManager()->ManageInputUpdate(m_info, i, RETRO_DEVICE_JOYPAD);
+
+		/*
 		// update input state
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_SELECT] = vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_START] = vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_UP] = vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_DOWN] = vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_LEFT] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_RIGHT] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_A] = vgui::input()->IsKeyDown(KEY_XBUTTON_B);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_B] = vgui::input()->IsKeyDown(KEY_XBUTTON_A);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_X] = vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_Y] = vgui::input()->IsKeyDown(KEY_XBUTTON_X);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_L] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
-		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_R] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_SELECT"] = vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_START"] = vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_UP"] = vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_DOWN"] = vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_LEFT"] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_RIGHT"] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_A"] = vgui::input()->IsKeyDown(KEY_XBUTTON_B);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_B"] = vgui::input()->IsKeyDown(KEY_XBUTTON_A);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_X"] = vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_Y"] = vgui::input()->IsKeyDown(KEY_XBUTTON_X);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_L"] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
+		m_info->inputstate["RETRO_DEVICE_ID_JOYPAD_R"] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
+		*/
 
 		this->OnProxyBind(null);
 
@@ -126,70 +151,19 @@ void C_LibretroInstance::Update()
 	}
 }
 
-bool C_LibretroInstance::LoadCore()
+bool C_LibretroInstance::LoadCore(std::string coreFile)
 {
-	//C_ArcadeResources* pClientArcadeResources = C_ArcadeResources::GetSelf();
-
-	//long startTime = pClientArcadeResources->GetSystemTime();
-
-	//char fullFilename[MAX_PATH];
-	//g_pFullFileSystem->RelativePathToFullPath(pFilename, USE_GAME_PATH, fullFilename, sizeof(fullFilename));
-
-	/*
-	std::string core = "D:\\Projects\\AArcade-Source\\game\\frontend\\cores\\ffmpeg_libretro.dll";
-	m_pModule = Sys_LoadModule(core.c_str());
-
-	if (!m_pModule)
+	if (coreFile != "")
 	{
-		Msg("Failed to load %s\n", core.c_str());
-		// FIXME FIX ME Probably need to clean up!
-		return false;
+		std::string core = m_corePath + "\\" + coreFile;	//std::string(AA_LIBRETRO_PATH) + "\\" + coreFile;
+		if (g_pFullFileSystem->FileExists(core.c_str()))
+		{
+			CreateWorkerThread(core);
+			return true;
+		}
 	}
 
-	HMODULE	hModule = reinterpret_cast<HMODULE>(m_pModule);
-
-	if (!this->BuildInterface(&hModule))
-	{
-		DevMsg("libretro: Failed to build interface!\n");
-		// FIXME FIX ME Probably need to clean up!
-		return false;
-	}
-	*/
-
-//	if (ThreadInMainThread())
-	//	DevMsg("22 MAIN THREAD!\n");
-	//else
-//		DevMsg("22 CHILD THREAD!\n");
-
-	std::string core = "D:\\Projects\\AArcade-Source\\game\\frontend\\cores\\ffmpeg_libretro.dll";
-	CreateWorkerThread(core);
-
-	return true;
-//	LibretroInstanceInfo_t* info = new LibretroInstanceInfo_t;
-//	info->id = "taco";
-
-//	CreateSimpleThread(&C_LibretroInstance::Worker, info);
-
-	// Bind the callbacks that cores will call in us
-	//m_raw->set_environment(this->cbEnvironment);
-//	m_raw->set_environment(&this->cbEnvironment);
-	/*
-	m_raw->set_video_refresh(&this->cbVideoRefresh);
-	m_raw->set_audio_sample(&this->cbAudioSample);
-	m_raw->set_audio_sample_batch(&this->cbAudioSampleBatch);
-	m_raw->set_input_poll(&this->cbInputPoll);
-	m_raw->set_input_state(&this->cbInputState);
-
-	if (m_raw->api_version() != RETRO_API_VERSION)
-	{
-		DevMsg("libretro: Failed version check!\n");
-		// FIXME FIX ME Probably need to clean up!
-		return false;
-	}
-	*/
-
-	DevMsg("FIN!\n\n");
-	return true;
+	return false;
 	/*
 
 	//	struct retro_system_info info;
@@ -251,7 +225,14 @@ bool C_LibretroInstance::LoadGame()
 	info->videoformat = RETRO_PIXEL_FORMAT_0RGB1555;
 	//V:\MoviesTeenage Mutant Ninja Turtles(1990).avi
 
-	DevMsg("libretro: LOAD GAME %s\n", filename.c_str());
+	if (!g_pFullFileSystem->FileExists(filename.c_str()))
+	{
+		DevMsg("libretro: ERROR file does not exist: %s\n", filename.c_str());
+		info->close = true;
+		return false;
+	}
+	else
+		DevMsg("libretro: LOAD GAME %s\n", filename.c_str());
 
 	info->raw->init();	// could take a while
 	if (info->close)
@@ -289,6 +270,8 @@ bool C_LibretroInstance::LoadGame()
 		if (!info->raw->load_game(&game))	// this could take a while
 		{
 			DevMsg("ERROR LOADING LIBRETRO GAME!!\n");
+			info->close = true;
+			return false;
 		}
 		else
 		{
@@ -296,7 +279,10 @@ bool C_LibretroInstance::LoadGame()
 			if (!info->close)
 				info->state = 5;
 			else
+			{
 				DevMsg("However, the instance already wants to close. :(\n");
+				return false;
+			}
 		}
 
 		//pLibretroInstance->OnGameLoaded();
@@ -411,8 +397,7 @@ bool C_LibretroInstance::LoadGame()
 void C_LibretroInstance::OnCoreLoaded()
 {
 	DevMsg("Core finished loading!\n");
-	m_info->coreloaded = true;
-	m_info->state = 3;
+	m_info->state = 2;
 
 	// automatically load a game right away...
 //	m_info->game = "V:/Movies/Flash Gordon (1980).avi";//file
@@ -528,10 +513,16 @@ void C_LibretroInstance::CreateAudioStream()
 
 	PaStreamParameters outputParameters;
 	outputParameters.device = Pa_GetDefaultOutputDevice(); // default output device
+
+	if (outputParameters.device == -1)
+	{
+		DevMsg("FAILED TO GET PORT AUDIO DEVICE!! PREPARE FOR CRASH!\n");
+	}
+
 	outputParameters.channelCount = 2;
 	outputParameters.sampleFormat = paInt16;
 	//outputParameters.suggestedLatency = 0.032;// 0.064;// Pa_GetDeviceInfo(outputParameters.device)->defaultHighOutputLatency;
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultHighOutputLatency;
+	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultHighOutputLatency;	// FIXME: Add better error handling here!! sometimes this can't be called!!
 	//outputParameters.suggestedLatency = 1 / (info->framerate * 1.0);
 	outputParameters.hostApiSpecificStreamInfo = NULL;
 
@@ -621,6 +612,35 @@ unsigned MyThread(void *params)
 			info->module = pModule;
 
 		info->threadid = ThreadGetCurrentId();
+		info->coreloaded = true;
+		g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
+		DevMsg("Thread: core loaded.\n");
+
+		/*
+		// init 3d
+		if (glfwInit())
+		{
+			glfwWindowHint(GLFW_SAMPLES, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+			//glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);	// invisible window
+
+			info->window = glfwCreateWindow(640, 480, "My OPENGL", NULL, NULL);
+			if (info->window)
+			{
+				DevMsg("libretro: OpenGL window created.\n");
+				glfwMakeContextCurrent(info->window);
+				glewExperimental = true; // Needed in core profile
+				//glBindFramebuffer(GL_FRAMEBUFFER, GL_BACK_LEFT);
+				//glfwPollEvents();
+				//GLuint fbo = 0;
+				//glGenFramebuffers(1, &fbo);// info->framebuffer);
+				//glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+				//glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer);
+			}
+		}
+		*/
 
 		//	C_LibretroInstance* pLibretroInstance;
 		libretro_raw* raw = info->raw;
@@ -629,8 +649,10 @@ unsigned MyThread(void *params)
 		bool bDidNotify = false;
 
 		//while (state != 666)
-		while (!info->close)
+		while (!info->close)	//&& glfwWindowShouldClose(window) == 0
 		{
+		//	glfwPollEvents();
+
 		//	if ( info->close )
 			state = info->state;
 			//pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
@@ -638,7 +660,7 @@ unsigned MyThread(void *params)
 			//if (!raw)
 			//			continue;
 
-			if (state == 0)
+			if (state == 2)
 			{
 				CSysModule* myModule = Sys_LoadModule(VarArgs("%s\\bin\\portaudio_x86.dll", engine->GetGameDirectory()));
 				if (myModule)
@@ -655,12 +677,14 @@ unsigned MyThread(void *params)
 					DevMsg("Failed to load portaudio_x86.dll.\n");
 
 				// this should be done in the manager class.
+				/*
 				raw->set_environment(C_LibretroInstance::cbEnvironment);
 				raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
 				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
 				raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
 				raw->set_input_poll(C_LibretroInstance::cbInputPoll);
 				raw->set_input_state(C_LibretroInstance::cbInputState);
+				*/
 
 				/*
 				if (s_raw->api_version() != RETRO_API_VERSION)
@@ -671,19 +695,31 @@ unsigned MyThread(void *params)
 				}
 				*/
 
-				// skip state 2
-				info->state = 1;
-				g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
+
+				info->state = 3;
 			}
 			else if (state == 3)
+			{
+				raw->set_environment(C_LibretroInstance::cbEnvironment);
+				raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
+				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
+				raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
+				raw->set_input_poll(C_LibretroInstance::cbInputPoll);
+				raw->set_input_state(C_LibretroInstance::cbInputState);
+				info->state = 4;
+			}
+			else if (state == 4)
 			{
 				// load a game if we have one
 				if (info->game != "")
 				{
 					//	DevMsg("Load the game next!!\n");
-					info->state = 4;
-					C_LibretroInstance::LoadGame();
-					info->raw->run();
+					//info->state = 5;
+					if (C_LibretroInstance::LoadGame())
+					{
+						if (info->state == 5)
+							info->raw->run();	// complete the game loading by executing 1 run
+					}
 					//	DevMsg("cuatro\n");
 				}
 			}
@@ -696,7 +732,6 @@ unsigned MyThread(void *params)
 				info->raw->run();
 				}
 				*/
-
 				info->raw->run();
 
 				/*
@@ -730,24 +765,37 @@ unsigned MyThread(void *params)
 	{
 		// clean up the memory
 		if (info->module)
+		{
 			Sys_UnloadModule(info->module);
+			DevMsg("Unloaded Libretro core.\n");
+		}
 
 		if (info->lastframedata)
 			free(info->lastframedata);
 
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//glDeleteFramebuffers(1, &info->framebuffer);
+
+		info->libretrokeybinds->deleteThis();
+		info->corekeybinds->deleteThis();
+		info->gamekeybinds->deleteThis();
+		info->inputstate->deleteThis();
+		info->coreCoreOptions->deleteThis();
+		info->gameCoreOptions->deleteThis();
 		delete info;
 	}
 
 	return 0;
 }
 
-int C_LibretroInstance::GetOptionCurrentValue(unsigned int index)
-{
-	if (m_info && index < m_info->optionscurrentvalues.size())
-		return m_info->optionscurrentvalues[index];
-	else
-		return 0;
-}
+//int C_LibretroInstance::GetOptionCurrentValue(unsigned int index)
+//std::string C_LibretroInstance::GetOptionCurrentValue(std::string name_internal)
+//{
+//	if (m_info && index < m_info->optionscurrentvalues.size())
+	//	return m_info->optionscurrentvalues[index];
+	//else
+		//return 0;
+//}
 
 bool C_LibretroInstance::IsSelected()
 {
@@ -820,6 +868,9 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->gameloaded = false;
 	m_info->raw = m_raw;
 	m_info->corepath = m_corePath;
+	m_info->assetspath = m_assetsPath;
+	m_info->systempath = m_systemPath;
+	m_info->savepath = m_savePath;
 	m_info->module = null;// pModule;
 	m_info->threadid = 0;
 	m_info->libretroinstance = this;
@@ -831,6 +882,7 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->lastframepitch = 0;
 	m_info->videoformat = RETRO_PIXEL_FORMAT_UNKNOWN;
 	m_info->optionshavechanged = false;
+	//m_info->numOptions = 0;
 //	m_info->audiobuffer = null;
 //	m_info->audiobuffersize = 1024;
 //	m_info->audiobufferpos = 0;
@@ -845,6 +897,70 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	//m_info->safebuffersize = 0;
 	//m_info->safebufferpos = 0;
 	m_info->processingaudio = false;
+//	m_info->window = null;
+	//m_info->framebuffer = null;
+	m_info->portdata = null;
+	//m_info->currentPortTypes;
+	m_info->numports = 0;
+
+	// LIBRETRO-WIDE KEYBINDS
+	KeyValues* kv = new KeyValues("keybinds");
+	if (kv->LoadFromFile(g_pFullFileSystem, "libretro\\user\\keybinds.key", "MOD"))
+		DevMsg("Loaded libretro keybinds!\n");
+	m_info->libretrokeybinds = kv;
+
+	// CORE-SPECIFIC KEYBINDS
+	std::string prettyCore = m_info->core;
+	size_t found = prettyCore.find_last_of("/\\");
+	if ( found != std::string::npos )
+		prettyCore = prettyCore.substr(found + 1);
+
+	found = prettyCore.find(".");
+	if (found != std::string::npos)
+		prettyCore = prettyCore.substr(0, found);
+
+	std::string kvPath = VarArgs("libretro\\user\\%s", prettyCore.c_str());
+	//g_pFullFileSystem->CreateDirHierarchy(kvPath.c_str(), "DEFAULT_WRITE_PATH");
+
+	kv = new KeyValues("keybinds");
+	kv->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", kvPath.c_str()), "MOD");
+	m_info->corekeybinds = kv;
+
+	// GAME-SPECIFIC KEYBINDS
+	std::string prettyGame = m_info->game;
+	found = prettyGame.find_last_of("/\\");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(found + 1);
+
+	found = prettyGame.find(".");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(0, found);
+	
+	kvPath = VarArgs("libretro\\user\\%s\\%s", prettyCore.c_str(), prettyGame.c_str());
+	//g_pFullFileSystem->CreateDirHierarchy(kvPath.c_str(), "DEFAULT_WRITE_PATH");
+
+	kv = new KeyValues("keybinds");
+	kv->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", kvPath.c_str()), "MOD");
+	m_info->gamekeybinds = kv;
+
+	// CURRENT KEYBINDS
+	m_info->inputstate = new KeyValues("keybinds");	// just like the other structs, but holds backbuffer input values instead of source engine key enums.
+
+	// CORE-SPECIFIC OPTIONS
+	//kvPath = VarArgs("libretro\\user\\%s", prettyCore.c_str());
+	kvPath = "libretro\\user\\" + prettyCore + "\\options.key";
+
+	kv = new KeyValues("options");
+	kv->LoadFromFile(g_pFullFileSystem, kvPath.c_str(), "MOD");
+	m_info->coreCoreOptions = kv;
+
+	// GAME-SPECIFIC OPTIONS
+	kvPath = "libretro\\user\\" + prettyCore + "\\" + prettyGame + "\\options.key";
+
+	kv = new KeyValues("options");
+	kv->LoadFromFile(g_pFullFileSystem, kvPath.c_str(), "MOD");
+	m_info->gameCoreOptions = kv;
+
 	
 	CreateSimpleThread(MyThread, m_info);
 
@@ -902,19 +1018,32 @@ unsigned C_LibretroInstance::Worker(void *params)
 	DevMsg("whaaaaat\n");
 }
 */
+
+/*
+int16_t C_LibretroInstance::GetInputState(LibretroInstanceInfo_t* info, unsigned int port, unsigned int device, unsigned int index, unsigned int id)
+{
+	return g_pAnarchyManager->GetLibretroManager()->GetInputState(info, port, device, index, id);
+}
+*/
+
 void C_LibretroInstance::cbMessage(enum retro_log_level level, const char * fmt, ...)
 {
 	va_list args;
 
-	char* msg = new char[AA_MAX_STRING];
+	//char* msg = new char[AA_MAX_STRING];
+	char msg[AA_MAX_STRING];
 
 	va_start(args, fmt);
-	int neededlen = Q_vsnprintf(msg, 64, fmt, args);
+	int neededlen = Q_vsnprintf(msg, AA_MAX_STRING, fmt, args);
 	va_end(args);
 
-	DevMsg("libretro: %s\n", msg);
+	std::string buf = msg;
+	if (buf.at(buf.length() - 1) != '\n')
+		buf += "\n";
 
-	delete[] msg;
+	DevMsg("libretro: %s", buf.c_str());
+
+	//delete[] msg;
 }
 
 ///*
@@ -963,6 +1092,30 @@ const char* GetFormatName(int format)
 		return "UNKOWN";
 }
 
+static retro_proc_address_t v3d_get_proc_address(const char * sym)
+{
+	DevMsg("Getting proc address for %s\n", sym);
+	return glfwGetProcAddress(sym);
+}
+
+static uintptr_t v3d_get_current_framebuffer()
+{
+	DevMsg("Getting frame buffer...\n");
+	return 0;
+	uint uId = ThreadGetCurrentId();
+	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
+
+	if (!pLibretroInstance)
+		return false;
+
+	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+
+	DevMsg("Getting frame buffer...\n");
+
+	//(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
+	return GL_BACK_LEFT;// info->framebuffer;// GL_FRAMEBUFFER;// glfwGetCurrentContext();
+}
+
 bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 {
 	uint uId = ThreadGetCurrentId();
@@ -980,8 +1133,8 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	if (cmd == RETRO_ENVIRONMENT_GET_CAN_DUPE) //3
 	{
 		DevMsg("libretro: Asking backend if CAN_DUPE.\n");
-		//*(bool*)data = true;
-		return false;
+		*(bool*)data = false;
+		return true;
 	}
 
 	//4 was removed and can safely be ignored.
@@ -989,23 +1142,35 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	//6 SET_MESSAGE, ignored because I don't know what to do with that.
 	//7 SHUTDOWN, ignored because no supported core has any reason to have Off buttons.
 	//8 SET_PERFORMANCE_LEVEL, ignored because I don't support a wide range of powers.
-	if (cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY) // note that libretro path might be wanting a full file location including extension, but ignore that for now and treat it like the others.
+	if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY) // note that libretro path might be wanting a full file location including extension, but ignore that for now and treat it like the others.
 	{
-		char* buf = "fail";// new char[AA_MAX_STRING];
+		// FIXME: MEMORY LEAK
+		// FIXME: there needs to be book keeping so that these temp const char*'s can be cleaned up!!!
+		char* buf = new char[AA_MAX_STRING];
 
-		// Libretro path is actually NOT what they are asking for when they ask for SYSTEM path.
-	/////////	Q_strcpy(buf, m_corePath.c_str());
+		std::string folder;
 
-		//Q_strcpy(buf, "X:\\Emulators\\Genesis\\roms");
+		if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY)
+			folder = info->assetspath;
+		else if (cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY)
+			folder = info->systempath;
+		else if (cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH)
+			folder = info->corepath + "\\" + info->core;	// this is a full file location w/ extension
+		else if (cmd == RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY)
+			folder = info->savepath;
 
-		//Q_strcpy(buf, "X:\\Emulators\\Genesis\\roms");
-		//V_FixSlashes(buf, '/');
+		if (cmd != RETRO_ENVIRONMENT_GET_LIBRETRO_PATH)
+			g_pFullFileSystem->CreateDirHierarchy(folder.c_str());
 
-		DevMsg("libretro: Fetching ");
+		Q_strcpy(buf, folder.c_str());// corePath.c_str());
+
+		DevMsg("libretro: Returning string for ");
 		if (cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY)
 			DevMsg("system");
 		else if (cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH)
 			DevMsg("libretro");
+		else if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY)
+			DevMsg("core assets");
 		else if (cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY)
 			DevMsg("content");
 
@@ -1013,7 +1178,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 		(*(const char**)data) = buf;
 
-		delete[] buf;
+		//delete[] buf;
 		return true;
 	}
 
@@ -1062,13 +1227,34 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 			return true;
 		}
 		else
+		{
+			DevMsg("libretro: Failed at setting video to format %s\n", GetFormatName(newfmt));
 			return false;
+		}
 	}
 
 	if (cmd == RETRO_ENVIRONMENT_SET_HW_RENDER) //14
 	{
 		DevMsg("core requested to set environment HW render\n");
 		return false;
+
+		struct retro_hw_render_callback * render = (struct retro_hw_render_callback*)data;
+		//render->get_current_framebuffer = //(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
+		render->get_current_framebuffer = v3d_get_current_framebuffer;
+		render->get_proc_address = v3d_get_proc_address;
+		return true;
+		
+		/*
+		if (!this->create3d) return false;
+		struct retro_hw_render_callback * render = (struct retro_hw_render_callback*)data;
+		this->v3d = this->create3d(render);
+		if (!this->v3d) return false;
+		render->get_current_framebuffer = v3d_get_current_framebuffer;
+		render->get_proc_address = v3d_get_proc_address;
+		*/
+		//return true;
+
+		//return false;
 	}
 
 	if (cmd == RETRO_ENVIRONMENT_GET_VARIABLE) //15
@@ -1076,52 +1262,63 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		struct retro_variable * variable = (struct retro_variable*)data;
 
 		variable->value = NULL;
+
+		DevMsg("Requesting variable: %s = ", variable->key);
+
+		bool bFoundVal = false;
+		std::string val;
+		KeyValues* kv;
+		unsigned int index;
 		unsigned int numOptions = info->options.size();
-
-		DevMsg("Requesting variable: %s and numOptions are %i\n", variable->key, numOptions);
-		/*
-		for (unsigned int i = 0; i < s_options.size(); i++)
+		for (index = 0; index < numOptions; index++)
 		{
-		for (unsigned int j = 0; j < s_options[i]->values.size(); i++)
-		{
-		DevMsg("Value: %s\n", s_options[i]->values[j].c_str());
-		}
-		}
-		*/
-
-
-		for (unsigned int i = 0; i < numOptions; i++)
-		{
-			if (!Q_strcmp(variable->key, info->options[i]->name_internal))
-			{
-				//char* buf = new char[MAX_STRING_LENGTH];
-
-				//Q_strcpy(buf, s_options[i]->values[s_optionsCurrentValues[i]]);
-
-
-				//				DevMsg("libretro: Fetching variable %s = %s.\n", s_options[i]->name_internal, s_options[i]->values[s_optionsCurrentValues[i]].c_str());
-
-				variable->value = VarArgs("%s", info->options[i]->values[info->optionscurrentvalues[i]].c_str());
-				//variable->value = buf;
-
-				//delete[] buf;
-
+			if (std::string(variable->key) == info->options[index]->name_internal)
 				break;
+		}
+
+		kv = info->gameCoreOptions;
+		if (!Q_strcmp(kv->GetString(variable->key, "default"), "default"))
+			kv = info->coreCoreOptions;
+
+		if (Q_strcmp(kv->GetString(variable->key, "default"), "default"))
+		{
+			val = kv->GetString(variable->key);
+			bFoundVal = true;
+		}
+		else if (index < numOptions)
+		{
+			val = info->options[index]->values[0].c_str();
+			bFoundVal = true;
+		}
+		else
+		{
+			DevMsg("WARNING: Libretro core requested a variable that it did not tell us about before hand!: %s\n", variable->key);
+
+			// try to reply with a default response (even tho we dont know what a default response is cuz this core never told us shit.)
+			if (info->core.find("mame") != std::string::npos)
+			{
+				val = "disabled";
+				bFoundVal = true;
 			}
 		}
 
-		info->optionshavechanged = false;
+		if (bFoundVal)
+		{
+			// FIXME: MEMORY LEAK
+			// FIXME: there needs to be book keeping so that these temp const char*'s can be cleaned up!!!
+			char* buf = new char[AA_MAX_STRING];
+			Q_strcpy(buf, val.c_str());
+			variable->value = buf;
+			DevMsg("%s\n", buf);
 
-		/*
-		for (unsigned int i = 0; i<this->core_opt_num; i++)
-		{
-		if (!strcmp(variable->key, this->core_opts[i].name_internal))
-		{
-		variable->value = this->core_opts[i].values[this->core_opt_current_values[i]];
+			//V_FixSlashes(buf, '/');
+			//(*(const char**)data) = buf;
+			//delete[] buf;
 		}
-		}
-		this->core_opt_changed = false;
-		*/
+		else
+			variable->value = null;
+
+		info->optionshavechanged = false;
 		return true;
 	}
 
@@ -1130,8 +1327,13 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		DevMsg("libretro: RETRO_ENVIRONMENT_SET_VARIABLES\n");
 		const struct retro_variable * variables = (const struct retro_variable*)data;
 
+		// variables are stored as const chars and must be manually dealloc OBSOLTETE: i think they are strings now.
 		while (!info->options.empty())
+		{
+		//	libretro_core_option* pOption = info->options[info->options.size() - 1];
+		//	free(pOption->name_display);
 			info->options.pop_back();
+		}
 
 		const struct retro_variable * variables_count = variables;
 
@@ -1144,7 +1346,8 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		for (unsigned int i = 0; i<numvars; i++)
 		{
 			// Initialize to 0 index for this variable's value
-			info->optionscurrentvalues.push_back(0);
+
+//			info->optionscurrentvalues.push_back(0);
 
 			DevMsg("libretro: Setting up environment variable %s with definition %s of %u\n", variables[i].key, variables[i].value, i);
 
@@ -1156,7 +1359,23 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 			//if the value does not contain "; ", the core is broken, and broken cores can break shit in whatever way they want, anyways.
 			//let's segfault.
 			// In other words, values would be null and a crash would occur when we tried to use it.
-			pOption->name_display = VarArgs("%s", variables[i].value);
+			//pOption->name_display = VarArgs("%s", variables[i].value);
+
+			/*
+			unsigned int namelen = values - variables[i].value;
+			values += 2;
+
+			char* name = (char*)malloc(namelen + 1);
+			memcpy(name, variables[i].value, namelen);
+			name[namelen] = '\0';
+			pOption->name_display = name;
+			*/
+
+			//buf = VarArgs("%s", variables[i].value);
+			pOption->name_display = variables[i].value;
+			size_t found = pOption->name_display.find("; ");
+			if (found != std::string::npos)
+				pOption->name_display = pOption->name_display.substr(0, found);
 
 			unsigned int numvalues = 1;
 			const char * valuescount = values;
@@ -1201,6 +1420,113 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	{
 		struct retro_log_callback * logcb = (struct retro_log_callback*)data;
 		logcb->log = &C_LibretroInstance::cbMessage;
+		return true;
+	}
+
+
+	if (cmd == RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO) //32
+	{
+		DevMsg("libretro: acknowledging RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO\n");
+		return true;
+	}
+
+	if (cmd == RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS)
+{
+		DevMsg("libretro: RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS\n");
+
+		unsigned controller, typeIndex;
+		const struct retro_input_descriptor *controllerData = (const struct retro_input_descriptor*)data;
+
+		//info->currentPortTypes.clear();
+
+		for (controller = 0; controllerData[controller].description; controller++)
+		{
+			DevMsg("Unhandled Controller info:\n");
+			DevMsg("\tPort: %u\n", controllerData[controller].port);
+			DevMsg("\tDevice: %u\n", controllerData[controller].device);
+			DevMsg("\tIndex: %u\n", controllerData[controller].index);
+			DevMsg("\tID: %u\n", controllerData[controller].id);
+
+			//info->currentPortTypes.push_back(1);	// set every joystick to use the 1st entry (should always be RetroPad w/ id 1).
+			// NOTE: 0 must ALWAYS gets inserted to the front when the current ports are gotten, which would mean Unplugged.
+			// NOTE: These are vector indecies, NOT retro device IDs
+
+			//for (typeIndex = 0; typeIndex < portData[port].num_types; typeIndex++)
+			//	DevMsg("\t%s (ID: %u)\n", portData[port].types[typeIndex].desc, portData[port].types[typeIndex].id);
+		}
+
+		//free((void*)info->portdata);
+		//info->portdata = (struct retro_controller_info*)
+		//	calloc(port, sizeof(*info->portdata));
+		//memcpy((void*)info->portdata, portData,
+		//	port * sizeof(*info->portdata));
+
+		//info->numports = port;
+
+
+
+		/*
+		if (system)
+		{
+		free(system->ports.data);
+		system->ports.data = (struct retro_controller_info*)
+		calloc(i, sizeof(*system->ports.data));
+		if (!system->ports.data)
+		return false;
+
+		memcpy(system->ports.data, info,
+		i * sizeof(*system->ports.data));
+		system->ports.size = i;
+		}
+		break;
+		*/
+
+		return false;
+	}
+
+	if (cmd == RETRO_ENVIRONMENT_SET_CONTROLLER_INFO) //35
+	{
+		DevMsg("libretro: RETRO_ENVIRONMENT_SET_CONTROLLER_INFO\n");
+
+		unsigned port, typeIndex;
+		const struct retro_controller_info *portData = (const struct retro_controller_info*)data;
+
+		info->currentPortTypes.clear();
+		for (port = 0; portData[port].types; port++)
+		{
+			DevMsg("Controller port: %u\n", port + 1);
+			info->currentPortTypes.push_back(1);	// set every joystick to use the 1st entry (should always be RetroPad w/ id 1).
+			// NOTE: 0 must ALWAYS gets inserted to the front when the current ports are gotten, which would mean Unplugged.
+			// NOTE: These are vector indecies, NOT retro device IDs
+
+			for (typeIndex = 0; typeIndex < portData[port].num_types; typeIndex++)
+				DevMsg("\t%s (ID: %u)\n", portData[port].types[typeIndex].desc, portData[port].types[typeIndex].id);
+		}
+
+		free((void*)info->portdata);
+		info->portdata = (struct retro_controller_info*)
+			calloc(port, sizeof(*info->portdata));
+		memcpy((void*)info->portdata, portData,
+			port * sizeof(*info->portdata));
+
+		//info->portdata = portData;
+		info->numports = port;
+		/*
+		if (system)
+		{
+			free(system->ports.data);
+			system->ports.data = (struct retro_controller_info*)
+				calloc(i, sizeof(*system->ports.data));
+			if (!system->ports.data)
+				return false;
+
+			memcpy(system->ports.data, info,
+				i * sizeof(*system->ports.data));
+			system->ports.size = i;
+		}
+		break;
+		*/
+
 		return true;
 	}
 
@@ -1277,6 +1603,9 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 	if (info->close)
 		return;
 
+	//glfwSwapBuffers(info->window);
+	//return;
+
 	info->lastrendered = gpGlobals->curtime;
 
 	if (!info->readyfornextframe || info->copyingframe )
@@ -1287,6 +1616,7 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 
 	if (info->samplerate == 0)
 	{
+		DevMsg("Get AV info\n");
 		struct retro_system_av_info avinfo;
 		info->raw->get_system_av_info(&avinfo);
 
@@ -1402,7 +1732,8 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 
 void C_LibretroInstance::cbInputPoll(void)
 {
-		//DevMsg("libretro: Input Poll called.\n");
+	// TODO: Implement this.  it might be related to timing of analog & mouse input devices because those expect offsets relative to the last time they were polled.
+	//DevMsg("libretro: Input Poll called.\n");
 }
 
 int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigned index, unsigned id)
@@ -1414,6 +1745,29 @@ int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigne
 		return false;
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+	//DevMsg("Check for: port%u/device%u/index%u/key%u\n", port, device, index, id);
+
+	// only accept input from port0 device1 index0
+	if (port != 0 || device != 1 || index != 0 )
+		return (int16_t)0;
+
+	//int intVal = info->inputstate->GetInt(VarArgs("port%u/device%u/index%u/key%u", port, device, index, id), 0);
+	//return (int16_t)intVal;
+
+	std::string keyPath = "port" + std::to_string(port) + "/device" + std::to_string(device) + "/index" + std::to_string(index) + "/key" + std::to_string(id);
+
+	return (int16_t)info->inputstate->GetInt(keyPath.c_str());
+
+	//KeyValues* kv = info->inputstate->FindKey();
+	//if (!kv)
+//		return (int16_t)0;
+
+	//int intVal = kv->GetInt();
+	//if ( id > 11 && intVal != 0)
+	//	DevMsg("Looking for ID: %u = %i\n", id, intVal);
+
+	//return (int16_t)intVal;
+		//pLibretroInstance->GetInputState(info, port, device, index, id);
 
 	/*
 	#define RETRO_DEVICE_ID_JOYPAD_B        0
@@ -1436,13 +1790,25 @@ int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigne
 	//DevMsg("libretro: Input State called.\n");
 	//DevMsg("libretro: Input State called with port %u, device %u, index %u, and ID %u.\n", port, device, index, id);
 
-	//if (port != 0 || device != 1 || index != 0 || true)
+	// only accept input from player 1
+	//if (port != 0 || device != 1 || index != 0)
 	//	return (int16_t)0;
 
-	if (info->inputstate.find(id) != info->inputstate.end() )
-		return (int16_t)info->inputstate[id];
-	else
-		return (int16_t)0;
+	//DevMsg("%i %i %i\n", port, device, index);
+	// FIXME: index could allow for additional devices PER port, which would require significant changes to support.  However AArcade will rarely be used by more than 1 local player, so support for index probably isn't needed.  supoorting N input ports is enough.
+
+	//std::string retrokey = g_pAnarchyManager->GetLibretroManager()->RetroKeyboardKeyToString((retro_key)index);
+	//std::string retrodevice = g_pAnarchyManager->GetLibretroManager()->RetroDeviceToString(device);
+
+	//int max = 32767;
+	//max *= info->inputstate[retrokey];
+	//int16_t max = 0x7fff;	//32767
+
+
+//	if (info->inputstate.find(retrokey) != info->inputstate.end() )
+//		return (int16_t)info->inputstate[retrokey];
+//	else
+//		return (int16_t)0;
 }
 
 void C_LibretroInstance::ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth)
@@ -1746,4 +2112,123 @@ bool C_LibretroInstance::SetGame(std::string file)
 C_EmbeddedInstance* C_LibretroInstance::GetParentSelectedEmbeddedInstance()
 {
 	return g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
+}
+
+void C_LibretroInstance::SaveLibretroKeybind(std::string type, unsigned int retroport, unsigned int retrodevice, unsigned int retroindex, unsigned int retrokey, std::string steamkey)
+{
+	// pretty CORE
+	std::string prettyCore = m_info->core;
+	size_t found = prettyCore.find_last_of("/\\");
+	if (found != std::string::npos)
+		prettyCore = prettyCore.substr(found + 1);
+
+	found = prettyCore.find(".");
+	if (found != std::string::npos)
+		prettyCore = prettyCore.substr(0, found);
+	
+	// pretty GAME
+	std::string prettyGame = m_info->game;
+	found = prettyGame.find_last_of("/\\");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(found + 1);
+
+	found = prettyGame.find(".");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(0, found);
+
+	// now do keybind stuff
+	KeyValues* kv;
+	std::string savePath;
+	if (type == "libretro")
+	{
+		kv = m_info->libretrokeybinds;	// LIBRETRO-WIDE KEYBINDS
+		savePath = "libretro\\user";
+	}
+	else if (type == "core")
+	{
+		kv = m_info->corekeybinds;	// CORE-SPECIFIC KEYBINDS
+		savePath = "libretro\\user\\" + prettyCore;
+	}
+	else if (type == "game")
+	{
+		kv = m_info->gamekeybinds;	// GAME-SPECIFIC KEYBINDS
+		savePath = "libretro\\user\\" + prettyCore + "\\" + prettyGame;
+	}
+
+	// add the info to the KV: PORT/INDEX/TYPE/RETORKEY = STEAMKEY
+	kv->SetString(VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retrokey), steamkey.c_str());
+
+	// save the KV out
+	// (load up a fresh version and write ONLY this value to it to avoid saving other shit that we don't really want to save at this time.)
+	KeyValues* fresh = new KeyValues("keybinds");
+	fresh->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	if (steamkey != "default")
+		fresh->SetString(VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retrokey), steamkey.c_str());
+	else
+		fresh->SetString(VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retrokey), "");
+
+	g_pFullFileSystem->CreateDirHierarchy(savePath.c_str(), "DEFAULT_WRITE_PATH");
+	fresh->SaveToFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	fresh->deleteThis();
+	//g_pFullFileSystem->CreateDirHierarchy(savePath.c_str(), "DEFAULT_WRITE_PATH");
+	//kv->SaveToFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+
+	// update the ACTIVE keymap of pointers // OBSOLETE: just check all 3 KV's in hiarchy each poll
+	//retro_key retrokeyresolved = g_pAnarchyManager->GetLibretroManager()->StringToRetroKeyEnum(retrokey);
+	//vgui::KeyCode steamkeyresolved = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(steamkey);
+	//m_info->activekeybinds->SetString(VarArgs("port%u/%s/%s", retroport, retrotype.c_str(), retrokey.c_str()), steamkey.c_str());
+}
+
+void C_LibretroInstance::SaveLibretroOption(std::string type, std::string name_internal, std::string value)
+{
+	// pretty CORE
+	std::string prettyCore = m_info->core;
+	size_t found = prettyCore.find_last_of("/\\");
+	if (found != std::string::npos)
+		prettyCore = prettyCore.substr(found + 1);
+
+	found = prettyCore.find(".");
+	if (found != std::string::npos)
+		prettyCore = prettyCore.substr(0, found);
+
+	// pretty GAME
+	std::string prettyGame = m_info->game;
+	found = prettyGame.find_last_of("/\\");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(found + 1);
+
+	found = prettyGame.find(".");
+	if (found != std::string::npos)
+		prettyGame = prettyGame.substr(0, found);
+
+	// now do keybind stuff
+	KeyValues* kv;
+	std::string savePath;
+	if (type == "core")
+	{
+		kv = m_info->coreCoreOptions;	// CORE-SPECIFIC OPTIONS
+		savePath = "libretro\\user\\" + prettyCore;
+	}
+	else if (type == "game")
+	{
+		kv = m_info->gameCoreOptions;	// GAME-SPECIFIC OPTIONS
+		savePath = "libretro\\user\\" + prettyCore + "\\" + prettyGame;
+	}
+
+	// add the info to the KV: NAME_INTERNAL = VALUE
+	kv->SetString(name_internal.c_str(), value.c_str());
+	m_info->optionshavechanged = true;
+
+	// save the KV out
+	// (load up a fresh version and write ONLY this value to it to avoid saving other shit that we don't really want to save at this time.)
+	KeyValues* fresh = new KeyValues("options");
+	fresh->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\options.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	if (value != "default")
+		fresh->SetString(name_internal.c_str(), value.c_str());
+	else
+		fresh->SetString(name_internal.c_str(), "");
+
+	g_pFullFileSystem->CreateDirHierarchy(savePath.c_str(), "DEFAULT_WRITE_PATH");
+	fresh->SaveToFile(g_pFullFileSystem, VarArgs("%s\\options.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	fresh->deleteThis();
 }

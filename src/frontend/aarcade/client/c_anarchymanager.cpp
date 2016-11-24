@@ -547,9 +547,19 @@ void C_AnarchyManager::Update(float frametime)
 	}
 }
 
+#include "vgui/IInput.h"
 #include "ienginevgui.h"
 bool C_AnarchyManager::HandleUiToggle()
 {
+	// ignore the start button on the gamepad if we are NOT the focused window
+	HWND myHWnd = FindWindow(null, "AArcade: Source");
+	//HWND myHWnd = GetActiveWindow();
+	//HWND topHWnd = GetTopWindow(null);
+	HWND foregroundWindow = GetForegroundWindow();
+	//if (myHWnd != topHWnd)
+	if (myHWnd != foregroundWindow)
+		return true;
+
 	// handle escape if in pause mode (ignore it)
 	if (!engine->IsInGame())
 	{
@@ -559,7 +569,7 @@ bool C_AnarchyManager::HandleUiToggle()
 		{
 			C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->GetSelectedSteamBrowserInstance();
 			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
 			{
 				m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
 				m_pInputManager->SetEmbeddedInstance(null);
@@ -571,7 +581,7 @@ bool C_AnarchyManager::HandleUiToggle()
 		{
 			C_LibretroInstance* pInstance = m_pLibretroManager->GetSelectedLibretroInstance();
 			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
 			{
 				m_pLibretroManager->DestroyLibretroInstance(pInstance);
 				m_pInputManager->SetEmbeddedInstance(null);
@@ -583,7 +593,7 @@ bool C_AnarchyManager::HandleUiToggle()
 		{
 			C_AwesomiumBrowserInstance* pInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
 			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-			if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
 			{
 				m_pAwesomiumBrowserManager->DestroyAwesomiumBrowserInstance(pInstance);
 				m_pInputManager->SetEmbeddedInstance(null);
@@ -595,7 +605,33 @@ bool C_AnarchyManager::HandleUiToggle()
 	}
 
 	if (m_bPaused)
+	{
+		this->Unpause();
 		return true;
+	}
+
+	// update this code block when joypad input gets restricted to the selected input slate instance!!
+	// (currently it will assume that a selected cabinet with a libretro instances ALWAYS wants joypad input!!
+	// ignore if its a libretro instance
+	C_BaseEntity* pEntity = this->GetSelectedEntity();
+	if (pEntity)
+	{
+		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+		if (pShortcut)
+		{
+			std::vector<C_EmbeddedInstance*> embeddedInstances;
+			pShortcut->GetEmbeddedInstances(embeddedInstances);
+
+			C_LibretroInstance* pLibretroInstance;
+			unsigned int max = embeddedInstances.size();
+			for (unsigned int i = 0; i < max; i++)
+			{
+				pLibretroInstance = dynamic_cast<C_LibretroInstance*>(m_pInputManager->GetEmbeddedInstance());
+				if (pLibretroInstance && vgui::input()->IsKeyDown(KEY_XBUTTON_START))
+					return true;
+			}
+		}
+	}
 
 	if (m_pInputManager->GetInputMode())
 	{
@@ -638,13 +674,115 @@ void C_AnarchyManager::Pause()
 void C_AnarchyManager::Unpause()
 {
 	m_bPaused = false;
+
 	m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
 //	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 	m_pInputManager->DeactivateInputMode(true);
+
+	if (cvar->FindVar("broadcast_mode")->GetBool())
+	{
+		// Write this live URL out to the save file.
+		std::string XSPlitLiveFolder = "Z:\\scripts";
+		FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", XSPlitLiveFolder.c_str()), "w+", "");
+
+		if (hFile)
+		{
+			std::string xml = "";
+			xml += "<div class=\"response\">\n";
+			xml += "\t<activetitle class=\"activetitle\">Anarchy Arcade</activetitle>\n";
+			xml += "</div>";
+
+			g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
+			g_pFullFileSystem->Close(hFile);
+		}
+
+		// Also update a JS file
+		hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
+
+		if (hFile)
+		{
+			std::string code = "gAnarchyTV.OnAArcadeCommand(\"finishPlaying\");\n";
+			g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
+			g_pFullFileSystem->Close(hFile);
+		}
+	}
+}
+
+size_t ExecuteProcess(std::string FullPathToExe, std::string Parameters)
+{
+	size_t iMyCounter = 0, iReturnVal = 0, iPos = 0;
+	DWORD dwExitCode = 0;
+	std::string sTempStr = "";
+
+	/* - NOTE - You should check here to see if the exe even exists */
+
+	/* Add a space to the beginning of the Parameters */
+	if (Parameters.size() != 0)
+	{
+		if (Parameters[0] != L' ')
+		{
+			Parameters.insert(0, " ");
+		}
+	}
+
+	/* The first parameter needs to be the exe itself */
+	sTempStr = FullPathToExe;
+	iPos = sTempStr.find_last_of("/\\");
+	sTempStr.erase(0, iPos + 1);
+	Parameters = sTempStr.append(Parameters);
+
+	/* CreateProcessW can modify Parameters thus we allocate needed memory */
+	char* pwszParam = new char[Parameters.size() + 1];
+	if (pwszParam == 0)
+	{
+		return 1;
+	}
+	const char* pchrTemp = Parameters.c_str();
+	Q_strcpy(pwszParam, pchrTemp);
+	//wcscpy_s(pwszParam, Parameters.size() + 1, pchrTemp);
+
+	/* CreateProcess API initialization */
+	//STARTUPINFOW siStartupInfo;
+	STARTUPINFO siStartupInfo;
+	PROCESS_INFORMATION piProcessInfo;
+	memset(&siStartupInfo, 0, sizeof(siStartupInfo));
+	memset(&piProcessInfo, 0, sizeof(piProcessInfo));
+	siStartupInfo.cb = sizeof(siStartupInfo);
+
+	if (CreateProcess(FullPathToExe.c_str(),
+		pwszParam, 0, 0, false,
+		CREATE_DEFAULT_ERROR_MODE, 0, 0,
+		&siStartupInfo, &piProcessInfo) != false)
+	{
+		/* Watch the process. */
+		//dwExitCode = WaitForSingleObject(piProcessInfo.hProcess, (SecondsToWait * 1000));
+	}
+	else
+	{
+		/* CreateProcess failed */
+		iReturnVal = GetLastError();
+	}
+
+
+	DevMsg("Done\n");
+	/* Free memory */
+	delete[]pwszParam;
+	pwszParam = 0;
+
+	/* Release handles */
+	CloseHandle(piProcessInfo.hProcess);
+	CloseHandle(piProcessInfo.hThread);
+
+	return iReturnVal;
 }
 
 void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands)
 {
+
+	//DevMsg("Launching Item: \n\tExecutable: %s\n\tDirectory: %s\n\tMaster Commands: %s\n", executable.c_str(), executableDirectory.c_str(), masterCommands.c_str());
+	//size_t result = ExecuteProcess(executable, masterCommands);
+	//DevMsg("Finished launching item.\n");
+
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
 
@@ -653,27 +791,133 @@ void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string e
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
-	char pCommands[AA_MAX_STRING];
-	Q_strcpy(pCommands, masterCommands.c_str());
-
 	DevMsg("Launching Item: \n\tExecutable: %s\n\tDirectory: %s\n\tMaster Commands: %s\n", executable.c_str(), executableDirectory.c_str(), masterCommands.c_str());
 
-	if (executableDirectory == "" && masterCommands == "")
-		g_pVGuiSystem->ShellExecuteA("open", executable.c_str());
+	bool bIsDirectlyExecutable = false;
+
+	/*
+	bool bIsDirectlyExecutable = false;
+
+	std::string executableExtensions = "::exe::";
+	std::string fileName = executable;
+	std::string fileExtension = "";
+	size_t found = fileName.find_last_of("/\\");
+	if ( found != std::string::npos )
+	{
+		fileName = fileName.substr(found + 1);
+
+		found = fileName.find_last_of(".");
+		if (found != std::string::npos && found < fileName.length() - 1)
+		{
+			fileExtension = fileName.substr(found + 1);
+			fileExtension = "::" + fileExtension + "::";
+			//fileName = fileName.substr(0, found);
+			if (executableExtensions.find(fileExtension) != std::string::npos)
+			{
+				if (g_pFullFileSystem->FileExists(executable.c_str()))
+				{
+					fileName = fileName + " ";
+					bIsDirectlyExecutable = true;
+					Q_strcpy(pCommands, fileName.c_str());
+					DevMsg("Using %s as the filename\n", fileName.c_str());
+				}
+			}
+		}
+	}
+
+	if ( !bIsDirectlyExecutable )
+		Q_strcpy(pCommands, masterCommands.c_str());
+	*/
+
+	if (!bIsDirectlyExecutable && executableDirectory == "" && masterCommands == "")
+	{
+		// Check for Kodi files
+		std::vector<std::string> kodiFileExtensions;
+		kodiFileExtensions.push_back(".avi");
+		kodiFileExtensions.push_back(".mpg");
+		kodiFileExtensions.push_back(".mp4");
+		kodiFileExtensions.push_back(".mpeg");
+		kodiFileExtensions.push_back(".vob");
+		kodiFileExtensions.push_back(".mkv");
+
+		bool bIsKodiFileExtension = false;
+		unsigned int length = executable.length();
+		unsigned int max = kodiFileExtensions.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (executable.find(kodiFileExtensions[i]) == length - kodiFileExtensions[i].length())
+			{
+				bIsKodiFileExtension = true;
+				break;
+			}
+		}
+
+		if (bIsKodiFileExtension)
+		{
+			DevMsg("Launch option A\n");
+			std::string bufLocationString = executable;
+
+			size_t found = bufLocationString.find("\\");
+			while (found != std::string::npos)
+			{
+				bufLocationString[found] = '/';
+				found = bufLocationString.find("\\");
+			}
+
+			std::string kodiInfo = cvar->FindVar("kodi_info")->GetString();
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+			std::vector<std::string> params;
+			params.push_back(kodiInfo);
+			params.push_back(executable);
+			pHudBrowserInstance->DispatchJavaScriptMethod("kodiListener", "play", params);
+		}
+		else
+		{
+			DevMsg("Launch option B\n");
+			//g_pVGuiSystem->ShellExecuteA("open", executable.c_str());
+
+			// NOW DO THE ACTUAL LAUNCHING STUFF
+			FileHandle_t launch_file = filesystem->Open("Arcade_Launcher.bat", "w", "EXECUTABLE_PATH");
+
+			if (!launch_file)
+			{
+				Msg("Error creating ArcadeLauncher.bat!\n");
+				return;
+			}
+
+			bool bCommandIsURL = false;
+
+			bool DoNotPause = false;
+			std::string goodExecutable = "\"" + executable + "\"";
+			filesystem->FPrintf(launch_file, "%s:\n", goodExecutable.substr(1, 1).c_str());
+			filesystem->FPrintf(launch_file, "cd \"%s\"\n", goodExecutable.substr(1, goodExecutable.find_last_of("/\\", goodExecutable.find("\"", 1)) - 1).c_str());
+			filesystem->FPrintf(launch_file, "START \"Launching item...\" %s", goodExecutable.c_str());
+			//filesystem->FPrintf(launch_file, "START \"Launching item...\" %s", masterCommands.c_str());
+			filesystem->Close(launch_file);
+			system("Arcade_Launcher.bat");
+		}
+	}
 	else
 	{
+		DevMsg("Launch option C\n");
+
+		char pCommands[AA_MAX_STRING];
+		Q_strcpy(pCommands, masterCommands.c_str());
+
 		// start the program up
 		CreateProcess(executable.c_str(),   // the path
 			pCommands,        // Command line
 			NULL,           // Process handle not inheritable
 			NULL,           // Thread handle not inheritable
 			FALSE,          // Set handle inheritance to FALSE
-			0,              // No creation flags
+			0,//CREATE_DEFAULT_ERROR_MODE,              //0 // No creation flags
 			NULL,           // Use parent's environment block
 			executableDirectory.c_str(),           // Use parent's starting directory 
 			&si,            // Pointer to STARTUPINFO structure
 			&pi);           // Pointer to PROCESS_INFORMATION structure
 	}
+	DevMsg("Finished launching item.\n");
 }
 
 void C_AnarchyManager::RunAArcade()
@@ -836,9 +1080,9 @@ std::string C_AnarchyManager::ExtractLegacyId(std::string itemFile, KeyValues* i
 		}
 	}
 	
-	// generate a legacy ID based on the filelocation if given an item to work with
-	if (!bPassed && item)
-		nameSnip = this->GenerateLegacyHash(item->GetString("filelocation"));
+	//// generate a legacy ID based on the filelocation if given an item to work with
+//	if (!bPassed && item)
+	//	nameSnip = this->GenerateLegacyHash(item->GetString("filelocation"));
 
 	if (!bPassed)
 		nameSnip = "";
@@ -992,9 +1236,33 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
 	*/
 
+	// add legacy search paths
 	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
 	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+	// and legacy workshop search paths (from workshop folder)
+	std::string workshopMapsPath = path + "workshop\\workshopmaps\\";
+	//g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "MOD", PATH_ADD_TO_TAIL);
+	g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+	std::string workshopFile;
+	FileFindHandle_t findHandle;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", path.c_str()), "", &findHandle);
+	while (pFilename != NULL)
+	{
+		workshopFile = path + "workshop\\" + std::string(pFilename);
+
+		if (workshopFile.find(".vpk") == workshopFile.length() - 4 ) //g_pFullFileSystem->FindIsDirectory(findHandle)
+		{
+			DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
+			//g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "MOD", PATH_ADD_TO_TAIL);
+			g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
+			//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, workshopFile, "", "");
+		}
+
+		pFilename = g_pFullFileSystem->FindNext(findHandle);
+	}
 
 	/* DISABLE MOUNTING OF LEGACY AARCADE CONTENT
 	std::string pathDownload = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\download\\";	// for resolving cached images
@@ -1034,6 +1302,7 @@ bool C_AnarchyManager::AttemptSelectEntity()
 		// finished positioning & choosing model, ie: changes confirmed
 		DevMsg("CHANGES CONFIRMED\n");
 		g_pAnarchyManager->DeactivateObjectPlacementMode();
+
 		return SelectEntity(pShortcut);
 	}
 	else
@@ -1184,23 +1453,152 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 						bool bDoAutoInspect = true;
 						if (m_pLibretroManager->GetInstanceCount() == 0)
 						{
-							std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
-							std::string fileExt = active->GetString("file");
+							std::string coreFile = "";
+							std::string file = "";
 
-							size_t found = fileExt.find_last_of(".");
-							if (found != std::string::npos)
-								fileExt = fileExt.substr(found + 1);
-
-							found = exts.find("::" + fileExt + "::");
-							if (found != std::string::npos && g_pFullFileSystem->FileExists(active->GetString("file")))
+							// check for compatible files for ffmpeg
+							if (coreFile == "")
 							{
-								C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
-								pLibretroInstance->Init(tabTitle);
-								pLibretroInstance->SetOriginalGame(active->GetString("file"));
-								//pLibretroInstance->SetGame(active->GetString("file"));
-								pLibretroInstance->LoadCore();
-								pEmbeddedInstance = pLibretroInstance;
-								bDoAutoInspect = false;
+								std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
+								std::string fileExt = active->GetString("file");
+
+								size_t found = fileExt.find_last_of(".");
+								if (found != std::string::npos)
+									fileExt = fileExt.substr(found + 1);
+
+								found = exts.find("::" + fileExt + "::");
+								if (found != std::string::npos )
+									coreFile = "ffmpeg_libretro.dll";
+							}
+
+							// check for compatible types for libretro cores.
+							if (coreFile == "")
+							{
+								std::map<std::string, std::string> typeToLibretroCore;
+								typeToLibretroCore["snes"] = "snes9x_libretro.dll";
+								//typeToLibretroCore["nes"] = "bsnes_performance_libretro.dll";
+								typeToLibretroCore["nes"] = "fceumm_libretro.dll";
+								typeToLibretroCore["arcade"] = "mame_libretro.dll";
+								typeToLibretroCore["gameboy advance"] = "vba_next_libretro.dll";
+								typeToLibretroCore["gameboy color"] = "vba_next_libretro.dll";
+								typeToLibretroCore["gameboy"] = "vba_next_libretro.dll";
+								typeToLibretroCore["gba"] = "vba_next_libretro.dll";
+								typeToLibretroCore["gbc"] = "vba_next_libretro.dll";
+								typeToLibretroCore["gb"] = "vba_next_libretro.dll";
+
+								KeyValues* type = m_pMetaverseManager->GetLibraryType(active->GetString("type"));
+								if (type)
+								{
+									KeyValues* activeType = type->FindKey("current");
+									if (!activeType)
+										activeType = type->FindKey("local", true);
+
+									std::string typeTitle = activeType->GetString("title");
+									if (typeTitle != "")
+									{
+										// convert to lowercase
+										int len = typeTitle.length() + 1;
+										char* pTemp = (char*)stackalloc(len);
+										Q_strncpy(pTemp, typeTitle.c_str(), len);
+										Q_strnlwr(pTemp, len);
+										typeTitle = pTemp;
+										stackfree(pTemp);
+
+										// loop through the user's types looking for literal title matches (because type ID's could be different for every user)
+										auto it = typeToLibretroCore.begin();
+										//size_t foundTypeTitle;
+										while (it != typeToLibretroCore.end())
+										{
+											//foundTypeTitle = typeTitle.find(it->first);
+											//if (foundTypeTitle != std::string::npos)
+											if ( typeTitle == it->first )
+											{
+												coreFile = it->second;
+												break;
+											}
+
+											it++;
+										}
+									}
+								}
+							}
+
+							// use the core, if one is found
+							if (coreFile != "" )//&& g_pFullFileSystem->FileExists(active->GetString("file")))
+							{
+								file = active->GetString("file");
+
+								bool bFileIsGood = false;
+								// is the path relative to the app?
+								size_t found = file.find(":");
+								if (found == 1 && g_pFullFileSystem->FileExists(file.c_str()))
+								{
+									bFileIsGood = true;
+								}
+								else
+								{
+									// does it have an app?
+									if (Q_strcmp(active->GetString("app"), ""))
+									{
+										bool bHasApp = true;
+										KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(active->GetString("app"));
+										KeyValues* appActive = app->FindKey("current");
+										if (!appActive)
+											appActive = app->FindKey("local", true);
+
+										if (appActive)
+										{
+											bool bHasAppFilepath = false;
+											bool bAtLeastOneAppFilepathExists = false;
+
+											// just grab the FIRST filepath for now.
+											// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+											// Note: Apps are not required to have a filepath specified.
+											std::string testFile;
+											std::string testPath;
+											KeyValues* filepaths = appActive->FindKey("filepaths", true);
+											for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+											{
+												// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+												// (because in that case the local user probably needs to specify a correct location for it.)
+												bHasAppFilepath = true;
+
+												testPath = sub->GetString("path");
+
+												// test if this path exists
+												// FIXME: always assume it exists for now
+												if (true)
+												{
+													bAtLeastOneAppFilepathExists = true;
+
+													// test if the file exists inside of this filepath
+													testFile = testPath + file;
+
+													// FIXME: always assume the file exists in this path for now.
+													if (true)
+													{
+														file = testFile;
+														bFileIsGood = true;
+														break;
+													}
+												}
+											}
+										}
+									}
+								}
+
+								if (bFileIsGood)
+								{
+									C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
+									pLibretroInstance->Init(tabTitle);
+									DevMsg("Setting game to: %s\n", file.c_str());
+									pLibretroInstance->SetOriginalGame(file);
+									pLibretroInstance->SetOriginalItemId(itemId);
+									if (!pLibretroInstance->LoadCore(coreFile))	// FIXME: elegantly revert back to autoInspect if loading the core failed!
+										DevMsg("ERROR: Failed to load core: %s\n", coreFile.c_str());
+									pEmbeddedInstance = pLibretroInstance;
+									bDoAutoInspect = false;
+								}
 							}
 						}
 
@@ -1214,6 +1612,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 
 							C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
 							pSteamBrowserInstance->Init(tabTitle, uri);
+							pSteamBrowserInstance->SetOriginalItemId(itemId);
 							pEmbeddedInstance = pSteamBrowserInstance;
 						}
 					}
@@ -1280,7 +1679,7 @@ bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 	C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	//C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
-	if (pEmbeddedInstance)
+	if (pEmbeddedInstance && pEmbeddedInstance != pHudBrowserInstance)
 	{	
 		pEmbeddedInstance->Deselect();
 		//pEmbeddedInstance->Blur();
@@ -1438,6 +1837,11 @@ void C_AnarchyManager::DeactivateObjectPlacementMode()
 	}
 
 	m_pMetaverseManager->SetSpawningObject(null);
+
+	C_AwesomiumBrowserInstance* pHudInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	pHudInstance->SetUrl("asset://ui/blank.html");
+
+	m_pInputManager->DeactivateInputMode(true);
 }
 
 void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut)
@@ -1640,6 +2044,219 @@ void C_AnarchyManager::ReleaseFileBrowseParams()
 	}
 }
 */
+
+void C_AnarchyManager::xCastSetLiveURL()
+{
+	//if (!m_pXSplitLiveConVar->GetBool())
+	//	return;
+
+	//DevMsg("Do anarchybot stuff\n");
+	std::string XSPlitLiveFolder = "Z:\\scripts";
+
+	std::string xml = "";
+	xml += "<div class=\"response\">\n";
+
+	KeyValues* active = null;
+	C_BaseEntity* pEntity = this->GetSelectedEntity();
+	if (pEntity)
+	{
+		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+		if (pShortcut)
+		{
+			KeyValues* pItem = m_pMetaverseManager->GetLibraryItem(pShortcut->GetItemId());
+			if (pItem)
+			{
+				active = pItem->FindKey("current");
+				if (!active)
+					active = pItem->FindKey("local", true);
+			}
+		}
+	}
+	else
+	{
+		// check for other open instances
+		// TODO: This code should also be used for slave screens to show other instances!!
+
+		std::vector<C_EmbeddedInstance*> embeddedInstances;
+		m_pLibretroManager->GetAllInstances(embeddedInstances);
+		m_pSteamBrowserManager->GetAllInstances(embeddedInstances);
+		m_pAwesomiumBrowserManager->GetAllInstances(embeddedInstances);
+
+		C_EmbeddedInstance* pEmbeddedInstance;
+		std::string originalItemId;
+		unsigned int i;
+		unsigned int size = embeddedInstances.size();
+		for (i = 0; i < size; i++)
+		{
+			pEmbeddedInstance = embeddedInstances[i];
+			if (!pEmbeddedInstance)
+				continue;
+
+			// ignore special instances
+			if (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "images")
+				continue;
+
+			// check for an original item id
+			originalItemId = pEmbeddedInstance->GetOriginalItemId();
+			if (originalItemId != "")
+			{
+				// WE HAVE FOUND AN EMBEDDED INSTANCE THAT WAS ORIGINALLY CREATED BY AN ITEM!!
+
+				// make sure we can find an item for it
+				KeyValues* pItem = m_pMetaverseManager->GetLibraryItem(originalItemId);
+				if (pItem)
+				{
+					active = pItem->FindKey("current");
+					if (!active)
+						active = pItem->FindKey("local", true);
+
+					if ( active )
+						break;
+				}
+			}
+		}
+	}
+
+	if (active)
+	{
+		xml += "\t<item class=\"item_container\">\n";
+
+		// automatically add all root-level keys & values
+		for (KeyValues *sub = active->GetFirstValue(); sub; sub = sub->GetNextValue())
+		{
+			if (sub->GetFirstSubKey() || !Q_strcmp(sub->GetName(), "") || !Q_strcmp(sub->GetString(), ""))
+				continue;
+
+			xml += "\t\t<";
+			xml += sub->GetName();
+			xml += ">";
+
+			std::string xmlBuf = sub->GetString();
+			size_t found = xmlBuf.find("&");
+			while (found != std::string::npos)
+			{
+				xmlBuf.replace(found, 1, "&amp;");
+				found = xmlBuf.find("&", found + 5);
+			}
+
+			found = xmlBuf.find("<");
+			while (found != std::string::npos)
+			{
+				xmlBuf.replace(found, 1, "&lt;");
+				found = xmlBuf.find("<", found + 4);
+			}
+
+			found = xmlBuf.find(">");
+			while (found != std::string::npos)
+			{
+				xmlBuf.replace(found, 1, "&gt;");
+				found = xmlBuf.find(">", found + 4);
+			}
+
+			xml += xmlBuf;
+
+			xml += "</";
+			xml += sub->GetName();
+			xml += ">\n";
+		}
+
+		// do some extra work to get the best possible image results
+		std::string bestScreenImage = active->GetString("screen");
+		if (bestScreenImage == "" || bestScreenImage.find(":") == 1 || bestScreenImage.find("http") != 0)
+			bestScreenImage = active->GetString("marquee");
+		if (bestScreenImage == "" || bestScreenImage.find(":") == 1 || bestScreenImage.find("http") != 0)
+			bestScreenImage = active->GetString("file");
+		if (bestScreenImage == "" || bestScreenImage.find(":") == 1 || bestScreenImage.find("http") != 0)
+			bestScreenImage = "noimage.png";
+
+		xml += "\t\t<screen2use>";
+		xml += bestScreenImage;
+		xml += "</screen2use>\n";
+
+		std::string bestMarqueeImage = active->GetString("marquee");
+		if (bestMarqueeImage == "" || bestMarqueeImage.find(":") == 1 || bestMarqueeImage.find("http") != 0)
+			bestMarqueeImage = active->GetString("screen");
+		if (bestMarqueeImage == "" || bestMarqueeImage.find(":") == 1 || bestMarqueeImage.find("http") != 0)
+			bestMarqueeImage = active->GetString("file");
+		if (bestMarqueeImage == "" || bestMarqueeImage.find(":") == 1 || bestMarqueeImage.find("http") != 0)
+			bestMarqueeImage = "noimage.png";
+
+		xml += "\t\t<marquee2use>";
+		xml += bestMarqueeImage;
+		xml += "</marquee2use>\n";
+
+		xml += "\t\t<screenurl>";
+		xml += active->GetString("screen");
+		xml += "</screenurl>\n";
+
+		xml += "\t\t<marqueeurl>";
+		xml += active->GetString("marquee");
+		xml += "</marqueeurl>\n";
+
+		xml += "\t\t<bestimageurl>";
+		if (bestMarqueeImage != "")
+			xml += bestMarqueeImage;
+		else
+			xml += bestScreenImage;
+		xml += "</bestimageurl>\n";
+
+
+		xml += "\t\t<isremember>0</isremember>\n";
+		xml += "\t</item>\n";
+	}
+
+	xml += "</div>";
+
+	// Write this live URL out to the save file.
+	FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\liveItems.xml", XSPlitLiveFolder.c_str()), "w", "");
+
+	if (hFile)
+	{
+		//DevMsg("Writing to liveItems:\n");
+		//DevMsg("%s\n", xml.c_str());
+
+		/*
+		// null terminate
+		int len = xml.length();
+		char* stuff = new char[xml.length() + 1];
+		Q_strcpy(stuff, xml.c_str());
+		stuff[len] = 0;	// null terminator
+		*/
+
+		//std::stringstream buffer;
+		//buffer << "Text" << std::endl;
+
+		g_pFullFileSystem->FPrintf(hFile, "%s", xml.c_str());
+		g_pFullFileSystem->Close(hFile);
+	}
+
+	// Also update a JS file to force the page to re-load
+	hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
+
+	if (hFile)
+	{
+		std::string selectedItemTitle = "";
+		if (active)
+			selectedItemTitle = active->GetString("info/id");
+
+		std::string rememberedItemTitle = "";
+		//if (pRememberItemKV)
+		//	rememberedItemTitle = pRememberItemKV->GetString("itemfilehash");
+
+		std::string code = "gAnarchyTV.OnAArcadeCommand(\"selection\", \"";
+		code += selectedItemTitle;
+		code += "\", \"";
+		code += rememberedItemTitle;
+		code += "\");\n";
+
+		//g_pFullFileSystem->FPrintf(hFile, VarArgs("var currentTick = \"%i\";\n", gpGlobals->tickcount));
+		g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
+
+		g_pFullFileSystem->Close(hFile);
+	}
+
+	//DevMsg("Done doing anarchybot stuff!!\n");
+}
 
 void C_AnarchyManager::TestSQLite()
 {

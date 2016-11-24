@@ -188,6 +188,9 @@ void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string ma
 #include "../../../game/shared/debugoverlay_shared.h"
 void C_InstanceManager::SpawnActionPressed()
 {
+	if (!g_pAnarchyManager->IsInitialized())
+		return;
+
 	float fMinDist = 420.0;
 	float fDuration = 4.0f;
 	DevMsg("Time is: %f\n", gpGlobals->realtime - m_fLastSpawnActionPressed);

@@ -90,18 +90,15 @@ void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, bool alph
 	std::string textureName = "canvas_";
 	textureName += m_id;
 
-	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
-	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	int iWidth = (id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
+	int iHeight = (id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
 
 	if (m_id == "images")
 	{
-		iWidth = 512;
-		iHeight = 512;
+		iWidth = AA_THUMBNAIL_SIZE;
+		iHeight = AA_THUMBNAIL_SIZE;
 	}
-
-	//int iWidth = 1920;
-	//int iHeight = 1080;
-
+	
 	//m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
 
 	if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
@@ -196,8 +193,14 @@ void C_SteamBrowserInstance::OnNeedsPaint(const void* data, unsigned int width, 
 
 void C_AwesomiumBrowserInstance::OnMouseMove(float x, float y)
 {
-	int iMouseX = x * 1280;
-	int iMouseY = y * 720;
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
+	unsigned int width = (m_id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	unsigned int height = (m_id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
+
+	int iMouseX = x * width;
+	int iMouseY = y * height;
 
 	Awesomium::WebView* pWebView = this->GetWebView();
 	if (pWebView)
@@ -217,6 +220,9 @@ void C_AwesomiumBrowserInstance::OnMouseMove(float x, float y)
 
 void C_AwesomiumBrowserInstance::OnMousePressed(vgui::MouseCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	int iButtonId = -1;
 	if (code == MOUSE_LEFT)
 		iButtonId = 0;
@@ -230,6 +236,9 @@ void C_AwesomiumBrowserInstance::OnMousePressed(vgui::MouseCode code)
 
 void C_AwesomiumBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	// translate the vgui::MouseCode into an Awesomium::MouseButton
 	int iButtonId = -1;
 	if (code == MOUSE_LEFT)
@@ -244,12 +253,18 @@ void C_AwesomiumBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 
 void C_AwesomiumBrowserInstance::OnMouseWheeled(int delta)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	DevMsg("Awesomium instance mouse wheeled: %i\n", delta);
 	m_pWebView->InjectMouseWheel(20 * delta, 0);
 }
 
 void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (m_id == "hud" && !this->HasFocus())
 	{
 		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
@@ -973,17 +988,26 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftSta
 
 void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (m_id == "hud" && !this->HasFocus())
 	{
 		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodeReleased(code);
 		return;
 	}
+
 	// FIXME: Dont' we need to send a keyup msg to awesomium?? (check the pressed msg to confirm)
+	//if (code == KEY_ESCAPE || code == KEY_LALT || code == KEY_RALT || code == KEY_LCONTROL || code == KEY_RCONTROL || code == KEY_LWIN || code == KEY_RWIN || code == KEY_APP)
+		//return;
 }
 
 void C_AwesomiumBrowserInstance::Update()
 {
 	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
+	if (g_pAnarchyManager->IsPaused())
 		return;
 
 	//if (m_info->state == 1)
@@ -1190,6 +1214,9 @@ void C_AwesomiumBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int
 	if (m_bCopyingFrame || !m_bReadyToCopyFrame || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	m_bCopyingFrame = true;
 	m_bReadyToCopyFrame = false;
 	//DevMsg("Copied.\n");
@@ -1260,6 +1287,9 @@ void C_AwesomiumBrowserInstance::Close()
 
 void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
@@ -1322,6 +1352,9 @@ void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 
 void C_AwesomiumBrowserInstance::Render()
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (m_id == "images")
 		return;
 	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
@@ -1343,6 +1376,9 @@ void C_AwesomiumBrowserInstance::Render()
 void C_AwesomiumBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
 	if (!m_pWebView || g_pAnarchyManager->GetSuspendEmbedded() )
+		return;
+
+	if (g_pAnarchyManager->IsPaused())
 		return;
 
 	if (!pTexture || !pTexture->IsProcedural())
@@ -1466,7 +1502,8 @@ void C_AwesomiumBrowserInstance::SaveImageToCache(std::string fieldVal)
 	filename += g_pAnarchyManager->GenerateLegacyHash(fieldVal.c_str());
 	filename += ".jpg";
 
-	char* filenameFixed = new char[AA_MAX_STRING];
+	//char* filenameFixed = new char[AA_MAX_STRING];
+	char filenameFixed[AA_MAX_STRING];
 	Q_strcpy(filenameFixed, filename.c_str());
 	V_FixSlashes(filenameFixed, '/');
 

@@ -115,6 +115,7 @@ public:
 
 	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 
+	void xCastSetLiveURL();
 	void TestSQLite();
 
 	// accessors

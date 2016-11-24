@@ -147,8 +147,8 @@ void C_SteamBrowserInstance::Init(std::string id, std::string url, const char* p
 	std::string textureName = "canvas_";
 	textureName += m_id;// pSelf->GetId();// m_id;
 
-	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
-	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	int iWidth = (id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	int iHeight = (id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 	//int iWidth = 1920;
 	//int iHeight = 1080;
 
@@ -222,8 +222,8 @@ void C_SteamBrowserInstance::OnBrowserInstanceCreated(HTML_BrowserReady_t *pResu
 	m_unHandle = pResult->unBrowserHandle;
 	//pSelf->SetHandle(pResult->unBrowserHandle);
 	
-	int iWidth = 1280;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth();
-	int iHeight = 720;// g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight();
+	int iWidth = (m_id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	int iHeight = (m_id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 	steamapicontext->SteamHTMLSurface()->SetSize(m_unHandle, iWidth, iHeight);
 
 	g_pAnarchyManager->GetSteamBrowserManager()->OnSteamBrowserInstanceCreated(this);// pSelf);
@@ -277,6 +277,9 @@ void C_SteamBrowserInstance::SetUrl(std::string url)
 
 void C_SteamBrowserInstance::BrowserInstanceStartRequest(HTML_StartRequest_t *pCmd)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	//	if (m_unHandle != pCmd->unBrowserHandle)
 	//{
 	//C_SteamBrowserInstance* pExists = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
@@ -394,6 +397,9 @@ bool C_SteamBrowserInstance::OnStartRequest(const char *url, const char *target,
 //-----------------------------------------------------------------------------
 void C_SteamBrowserInstance::BrowserInstanceFinishedRequest(HTML_FinishedRequest_t *pCmd)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	return;	// DISABLED for consistent usage of onurlchanged for meta scraping
 
 	if (m_unHandle != pCmd->unBrowserHandle || m_scraperId == "")	// only continue if we have an active scraper waiting for load finished events. (FIXME: This might change when the UI's address bar gets updated.)
@@ -424,6 +430,9 @@ void C_SteamBrowserInstance::BrowserInstanceFinishedRequest(HTML_FinishedRequest
 //-----------------------------------------------------------------------------
 void C_SteamBrowserInstance::BrowserInstanceNeedsPaint(HTML_NeedsPaint_t *pCallback)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (m_unHandle != pCallback->unBrowserHandle)
 		return;
 
@@ -577,6 +586,9 @@ private:
 
 void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (pCmd->unBrowserHandle != m_unHandle)
 		return;
 
@@ -625,6 +637,9 @@ void C_SteamBrowserInstance::BrowserSetHTMLTitle(HTML_ChangedTitle_t *pCmd)
 //#include "c_inputslate.h"
 void C_SteamBrowserInstance::BrowserPopupHTMLWindow(HTML_NewWindow_t *pCmd)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (pCmd->unBrowserHandle != m_unHandle)
 		return;
 
@@ -668,8 +683,11 @@ void C_SteamBrowserInstance::OnMouseMove(float x, float y)
 	if (g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance() != this)
 		return;
 
-	int goodX = (1280 * x) / 1;
-	int goodY = (720 * y) / 1;
+	unsigned int width = (m_id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	unsigned int height = (m_id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
+
+	int goodX = (width * x) / 1;
+	int goodY = (height * y) / 1;
 	steamapicontext->SteamHTMLSurface()->MouseMove(m_unHandle, goodX, goodY);
 }
 
@@ -720,6 +738,9 @@ void C_SteamBrowserInstance::OnMouseReleased(vgui::MouseCode code)
 void C_SteamBrowserInstance::Update()
 {
 	if (g_pAnarchyManager->GetSuspendEmbedded())
+		return;
+
+	if (g_pAnarchyManager->IsPaused())
 		return;
 
 	if (!m_unHandle)
@@ -930,6 +951,9 @@ void C_SteamBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int wid
 	if (m_bCopyingFrame || !m_bReadyToCopyFrame || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 //	DevMsg("SteamBrowserInstance: Start copy\n");
 
 	m_bCopyingFrame = true;
@@ -952,6 +976,9 @@ void C_SteamBrowserInstance::CopyLastFrame(unsigned char* dest, unsigned int wid
 
 void C_SteamBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
@@ -1020,6 +1047,9 @@ void C_SteamBrowserInstance::Render()
 
 void C_SteamBrowserInstance::RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	if (g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
@@ -1061,6 +1091,10 @@ void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftSta
 
 void C_SteamBrowserInstance::OnKeyCodeReleased(vgui::KeyCode code)
 {
+	// don't send alt button for now (it can cause crashes sometimes?
+	if (code == KEY_LALT || code == KEY_RALT)
+		return;
+
 	steamapicontext->SteamHTMLSurface()->KeyUp(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
 }
 

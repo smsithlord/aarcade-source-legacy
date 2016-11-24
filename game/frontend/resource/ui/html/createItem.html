@@ -1,0 +1,301 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+		// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+			function getParameterByName(name, url) {
+			    if (!url) url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+		</script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/items.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						New Shortcut
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<br />
+			<div id="itemContainer"></div>
+			<br />
+			<div id="saveButton" class="mainButton">Save to Library</div>
+		</div>
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+		<script>
+ 			var fileLocation = decodeURIComponent(getParameterByName("fileLocation"));
+
+ 			var item = aaapi.library.findLibraryItem("file", fileLocation);
+ 			var itemSlateElem = document.querySelector("#itemContainer");
+
+ 			if( item )
+	 			aaapi.system.spawnItem(item.info.id);
+	 		else
+	 		{
+	 			item = aaapi.library.createItem("file", fileLocation);
+
+	 			// item is created but NOT saved yet, time for last-minute changes!!
+				if( item )
+				{
+					var fields = ["title", "file", "type", "app"];
+					var i;
+					var max = fields.length;
+					for( i = 0; i < max; i++ )
+					{
+						var x = fields[i];
+						var val = (item.hasOwnProperty(x)) ? item[x] : "";
+
+						fieldContainer = document.createElement("div");
+						fieldContainer.className = "fieldContainer";
+
+						fieldKey = document.createElement("div");
+
+						fieldKeyNode = document.createTextNode(x);
+						fieldKey.appendChild(fieldKeyNode);
+						fieldContainer.appendChild(fieldKey);
+
+						fieldValue = document.createElement("form");
+						fieldValue.addEventListener('submit', function(e)
+						{
+							var elem = document.activeElement;
+							e.preventDefault();
+
+							item[elem.field] = elem.value;
+							elem.blur();
+						}, true);
+
+						if( x === "type" )
+						{
+							var fieldValueSelect = document.createElement("select");
+
+							var types = aaapi.library.getAllLibraryTypes();
+							var y;
+							for( y in types )
+							{
+								var type = types[y];
+								var fieldValueOption = document.createElement("option");
+								fieldValueOption.value = type.info.id;
+								fieldValueOption.text = type.title;
+								fieldValueSelect.appendChild(fieldValueOption);
+							}
+
+							fieldValueSelect.value = val;
+							fieldValueSelect.field = x;
+							fieldValueSelect.addEventListener("change", function(e)
+							{
+								var elem = e.target;
+								item[elem.field] = elem.value;
+							}, true);
+
+							fieldValue.appendChild(fieldValueSelect);
+						}
+						else if( x === "app" )
+						{
+							var fieldValueSelect = document.createElement("select");
+							var fieldValueOption = document.createElement("option");
+							fieldValueOption.value = "";
+							fieldValueOption.text = "Windows";
+							fieldValueSelect.appendChild(fieldValueOption);
+
+							var apps = aaapi.library.getAllLibraryApps();
+							var app;
+							var y;
+							for( y in apps )
+							{
+								app =apps[y];
+								fieldValueOption = document.createElement("option");
+								fieldValueOption.value = app.info.id;
+								fieldValueOption.text = app.title;
+								fieldValueSelect.appendChild(fieldValueOption);
+							}
+
+							fieldValueSelect.value = val;
+							fieldValueSelect.field = x;
+							fieldValueSelect.addEventListener("change", function(e)
+							{
+								var elem = e.target;
+								item[elem.field] = elem.value;
+							}, true);
+
+							fieldValue.appendChild(fieldValueSelect);
+						}
+						else
+						{
+							fieldValueInput = document.createElement("input");
+							fieldValueInput.type = "text";
+							fieldValueInput.value = val;//item[x];
+							fieldValueInput.field = x;
+							fieldValueInput.addEventListener('blur', function(e)
+							{
+								var elem = e.target;
+								item[elem.field] = elem.value;
+								//if( elem.value != item[elem.field] )
+								//	elem.value = item[elem.field];
+							}, true);
+							fieldValue.appendChild(fieldValueInput);
+						}
+
+						fieldContainer.appendChild(fieldValue);
+
+						if( x == "file" )
+						{
+							fieldValue.style.width = "72%";
+
+							var buttonBrowseContainer = document.createElement("div");
+							buttonBrowseContainer.className = "button";
+							buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
+							buttonBrowseContainer.addEventListener("click", function(e)
+							{
+								arcadeHud.browseForFile(function(chosenFile)
+								{
+									if(chosenFile !== "")
+									{
+										if( item.app !== "" )
+										{
+											var app = aaapi.library.getLibraryApp(item.app);
+											var x;
+											for( x in app.filepaths )
+											{
+												if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+												{
+													chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+													break;
+												}
+											}
+										}
+
+										var myInput = this.parentNode.querySelector("input");
+										myInput.value = chosenFile;
+									}
+								}.bind(this));
+							}.bind(buttonBrowseContainer), true);
+							buttonBrowseContainer.innerHTML = "<img src='browseicon.png' style='width: 20px;' />";
+							fieldContainer.appendChild(buttonBrowseContainer);
+						}
+						else
+						{
+							fieldValue.style.width = "76%";
+						}
+
+						itemSlateElem.appendChild(fieldContainer);
+
+						// try to automate some more of this stuff
+						if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
+							fetchYouTubeInfo();
+						/*
+						else if( isImageExtension(fileLocation) )
+						{
+							// auto-set to an images format
+						}
+						else if( isVideoExtension(fileLocation) )
+						{
+							// auto-set to a movies format
+						}
+						*/
+					}
+				}
+	 		}
+
+	 		var mainButtonElem = document.querySelector("#saveButton");
+	 		mainButtonElem.addEventListener("click", function()
+	 		{
+	 			// save it then spawn it
+	 			var params = [];
+
+				var x;
+				for( x in item )
+				{
+					if( x === "info" )
+						continue;
+
+					params.push(x);
+					params.push(item[x]);
+				}
+
+				if( aaapi.library.saveItem(item.info.id, params) )
+					aaapi.system.spawnItem(item.info.id);
+			});
+
+			function fetchYouTubeInfo()
+			{
+				// first auto-set the type to youtube
+				var elems = document.querySelectorAll("select");
+				var max = elems.length;
+				var i;
+				for( i = 0; i < max; i++ )
+				{
+					if( elems[i].field === "type" )
+					{
+						var altMax = elems[i].options.length;
+						var j;
+						for( j = 0; j < altMax; j++ )
+						{
+							if( elems[i].options[j].text.toLowerCase().indexOf("youtube") >= 0 )
+							{
+								elems[i].selectedIndex = j;
+								break;
+							}
+						}
+
+						break;
+					}
+				}
+
+				// then get rdy for async call
+				var encodedItem = arcadeHud.encodeRFC5987ValueChars(encodeURIComponent(JSON.stringify(item)));
+				var request = new XMLHttpRequest();
+				var requestURL = "http://metaverse.anarchyarcade.com/tubeinfo.php?item=" + encodedItem;
+
+				request.onreadystatechange = function()
+				{
+					if( request.readyState === 4 && request.status === 200 )
+					{
+						var response = JSON.parse(request.responseText);
+						var data = response.data;
+
+						var x;
+						for( x in data )
+						{
+							var inputElems = document.querySelectorAll("input");
+							var max = inputElems.length;
+							var i;
+							for( i = 0; i < max; i ++ )
+							{
+								if( inputElems[i].field === x )
+									inputElems[i].value = data[x];
+							}
+
+							item[x] = data[x];
+						}
+					}
+					else if( request.status >= 500 )
+					{
+						console.log("request status >= 500");
+					}
+				}.bind(this);
+
+				request.open("GET", requestURL, true);
+				request.send();
+			}
+		</script>
+	</body>
+</html>

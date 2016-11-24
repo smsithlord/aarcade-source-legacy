@@ -22,6 +22,7 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	m_pLoadListener = null;
 	m_pViewListener = null;
 	m_pMenuListener = null;
+	m_pProcessListener = null;
 
 	m_pJSHandler = null;
 
@@ -87,10 +88,11 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	m_pLoadListener = new LoadListener;
 	m_pViewListener = new ViewListener;
 	m_pMenuListener = new MenuListener;
+	m_pProcessListener = new ProcessListener;
 
 //	m_pMasterWebView = m_pWebCore->CreateWebView(g_pAnarchyManager->GetWebManager()->GetWebSurfaceWidth(), g_pAnarchyManager->GetWebManager()->GetWebSurfaceHeight(), m_pWebSession);
-	unsigned int width = 1280;
-	unsigned int height = 720;
+	unsigned int width = AA_MASTER_INSTANCE_WIDTH;
+	unsigned int height = AA_MASTER_INSTANCE_HEIGHT;
 	m_pMasterWebView = m_pWebCore->CreateWebView(width, height, m_pWebSession);
 	m_pMasterWebView->set_load_listener(m_pMasterLoadListener);
 	m_pMasterWebView->set_view_listener(m_pMasterViewListener);
@@ -247,11 +249,12 @@ C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInsta
 
 void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 {
-	unsigned int width = 1280;
-	unsigned int height = 720;
+	unsigned int width = (id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
+	unsigned int height = (id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 
-	unsigned int imageWidth = 512;
-	unsigned int imageHeight = 512;
+	unsigned int imageWidth = AA_THUMBNAIL_SIZE;
+	unsigned int imageHeight = AA_THUMBNAIL_SIZE;
+
 	if (id == "images")
 		pWebView->Resize(imageWidth, imageHeight);
 	else
@@ -260,6 +263,7 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 	pWebView->set_load_listener(m_pLoadListener);
 	pWebView->set_view_listener(m_pViewListener);
 	pWebView->set_menu_listener(m_pMenuListener);
+	pWebView->set_process_listener(m_pProcessListener);
 
 	if (id == "hud" || id == "images")
 	{
@@ -302,7 +306,12 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getSelectedWebTab"), true);
 	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("simpleImageReady"), false);
+	systemObject.SetCustomMethod(WSLit("saveLibretroKeybind"), false);
+	systemObject.SetCustomMethod(WSLit("getLibretroKeybinds"), true);
+	//systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
 	systemObject.SetCustomMethod(WSLit("getMapInstances"), true);
+	systemObject.SetCustomMethod(WSLit("getDefaultLibretroInputDevices"), true);
+	systemObject.SetCustomMethod(WSLit("saveLibretroOption"), false);
 	systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
 	systemObject.SetCustomMethod(WSLit("spawnNearestObject"), false);
 	systemObject.SetCustomMethod(WSLit("setNearestObjectDist"), false);
@@ -331,6 +340,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
+	libraryObject.SetCustomMethod(WSLit("createItem"), true);
+	libraryObject.SetCustomMethod(WSLit("saveItem"), true);
 
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryModel"), true);
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryModel"), true);
@@ -612,6 +623,17 @@ bool C_AwesomiumBrowserManager::SelectAwesomiumBrowserInstance(C_AwesomiumBrowse
 	m_pSelectedAwesomiumBrowserInstance = pAwesomiumBrowserInstance;
 	return true;
 }
+
+void C_AwesomiumBrowserManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
+{
+	auto it = m_awesomiumBrowserInstances.begin();
+	while (it != m_awesomiumBrowserInstances.end())
+	{
+		embeddedInstances.push_back(it->second);
+		it++;
+	}
+}
+
 /*
 void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance)
 {

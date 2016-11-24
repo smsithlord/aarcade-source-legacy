@@ -276,3 +276,18 @@ void MenuListener::OnShowPopupMenu(WebView *caller, const WebPopupMenuInfo &menu
 		object.InvokeAsync(WSLit(objectMethod.c_str()), arguments);
 	}
 }
+
+void ProcessListener::OnUnresponsive(WebView* caller)
+{
+	DevMsg("Web view is unresponsive!!\n");
+}
+
+void ProcessListener::OnResponsive(WebView* caller)
+{
+	DevMsg("Web view is responsive once again!!\n");
+}
+
+void ProcessListener::OnCrashed(WebView* caller, TerminationStatus status)
+{
+	DevMsg("Web view has crashed!!\n");
+}

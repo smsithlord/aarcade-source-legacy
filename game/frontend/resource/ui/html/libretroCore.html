@@ -1,0 +1,70 @@
+<html>
+	<head>
+		<style type="text/css" media="screen, print">
+			@font-face
+			{
+				font-family: "AAIcons";
+				src: url('aaicons.ttf') format('truetype');
+			}
+		</style>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>		
+		<div class="hudContent" style="width: 30%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/libretro.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroCoreOptions.html?type=core';" help="Configure this core's available options.">Configure Core</div>
+		</div>
+
+		
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+		<script>
+			var response = aaapi.system.getLibretroOptions("core");
+			var ports = response.ports;
+			var core = response.core;
+			var coreFile = core.substring(core.lastIndexOf("\\") + 1);
+			coreFile = coreFile.substring(0, coreFile.lastIndexOf("."));
+
+			var hudContentTitleElem = document.querySelectorAll(".hudContentHeaderCell")[1];
+			hudContentTitleElem.innerHTML = "Core Options";//: " + coreFile;
+			//loadingManager.init();
+
+			var hudContentElem = document.querySelector(".hudContent");
+
+			var numPorts = ports.length;
+			var i, buttonElem;
+			for( i = 0; i < numPorts; i++ )
+			{
+				buttonElem = document.createElement("div");
+				buttonElem.className = "mainButton helpNote";
+				buttonElem.portNum = i;
+				buttonElem.addEventListener("click", function(e)
+				{
+					window.location = "asset://ui/libretroInput.html?type=core&port=" + this.portNum;
+				}.bind(buttonElem), true);
+				buttonElem.setAttribute("help", "Setup your input devices for this core.");
+				buttonElem.innerHTML = "Input Devices Player " + (parseInt(i) + 1);
+				hudContentElem.appendChild(buttonElem);
+			}
+		</script>
+	</body>
+</html>

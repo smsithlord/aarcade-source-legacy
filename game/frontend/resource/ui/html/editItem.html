@@ -48,26 +48,38 @@ function getParameterByName(name, url) {
 			itemContainer = document.querySelector("#itemContainer");
 
 			var fieldHelp = {
-				"app": "(OPTIONAL) Apps are useful when Windows can't launch a particular shortcut by itself. They are similar to using \"Open With\" when launching a regular desktop shortcut, but far more powerful.",
-				"description": "(OPTIONAL) A brief description of the shortcut. Not really shown anywhere, but useful for searching.",
-				"download": "(OPTIONAL) An internet URI where the local file that this shortcut launches can be downloaded, if applicable.",
-				"file": "The local file location or internet URI that this shortcut launches.",
-				"marquee": "(OPTIONAL) A local file location or internet URI of the image to use as the marquee on this shortcut's 3D model.",
-				"model": "(OPTIONAL) The recommended 3D model to use when first spawning this shortcut.",
-				"preview": "(OPTIONAL) An internet URI to show on the shortcut's screen as a preview for when it gets selected.",
-				"reference": "(OPTIONAL) The internet URI to a unique wiki or reference page describing this shortcut, if applicable.",
-				"screen": "(OPTIONAL) A local file location or internet URI of the image to use as the screen on this shortcut's 3D model.",
-				"stream": "(OPTIONAL) An internet URI where a version of this shortcut's item can be streamed, rather than launching the shortcut to the local file version, if applicable.",
 				"title": "A short, unique, & descriptive title.",
-				"type": "(OPTIONAL) The type of this shortcut. Useful for searching, and especially useful for shortcuts that require \"Open With\" apps to launch."
+				"type": "(OPTIONAL) The type of this shortcut. Useful for searching, and especially useful for shortcuts that require \"Open With\" apps to launch.",
+				"app": "(OPTIONAL) Apps are useful when Windows can't launch a particular shortcut by itself. They are similar to using \"Open With\" when launching a regular desktop shortcut, but far more powerful.",
+				"file": "The local file location or internet URI that this shortcut launches.",
+				"reference": "(OPTIONAL) The internet URI to a unique wiki or reference page describing this shortcut, if applicable.",
+				"download": "(OPTIONAL) An internet URI where the local file that this shortcut launches can be downloaded, if applicable.",
+				"stream": "(OPTIONAL) An internet URI where a version of this shortcut's item can be streamed, rather than launching the shortcut to the local file version, if applicable.",
+				"preview": "(OPTIONAL) An internet URI to show on the shortcut's screen as a preview for when it gets selected.",
+				"screen": "(OPTIONAL) A local file location or internet URI of the image to use as the screen on this shortcut's 3D model.",
+				"marquee": "(OPTIONAL) A local file location or internet URI of the image to use as the marquee on this shortcut's 3D model.",
+				//"model": "(OPTIONAL) The recommended 3D model to use when first spawning this shortcut.",
+				"description": "(OPTIONAL) A brief description of the shortcut. Not really shown anywhere, but useful for searching."
 			};
 
 			var x, help, fieldContainer, fieldKey, fieldKeyNode, fieldValue, fieldValueInput;
 			var item = aaapi.library.getLibraryItem(id);
-			for( var x in item )
+
+			// make sure all default values show up on the form
+			/*
+			for( var y in fieldHelp )
+			{
+				if( !item.hasOwnProperty(y) )
+					item[y] = "";
+			}
+			*/
+
+			for( var x in fieldHelp )
 			{
 				if( x === "info" || x === "model" )
 					continue;
+
+				var val = (item.hasOwnProperty(x)) ? item[x] : "";
 
 				fieldContainer = document.createElement("div");
 				fieldContainer.className = "fieldContainer";
@@ -115,7 +127,7 @@ function getParameterByName(name, url) {
 						fieldValueSelect.appendChild(fieldValueOption);
 					}
 
-					fieldValueSelect.value = item[x];
+					fieldValueSelect.value = val;//item[x];
 					fieldValueSelect.field = x;
 					fieldValueSelect.addEventListener("change", function(e)
 					{
@@ -154,7 +166,7 @@ function getParameterByName(name, url) {
 						fieldValueSelect.appendChild(fieldValueOption);
 					}
 
-					fieldValueSelect.value = item[x];
+					fieldValueSelect.value = val;//item[x];
 					fieldValueSelect.field = x;
 					fieldValueSelect.addEventListener("change", function(e)
 					{
@@ -180,7 +192,7 @@ function getParameterByName(name, url) {
 
 					fieldValueInput = document.createElement("input");
 					fieldValueInput.type = "text";
-					fieldValueInput.value = item[x];
+					fieldValueInput.value = val;//item[x];
 					fieldValueInput.field = x;
 					//fieldValueInput.setAttribute("fieldz", x);
 					fieldValueInput.addEventListener('blur', function(e)

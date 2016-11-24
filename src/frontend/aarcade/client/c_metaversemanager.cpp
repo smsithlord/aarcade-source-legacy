@@ -148,6 +148,20 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 //	g_pAnarchyManager->OnMountAllWorkshopsComplete();
 }
 
+
+void C_MetaverseManager::AddItem(KeyValues* pItem)
+{
+	KeyValues* active = pItem->FindKey("current");
+	if (!active)
+		active = pItem->FindKey("local");
+
+	if (active)
+	{
+		std::string id = VarArgs("%s", active->GetString("info/id"));
+		m_items[id] = pItem;
+	}
+}
+
 void C_MetaverseManager::SaveItem(KeyValues* pItem)
 {
 	KeyValues* pTargetKey = pItem->FindKey("loadedFromLegacy");
@@ -160,6 +174,30 @@ void C_MetaverseManager::SaveItem(KeyValues* pItem)
 
 	pItem->SaveToFile(g_pFullFileSystem, VarArgs("library/items/%s.key", active->GetString("info/id")), "DEFAULT_WRITE_PATH");
 	DevMsg("Saved item %s to library/items/%s.key\n", active->GetString("title"), active->GetString("info/id"));
+}
+
+KeyValues* C_MetaverseManager::CreateItem(KeyValues* pInfo)
+{
+	//KeyValues* pItem = new KeyValues("item");
+
+	KeyValues* pItem = new KeyValues("item");
+	pItem->SetInt("generation", 3);
+
+	// add standard info
+	pItem->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId().c_str());
+	pItem->SetInt("local/info/created", 0);
+	pItem->SetString("local/info/owner", "local");
+	pItem->SetInt("local/info/removed", 0);
+	pItem->SetString("local/info/remover", "");
+	pItem->SetString("local/info/alias", "");
+
+	pItem->SetString("local/type", "-KKa1MHJTls2KqNphWFM");	// FIXME: default type ID?  should be a define!!
+
+	KeyValues* active = pItem->FindKey("local");
+	for (KeyValues *sub = pInfo->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		active->SetString(sub->GetName(), sub->GetString());
+
+	return pItem;
 }
 
 void C_MetaverseManager::SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst)
@@ -1884,6 +1922,20 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<
 							bGood = false;
 					}
 				}
+				else
+				{
+					potentialBuf = active->GetString(fieldName.c_str());
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = searchField->GetString();
+					std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+					if (potentialBuf == searchBuf)
+						bGood = true;
+					else
+						bGood = false;
+				}
+				/*
 				else if (fieldName == "type")
 				{
 					if (!Q_strcmp(searchField->GetString(), "") || !Q_strcmp(active->GetString("type"), searchField->GetString()))
@@ -1891,6 +1943,7 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<
 					else
 						bGood = false;
 				}
+				*/
 
 				if (!bGood)
 					break;
@@ -1917,6 +1970,7 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<
 
 KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 {
+	DevMsg("C_MetaverseManager: FindLibraryItem with ONLY pSearchinfo!!\n");
 	KeyValues* potential;
 	KeyValues* active;
 	KeyValues* searchField;
@@ -2185,7 +2239,7 @@ void C_MetaverseManager::FlagDynamicModels()
 			active = it->second->FindKey("local", true);
 
 		buf = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-		if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0)
+		if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0 || buf.find("models\\banners\\") == 0 || buf.find("models/banners/") == 0 || buf.find("models\\frames\\") == 0 || buf.find("models/frames/") == 0 || buf.find("models\\icons\\") == 0 || buf.find("models/icons/") == 0)
 		{
 			active->SetInt("dynamic", 1);
 			DevMsg("Flagged %s as dynamic model\n", buf.c_str());

@@ -71,6 +71,7 @@ public:
 	std::string GetScraperId() { return m_scraperId; }
 	std::string GetScraperItemId() { return m_scraperItemId; }
 	std::string GetScraperField() { return m_scraperItemId; }
+	std::string GetOriginalItemId() { return m_originalItemId; }
 
 	// mutators	
 	void SetTexture(ITexture* pTexture) { m_pTexture = pTexture; }
@@ -80,6 +81,7 @@ public:
 		m_scraperItemId = itemId;
 		m_scraperField = field;
 	}
+	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 
 private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceStartRequest, HTML_StartRequest_t, m_StartRequest);
@@ -104,6 +106,7 @@ private:
 	int m_iLastRenderedFrame;
 	//HHTMLBrowser m_unBrowserHandle;
 	std::string m_id;
+	std::string m_originalItemId;
 	std::string m_initialURL;
 	void* m_pPostData;
 	bool m_bIsDirty;

@@ -32,8 +32,10 @@ public:
 	virtual int GetLastRenderedFrame() { return -1; }
 	virtual ITexture* GetTexture() { return null; }
 	virtual C_InputListener* GetInputListener() { return null; }
+	virtual std::string GetOriginalItemId() { return ""; }
 	
 	// mutators
+	virtual void SetOriginalItemId(std::string itemId) {}
 	
 private:
 

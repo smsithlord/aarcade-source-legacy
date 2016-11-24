@@ -1,0 +1,186 @@
+<html>
+	<head>
+		<style type="text/css" media="screen, print">
+			@font-face
+			{
+				font-family: "AAIcons";
+				src: url('aaicons.ttf') format('truetype');
+			}
+		</style>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>		
+		<div class="hudContent" style="width: 30%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/blank.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Libretro Menu
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroGame.html';" help="Configure the options this core uses on THIS game only.">Game Options</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroCore.html';" help="Configure the default options this core uses on ALL games.">Core Options</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroMain.html';" help="Configure the options that Libretro uses on ALL games & cores.">Libretro Options</div>
+			<div class="devicesContainer"></div>
+		</div>
+
+		
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<style>
+			.devicesContainer
+			{
+				width: 100%;
+				text-align: center;
+			}
+
+			.devicesContainer table
+			{
+				width: 90%;
+				display: inline-block;
+			}
+
+			.devicesContainer table td
+			{
+				font-size: 20px;
+				font-family: Arial;
+				/*font-style: italic;*/
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 2px;
+			}
+
+			.optionSelect
+			{
+				width: 100%;
+				padding: 4px;
+				font-size: 16px;
+				font-family: Arial;
+				/*font-style: italic;
+				text-shadow: 2px 2px 2px #000;*/
+				color: rgba(255, 255, 255, 0.7);
+				background-color: #000;
+				font-weight: bold;
+			}
+
+			.enabledSelect
+			{
+				color: rgba(150, 255, 150, 0.7);
+			}
+
+			.disabledSelect
+			{
+				color: rgba(255, 150, 150, 0.7);
+			}
+
+			.devicesContainer table td:nth-of-type(1)
+			{
+				width: 30%;
+				text-align: right;
+				padding-right: 8px;
+				white-space: nowrap;
+			}
+
+			.devicesContainer table td:nth-of-type(2)
+			{
+				width: 70%;
+				text-align: left;
+			}
+		</style>
+
+		<script>
+			//var libretroControllerTypes = ["RetroJoypad", "RetroMouse", "RetroKeyboard", "RetroLightgun", "RetroAnalog", "RetroPointer"];
+
+			var devicesContainerElem = document.querySelector(".devicesContainer");
+
+			var deviceTableElem = document.createElement("table");
+			var deviceRowElem, deviceNameCellElem, deviceSelectCellElem, optionSelectElem;//, optionNothingElem;
+
+			var response = aaapi.system.getLibretroOptions("auto");
+			var libretroControllerTypes = response.baseControllerTypes;
+			var controllerPorts = response.ports;//.types[0].desc);
+			var numPorts = controllerPorts.length;
+			var controllerPort, i, controllerPortType, numControllerPortTypes, j, controllerPortType;
+			for( i = 0; i < numPorts; i++ )
+			{
+				controllerPort = controllerPorts[i];
+
+				deviceRowElem = document.createElement("tr");
+
+				deviceNameCellElem = document.createElement("td");
+				deviceNameCellElem.innerHTML = "Controller Port " + (i+1);
+
+				deviceSelectCellElem = document.createElement("td");
+				optionSelectElem = document.createElement("select");
+
+/*
+				optionNothingElem = document.createElement("option");
+				optionNothingElem.value = 0;
+				optionNothingElem.text = "Unplugged";
+				optionSelectElem.appendChild(optionNothingElem);
+				*/
+
+				numControllerPortTypes = controllerPort.types.length;
+				for( j = 0; j < numControllerPortTypes; j++ )
+				{
+					controllerPortType = controllerPort.types[j];
+
+					optionSelectElem.className = "optionSelect";
+					optionOptionElem = document.createElement("option");
+					optionOptionElem.value = controllerPortType.id;
+					optionOptionElem.text = controllerPortType.desc;
+
+					optionOptionElem.text += " (" + libretroControllerTypes[parseInt((controllerPortType.id + "")[0])] + ")";
+
+					if( j === controllerPort.current )
+						optionOptionElem.selected = true;
+
+					optionSelectElem.appendChild(optionOptionElem);
+					/*
+					numValues = option.values.length;
+					for( j = 0; j < numValues; j++ )
+					{
+						optionOptionElem = document.createElement("option");
+						optionOptionElem.value = j;
+						optionOptionElem.text = option.values[j];
+
+						if( option.current == j )
+						{
+							optionOptionElem.selected = true;
+							testText = option.values[j].toLowerCase();
+							if( testText === "enabled" || testText === "yes" )
+								optionSelectElem.className += " enabledSelect";
+							else if( testText === "disabled" || testText === "no" )
+								optionSelectElem.className += " disabledSelect";
+						}
+
+						optionSelectElem.appendChild(optionOptionElem);
+					}
+					*/
+					deviceSelectCellElem.appendChild(optionSelectElem);
+				}
+
+				deviceRowElem.appendChild(deviceNameCellElem);
+				deviceRowElem.appendChild(deviceSelectCellElem);
+				deviceTableElem.appendChild(deviceRowElem);
+			}
+
+			devicesContainerElem.appendChild(deviceTableElem);
+			//loadingManager.init();
+		</script>
+	</body>
+</html>

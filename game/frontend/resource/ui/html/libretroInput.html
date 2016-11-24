@@ -1,0 +1,424 @@
+<html>
+	<head>
+		<style type="text/css" media="screen, print">
+			@font-face
+			{
+				font-family: "AAIcons";
+				src: url('aaicons.ttf') format('truetype');
+			}
+		</style>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>		
+		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell"></div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="hudContentBody">
+				<div class="devicesContainer"></div>
+			</div>
+		</div>
+
+		
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<style>
+			.hudContentBody
+			{
+				text-align: center;
+				max-height: 600px;
+				overflow-y: auto;
+			}
+
+			.hudContentBody::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.hudContentBody::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(50, 50, 50, 0.7);
+				border-radius: 10px;
+				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
+			}
+
+			.hudContentBody::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
+				background-color: rgba(50, 50, 50, 0.7);
+			}
+
+			.hudContentBody::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.hudContentBody table
+			{
+				display: inline-block;
+			}
+
+			.hudContentBody table td
+			{
+				font-size: 20px;
+				font-family: Arial;
+				/*font-style: italic;*/
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 2px;
+			}
+
+			.optionSelect
+			{
+				display: inline-block;
+				width: 100%;
+				padding: 4px;
+				font-size: 16px;
+				font-family: Arial;
+				/*font-style: italic;
+				text-shadow: 2px 2px 2px #000;*/
+				color: rgba(255, 255, 255, 0.7);
+				background-color: #000;
+				font-weight: bold;
+			}
+
+			.enabledSelect
+			{
+				color: rgba(150, 255, 150, 0.7);
+			}
+
+			.disabledSelect
+			{
+				color: rgba(255, 150, 150, 0.7);
+			}
+
+			.hudContentBody table td:nth-of-type(1)
+			{
+				width: 50%;
+				text-align: right;
+				padding-right: 8px;
+			}
+
+			.hudContentBody table td:nth-of-type(2)
+			{
+				width: 50%;
+				text-align: left;
+			}
+		</style>
+
+		<script>
+		// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+			var masterType = getParameterByName("type");
+			var masterPort = getParameterByName("port");
+
+			function keyCatcher(e)
+			{
+				console.log("Key catcher: " + e.keyCode);
+
+				var catcherElem = document.querySelector("#keyCatcher");
+				var timerElem = document.querySelector("#countdownTimer");
+				var selectElem = catcherElem.optionSelectElem;
+
+				// translate this web keycode into a Source keycode
+				var webCode = e.keyCode;
+				var sourceCode;
+
+				var i;
+				for( i = 0; i < sourceButtons.length; i++ )
+				{
+					if( sourceButtons[i].keyCodeDown === webCode )
+					{
+						sourceCode = sourceButtons[i].id;
+						break;
+					}
+				}
+
+				if( !!sourceCode )
+				{
+					console.log("Found source key: " + sourceCode);
+					clearInterval(timerElem.countdownHandle);
+					document.removeEventListener("keydown", keyCatcher, true);
+					catcherElem.parentNode.removeChild(catcherElem);
+
+					// find this option in the select list
+					var max = selectElem.length;
+					var i, option;
+					for( i = 0; i < max; i++ )
+					{
+						option = selectElem.options[i];
+						if( option.value === sourceCode )
+						{
+							console.log("Selecting value " + sourceCode);
+							//selectElem.selectedIndex = i;
+							selectElem.value = sourceCode;
+							break;
+						}
+					}
+				}
+
+				e.preventDefault();
+				return false;
+			}
+
+			function decreasingSort(a, b)
+			{
+				if( a.enumValue > b.enumValue )
+					return 1;
+				else if( a.enumValue < b.enumValue)
+					return -1;
+				else
+					return 0;
+			}
+
+			// build the content body
+			var hudContentBodyElem = document.querySelector(".hudContentBody");
+			var devicesContainerElem = document.querySelector(".devicesContainer");
+
+			var binds = aaapi.system.getLibretroKeybinds(masterType);
+			console.log(JSON.stringify(binds));
+
+			var response = aaapi.system.getDefaultLibretroInputDevices();
+			var sourceButtons = response.sourceButtons;
+			//for( var i = 0; i < sourceButtons.length; i++ )
+			//{
+			//	console.log(sourceButtons[i].id);
+			//}
+
+			var x, device, buttons, y, i, button;
+
+			var devices = [];
+			for( x in response.devices )
+				devices.push(response.devices[x]);
+//console.log(devices.length);
+			devices.sort(decreasingSort);
+			for( x = 0; x < devices.length; x++ )
+			{
+				device = devices[x];
+				console.log(device.id);
+
+				var optionsTableElem = document.createElement("table");
+				optionsTableElem.style.cssText = "padding-bottom: 25px;";
+
+				var headerRowElem = document.createElement("tr");
+				var headerCellElem = document.createElement("th");
+				headerCellElem.style.cssText = "font-size: 20px; font-family: Arial; font-style: italic; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+				headerCellElem.colSpan = 2;
+				headerCellElem.innerHTML += device.name;
+				headerRowElem.appendChild(headerCellElem);
+				optionsTableElem.appendChild(headerRowElem);
+
+				/*
+				buttons = [];
+				for( y in response.devices[x].buttons )
+					buttons.push(response.devices[x].buttons[y]);
+
+				buttons.sort(decreasingSort);
+				*/
+
+				buttons = devices[x].buttons;
+
+				console.log(buttons.length);
+
+				var numOptions = buttons.length;
+				var i, option, optionRowElem, optionNameCellElem, optionValueCellElem, numValues, j, optionSelectElem, optionOptionElem, testText;
+				for( i = 0; i < numOptions; i++ )
+				{
+					option = buttons[i]; //(button)
+					console.log(option.id);
+
+					optionRowElem = document.createElement("tr");
+					optionNameCellElem = document.createElement("td");
+					optionNameCellElem.innerHTML = option.name;
+
+					optionValueCellElem = document.createElement("td");
+					optionValueCellElem.style.cssText = "white-space: nowrap;";
+					optionSelectElem = document.createElement("select");
+					optionSelectElem.portid = masterPort;
+					optionSelectElem.deviceid = devices[x].enumValue;
+					optionSelectElem.indexid = 0;	// always 0 except for multi-touch
+					optionSelectElem.retrokeyid = option.enumValue;
+					optionSelectElem.addEventListener("change", function(e)
+					{
+						//console.log("Value is now " + this.options[this.selectedIndex].value);
+						aaapi.system.saveLibretroKeybind(masterType, this.portid, this.deviceid, this.indexid, this.retrokeyid, this.options[this.selectedIndex].value);
+					}.bind(optionSelectElem), true);
+					optionSelectElem.className = "optionSelect";
+					numValues = sourceButtons.length;
+
+						//console.log("HOLA HOLA HOLA");
+						//console.log("Port: 0");
+						//console.log("Device: " + devices[x].id + "(" + devices[x].enumValue + ")");
+						//console.log("Index: 0");
+						//console.log("Key: " + buttons[i].name + "(" + buttons[i].enumVaue + ")");
+
+					var currentBind = binds.keybinds;
+					if( !!currentBind )
+						currentBind = currentBind["port" + masterPort];
+
+					if( !!currentBind )
+					{
+						//console.log("Fetching device " + devices[x].enumValue);
+						currentBind = currentBind["device" + devices[x].enumValue];
+					}
+
+					if( !!currentBind )
+					{
+						//console.log("Fetching index");
+						currentBind = currentBind["index0"];
+					}
+
+					if( !!currentBind )
+					{
+						//console.log("ACTUALLY FETCHING A KEY!!");
+						currentBind = currentBind["key" + i];
+					}
+					else
+						currentBind = "unbound";
+
+					//console.log("Current bind: " + currentBind);
+
+					for( j = 0; j < numValues; j++ )
+					{
+						optionOptionElem = document.createElement("option");
+						optionOptionElem.value = sourceButtons[j].id;
+						optionOptionElem.text = sourceButtons[j].name;
+
+						// determine the currently bound key from keybindsResponse.ports[0]
+						//buttons = devices[x].buttons
+						// assume port 0 
+
+						if( sourceButtons[j].id === currentBind )
+							optionOptionElem.selected = true;
+						/*
+						if( option.current == j )
+						{
+							optionOptionElem.selected = true;
+							testText = option.values[j].toLowerCase();
+							if( testText === "enabled" || testText === "yes" )
+								optionSelectElem.className += " enabledSelect";
+							else if( testText === "disabled" || testText === "no" )
+								optionSelectElem.className += " disabledSelect";
+						}
+						*/
+
+						optionSelectElem.appendChild(optionOptionElem);
+					}
+					optionValueCellElem.appendChild(optionSelectElem);
+
+					var detectButtonElem = document.createElement("input");
+					detectButtonElem.style.cssText = "display: inline-block; padding: 6px;";
+					detectButtonElem.type = "button";
+					detectButtonElem.value = "...";
+
+					detectButtonElem.addEventListener("click", function(e)
+					{
+						var catcherElem = document.createElement("div");
+						catcherElem.optionSelectElem = this;
+						catcherElem.id = "keyCatcher";
+						catcherElem.style.cssText = "position: fixed; top: 0; bottom: 0; left: 0; right: 0; background-color: rgba(0, 0, 0, 0.9); z-index: 9999999; text-align: center;";
+
+						var textElem = document.createElement("div");
+						var windowHeight = window.innerHeight;
+						console.log(windowHeight);
+						textElem.style.cssText = "background-color: rgba(250, 50, 50, 0.95); border-radius: 20px; padding: 20px; display: inline-block; text-align: center; margin-top: " + windowHeight / 2 + "px; font-size: 20px; font-family: Arial; font-style: italic; text-shadow: 2px 2px 2px #000; font-weight: bold; border: 3px solid #000;";
+						textElem.innerHTML = "PRESS ANY KEY / BUTTON";
+
+						var timerElem = document.createElement("div");
+						timerElem.id = "countdownTimer";
+						timerElem.style.cssText = "font-size: 30px; font-weight: 900;";
+						timerElem.catcherElem = catcherElem;
+						timerElem.timeLeft = 5;
+						timerElem.innerHTML = "5";
+						textElem.appendChild(timerElem);
+						catcherElem.appendChild(textElem);
+
+						timerElem.countdownHandle = setInterval(function(e)
+						{
+							this.timeLeft--;
+							this.innerHTML = this.timeLeft;
+
+							if( this.timeLeft === 0 )
+							{
+								clearInterval(this.countdownHandle);
+								this.catcherElem.parentNode.removeChild(this.catcherElem);
+							}
+						}.bind(timerElem), 1000);
+
+						document.addEventListener("keydown", keyCatcher, true);
+
+						/*
+						catcherElem.addEventListener("click", function(e)
+						{
+							this.parentNode.removeChild(this);
+						}.bind(catcherElem), true);
+						*/
+
+						document.body.appendChild(catcherElem);
+					}.bind(optionSelectElem), true);
+
+					optionValueCellElem.appendChild(detectButtonElem);
+
+					//optionValueCellElem.innerHTML = option.current;
+
+					optionRowElem.appendChild(optionNameCellElem);
+					optionRowElem.appendChild(optionValueCellElem);
+					optionsTableElem.appendChild(optionRowElem);
+				}
+
+				devicesContainerElem.appendChild(optionsTableElem);
+			}
+
+			//var hudContentTitleElem = document.querySelectorAll(".hudContentHeaderCell")[1];
+
+			// get the info about the core
+			//var response = aaapi.system.getLibretroOptions();
+			//var core = response.core;
+			//var coreFile = core.substring(core.lastIndexOf("\\") + 1);
+			//coreFile = coreFile.substring(0, coreFile.lastIndexOf("."));
+
+			var headContentHeaderButtonElem = document.querySelector(".hudContentHeaderButton");
+			headContentHeaderButtonElem.addEventListener("click", function(e)
+			{
+				if( masterType === "libretro" )
+ 					window.location = "asset://ui/libretroMain.html";
+ 				else if( masterType === "core" )
+ 					window.location = "asset://ui/libretroCore.html";
+ 				else if( masterType === "game" )
+ 					window.location = "asset://ui/libretroGame.html";
+			}.bind(headContentHeaderButtonElem), true);
+
+			var hudContentTitleElem = document.querySelectorAll(".hudContentHeaderCell")[1];
+			hudContentTitleElem.style.cssText = "text-transform: capitalize;";
+			hudContentTitleElem.innerHTML = masterType + ": Input Devices Player " + (parseInt(masterPort)+1);// gameFile;
+		// 1	
+		</script>
+	</body>
+</html>

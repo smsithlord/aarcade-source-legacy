@@ -89,13 +89,11 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
 			DevMsg("ERROR: Material not found!!\n");
 
-		DevMsg("Check point A\n");
 		m_pOriginalTexture = pMaterialVar->GetTextureValue();
 
-		DevMsg("Check point B\n");
 		if (m_pCanvasTexture )
 			pMaterialVar->SetTextureValue(m_pCanvasTexture);
-		DevMsg("Check point C\n");
+
 		if (g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") != g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
 		{
 			ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");
@@ -103,7 +101,9 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 			pImagePanel->SetShouldScaleImage(true);
 			pImagePanel->SetSize(GetWide(), GetTall());
 			//pImagePanel->SetAutoResize() //pin
+			
 			pImagePanel->SetImage("activecanvas");
+			DevMsg("INPUT SLATE: active_canvas_panel - activecanvas\n");
 		}
 		
 		ITexture* pTexture = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->GetTexture();
@@ -113,6 +113,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		pHudImagePanel->SetSize(GetWide(), GetTall());
 		//pImagePanel->SetAutoResize() //pin
 		pHudImagePanel->SetImage("hudcanvas");
+		DevMsg("INPUT SLATE: hud_canvas_panel - hudcanvas\n");
 
 		/*
 		ITexture* pTexture = g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture();
@@ -197,7 +198,7 @@ void CInputSlate::SelfDestruct()
 {
 	bool found;
 	IMaterialVar* pMaterialVar = m_pMaterial->FindVar("$basetexture", &found, false);
-	if (!pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
+	if (!found || !pMaterialVar || !pMaterialVar->IsDefined() || !pMaterialVar->IsTexture())
 		DevMsg("ERROR: Material not found 222222222222222222222222222222222222222!!\n");
 	else if ( m_pOriginalTexture )
 		pMaterialVar->SetTextureValue(m_pOriginalTexture);
@@ -374,11 +375,14 @@ void CInputSlate::SetOverlayMode(bool bOverlayMode)
 
 void CInputSlate::OnKeyCodeReleased(KeyCode code)
 {
-	if (code == KEY_ESCAPE && g_pAnarchyManager->IsPaused())
-	{
-		g_pAnarchyManager->Unpause();
+	if (g_pAnarchyManager->IsPaused())
 		return;
-	}
+
+	//if (code == KEY_ESCAPE && g_pAnarchyManager->IsPaused())
+	//{
+		//g_pAnarchyManager->Unpause();
+		//return;
+	//}
 
 	g_pAnarchyManager->GetInputManager()->KeyCodeReleased(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
 	/*
@@ -456,6 +460,7 @@ void CInputSlate::OnCommand(const char* pcCommand)
 
 CInputSlate::~CInputSlate()
 {
+	DevMsg("Close input slate\n");
 	m_fPreviousTime = system()->GetTimeMillis();
 	/*
 	if (m_pOriginalTexture)
@@ -476,6 +481,8 @@ CInputSlate::~CInputSlate()
 			ShowCursor(true);
 		DevMsg("showing cursor\n");
 	}
+
+	DevMsg("done closing input slate.\n");
 }
 
 class CInputSlateInterface : public IInputSlate

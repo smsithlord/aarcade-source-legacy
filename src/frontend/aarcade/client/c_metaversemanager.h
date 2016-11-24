@@ -18,7 +18,9 @@ public:
 	//void OnWebTabCreated(C_WebTab* pWebTab);
 	void OnMountAllWorkshopsCompleted();
 
+	void AddItem(KeyValues* pItem);
 	void SaveItem(KeyValues* pItem);
+	KeyValues* CreateItem(KeyValues* pInfo);
 
 	void SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst = true);// , bool bFullMerg, bool bRefreshArtworkIfNeeded = true);
 

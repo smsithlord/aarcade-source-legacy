@@ -8,6 +8,14 @@
 #include <string>
 #include <vector>
 #include <map>
+
+// openGL stuff
+#include <stdio.h>
+#include <stdlib.h>
+// Include GLEW. Always include it before gl.h and glfw.h, since it's a bit magic.
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+//#include <glm/glm.hpp>
 //#include <mutex>
 //#include "c_libretrosurfaceregen.h"
 //#include <map>
@@ -50,8 +58,8 @@ struct libretro_raw {
 };
 
 struct libretro_core_option {
-	const char * name_internal;
-	const char * name_display;
+	std::string name_internal;
+	std::string name_display;
 	std::vector<std::string> values;
 };
 
@@ -70,13 +78,18 @@ struct LibretroInstanceInfo_t
 	bool gameloaded;
 	libretro_raw* raw;
 	std::string corepath;
+	std::string assetspath;
+	std::string systempath;
+	std::string savepath;
 	CSysModule* module;
 	uint threadid;
 	C_LibretroInstance* libretroinstance;
 	std::string core;
 	std::string game;
 	std::vector<libretro_core_option*> options;
-	std::vector<int> optionscurrentvalues;
+	//unsigned int numOptions;
+	//std::map<std::string, std::string> optioncurrentvalues;
+	//std::vector<int> optionscurrentvalues;
 	void* lastframedata;
 	unsigned int lastframewidth;
 	unsigned int lastframeheight;
@@ -98,7 +111,19 @@ struct LibretroInstanceInfo_t
 	//unsigned int safebuffersize;
 	//unsigned int safebufferpos;
 	bool processingaudio;
-	std::map<int, bool> inputstate;
+	//std::map<std::string, float> inputstate;
+	//GLFWwindow* window;
+//	GLuint framebuffer;
+	const retro_controller_info* portdata;
+	std::vector<int> currentPortTypes;
+	unsigned int numports;
+	KeyValues* libretrokeybinds;
+	KeyValues* corekeybinds;
+	KeyValues* gamekeybinds;
+	KeyValues* inputstate;
+	KeyValues* coreCoreOptions;
+	KeyValues* gameCoreOptions;
+	//KeyValues* activekeybinds;
 };
 
 class C_LibretroInstance : public C_EmbeddedInstance
@@ -113,7 +138,7 @@ public:
 	void Init(std::string id = "");
 	bool CreateWorkerThread(std::string core);
 	void Update();
-	bool LoadCore();
+	bool LoadCore(std::string coreFile = "");
 	static bool LoadGame();
 	void OnGameLoaded();
 	void OnCoreLoaded();
@@ -123,7 +148,8 @@ public:
 
 	bool HasInfo() { return (m_info != null); }
 	std::vector<libretro_core_option*>& GetAllOptions() { return m_info->options; }	// others should always check if m_info exists first themselves!!
-	int GetOptionCurrentValue(unsigned int index);
+	//int GetOptionCurrentValue(unsigned int index);
+	//std::string GetOptionCurrentValue(std::string name_internal);
 
 	bool IsSelected();
 	bool HasFocus();
@@ -138,6 +164,8 @@ public:
 
 	// threaded
 	//unsigned Worker(void *params);
+
+//	int16_t GetInputState(LibretroInstanceInfo_t* info, unsigned int port, unsigned int device, unsigned int index, unsigned int id);
 
 	// callbacks
 	static void cbMessage(enum retro_log_level level, const char * fmt, ...);
@@ -158,6 +186,9 @@ public:
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
+	void SaveLibretroKeybind(std::string type, unsigned int retroport, unsigned int retrodevice, unsigned int retroindex, unsigned int retrokey, std::string steamkey);
+	void SaveLibretroOption(std::string type, std::string name_internal, std::string value);
+
 	// accessors
 	libretro_raw* GetRaw() { return m_raw; }
 	LibretroInstanceInfo_t* GetInfo() { return m_info; }
@@ -166,10 +197,12 @@ public:
 	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;
 	std::string GetOriginalGame() { return m_originalGame; }
+	std::string GetOriginalItemId() { return m_originalItemId; }
 
 	// mutators
 	bool SetGame(std::string file);
 	void SetOriginalGame(std::string file) { m_originalGame = file; }
+	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 
 private:
 	std::string m_originalGame;
@@ -177,9 +210,14 @@ private:
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;
 	std::string m_id;
+	std::string m_originalItemId;
 	libretro_raw* m_raw;
 	std::string m_corePath;
+	std::string m_assetsPath;
+	std::string m_systemPath;
+	std::string m_savePath;
 	LibretroInstanceInfo_t* m_info;
+	//C_OpenGLManager* m_pOpenGLManager;
 	//CSysModule* m_pModule;
 };
 

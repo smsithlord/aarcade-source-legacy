@@ -83,11 +83,13 @@ public:
 	std::vector<JavaScriptMethodCall_t*> GetJavaScriptMethodCalls() { return m_javaScriptMethodCalls; }
 	int GetState() { return m_iState; }
 	C_InputListener* GetInputListener();
+	std::string GetOriginalItemId() { return m_originalItemId; }
 
 	// mutators	
 	//void SetState(int val) { m_iState = val; }
 	void SetState(int state) { m_iState = state; }
 	void SetWebView(Awesomium::WebView* pWebView) { m_pWebView = pWebView; }
+	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 
 private:
 	std::string m_URL;
@@ -107,6 +109,7 @@ private:
 	int m_iLastRenderedFrame;
 	HHTMLBrowser m_unBrowserHandle;
 	std::string m_id;
+	std::string m_originalItemId;
 	std::string m_initialURL;
 	bool m_bAlpha;
 	void* m_pPostData;

@@ -1169,6 +1169,9 @@ function ArcadeHud()
 		this.cursorImageElem.className = "cursorImage";
 		this.cursorImageElem.src = "cursors/hippie_default.png";
 
+		//if( document.body.offsetWidth > 1280 )
+			//this.cursorImageElem.style.width = this.cursorImageElem.offsetWidth * 2.0 + "px";
+
 		this.cursorElem.style.left = (document.body.offsetWidth / 2) + "px";
 		this.cursorElem.style.top = (document.body.offsetHeight / 2) + "px";
 
@@ -2317,6 +2320,18 @@ ArcadeHud.prototype.viewStream = function()
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
 		aaapi.system.viewStream(item.info.id);
+};
+
+// Originally from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
+ArcadeHud.prototype.encodeRFC5987ValueChars = function(str){
+    return encodeURIComponent(str).
+        // Note that although RFC3986 reserves "!", RFC5987 does not,
+        // so we do not need to escape it
+        replace(/['()]/g, escape). // i.e., %27 %28 %29
+        replace(/\*/g, '%2A').
+            // The following are not required for percent-encoding per RFC5987, 
+            // so we can allow for a little better readability over the wire: |`^
+            replace(/%(?:7C|60|5E)/g, unescape);
 };
 
 ArcadeHud.prototype.onDOMGot = function(url, response)

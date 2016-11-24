@@ -1,0 +1,240 @@
+<html>
+	<head>
+		<style type="text/css" media="screen, print">
+			@font-face
+			{
+				font-family: "AAIcons";
+				src: url('aaicons.ttf') format('truetype');
+			}
+		</style>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>		
+		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell"></div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="hudContentBody"></div>
+		</div>
+
+		
+
+<!--		<div class="backButton">Back</div> -->
+		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<style>
+			.hudContentBody
+			{
+				text-align: center;
+			}
+
+			.hudContentBody table
+			{
+				display: inline-block;
+			}
+
+			.hudContentBody table td
+			{
+				font-size: 20px;
+				font-family: Arial;
+				/*font-style: italic;*/
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 2px;
+			}
+
+			.optionSelect
+			{
+				width: 100%;
+				padding: 4px;
+				font-size: 16px;
+				font-family: Arial;
+				/*font-style: italic;
+				text-shadow: 2px 2px 2px #000;*/
+				color: rgba(255, 255, 255, 0.7);
+				background-color: #000;
+				font-weight: bold;
+			}
+
+			.enabledSelect
+			{
+				color: rgba(150, 255, 150, 0.7);
+			}
+
+			.disabledSelect
+			{
+				color: rgba(255, 150, 150, 0.7);
+			}
+
+			.hudContentBody table td:nth-of-type(1)
+			{
+				width: 50%;
+				text-align: right;
+				padding-right: 8px;
+			}
+
+			.hudContentBody table td:nth-of-type(2)
+			{
+				width: 50%;
+				text-align: left;
+			}
+		</style>
+
+		<script>
+		// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+			var masterType = getParameterByName("type");
+
+			var headContentHeaderButtonElem = document.querySelector(".hudContentHeaderButton");
+			headContentHeaderButtonElem.addEventListener("click", function(e)
+			{
+				if( masterType === "core" )
+ 					window.location = "asset://ui/libretroCore.html";
+ 				else if( masterType === "game" )
+ 					window.location = "asset://ui/libretroGame.html";
+			}.bind(headContentHeaderButtonElem), true);
+
+			var hudContentTitleElem = document.querySelectorAll(".hudContentHeaderCell")[1];
+
+			// get the info about the core
+			var response = aaapi.system.getLibretroOptions(masterType);
+
+			var core = response.core;
+			var coreFile = core.substring(core.lastIndexOf("\\") + 1);
+			coreFile = coreFile.substring(0, coreFile.lastIndexOf("."));
+
+			// set the content header title
+			var hudContentTitleElem = document.querySelectorAll(".hudContentHeaderCell")[1];
+			hudContentTitleElem.style.cssText = "text-transform: capitalize;";
+			hudContentTitleElem.innerHTML = masterType + ": Configure " + coreFile;
+
+			// build the content body
+			var hudContentBodyElem = document.querySelector(".hudContentBody");
+
+			var optionsTableElem = document.createElement("table");
+
+			function onOptionSelectChange(e)
+			{
+				var selectedOption = this.options[this.selectedIndex];
+				var testText = selectedOption.text.toLowerCase();
+
+				if( this.selectedIndex === 0 && testText.indexOf("default (") === 0 )
+				{
+					testText = testText.substring(9);
+					testText = testText.substring(0, testText.indexOf(")"));
+				}
+
+				if( testText === "enabled" || testText === "yes" )
+				{
+					this.className = this.className.replace(/\bdisabledSelect\b/,'');
+					this.className += " enabledSelect";
+				}
+				else if( testText === "disabled" || testText === "no" )
+				{
+					this.className = this.className.replace(/\benabledSelect\b/,'');
+					this.className += " disabledSelect";
+				}
+				else
+				{
+					this.className = this.className.replace(/\bdisabledSelect\b/,'');
+					this.className = this.className.replace(/\benabledSelect\b/,'');
+				}
+
+				aaapi.system.saveLibretroOption(masterType, this.name_internal, selectedOption.value + "");
+
+				/*
+				// update the active value for this option
+				var updatedResponse = aaapi.system.getLibretroOptions(masterType);
+				response.options[this.optionNumber].active = updatedResponse.options[this.optionNumber].active;
+				this.options[0].value = "default";
+				this.options[0].text = "default (" + option.active + ")";
+				*/
+
+				//console.log("Time to save option #" + this.optionNumber + " as " + selectedOption.text + "(" + selectedOption.value + ")");
+			}
+
+			var numOptions = response.options.length;
+			var i, option, optionRowElem, optionNameCellElem, optionValueCellElem, numValues, j, optionSelectElem, optionOptionElem, testText;
+			for( i = 0; i < numOptions; i++ )
+			{
+				option = response.options[i];
+
+				optionRowElem = document.createElement("tr");
+				optionNameCellElem = document.createElement("td");
+				optionNameCellElem.innerHTML = option.name_display;
+
+				optionValueCellElem = document.createElement("td");
+				optionSelectElem = document.createElement("select");
+				optionSelectElem.addEventListener("change", onOptionSelectChange.bind(optionSelectElem));
+				optionSelectElem.className = "optionSelect";
+				optionSelectElem.name_internal = option.name_internal;
+				optionSelectElem.optionNumber = i;
+
+				optionOptionElem = document.createElement("option");
+				optionOptionElem.value = "default";
+				optionOptionElem.text = "default (" + option.default + ")";
+				if( option.current == "default" )
+				{
+					optionOptionElem.selected = true;	
+					testText = option.default.toLowerCase();
+					if( testText === "enabled" || testText === "yes" )
+						optionSelectElem.className += " enabledSelect";
+					else if( testText === "disabled" || testText === "no" )
+						optionSelectElem.className += " disabledSelect";
+				}
+				optionSelectElem.appendChild(optionOptionElem);
+
+				numValues = option.values.length;
+				for( j = 0; j < numValues; j++ )
+				{
+					optionOptionElem = document.createElement("option");
+					optionOptionElem.value = option.values[j];
+					optionOptionElem.text = option.values[j];
+//console.log(option.current + " vs " + option.values[j]);
+					if( option.current == option.values[j] )
+					{
+						optionOptionElem.selected = true;
+						testText = option.values[j].toLowerCase();
+						if( testText === "enabled" || testText === "yes" )
+							optionSelectElem.className += " enabledSelect";
+						else if( testText === "disabled" || testText === "no" )
+							optionSelectElem.className += " disabledSelect";
+					}
+
+					optionSelectElem.appendChild(optionOptionElem);
+				}
+				optionValueCellElem.appendChild(optionSelectElem);
+				//optionValueCellElem.innerHTML = option.current;
+
+				optionRowElem.appendChild(optionNameCellElem);
+				optionRowElem.appendChild(optionValueCellElem);
+				optionsTableElem.appendChild(optionRowElem);
+			}
+
+			hudContentBodyElem.appendChild(optionsTableElem);
+		</script>
+	</body>
+</html>

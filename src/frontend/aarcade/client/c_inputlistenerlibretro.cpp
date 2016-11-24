@@ -19,6 +19,9 @@ C_InputListenerLibretro::~C_InputListenerLibretro()
 
 void C_InputListenerLibretro::OnMouseMove(float x, float y)
 {
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	DevMsg("xxxOnMouseMove: %f %f\n", x, y);
 
 	// end of the road for libretro.  gotta look into how libretro likes to recieve its input.

@@ -55,4 +55,11 @@ class MenuListener : public WebViewListener::Menu
 	void OnShowContextMenu(WebView *caller, const WebContextMenuInfo &menu_info) {};
 };
 
+class ProcessListener : public WebViewListener::Process
+{
+	void OnUnresponsive(WebView* caller);
+	void OnResponsive(WebView* caller);
+	void OnCrashed(WebView* caller, TerminationStatus status);
+};
+
 #endif

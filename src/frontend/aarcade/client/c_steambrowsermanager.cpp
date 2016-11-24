@@ -232,3 +232,13 @@ void C_SteamBrowserManager::DestroySteamBrowserInstance(C_SteamBrowserInstance* 
 
 	pInstance->SelfDestruct();
 }
+
+void C_SteamBrowserManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
+{
+	auto it = m_steamBrowserInstances.begin();
+	while (it != m_steamBrowserInstances.end())
+	{
+		embeddedInstances.push_back(it->second);
+		it++;
+	}
+}

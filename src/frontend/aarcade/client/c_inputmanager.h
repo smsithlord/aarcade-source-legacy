@@ -3,6 +3,7 @@
 
 #include "vgui/MouseCode.h"
 #include "vgui/KeyCode.h"
+#include <map>
 
 #include "c_inputlistener.h"
 #include "c_embeddedinstance.h"
@@ -20,6 +21,8 @@ class C_InputManager
 public:
 	C_InputManager();
 	~C_InputManager();
+
+	vgui::KeyCode StringToSteamKeyEnum(std::string text);
 
 	// accessors
 	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
@@ -52,6 +55,7 @@ public:
 	//void SetInputCanvasTexture(ITexture* pTexture) { m_pInputCanvasTexture = pTexture; }
 	
 private:
+	std::map<std::string, vgui::KeyCode> m_sourceKeyEnumMap;
 	C_EmbeddedInstance* m_pEmbeddedInstance;
 	bool m_bWasForcedInputMode;
 	bool m_bForcedInputMode;

@@ -5,12 +5,16 @@
 //#include "aa_globals.h"
 #include "c_anarchymanager.h"
 
+#include "c_openglmanager.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
 //ConVar xbmc_enable( "xbmc_enable", "0", FCVAR_ARCHIVE );
 ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);
 ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);
+ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);
+ConVar kodi_info("kodi_info", "xbmc:xbmc@192.168.0.100:8080", FCVAR_ARCHIVE, "The username:password@ip:port of the 1st Kodi host.");
 
 void TestFunction( const CCommand &args )
 {
@@ -33,10 +37,17 @@ void TestFunction( const CCommand &args )
 
 //	g_pAnarchyManager->TestSQLite();
 
+	/*
 	DevMsg("Setting url to overlay test...\n");
 	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, true);
+	*/
+
+	//system("Arcade_Launcher.bat");
+
+	C_OpenGLManager* pOpenGLManager = new C_OpenGLManager();
+	pOpenGLManager->Init();
 }
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
 
@@ -64,7 +75,16 @@ void RunEmbeddedLibretro(const CCommand &args)
 {
 	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
 	if ( pLibretroManager )
-		pLibretroManager->RunEmbeddedLibretro("V:/Movies/Flash Gordon (1980).avi");
+		pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/TV/Beavis & Butthead/Beavis and Butthead - Season 7/731 Drinking Butt-ies.mpg");
+	
+		//pLibretroManager->RunEmbeddedLibretro("mame_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
+		//pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
+		//pLibretroManager->RunEmbeddedLibretro("mame2014_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mame2014_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
+		
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
 	
 		//pLibretroManager->RunEmbeddedLibretro("V:/Movies/Jay and silent Bob Strike Back (2001).avi");
 }
@@ -86,7 +106,7 @@ void RunEmbeddedAwesomiumBrowser(const CCommand &args)
 }
 ConCommand run_embedded_awesomium_browser("run_embedded_awesomium_browser", RunEmbeddedAwesomiumBrowser, "Usage: runs embedded apps");
 
-void SetContinuous(const CCommand &args)
+void Continuous(const CCommand &args)
 {
 	C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
 	if (pEntity)
@@ -115,7 +135,7 @@ void SetContinuous(const CCommand &args)
 		}
 	}
 }
-ConCommand setcontinuous("setcontinuous", SetContinuous, "Usage: sets the selected entity as continuous play.");
+ConCommand continuous("continuous", Continuous, "Usage: sets the selected entity as continuous play.");
 
 void CloseAll(const CCommand &args)
 {
@@ -123,11 +143,13 @@ void CloseAll(const CCommand &args)
 }
 ConCommand closeall("closeall", CloseAll, "Usage: closes all open instaces (execpt for important game system ones)");
 
+/*
 void RememberWrapper(const CCommand &args)
 {
 	engine->ClientCmd("setcontinuous\n");
 }
 ConCommand rememberwrapper("-remember", RememberWrapper, "Usage: wrapper for the remember button to mean setcontinous now.");
+*/
 
 void RunAArcade(const CCommand &args)
 {
@@ -168,6 +190,20 @@ void AnarchyManager(const CCommand &args)
 
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
 
+void CreateHotlink(const CCommand &args)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
+	//DevMsg("DISPLAY MAIN MENU\n");
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->DeselectEntity("asset://ui/items.html");
+	else
+		pHudBrowserInstance->SetUrl("asset://ui/items.html");
+
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
+}
+ConCommand createhotlink("createhotlink", CreateHotlink, "Open up the library.", FCVAR_NONE);
+
 void ActivateInputMode(const CCommand &args)
 {
 	// FIXME: Need to reject commands that are sent before the AArcade system is ready.
@@ -187,6 +223,9 @@ ConCommand deactivateinputmode("-hdview_input_toggle", DeactivateInputMode, "Tur
 void AttemptSelectObject(const CCommand &args)
 {
 	g_pAnarchyManager->AttemptSelectEntity();
+
+	if (broadcast_mode.GetBool())
+		g_pAnarchyManager->xCastSetLiveURL();
 }
 ConCommand attemptselectobject("focus", AttemptSelectObject, "Attempts to select the object under your crosshair.", FCVAR_NONE);
 

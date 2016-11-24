@@ -5,6 +5,7 @@
 #include "c_inputlistenersteambrowser.h"
 //#include "c_libretrosurfaceregen.h"
 #include <map>
+#include <vector>
 
 class C_SteamBrowserManager
 {
@@ -27,6 +28,8 @@ public:
 
 	void RunEmbeddedSteamBrowser();
 	void DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance);
+
+	void GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
 
 	// accessors
 	C_SteamBrowserInstance* GetFocusedSteamBrowserInstance() { return m_pFocusedSteamBrowserInstance; }
