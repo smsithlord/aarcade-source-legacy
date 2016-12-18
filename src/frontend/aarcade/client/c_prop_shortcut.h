@@ -27,6 +27,7 @@ public:
 	void Precache();
 
 	std::string GetItemId();
+	std::string GetObjectId();
 	bool GetSlave();
 	void GetEmbeddedInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
 	//void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
@@ -35,9 +36,10 @@ public:
 
 private:
 	bool m_bInitialized;
-	KeyValues* pItem;
+	//KeyValues* pItem;
 	bool m_bSlave;
 	char m_itemId[AA_MAX_STRING];
+	char m_objectId[AA_MAX_STRING];
 };
 
 #endif //C_PROP_SHORTCUT_ENTITY_H

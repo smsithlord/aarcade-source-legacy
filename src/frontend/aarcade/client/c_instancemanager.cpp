@@ -33,23 +33,21 @@ void C_InstanceManager::SpawnObject(object_t* object)
 		return;
 	
 	object->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
-	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(object->modelId);
-	if (model)
-	{
-	//	DevMsg("Spawning an object w/ %s\n", object->modelId.c_str());
+	std::string goodModelId = (object->modelId != "") ? object->modelId : object->itemId;
 
-		KeyValues* active = model->FindKey("current");
-		if (!active)
-			active = model->FindKey("local", true);
-
-		std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-		std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i\n", object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave);
-		engine->ServerCmd(msg.c_str(), false);
-	}
-	else
+	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(goodModelId);
+	if (!model)
 	{
-		DevMsg("Could not spawn object because it's model was not found: %s\n", object->modelId.c_str());
+		DevMsg("WARNING: Model not found in library with given ID! Using default cabinet instead.\n");
+		goodModelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
+		model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(goodModelId);
 	}
+
+	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(model);
+	std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+
+	std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i\n", object->objectId.c_str(), object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave);
+	engine->ServerCmd(msg.c_str(), false);
 }
 
 object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave)
@@ -70,6 +68,34 @@ object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId,
 
 	m_unspawnedObjects.push_back(pObject);
 	return pObject;
+}
+
+object_t* C_InstanceManager::GetInstanceObject(std::string objectId)
+{
+	auto it = m_objects.find(objectId);
+	if (it != m_objects.end())
+		return it->second;
+	
+	return null;
+}
+
+void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity)
+{
+	// 1. find the object associated with this entity
+	// 2. get rdy to delete the object
+	// 3. remove the entity
+	// 4. remove the object
+
+	object_t* pObject;
+	// FIXME: What if the object is still unspawned?  Could this ever happen?  If it could, then it'd need to be removed from the unspawned objects vector too.
+	auto it = m_objects.find(pShortcutEntity->GetObjectId());
+	if (it != m_objects.end())
+	{
+		delete it->second;
+		m_objects.erase(it);
+	}
+
+	engine->ServerCmd(VarArgs("removeobject %i;\n", pShortcutEntity->entindex()), false);
 }
 
 bool C_InstanceManager::SpawnNearestObject()
@@ -163,8 +189,10 @@ void C_InstanceManager::FindAllInstances(std::string mapId, std::vector<instance
 	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
 	while (it != m_instances.end())
 	{
+		//DevMsg("Map iiiiiiiiiid: %s\n", it->second->mapId.c_str());
 		//if (it->second->mapId == mapId)
-		if (!Q_stricmp(it->second->mapId.c_str(), mapId.c_str()))
+		//if (!Q_stricmp(it->second->mapId.c_str(), mapId.c_str()))
+		if (it->second->mapId == mapId)
 			instances.push_back(it->second);
 
 		it++; 

@@ -257,25 +257,61 @@ void C_AwesomiumBrowserInstance::OnMouseWheeled(int delta)
 		return;
 
 	DevMsg("Awesomium instance mouse wheeled: %i\n", delta);
-	m_pWebView->InjectMouseWheel(20 * delta, 0);
+
+	if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() && m_id == "hud" )
+	{
+		if (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT))
+		{
+			// scale instead of sending mouse wheel to the web view
+			g_pAnarchyManager->GetMetaverseManager()->ScaleObject(g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity(), delta);
+		}
+		else if (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL))
+		{
+			// specialWheel instead of sending mouse wheel to the web view
+			std::vector<std::string> params;
+			params.push_back(std::string(VarArgs("%i", delta)));
+			this->DispatchJavaScriptMethod("cmdListener", "specialWheel", params);
+		}
+		else if (vgui::input()->IsKeyDown(KEY_E))
+		{
+			// update the internal rotation axis
+			int amount = (delta >= 0) ? 1 : -1;
+			int axis = g_pAnarchyManager->GetMetaverseManager()->CycleSpawningRotationAxis(amount);
+
+			// ALSO change rotation axis instead of sending mouse wheel to the web view
+			std::vector<std::string> params;
+			params.push_back(std::string(VarArgs("%i", axis)));
+			this->DispatchJavaScriptMethod("cmdListener", "setRotationAxis", params);
+		}
+		else
+			m_pWebView->InjectMouseWheel(20 * delta, 0);	// just wheel like normal
+	}
+	else
+		m_pWebView->InjectMouseWheel(20 * delta, 0);
 }
 
-void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
-	if (g_pAnarchyManager->IsPaused())
+	// ignore input sometimes
+	if (g_pAnarchyManager->IsPaused() || IsJoystickCode(code) || !IsKeyCode(code))
 		return;
 
+	//	if (code == KEY_ESCAPE || code == KEY_LALT || code == KEY_RALT || code == KEY_LCONTROL || code == KEY_RCONTROL || code == KEY_LWIN || code == KEY_RWIN || code == KEY_APP)
+	//	return;
+
+	// Forward input to the selected embedded instance if we are the HUD
 	if (m_id == "hud" && !this->HasFocus())
 	{
-		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 		return;
 	}
+
 	//	DevMsg("Code is %i\n", code);
 	//input()->GetKeyCodeText();
 
+	// catch the buttons bound to mouse movement
+	/*
 	bool m_bMoveUp, m_bMoveDown, m_bMoveLeft, m_bMoveRight;
-
-	//	if( IsJoystickAxisCode(code) ) {
 	if (code == KEY_XBUTTON_UP)
 	{
 		m_bMoveUp = true;
@@ -296,10 +332,10 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftSta
 		m_bMoveRight = true;
 		return;
 	}
+	*/
 
-	//		return;
-	//	}
-
+	// a better way to catch buttons bound to special functions
+	/*
 	if (engine->Key_BindingForKey(code))
 	{
 		if (!Q_strcmp(engine->Key_BindingForKey(code), "alt_escape")) {
@@ -330,676 +366,111 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftSta
 			return;
 		}
 	}
-
-	if (IsJoystickCode(code) || !IsKeyCode(code)) return;
+	*/
 
 	using namespace Awesomium;
-	DevMsg("Checkpoint Uno %s\n", m_id.c_str());
 	WebView* pWebView = m_pWebView;
-	DevMsg("Checkpoint Dos\n");
-
-	WebKeyboardEvent pWebKeyboardEvent;
-	DevMsg("Checkpoint Tres\n");
-	pWebKeyboardEvent.type = WebKeyboardEvent::kTypeKeyDown;
-	DevMsg("Checkpoint Cuatro\n");
-	pWebKeyboardEvent.modifiers = 0;
-
-//	bool shift = (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT));
-	//bool ctrl = (vgui::input()->IsKeyDown(KEY_LCONTROL) || vgui::input()->IsKeyDown(KEY_RCONTROL));
-	//bool alt = (vgui::input()->IsKeyDown(KEY_LALT) || vgui::input()->IsKeyDown(KEY_RALT));
-
-	bool shift = bShiftState;
-	bool ctrl = bCtrlState;
-	bool alt = bAltState;
-
-	/*
-	( 1 << 0 ),
-	MODIFIER_CONTROL	= ( 1 << 1 ),
-	MODIFIER_ALT		= ( 1 << 2 ),
-	};
-	*/
-	if (shift)
-		pWebKeyboardEvent.modifiers |= (1 << 0);
-
-	if (ctrl)
-		pWebKeyboardEvent.modifiers |= (1 << 1);
-
-	if (alt)
-		pWebKeyboardEvent.modifiers |= (1 << 2);
-
-	int virtualKeyCode = KeyCodes::AK_UNKNOWN;
-	std::string actualCharOutput = "";
-
-	//	// SHIFT events are sent with keystrokes, so no need to send the SHIFT (or other modifiers) directly.
-	//	if( code == KEY_ESCAPE || code == KEY_LSHIFT || code == KEY_RSHIFT || code == KEY_LALT || code == KEY_RALT || code == KEY_LCONTROL || code == KEY_RCONTROL || code == KEY_LWIN || code == KEY_RWIN || code == KEY_APP )
-	if (code == KEY_ESCAPE || code == KEY_LALT || code == KEY_RALT || code == KEY_LCONTROL || code == KEY_RCONTROL || code == KEY_LWIN || code == KEY_RWIN || code == KEY_APP)
-		return;
-
-	switch (code)
-	{
-	case KEY_0:
-		virtualKeyCode = 0x30;
-		if (shift)
-			actualCharOutput = ')';
-		else
-			actualCharOutput = '0';
-		break;
-
-	case KEY_1:
-		virtualKeyCode = 0x31;
-		if (shift)
-			actualCharOutput = '!';
-		else
-			actualCharOutput = '1';
-		break;
-
-	case KEY_2:
-		virtualKeyCode = 0x32;
-		if (shift)
-			actualCharOutput = '@';
-		else
-			actualCharOutput = '2';
-		break;
-
-	case KEY_3:
-		virtualKeyCode = 0x33;
-		if (shift)
-			actualCharOutput = '#';
-		else
-			actualCharOutput = '3';
-		break;
-
-	case KEY_4:
-		virtualKeyCode = 0x34;
-		if (shift)
-			actualCharOutput = '$';
-		else
-			actualCharOutput = '4';
-		break;
-
-	case KEY_5:
-		virtualKeyCode = 0x35;
-		if (shift)
-			actualCharOutput = '%';
-		else
-			actualCharOutput = '5';
-		break;
-
-	case KEY_6:
-		virtualKeyCode = 0x36;
-		if (shift)
-			actualCharOutput = '^';
-		else
-			actualCharOutput = '6';
-		break;
-
-	case KEY_7:
-		virtualKeyCode = 0x37;
-		if (shift)
-			actualCharOutput = '&';
-		else
-			actualCharOutput = '7';
-		break;
-
-	case KEY_8:
-		virtualKeyCode = 0x38;
-		if (shift)
-			actualCharOutput = '*';
-		else
-			actualCharOutput = '8';
-		break;
-
-	case KEY_9:
-		virtualKeyCode = 0x39;
-		if (shift)
-			actualCharOutput = '(';
-		else
-			actualCharOutput = '9';
-		break;
-
-	case KEY_A:
-		virtualKeyCode = 0x41;
-		if (shift)
-			actualCharOutput = 'A';
-		else
-			actualCharOutput = 'a';
-		break;
-
-	case KEY_B:
-		virtualKeyCode = 0x42;
-		if (shift)
-			actualCharOutput = 'B';
-		else
-			actualCharOutput = 'b';
-		break;
-
-	case KEY_C:
-		virtualKeyCode = 0x43;
-		if (shift)
-			actualCharOutput = 'C';
-		else
-			actualCharOutput = 'c';
-		break;
-
-	case KEY_D:
-		virtualKeyCode = 0x44;
-		if (shift)
-			actualCharOutput = 'D';
-		else
-			actualCharOutput = 'd';
-		break;
-
-	case KEY_E:
-		virtualKeyCode = 0x45;
-		if (shift)
-			actualCharOutput = 'E';
-		else
-			actualCharOutput = 'e';
-		break;
-
-	case KEY_F:
-		virtualKeyCode = 0x46;
-		if (shift)
-			actualCharOutput = 'F';
-		else
-			actualCharOutput = 'f';
-		break;
-
-	case KEY_G:
-		virtualKeyCode = 0x47;
-		if (shift)
-			actualCharOutput = 'G';
-		else
-			actualCharOutput = 'g';
-		break;
-
-	case KEY_H:
-		virtualKeyCode = 0x48;
-		if (shift)
-			actualCharOutput = 'H';
-		else
-			actualCharOutput = 'h';
-		break;
-
-	case KEY_I:
-		virtualKeyCode = 0x49;
-		if (shift)
-			actualCharOutput = 'I';
-		else
-			actualCharOutput = 'i';
-		break;
-
-	case KEY_J:
-		virtualKeyCode = 0x4A;
-		if (shift)
-			actualCharOutput = 'J';
-		else
-			actualCharOutput = 'j';
-		break;
-
-	case KEY_K:
-		virtualKeyCode = 0x4B;
-		if (shift)
-			actualCharOutput = 'K';
-		else
-			actualCharOutput = 'k';
-		break;
-
-	case KEY_L:
-		virtualKeyCode = 0x4C;
-		if (shift)
-			actualCharOutput = 'L';
-		else
-			actualCharOutput = 'l';
-		break;
-
-	case KEY_M:
-		virtualKeyCode = 0x4D;
-		if (shift)
-			actualCharOutput = 'M';
-		else
-			actualCharOutput = 'm';
-		break;
-
-	case KEY_N:
-		virtualKeyCode = 0x4E;
-		if (shift)
-			actualCharOutput = 'N';
-		else
-			actualCharOutput = 'n';
-		break;
-
-	case KEY_O:
-		virtualKeyCode = 0x4F;
-		if (shift)
-			actualCharOutput = 'O';
-		else
-			actualCharOutput = 'o';
-		break;
-
-	case KEY_P:
-		virtualKeyCode = 0x50;
-		if (shift)
-			actualCharOutput = 'P';
-		else
-			actualCharOutput = 'p';
-		break;
-
-	case KEY_Q:
-		virtualKeyCode = 0x51;
-		if (shift)
-			actualCharOutput = 'Q';
-		else
-			actualCharOutput = 'q';
-		break;
-
-	case KEY_R:
-		virtualKeyCode = 0x52;
-		if (shift)
-			actualCharOutput = 'R';
-		else
-			actualCharOutput = 'r';
-		break;
-
-	case KEY_S:
-		virtualKeyCode = 0x53;
-		if (shift)
-			actualCharOutput = 'S';
-		else
-			actualCharOutput = 's';
-		break;
-
-	case KEY_T:
-		virtualKeyCode = 0x54;
-		if (shift)
-			actualCharOutput = 'T';
-		else
-			actualCharOutput = 't';
-		break;
-
-	case KEY_U:
-		virtualKeyCode = 0x55;
-		if (shift)
-			actualCharOutput = 'U';
-		else
-			actualCharOutput = 'u';
-		break;
-
-	case KEY_V:
-		virtualKeyCode = 0x56;
-		if (shift)
-			actualCharOutput = 'V';
-		else
-			actualCharOutput = 'v';
-		break;
-
-	case KEY_W:
-		virtualKeyCode = 0x57;
-		if (shift)
-			actualCharOutput = 'W';
-		else
-			actualCharOutput = 'w';
-		break;
-
-	case KEY_X:
-		virtualKeyCode = 0x58;
-		if (shift)
-			actualCharOutput = 'X';
-		else
-			actualCharOutput = 'x';
-		break;
-
-	case KEY_Y:
-		virtualKeyCode = 0x59;
-		if (shift)
-			actualCharOutput = 'Y';
-		else
-			actualCharOutput = 'y';
-		break;
-
-	case KEY_Z:
-		virtualKeyCode = 0x5A;
-		if (shift)
-			actualCharOutput = 'Z';
-		else
-			actualCharOutput = 'z';
-		break;
-
-	case KEY_PAD_0:
-		virtualKeyCode = 0x60;
-		actualCharOutput = '0';
-		break;
-
-	case KEY_PAD_1:
-		virtualKeyCode = 0x61;
-		actualCharOutput = '1';
-		break;
-
-	case KEY_PAD_2:
-		virtualKeyCode = 0x62;
-		actualCharOutput = '2';
-		break;
-
-	case KEY_PAD_3:
-		virtualKeyCode = 0x63;
-		actualCharOutput = '3';
-		break;
-
-	case KEY_PAD_4:
-		virtualKeyCode = 0x64;
-		actualCharOutput = '4';
-		break;
-
-	case KEY_PAD_5:
-		virtualKeyCode = 0x65;
-		actualCharOutput = '5';
-		break;
-
-	case KEY_PAD_6:
-		virtualKeyCode = 0x66;
-		actualCharOutput = '6';
-		break;
-
-	case KEY_PAD_7:
-		virtualKeyCode = 0x67;
-		actualCharOutput = '7';
-		break;
-
-	case KEY_PAD_8:
-		virtualKeyCode = 0x68;
-		actualCharOutput = '8';
-		break;
-
-	case KEY_PAD_9:
-		virtualKeyCode = 0x69;
-		actualCharOutput = '9';
-		break;
-
-	case KEY_PAD_DIVIDE:
-		virtualKeyCode = 0x6F;
-		actualCharOutput = '/';
-		break;
-
-	case KEY_PAD_MULTIPLY:
-		virtualKeyCode = 0x6A;
-		actualCharOutput = '*';
-		break;
-
-	case KEY_PAD_MINUS:
-		virtualKeyCode = 0x6D;
-		actualCharOutput = '-';
-		break;
-
-	case KEY_PAD_PLUS:
-		virtualKeyCode = 0x6B;
-		actualCharOutput = '+';
-		break;
-
-	case KEY_PAD_ENTER:
-		virtualKeyCode = 0x0D;
-		actualCharOutput = '\r';
-		break;
-
-	case KEY_PAD_DECIMAL:
-		virtualKeyCode = 0x6E;
-		actualCharOutput = '.';
-		break;
-
-	case KEY_LBRACKET:
-		virtualKeyCode = 0xDB;
-		if (shift)
-			actualCharOutput = '{';
-		else
-			actualCharOutput = '[';
-		break;
-
-	case KEY_RBRACKET:
-		virtualKeyCode = 0xDD;
-		if (shift)
-			actualCharOutput = '}';
-		else
-			actualCharOutput = ']';
-		break;
-
-	case KEY_SEMICOLON:
-		virtualKeyCode = 0xBA;
-		if (shift)
-			actualCharOutput = ':';
-		else
-			actualCharOutput = ';';
-		break;
-
-	case KEY_APOSTROPHE:
-		virtualKeyCode = 0xDE;
-		if (shift)
-			actualCharOutput = '"';
-		else
-			actualCharOutput = '\'';
-		break;
-
-	case KEY_BACKQUOTE:
-		virtualKeyCode = 0xC0;
-		if (shift)
-			actualCharOutput = '~';
-		else
-			actualCharOutput = '`';
-		break;
-
-	case KEY_COMMA:
-		virtualKeyCode = 0xBC;
-		if (shift)
-			actualCharOutput = '<';
-		else
-			actualCharOutput = ',';
-		break;
-
-	case KEY_PERIOD:
-		virtualKeyCode = 0xBE;
-		if (shift)
-			actualCharOutput = '>';
-		else
-			actualCharOutput = '.';
-		break;
-
-	case KEY_SLASH:
-		virtualKeyCode = 0xBF;
-		if (shift)
-			actualCharOutput = '?';
-		else
-			actualCharOutput = '/';
-		break;
-
-	case KEY_BACKSLASH:
-		virtualKeyCode = 0xDC;
-		if (shift)
-			actualCharOutput = '|';
-		else
-			actualCharOutput = '\\';
-		break;
-
-	case KEY_MINUS:
-		virtualKeyCode = 0xBD;
-		if (shift)
-			actualCharOutput = '_';
-		else
-			actualCharOutput = '-';
-		break;
-
-	case KEY_EQUAL:
-		virtualKeyCode = 0xBB;
-		if (shift)
-			actualCharOutput = '+';
-		else
-			actualCharOutput = '=';
-		break;
-
-	case KEY_ENTER:
-		virtualKeyCode = 0x0D;
-		actualCharOutput = '\r';
-		break;
-
-	case KEY_SPACE:
-		virtualKeyCode = 0x20;
-		actualCharOutput = ' ';
-		break;
-
-	case KEY_BACKSPACE:
-		virtualKeyCode = 0x08;
-		break;
-
-	case KEY_TAB:
-		virtualKeyCode = 0x09;
-		break;
-
-	case KEY_CAPSLOCK:
-		virtualKeyCode = 0x14;
-		break;
-
-	case KEY_NUMLOCK:
-		virtualKeyCode = 0x90;
-		break;
-
-		//		case KEY_ESCAPE:
-		//			virtualKeyCode = 0x1B;
-		//			DevMsg("ESCAPE PRESSED!\n");
-		//			break;
-
-	case KEY_SCROLLLOCK:
-		virtualKeyCode = 0x91;
-		break;
-
-	case KEY_INSERT:
-		virtualKeyCode = 0x2D;
-		break;
-
-	case KEY_DELETE:
-		virtualKeyCode = 0x2E;
-		break;
-
-	case KEY_HOME:
-		virtualKeyCode = 0x24;
-		break;
-
-	case KEY_END:
-		virtualKeyCode = 0x23;
-		break;
-
-	case KEY_PAGEUP:
-		virtualKeyCode = 0x21;
-		break;
-
-	case KEY_PAGEDOWN:
-		virtualKeyCode = 0x22;
-		break;
-
-	case KEY_LSHIFT:
-		virtualKeyCode = 0xA0;
-		break;
-
-	case KEY_RSHIFT:
-		virtualKeyCode = 0xA1;
-		break;
-
-	case KEY_LALT:
-		virtualKeyCode = 0x12;
-		break;
-
-	case KEY_RALT:
-		virtualKeyCode = 0x12;
-		break;
-
-	case KEY_LCONTROL:
-		virtualKeyCode = 0xA2;
-		break;
-
-	case KEY_RCONTROL:
-		virtualKeyCode = 0xA3;
-		break;
-
-	case KEY_LWIN:
-		virtualKeyCode = 0x5B;
-		break;
-
-	case KEY_RWIN:
-		virtualKeyCode = 0x5C;
-		break;
-
-	case KEY_APP:
-		virtualKeyCode = 0x5D;
-		break;
-
-	case KEY_UP:
-		virtualKeyCode = 0x26;
-		break;
-
-	case KEY_LEFT:
-		virtualKeyCode = 0x25;
-		break;
-
-	case KEY_DOWN:
-		virtualKeyCode = 0x28;
-		break;
-
-	case KEY_RIGHT:
-		virtualKeyCode = 0x27;
-		break;
-	}
-
-	char outputChar = actualCharOutput[0];
-
-	char* buf = new char[20];
-	pWebKeyboardEvent.virtual_key_code = virtualKeyCode;
-	GetKeyIdentifierFromVirtualKeyCode(pWebKeyboardEvent.virtual_key_code, &buf);
-	strcpy(pWebKeyboardEvent.key_identifier, buf);
-	delete[] buf;
-
-	pWebKeyboardEvent.native_key_code = pWebKeyboardEvent.virtual_key_code;
-
-	bool hasChar = false;
-
-	// If this key generates text output...
-	if (actualCharOutput != "")
-		hasChar = true;
-
+	C_InputListenerAwesomiumBrowser* inputListener = dynamic_cast<C_InputListenerAwesomiumBrowser*>(this->GetInputListener());
+
+	// 2 events will be built that will use nearly identical params
+
+	// build the common params
+	int virtualKeyCode = inputListener->ConvertSourceButtonToAwesomiumButton(code);
+	std::string actualCharOutput = this->GetOutput(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
+	std::string unmodifiedOutput = this->GetOutput(code, false, false, false, false, false);
+	bool hasChar = (actualCharOutput != "");
+	bool hasUnmodifiedChar = (unmodifiedOutput != "");
+	char outputChar = (hasChar) ? actualCharOutput[0] : null;
+	char unmodifiedOutputChar = (hasUnmodifiedChar) ? unmodifiedOutput[0] : null;
+	
+	int modifiers = 0;
+	modifiers |= (bShiftState) ? WebKeyboardEvent::kModShiftKey : 0;
+	modifiers |= (bCtrlState) ? WebKeyboardEvent::kModControlKey : 0;
+	modifiers |= (bAltState) ? WebKeyboardEvent::kModAltKey : 0;
+	modifiers |= (bWinState) ? WebKeyboardEvent::kModMetaKey : 0;
+	//modifiers |= (bKeypadState) ? WebKeyboardEvent::kModIsKeypad : 0;
+	modifiers |= (code >= KEY_PAD_0 && code <= KEY_PAD_DECIMAL) ? WebKeyboardEvent::kModIsKeypad : 0;
+	modifiers |= (bAutorepeatState) ? WebKeyboardEvent::kModIsAutorepeat : 0;
+
+	char* keyIdentifier = new char[20];
+	GetKeyIdentifierFromVirtualKeyCode(virtualKeyCode, &keyIdentifier);
+	
+	// build the keydown event
+	WebKeyboardEvent pKeydownEvent;
+	pKeydownEvent.type = WebKeyboardEvent::kTypeKeyDown;
+	pKeydownEvent.modifiers = modifiers;
+	pKeydownEvent.virtual_key_code = virtualKeyCode;
+	pKeydownEvent.native_key_code = virtualKeyCode;
+	strcpy(pKeydownEvent.key_identifier, keyIdentifier);
+	pKeydownEvent.text[0] = outputChar;
+	pKeydownEvent.unmodified_text[0] = unmodifiedOutputChar;
+
+	pWebView->InjectKeyboardEvent(pKeydownEvent);
+
+	// build the char event
 	if (hasChar)
 	{
-		pWebKeyboardEvent.text[0] = outputChar;
-		pWebKeyboardEvent.unmodified_text[0] = outputChar;
+		WebKeyboardEvent pCharEvent;
+		pCharEvent.type = WebKeyboardEvent::kTypeChar;
+		pCharEvent.modifiers = modifiers;
+		pCharEvent.virtual_key_code = outputChar;
+		pCharEvent.native_key_code = unmodifiedOutputChar;
+		strcpy(pCharEvent.key_identifier, keyIdentifier);
+		pCharEvent.text[0] = outputChar;
+		pCharEvent.unmodified_text[0] = unmodifiedOutputChar;
+
+		pWebView->InjectKeyboardEvent(pCharEvent);
 	}
-	else
-	{
-		pWebKeyboardEvent.text[0] = null;
-		pWebKeyboardEvent.unmodified_text[0] = null;
-	}
 
-	pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
-
-	// If this key has text output, we gotta send a char msg too
-	if (hasChar)
-	{
-		pWebKeyboardEvent.type = WebKeyboardEvent::kTypeChar;
-
-		pWebKeyboardEvent.virtual_key_code = virtualKeyCode;
-		pWebKeyboardEvent.native_key_code = virtualKeyCode;
-
-		pWebView->InjectKeyboardEvent(pWebKeyboardEvent);
-	}
+	delete[] keyIdentifier;
 }
 
-void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code)
+void C_AwesomiumBrowserInstance::OnKeyReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
 	if (m_id == "hud" && !this->HasFocus())
 	{
-		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodeReleased(code);
+		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 		return;
 	}
+
+	using namespace Awesomium;
+	WebView* pWebView = m_pWebView;
+	C_InputListenerAwesomiumBrowser* inputListener = dynamic_cast<C_InputListenerAwesomiumBrowser*>(this->GetInputListener());
+
+	// build the params
+	int virtualKeyCode = inputListener->ConvertSourceButtonToAwesomiumButton(code);
+
+	int modifiers = 0;
+	modifiers |= (bShiftState) ? WebKeyboardEvent::kModShiftKey : 0;
+	modifiers |= (bCtrlState) ? WebKeyboardEvent::kModControlKey : 0;
+	modifiers |= (bAltState) ? WebKeyboardEvent::kModAltKey : 0;
+	modifiers |= (bWinState) ? WebKeyboardEvent::kModMetaKey : 0;
+	//modifiers |= (bKeypadState) ? WebKeyboardEvent::kModIsKeypad : 0;
+	modifiers |= (code >= KEY_PAD_0 && code <= KEY_PAD_DECIMAL) ? WebKeyboardEvent::kModIsKeypad : 0;
+	modifiers |= (bAutorepeatState) ? WebKeyboardEvent::kModIsAutorepeat : 0;
+
+	char* keyIdentifier = new char[20];
+	GetKeyIdentifierFromVirtualKeyCode(virtualKeyCode, &keyIdentifier);
+
+	// build the keyup event
+	WebKeyboardEvent pKeyupEvent;
+	pKeyupEvent.type = WebKeyboardEvent::kTypeKeyUp;
+	pKeyupEvent.modifiers = modifiers;
+	pKeyupEvent.virtual_key_code = virtualKeyCode;	//getWebKeyFromSDLKey(event.key.keysym.sym);
+	pKeyupEvent.native_key_code = virtualKeyCode;	//event.key.keysym.scancode;
+	strcpy(pKeyupEvent.key_identifier, keyIdentifier);
+
+	pWebView->InjectKeyboardEvent(pKeyupEvent);
+
 
 	// FIXME: Dont' we need to send a keyup msg to awesomium?? (check the pressed msg to confirm)
 	//if (code == KEY_ESCAPE || code == KEY_LALT || code == KEY_RALT || code == KEY_LCONTROL || code == KEY_RCONTROL || code == KEY_LWIN || code == KEY_RWIN || code == KEY_APP)
 		//return;
+
+	delete[] keyIdentifier;
 }
 
 void C_AwesomiumBrowserInstance::Update()

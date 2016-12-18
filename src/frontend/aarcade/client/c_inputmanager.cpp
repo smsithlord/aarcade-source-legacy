@@ -416,18 +416,18 @@ void C_InputManager::MouseRelease(vgui::MouseCode code)
 	*/
 }
 
-void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+void C_InputManager::KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	if (pHudBrowserInstance->HasFocus())
 	{
 		C_InputListener* pInputListener = pHudBrowserInstance->GetInputListener();
-		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 	}
 	else if (m_pEmbeddedInstance)
 	{
 		C_InputListener* pInputListener = m_pEmbeddedInstance->GetInputListener();
-		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState);
+		pInputListener->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 	}
 	/*
 	// forward this info to any listeners
@@ -476,18 +476,20 @@ void C_InputManager::MouseWheelUp()
 	this->OnMouseWheeled(10);
 }
 
-void C_InputManager::KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+void C_InputManager::KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	if (pHudBrowserInstance->HasFocus())
 	{
 		C_InputListener* pInputListener = pHudBrowserInstance->GetInputListener();
-		pInputListener->OnKeyCodeReleased(code);
+		pInputListener->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
+		//C_InputListenerAwesomiumBrowser* listener = dynamic_cast<C_InputListenerAwesomiumBrowser*>(pInputListener);
+		//listener->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 	}
 	else if (m_pEmbeddedInstance)
 	{
 		C_InputListener* pInputListener = m_pEmbeddedInstance->GetInputListener();
-		pInputListener->OnKeyCodeReleased(code);
+		pInputListener->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 	}
 	/*
 	// forward this info to any listeners

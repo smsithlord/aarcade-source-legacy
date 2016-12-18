@@ -17,6 +17,7 @@ C_InputListenerLibretro::~C_InputListenerLibretro()
 	DevMsg("InputListenerLibretro: Destructor\n");
 }
 
+/*
 void C_InputListenerLibretro::OnMouseMove(float x, float y)
 {
 	if (g_pAnarchyManager->IsPaused())
@@ -32,3 +33,4 @@ void C_InputListenerLibretro::OnMouseMove(float x, float y)
 	//if (pHudBrowserInstance && pHud)
 		//pHudBrowserInstance->OnMouseMove(x, y);
 }
+*/

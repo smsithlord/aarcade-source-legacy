@@ -1,0 +1,566 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#createNewButton:not( .disabledButton )
+			{
+		 		border: 2px solid rgba(250, 50, 50, 0.7);
+		 	}
+		</style>
+	</head>
+	<body>
+		<div class="hudContent" style="height: 65%; position: fixed; top: 15%; width: 80%; left: 0; right: 0;">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Library Browser: <div id="libBrowserType" style="display: inline-block; text-transform: capitalize;"></div>
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
+							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div style="display: table; height: 100%; width: 100%; border-collapse: separate; table-layout: fixed;">
+				<div style="display: table-row;">
+					<div style="display: table-cell;">
+						<div class="librarySearchContainer" style="padding: 0;">
+							<table style="width: 100%;"><tr>
+								<td style="width: 140px;">
+									<select id="filterSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results." style="width: 100%;">
+									</select>
+								</td>
+								<td style="padding-left: 8px; padding-right: 8px;">
+									<form id="searchBox">
+										<input class="helpNote" type="text" placeholder="Search..." help="Type the name of what you're looking for into this box." style="width: 100%;" />
+									</form>
+								</td>
+								<td style="width: 140px;">
+									<select id="categorySelect" class="helpNote" help="Yadda yadda." style="width: 100%;"></select>
+								</td>
+							</tr></table>
+						</div>
+					</div>
+				</div>
+
+				<div style="display: table-row; height: 100%;">
+					<div style="display: table-cell;">
+						<div id="libraryContainer"></div>
+					</div>
+				</div>
+
+				<div style="display: table-row; height: 108px;">
+					<div style="display: table-cell;">
+						<div class="librarySearchContainer">
+							<table style="width: 100%;"><tr>
+								<td align="left">
+									<table style="width: 80%;"><tr>
+										<td>
+											<nobr>
+												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div>
+											</nobr>
+										</td>
+									</tr></table>
+								</td>
+								<td align="right">
+									<table><tr>
+										<td>
+											<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Launch the selected shortcut in Windows.">Launch</div>
+										</td>
+										<td>
+											<div class="button disabledButton">Delete</div>
+										</td>
+										<td>
+											<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected entry.">Edit</div>
+										</td>
+										<td>
+											<div class="button disabledButton">Inspect</div>
+										</td>
+									</tr></table>
+								</td>
+							</tr></table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">Reload</a>
+
+		<script>
+			// FUNCTIONS
+			function onEntryValueChange(doNotDeselect)
+			{
+				if( entryValueInputElem.value !== "" )
+				{
+					okButtonElem.className = "button";
+					okButtonElem.style.backgroundColor = "rgba(250, 50, 50, 0.7)";
+					entryValueInputElem.style.border = "2px solid rgba(250, 50, 50, 0.7)";
+				}
+				else
+				{
+					okButtonElem.className = "button disabledButton";
+					okButtonElem.style.backgroundColor = "";
+					entryValueInputElem.style.border = "2px solid white";
+				}
+
+				if( typeof doNotDeselect !== "boolean" || !doNotDeselect )
+					deselectLibraryEntry();
+			}
+
+			function browse(inputElem)
+			{
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					if(chosenFile !== "")
+					{
+						inputElem.value = chosenFile;
+						onEntryValueChange();
+					}
+				}.bind(this));
+			}
+/*
+			function selectLibraryEntry()
+			{
+
+			}
+			*/
+
+			function selectLibraryEntry(elem)
+			{
+				// FIXME: this always assumes category "items"
+
+				// Remove the disabledButton class
+				// FIXME: Need a more generalized way to toggle the buttons
+				var button = document.querySelector("#editButton");
+				button.className = button.className.replace(/\bdisabledButton\b/,'');
+
+				button = document.querySelector("#launchButton");
+				button.className = button.className.replace(/\bdisabledButton\b/,'');
+
+				// adjust the entry's style
+				elem.oldBgColor = elem.style.backgroundColor;
+				elem.style.backgroundColor = "rgba(250, 50, 50, 0.7)";
+
+				// select
+				libraryContainer.selectedEntry = elem;
+
+				// update selected entry value
+				var itemValue;
+				if( category === "items" )
+					itemValue = elem.entry.file;
+				else if( category === "models" )
+					itemValue = elem.entry.platforms[arcadeHud.platformId].file;
+				entryValueInputElem.value = itemValue;
+				onEntryValueChange(true);
+			}
+
+			function deselectLibraryEntry()
+			{
+				if( !libraryContainer.selectedEntry )
+					return;
+
+				// reset the victim's style
+				var victim = libraryContainer.selectedEntry;
+				victim.style.backgroundColor = victim.oldBgColor;
+				victim.oldBgColor = "";
+
+				// reset item value field
+				entryValueInputElem.value = "";
+				onEntryValueChange(true);
+
+				// deselect
+				libraryContainer.selectedEntry = null;
+
+				// adjust disabled buttons accordingly
+				// FIXME: Need a more generalized way to toggle the buttons
+				var button = document.querySelector("#editButton");
+				if( button.className.search(/\bdisabledButton\b/) === -1 )
+					button.className += " disabledButton";
+
+				button = document.querySelector("#launchButton");
+				if( button.className.search(/\bdisabledButton\b/) === -1 )
+					button.className += " disabledButton";
+			}
+
+			function startLibrarySearch(updateContext)
+			{
+				// empty the list & reset action button states
+				deselectLibraryEntry();
+				clearRepeaterHandle();
+				clearList();
+
+				var searchElem = searchBox.querySelector("input");
+
+				if( typeof updateContext !== "boolean" || updateContext )
+				{
+					var searchText = searchElem.value;
+					var filterText = filterSelect.value;
+					aaapi.system.setLibraryBrowserContext(category, "", searchText, filterText);
+				}
+
+				// now figure out if we are finding or getting
+				var response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
+				var method;
+				if( searchElem.value !== "" || filterSelect.value !== "")
+				{
+					method = "find";
+
+					if( filterSelect.value === "" )
+						response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value);
+					else
+						response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterSelect.value);
+				}
+				else
+				{
+					method = "get";
+					response = aaapi.library.getFirstLibraryEntry(category);
+				}
+
+				if( !response.success )
+					console.log("ERROR: FAILED TO GET LIBRARY ENTRY!");
+
+				var libraryQueryId = response.queryId;
+
+				appendEntry(response.entry);
+				libraryFetch(libraryQueryId, method, 99);
+			}
+
+			function chooseSelected()
+			{
+				//if( !libraryContainer.selectedEntry )
+				//	return;
+
+				// get some values that we're probably going to have to pass to AArcade
+				var searchElem = searchBox.querySelector("input");
+				var searchText = searchElem.value;
+				var filterText = filterSelect.value;
+
+				if( !!libraryContainer.selectedEntry )// && entryValueInputElem.value === libraryContainer.selectedEntry.entry.file )
+				{
+					// entry exists
+					if( category === "items" )// && entryValueInputElem.value === libraryContainer.selectedEntry.entry.file )
+					{
+						// always spawn items for now.
+						//aaapi.system.spawnItem(libraryContainer.selectedEntry.entry.info.id);
+						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+					}
+					else
+					{
+						// spawnEntry(category, entryId, search, filter)
+						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+					}
+				}
+				else if( entryValueInputElem.value !== "" )
+				{
+					// entry does NOT exist yet
+					if( category === "items" )
+					{
+						// start the wizard for creating a new item
+						createNewItemWizard();
+					}
+					else
+						console.log("UNHANDLED CREATE NEW");
+				}
+			}
+
+			function createNewItemWizard()
+			{
+				document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(entryValueInputElem.value);
+			}
+
+			function editSelected()
+			{
+				if( !libraryContainer.selectedEntry || entryValueInputElem.value !== libraryContainer.selectedEntry.entry.file )
+					return;
+
+				if( category === "items" )
+				{
+					window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(libraryContainer.selectedEntry.entry.info.id);
+				}
+				else
+					console.log("UNHANDLED EDIT ENTRY");
+			}
+
+			function launchSelected()
+			{
+				if( !libraryContainer.selectedEntry || entryValueInputElem.value !== libraryContainer.selectedEntry.entry.file )
+					return;
+
+				if( category === "items" )
+				{
+					window.location = "asset://ui/launchItem.html?id=" + encodeURIComponent(libraryContainer.selectedEntry.entry.info.id);
+				}
+				else
+					console.log("UNHANDLED LAUNCH ENTRY");
+			}
+
+			// add an entry to the table
+			function appendEntry(entry)
+			{
+				var entryContainer = document.createElement("div");
+				entryContainer.className = "libraryEntryContainer";
+
+				entryContainer.onselectstart = function(e)
+				{
+					e.preventDefault;
+					return false;
+				};
+
+				entryContainer.entry = entry;
+				entryContainer.oldBgColor = "";
+
+				//dblclick
+				entryContainer.addEventListener("dblclick", function(e)
+				{
+					if(libraryContainer.selectedEntry)
+					{
+						// we have chosen it
+						//var elem = document.querySelector("#editButton");
+						//editSelected();
+						chooseSelected();
+					}
+				}, true);
+
+				entryContainer.addEventListener("mouseover", function(e)
+				{
+					var elem = e.srcElement;
+					arcadeHud.showCursorPreviewImage(elem.entry.marquee, elem.entry.screen);
+				}, true);
+
+				entryContainer.addEventListener("mouseout", function(e)
+				{
+					var elem = e.srcElement;
+					arcadeHud.hideCursorPreviewImage();
+				}, true);
+
+				entryContainer.addEventListener("click", function(e)
+				{
+					var elem = e.srcElement;
+					if( !!!elem.entry )
+						return;
+
+					deselectLibraryEntry();
+					selectLibraryEntry(elem);
+				}, true);				
+
+				// FIXME: generalize the filters to be more than just "item type"
+				// entry filter
+				var type = document.createElement("div");
+				type.className = "libraryEntryFilter";
+				type.style.pointerEvents = "none";
+
+				var typeNode;
+				if(!!types[entry.type])
+					typeNode = document.createTextNode(types[entry.type].title);
+				else
+					typeNode = document.createTextNode("");
+
+				type.appendChild(typeNode);
+				entryContainer.appendChild(type);
+
+				// entry title
+				var title = document.createElement("div");
+				title.className = "libraryEntryTitle";
+				title.style.pointerEvents = "none";
+
+				var titleNode = document.createTextNode(entry.title);
+				title.appendChild(titleNode);
+				entryContainer.appendChild(title);
+
+				// add this row to the table
+				libraryContainer.appendChild(entryContainer);
+			}
+
+			// update the category mode of the library browser
+			function setCategory(param)
+			{
+				category = param;
+				libBrowserTypeElem.innerHTML = param;
+
+				// also handle the filters list
+				// clear the filters
+				while (filterSelect.options.length)
+					filterSelect.remove(0);
+
+				// add category-specific filters
+				if( category === "items" )
+				{
+					var fieldValueOption = document.createElement("option");
+					fieldValueOption.value = "";
+					fieldValueOption.text = "All Types";
+					filterSelect.appendChild(fieldValueOption);
+
+					var x;
+					for( y in types )
+					{
+						var type = types[y];
+						fieldValueOption = document.createElement("option");
+						fieldValueOption.value = type.info.id;
+						fieldValueOption.text = type.title;
+
+						if( type.info.id === libraryBrowserContext.filter )
+							fieldValueOption.selected = true;
+
+						filterSelect.appendChild(fieldValueOption);
+					}
+				}
+				else
+				{
+					var fieldValueOption = document.createElement("option");
+					fieldValueOption.value = "";
+					fieldValueOption.text = "All Models";
+					filterSelect.appendChild(fieldValueOption);
+
+					// FIXME: the calls to aaapi need to be adjusted for non-type filters.
+					/*
+					fieldValueOption = document.createElement("option");
+					fieldValueOption.value = "";
+					fieldValueOption.text = "All Models";
+					filterSelect.appendChild(fieldValueOption);
+					*/
+				}
+			}
+
+			// clears out the list & also resets the action button states
+			function clearList()
+			{
+				// clear out the contents of the search results
+				while(libraryContainer.firstChild)
+					libraryContainer.removeChild(libraryContainer.firstChild);
+
+				if(libraryContainer.selectedEntry)
+				{
+					libraryContainer.selectedEntry = null;
+
+					// Add the disabledButton class
+					var button = document.querySelector("#editButton");
+					if( button.className.search(/\bdisabledButton\b/) === -1 )
+						button.className += " disabledButton";
+
+					button = document.querySelector("#launchButton");
+					if( button.className.search(/\bdisabledButton\b/) === -1 )
+						button.className += " disabledButton";
+				}
+			}
+
+			// clear the auto-fetch interval for library searches
+			function clearRepeaterHandle()
+			{
+				if( repeaterHandle )
+				{
+					clearInterval(repeaterHandle);
+					repeaterHandle = null;
+				}
+			}
+
+			// gets 1 entry from the AArcade backend at a time in an interval
+			function libraryFetch(libraryQueryId, method, amount)
+			{
+				clearRepeaterHandle();
+
+				// TODO: make the repeaterHandle part of the dummy object
+				var dummy = {"queryId": libraryQueryId, "queryMethod": method, "amount": amount, "count": 0};
+				repeaterHandle = setInterval(function()
+				{
+					var response = (this.queryMethod === "get") ? aaapi.library.getNextLibraryEntry(this.queryId, category) : aaapi.library.findNextLibraryEntry(this.queryId, category);
+
+					if( response.success )
+					{
+						var libraryEntry = response.entry;
+						if( this.count < this.amount && libraryEntry != 0 )
+						{
+							appendEntry(libraryEntry);
+							this.count++;
+						}
+					}
+					else
+						clearRepeaterHandle();
+				}.bind(dummy), 1);
+			}
+		</script>
+
+		<script>
+			var repeaterHandle = null;	// for library queries
+			var types = aaapi.library.getAllLibraryTypes();	// this could be deferred until we're sure we need the types
+			var libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
+			var category = (libraryBrowserContext.category) ? libraryBrowserContext.category : "items";
+			//console.log(JSON.stringify(libraryBrowserContext));
+			//var category = arcadeHud.getParameterByName("category");	// still need to setCategory
+			var libraryContainer = document.querySelector("#libraryContainer");
+			var libBrowserTypeElem = document.querySelector("#libBrowserType");
+			var fileLocationFormElem = document.querySelector("#fileLocationForm");
+			var categorySelect = document.querySelector("#categorySelect");
+			var entryValueInputElem = document.querySelector("#browseInput");
+			var okButtonElem = document.querySelector("#createNewButton");
+			var filterSelect = document.querySelector("#filterSelect");
+			var searchBox = document.querySelector("#searchBox");
+			searchBox.querySelector("input").value = libraryBrowserContext.search;
+
+			// listeners
+			entryValueInputElem.addEventListener("input", onEntryValueChange);
+
+			fileLocationForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				chooseSelected();
+				return false;
+			}, true);
+			
+			categorySelect.addEventListener("change", function(e)
+			{
+				var elem = e.srcElement;
+				category = elem.options[elem.selectedIndex].value;
+				setCategory(category);
+				startLibrarySearch();
+			}, true);
+			
+			filterSelect.addEventListener("change", function(e)
+			{
+				startLibrarySearch();
+			}, true);
+
+			searchBox.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				startLibrarySearch();
+				return false;
+			}, true);
+
+			// INITIATE THE WORK
+			var categoryNames = ["items", "models"];
+			var x, categoryOption;
+			for( x in categoryNames )
+			{
+				categoryOption = document.createElement("option");
+				categoryOption.value = categoryNames[x];
+				categoryOption.text = categoryNames[x].charAt(0).toUpperCase() + categoryNames[x].slice(1);
+
+				if( categoryNames[x] === libraryBrowserContext.category )
+					categoryOption.selected = true;
+
+				categorySelect.appendChild(categoryOption);
+			}
+
+			// deselect
+			libraryContainer.selectedEntry = null;
+
+			// build the filters list & update the menu title
+			setCategory(category);
+
+			// repeat the previous search (or just get the 1st 100 entries)
+			startLibrarySearch(false);
+
+			// focus the search box for user input
+			searchBox.querySelector("input").focus();
+		</script>
+	</body>
+</html>

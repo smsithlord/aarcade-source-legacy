@@ -211,27 +211,27 @@
 	</head>
 	<body style="background-color: transparent;">
 		<style>
-			#modelContainer::-webkit-scrollbar
+			#entryContainer::-webkit-scrollbar
 			{
 				width: 15px;
 				height: 15px;
 			}
 
-			#modelContainer::-webkit-scrollbar-track
+			#entryContainer::-webkit-scrollbar-track
 			{
 				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
 				border-radius: 10px;
 				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
 			}
 
-			#modelContainer::-webkit-scrollbar-thumb
+			#entryContainer::-webkit-scrollbar-thumb
 			{
 				border-radius: 10px;
 				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
 				background-color: rgba(250, 50, 50, 0.7);
 			}
 
-			#modelContainer::-webkit-scrollbar-corner
+			#entryContainer::-webkit-scrollbar-corner
 			{
 				background-color: transparent;
 			}
@@ -302,15 +302,33 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 			}
 		</style>
-		<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;">CABINETS</div>
+		<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;"></div>
 		<div id="titleRule"></div>
-		<div id="modelContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+		<div id="entryContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
 
 		<script>
+			var libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
+			var mode = arcadeHud.getParameterByName("mode");
+			var category = libraryBrowserContext.category;
+			var titleElem = document.querySelector("#title");
+			titleElem.innerHTML = (category === "items") ? "CABINETS" : "PROPS";
+
 			document.addEventListener("keypress", function(e)
 			{
 				console.log(e);
 			});
+
+			var cmdListener = {
+				"specialWheel": function(delta)
+				{
+					console.log("SPECIAL WHEEEEL IT " + delta);
+				}, 
+				"setRotationAxis": function(axis)
+				{
+					console.log("SET ROTATION AXISSSSS: " + axis);
+				}
+			};
+
 			/*
 			namePlateElem.style.opacity = "1.0";
 					namePlateElem.style.border = "2px solid rgb(255, 255, 255)";
@@ -320,7 +338,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
 
-			var modelContainerElem = document.querySelector("#modelContainer");
+			var entryContainerElem = document.querySelector("#entryContainer");
 			function selectNone()
 			{
 				// deselect everything
@@ -348,8 +366,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 				if( !!!next )
 				{
-					next = modelContainerElem.firstChild;//childNodes[0];
-					modelContainerElem.scrollTop = 0;
+					next = entryContainerElem.firstChild;//childNodes[0];
+					entryContainerElem.scrollTop = 0;
 				}
 
 				if( !!next )
@@ -358,11 +376,16 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					if( (old && next === old.parentNode.nextSibling) || !!!old )
 						updateScroll();
 
-					// load this model in 1 second, after its animation is finished.
-					// (this allows you to skip past models you don't want to load)
+					// load this entry in 1 second, after its animation is finished.
+					// (this allows you to skip past entries you don't want to load)
 					next.timerHandle = setTimeout(function()
 					{
-						aaapi.system.cabinetSelected(this.model.info.id);
+						console.log("category is " + category + " and mode is " + mode);
+						if( mode === "spawn" && category === "items" )
+							aaapi.system.cabinetSelected(this.entry.info.id);
+						else
+							aaapi.system.modelSelected(this.entry.info.id);
+							//console.log("xxx tea bag disabled");
 					}.bind(next), 1000);
 				}
 			}
@@ -381,8 +404,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 				if( !!!prev )
 				{
-					prev = modelContainerElem.lastChild;
-					modelContainerElem.scrollTop = modelContainerElem.scrollHeight;
+					prev = entryContainerElem.lastChild;
+					entryContainerElem.scrollTop = entryContainerElem.scrollHeight;
 				}
 
 				if( !!prev )
@@ -392,11 +415,15 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					if( (old && prev === old.parentNode.previousSibling) || !!!old )
 						updateScroll();
 
-					// load this model in 1 second, after its animation is finished.
-					// (this allows you to skip past models you don't want to load)
+					// load this entry in 1 second, after its animation is finished.
+					// (this allows you to skip past entries you don't want to load)
 					prev.timerHandle = setTimeout(function()
 					{
-						aaapi.system.cabinetSelected(this.model.info.id);
+						if( mode === "spawn" && category === "items" )
+							aaapi.system.cabinetSelected(this.entry.info.id);
+						else
+							aaapi.system.modelSelected(this.entry.info.id);
+							//console.log("xxx tea bag disabled");
 					}.bind(prev), 1000);
 				}
 			}
@@ -406,27 +433,27 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				var selected = document.querySelector(".selectedNamePlate");
 				if( selected )
 				{
-					var offset = selected.parentNode.offsetTop - modelContainerElem.scrollTop;
+					var offset = selected.parentNode.offsetTop - entryContainerElem.scrollTop;
 					var elemOffset = selected.parentNode.offsetHeight;
-					var containerHeight = modelContainerElem.offsetHeight;	//window.innerHeight
+					var containerHeight = entryContainerElem.offsetHeight;	//window.innerHeight
 					if(offset > (containerHeight / 3.0) * 2.0)
 					{
-						if( modelContainerElem.scrollTop + elemOffset <= modelContainerElem.scrollHeight )
-							modelContainerElem.scrollTop += elemOffset;
+						if( entryContainerElem.scrollTop + elemOffset <= entryContainerElem.scrollHeight )
+							entryContainerElem.scrollTop += elemOffset;
 						else
-							modelContainerElem.scrollTop = modelContainerElem.scrollHeight;
+							entryContainerElem.scrollTop = entryContainerElem.scrollHeight;
 					}
 					else if(offset < (containerHeight / 3.0) * 1.0)
 					{
-						if( modelContainerElem.scrollTop - elemOffset >= 0 )
-							modelContainerElem.scrollTop -= elemOffset;
+						if( entryContainerElem.scrollTop - elemOffset >= 0 )
+							entryContainerElem.scrollTop -= elemOffset;
 						else
-							modelContainerElem.scrollTop = 0;
+							entryContainerElem.scrollTop = 0;
 					}
 				}
 			}
 
-			//modelContainerElem.addEventListener("mousewheel", function(e)
+			//entryContainerElem.addEventListener("mousewheel", function(e)
 			document.addEventListener("mousewheel", function(e)
 			{
 				var direction = (e.wheelDelta > 0) ? -1 : 1;
@@ -435,27 +462,52 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				else
 					selectPrev();
 
-				//modelContainerElem.scrollTop += 100 * direction;
+				//entryContainerElem.scrollTop += 100 * direction;
 
 				e.preventDefault();
 				return false;
 			}, false);
 
 
-			var model = aaapi.library.findFirstLibraryModel("", 1);
-			var modelElem;
-			var prettyName;
-
-			var models = [];
-
-			while( model )
+			//var model = aaapi.library.findFirstLibraryModel("", 1);
+			var searchCategory;
+			var response;
+			if( libraryBrowserContext.category === "items" )
 			{
-				models.push(model);
-				model = aaapi.library.findNextLibraryModel();
+				searchCategory = "models";
+					response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", "", "dynamic", "1");
+			}
+			else if( libraryBrowserContext.filter === "" )
+			{
+				searchCategory = libraryBrowserContext.category;
+				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", libraryBrowserContext.search);
+			}
+			else
+			{
+				searchCategory = libraryBrowserContext.category;
+				// FIXME: (maybe) This always assumes that the filter field of the item is "type".
+				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", libraryBrowserContext.search, "type", libraryBrowserContext.filter);
 			}
 
-			models.sort(function(a, b)
+			var queryId = response.queryId;
+			var entry = response.entry;
+			var entryElem;
+			var prettyName;
+
+			var entries = [];
+
+			while( response.success )
 			{
+				entries.push(entry);
+				response = aaapi.library.findNextLibraryEntry(this.queryId, searchCategory);
+
+				entry = response.entry;
+				//entry = aaapi.library.findNextLibraryModel();
+			}
+
+			entries.sort(function(a, b)
+			{
+				/*
 				var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
 				var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
 
@@ -465,17 +517,28 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					return 1;
 				else
 					return 0;
+				*/
+
+				var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+				var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+
+				if( lettersA < lettersB )
+					return -1;
+				else if( lettersA > lettersB )
+					return 1;
+				else
+					return 0;
 			});
 
 			var i;
-			var max = models.length;
+			var max = entries.length;
 			for( i = 0; i < max; i++ )
 			{
-				model = models[i];
-				modelElem = document.createElement("div");
-				modelElem.model = model;
+				entry = entries[i];
+				entryElem = document.createElement("div");
+				entryElem.entry = entry;
 
-				prettyName = model.platforms[sourcePlatformId].file;
+				prettyName = entry.platforms[sourcePlatformId].file;
 				prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
 				prettyName = prettyName.substring(0, prettyName.length - 4);
 				prettyName = prettyName.replace(/_/g, " ");
@@ -485,12 +548,12 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				namePlateElem.className = "namePlate";
 				namePlateElem.innerHTML = prettyName;
 
-				modelElem.appendChild(namePlateElem);
+				entryElem.appendChild(namePlateElem);
 
-				modelContainerElem.appendChild(modelElem);
+				entryContainerElem.appendChild(entryElem);
 
-				//console.log(JSON.stringify(model));
-				//model = aaapi.library.findNextLibraryModel();
+				//console.log(JSON.stringify(entry));
+				//entry = aaapi.library.findNextLibraryModel();
 			}
 
 			function randoSelect()
@@ -507,11 +570,12 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				var randoIndex = Math.floor(Math.random() * 10) + 0;
 				potentials[randoIndex].className += " selectedNamePlate";
 			}
-
+/*
 			setInterval(function()
 			{
 				randoSelect();
 			}, 2000);
+*/
 		</script>
 		<!--
 		<select id="modelContainer" size=20 style="font-size: 20px; font-weight: 900; position: fixed; top: 0; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; background-color: transparent;"></select>

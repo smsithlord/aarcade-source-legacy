@@ -15,8 +15,8 @@ public:
 	virtual void OnMouseMove(float x, float y) {};
 	virtual void OnMousePressed(vgui::MouseCode code) {};
 	virtual void OnMouseReleased(vgui::MouseCode code) {};
-	virtual void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState) {};
-	virtual void OnKeyCodeReleased(vgui::KeyCode code) {};
+	virtual void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState) {};
+	virtual void OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState) {};
 	virtual void OnMouseWheeled(int delta) {};
 
 	// accessors

@@ -577,7 +577,7 @@ bool C_AnarchyManager::HandleUiToggle()
 			}
 		}
 
-		if (m_pLibretroManager)
+		if (m_pLibretroManager && !vgui::input()->IsKeyDown(KEY_XBUTTON_START))
 		{
 			C_LibretroInstance* pInstance = m_pLibretroManager->GetSelectedLibretroInstance();
 			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
@@ -706,6 +706,41 @@ void C_AnarchyManager::Unpause()
 			g_pFullFileSystem->Close(hFile);
 		}
 	}
+}
+
+void C_AnarchyManager::BeginImportSteamGames()
+{
+	if (!this->IsInitialized())
+	{
+		DevMsg("Not initialized.  Aborting Steam games import.\n");
+		return;
+	}
+
+	// Scan user profile.
+	// 1. Activate input mode.
+	// 2. Navigate to the user's games list on their Steam profile in the in-game Steamworks browser.
+	// 3. Notify & instruct the user if their profile is set to private, otherwise have an "IMPORT" button appear.
+	// 4. Import all games from their list into a KeyValues file ownedGames.key
+	// 5. Load all entries from ownedGames.key as items, but do not automatically save them out until the user modifies them.
+
+	this->GetInputManager()->DeactivateInputMode(true);
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->DeselectEntity("asset://ui/blank.html");
+	else
+		pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+
+	CSteamID sid = steamapicontext->SteamUser()->GetSteamID();
+	std::string profileUrl = "http://www.steamcommunity.com/profiles/" + std::string(VarArgs("%llu", sid.ConvertToUint64())) + "/games/?tab=all";
+
+	C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+	pSteamBrowserInstance->SetActiveScraper("importSteamGames", "", "");
+	pSteamBrowserInstance->Init("", profileUrl, null);
+	pSteamBrowserInstance->Focus();
+	pSteamBrowserInstance->Select();
+	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSteamBrowserInstance);
 }
 
 size_t ExecuteProcess(std::string FullPathToExe, std::string Parameters)
@@ -953,7 +988,89 @@ inline int Floor2Int(float a)
 }
 */
 #include <chrono>
-std::string C_AnarchyManager::GenerateUniqueId()
+void C_AnarchyManager::GenerateUniqueId(char* result)
+{
+	/*
+	DevMsg("AnarchyManager: GenerateUniqueId\n");
+
+	// pseudo random pseudo unique ids until the firebase id generator can be ported to C++
+	std::string id = "random";
+
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+
+	return id;
+	*/
+
+	std::string PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
+	//double now = vgui::system()->GetCurrentTime();
+	//using namespace std::chrono;
+	double now = std::chrono::system_clock::now().time_since_epoch().count();//GetCurrentTime();// vgui::system()->GetCurrentTime();
+	now = floor(now / 64.0);
+	now = floor(now / 64.0);
+
+	//DevMsg("Time now: %lf\n", now);
+
+	bool duplicateTime = (now == m_dLastGenerateIdTime);
+	m_dLastGenerateIdTime = now;
+
+	//char* timeStampChars[8];
+	std::string timeStampChars = "00000000";
+	for (unsigned int i = 8; i > 0; i--)
+	{
+		timeStampChars.replace(i - 1, 1, 1, PUSH_CHARS.at(fmod(now, 64.0)));
+		// NOTE: Can't use << here because javascript will convert to int and lose the upper bits.
+		//		if (now >= 64.0)
+		now = floor(now / 64.0);
+		//	else
+		//	now = 0;
+	}
+
+	if (now != 0)
+	{
+		DevMsg("ERROR: We should have converted the entire timestamp. %f\n", now);
+	}
+
+	std::string id = timeStampChars;
+	//bool bCharsExist = (m_lastGeneratedChars != "");
+	if (!duplicateTime)
+	{
+		for (unsigned int i = 0; i < 12; i++)
+		{
+			//			if (bCharsExist)
+			m_lastGeneratedChars.replace(i, 1, 1, (char)floor(random->RandomFloat() * 64.0L));
+			//		else
+			//		m_lastGeneratedChars += VarArgs("%c", (char)floor(random->RandomFloat() * 64.0L));
+		}
+	}
+	else
+	{
+		// If the timestamp hasn't changed since last push, use the same random number, except incremented by 1.
+		unsigned int i;
+		for (i = 11; i >= 0 && m_lastGeneratedChars.at(i) == 63; i--)
+			m_lastGeneratedChars.replace(i, 1, 1, (char)0);
+
+		m_lastGeneratedChars.replace(i, 1, 1, (char)(m_lastGeneratedChars.at(i) + 1));
+	}
+
+	for (unsigned int i = 0; i < 12; i++)
+	{
+		id += PUSH_CHARS.at(m_lastGeneratedChars.at(i));
+	}
+
+	if (id.length() != 20)
+		DevMsg("ERROR: Lngth should be 20.\n");
+
+	Q_strcpy(result, id.c_str());
+
+	//return VarArgs("%s", id.c_str());	// works on instance menu	// GETS ALL CALLS DURING SAME TICK
+	return;// id.c_str();	// works on library browser menu	// GETS CALLS ON DIFFERENT TICKS
+}
+
+const char* C_AnarchyManager::GenerateUniqueId()
 {
 	/*
 	DevMsg("AnarchyManager: GenerateUniqueId\n");
@@ -1029,7 +1146,92 @@ std::string C_AnarchyManager::GenerateUniqueId()
 	if (id.length() != 20)
 		DevMsg("ERROR: Lngth should be 20.\n");
 
+	//Q_strcpy(result, id.c_str());
+
+	return VarArgs("%s", id.c_str());	// works on instance menu	// GETS ALL CALLS DURING SAME TICK
+	//return id.c_str();	// works on library browser menu	// GETS CALLS ON DIFFERENT TICKS
+}
+
+const char* C_AnarchyManager::GenerateUniqueId2()
+{
+	/*
+	DevMsg("AnarchyManager: GenerateUniqueId\n");
+
+	// pseudo random pseudo unique ids until the firebase id generator can be ported to C++
+	std::string id = "random";
+
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+	id += std::to_string(random->RandomInt(0, 10));
+
 	return id;
+	*/
+
+	std::string PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
+	//double now = vgui::system()->GetCurrentTime();
+	//using namespace std::chrono;
+	double now = std::chrono::system_clock::now().time_since_epoch().count();//GetCurrentTime();// vgui::system()->GetCurrentTime();
+	now = floor(now / 64.0);
+	now = floor(now / 64.0);
+
+	//DevMsg("Time now: %lf\n", now);
+
+	bool duplicateTime = (now == m_dLastGenerateIdTime);
+	m_dLastGenerateIdTime = now;
+
+	//char* timeStampChars[8];
+	std::string timeStampChars = "00000000";
+	for (unsigned int i = 8; i > 0; i--)
+	{
+		timeStampChars.replace(i - 1, 1, 1, PUSH_CHARS.at(fmod(now, 64.0)));
+		// NOTE: Can't use << here because javascript will convert to int and lose the upper bits.
+		//		if (now >= 64.0)
+		now = floor(now / 64.0);
+		//	else
+		//	now = 0;
+	}
+
+	if (now != 0)
+	{
+		DevMsg("ERROR: We should have converted the entire timestamp. %f\n", now);
+	}
+
+	std::string id = timeStampChars;
+	//bool bCharsExist = (m_lastGeneratedChars != "");
+	if (!duplicateTime)
+	{
+		for (unsigned int i = 0; i < 12; i++)
+		{
+			//			if (bCharsExist)
+			m_lastGeneratedChars.replace(i, 1, 1, (char)floor(random->RandomFloat() * 64.0L));
+			//		else
+			//		m_lastGeneratedChars += VarArgs("%c", (char)floor(random->RandomFloat() * 64.0L));
+		}
+	}
+	else
+	{
+		// If the timestamp hasn't changed since last push, use the same random number, except incremented by 1.
+		unsigned int i;
+		for (i = 11; i >= 0 && m_lastGeneratedChars.at(i) == 63; i--)
+			m_lastGeneratedChars.replace(i, 1, 1, (char)0);
+
+		m_lastGeneratedChars.replace(i, 1, 1, (char)(m_lastGeneratedChars.at(i) + 1));
+	}
+
+	for (unsigned int i = 0; i < 12; i++)
+	{
+		id += PUSH_CHARS.at(m_lastGeneratedChars.at(i));
+	}
+
+	if (id.length() != 20)
+		DevMsg("ERROR: Lngth should be 20.\n");
+
+	//Q_strcpy(result, id.c_str());
+
+	//return VarArgs("%s", id.c_str());	// works on instance menu	// GETS ALL CALLS DURING SAME TICK
+	return id.c_str();	// works on library browser menu	// GETS CALLS ON DIFFERENT TICKS
 }
 
 std::string C_AnarchyManager::ExtractLegacyId(std::string itemFile, KeyValues* item)
@@ -1296,12 +1498,15 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 
 bool C_AnarchyManager::AttemptSelectEntity()
 {
+	if (!g_pAnarchyManager->IsInitialized())
+		return false;
+
 	C_PropShortcutEntity* pShortcut = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
 	if (pShortcut)
 	{
 		// finished positioning & choosing model, ie: changes confirmed
 		DevMsg("CHANGES CONFIRMED\n");
-		g_pAnarchyManager->DeactivateObjectPlacementMode();
+		g_pAnarchyManager->DeactivateObjectPlacementMode(true);
 
 		return SelectEntity(pShortcut);
 	}
@@ -1811,26 +2016,36 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 	g_pFullFileSystem->FindClose(findHandle);
 }
 
-void C_AnarchyManager::DeactivateObjectPlacementMode()
+void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 {
 	C_PropShortcutEntity* pShortcut = m_pMetaverseManager->GetSpawningObjectEntity();
 	if (pShortcut)
 	{
-		pShortcut->SetRenderColorA(255);
-		pShortcut->SetRenderMode(kRenderNormal);
-
-		// make the prop solid
-		pShortcut->SetSolid(SOLID_VPHYSICS);
-		pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
-		pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
-
-		if (pShortcut->CreateVPhysics())
+		if (confirm)
 		{
-			IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
-			if (pPhysics)
+			pShortcut->SetRenderColorA(255);
+			pShortcut->SetRenderMode(kRenderNormal);
+
+			// make the prop solid
+			pShortcut->SetSolid(SOLID_VPHYSICS);
+			pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+			pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
+
+			if (pShortcut->CreateVPhysics())
 			{
-				pPhysics->EnableMotion(false);
+				IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
+				if (pPhysics)
+				{
+					pPhysics->EnableMotion(false);
+				}
 			}
+		}
+		else
+		{
+			// CANCEL
+			this->GetMetaverseManager()->SetSpawningObjectEntity(null);
+			this->GetMetaverseManager()->SetSpawningObject(null);
+			this->GetInstanceManager()->RemoveEntity(pShortcut);
 		}
 
 		m_pMetaverseManager->SetSpawningObjectEntity(null);
@@ -1846,10 +2061,15 @@ void C_AnarchyManager::DeactivateObjectPlacementMode()
 
 void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut)
 {
+	m_pMetaverseManager->ResetSpawningAngles();
+	m_pMetaverseManager->SetSpawningRotationAxis(1);
 	m_pMetaverseManager->SetSpawningObjectEntity(pShortcut);
 
 	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
+	//pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
+	//std::string category = this->GetMetaverseManager()->GetLibraryBrowserContext("category");
+	//pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=spawn&category=%s", category.c_str()));
+	pHudInstance->SetUrl("asset://ui/buildMode.html?mode=spawn");
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, true);
 
 	/*
@@ -1996,6 +2216,14 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 		// iterate through all models and assign the dynamic property to them
 		// FIXME: THIS SHOULD BE DONE UPON MODEL IMPORT/LOADING!!
 		m_pMetaverseManager->FlagDynamicModels();
+
+		// this is where steamGames.key could be auto-scanned to make sure all Steam games exist in the library, if wanted.
+		if (false && g_pFullFileSystem->FileExists("steamGames.key", "DEFAULT_WRITE_PATH"))
+		{
+			KeyValues* kv = new KeyValues("steamgames");
+			kv->LoadFromFile(g_pFullFileSystem, "steamGames.key", "DEFAULT_WRITE_PATH");
+			g_pAnarchyManager->GetMetaverseManager()->ImportSteamGames(kv);
+		}
 
 		// restart the sound system so that mounted paths can play sounds
 		engine->ClientCmd("snd_restart");

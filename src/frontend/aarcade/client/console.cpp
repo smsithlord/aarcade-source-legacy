@@ -46,8 +46,40 @@ void TestFunction( const CCommand &args )
 
 	//system("Arcade_Launcher.bat");
 
-	C_OpenGLManager* pOpenGLManager = new C_OpenGLManager();
-	pOpenGLManager->Init();
+	//C_OpenGLManager* pOpenGLManager = new C_OpenGLManager();
+	//pOpenGLManager->Init();
+
+
+
+
+
+	/*
+	// Scan user profile.
+	// 1. Activate input mode.
+	// 2. Navigate to the user's games list on their Steam profile in the in-game Steamworks browser.
+	// 3. Notify & instruct the user if their profile is set to private, otherwise have an "IMPORT" button appear.
+	// 4. Import all games from their list into a KeyValues file ownedGames.key
+	// 5. Load all entries from ownedGames.key as items, but do not automatically save them out until the user modifies them.
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->DeselectEntity("asset://ui/blank.html");
+	else
+		pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+	
+	CSteamID sid = steamapicontext->SteamUser()->GetSteamID();
+	std::string profileUrl = "http://www.steamcommunity.com/profiles/" + std::string(VarArgs("%llu", sid.ConvertToUint64())) + "/games/?tab=all";
+
+	C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+	pSteamBrowserInstance->SetActiveScraper("importSteamGames", "", "");
+	pSteamBrowserInstance->Init("", profileUrl, null);
+	pSteamBrowserInstance->Focus();
+	pSteamBrowserInstance->Select();
+	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSteamBrowserInstance);
+	*/
+
+	g_pAnarchyManager->BeginImportSteamGames();
 }
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
 
@@ -74,13 +106,35 @@ ConCommand wheel_down("wheeldown", WheelDown, "Usage: mouse wheel down");
 void RunEmbeddedLibretro(const CCommand &args)
 {
 	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
-	if ( pLibretroManager )
-		pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
+	if (pLibretroManager)
+		pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:\\Emulators\\N64\\Roms\\Super Mario 64 (U) [!].zip");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mednafen_psx_libretro.dll", "X:\\Emulators\\PSP\\roms\\ffn-spac.iso");
+		//pLibretroManager->RunEmbeddedLibretro("mednafen_psx_libretro.dll", "X:\\Emulators\\PS\\roms\\Need For Speed 4 - High Stakes [U] [SLUS-00826].cue");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mednafen_psx_libretro.dll", "X:\\Emulators\\PS\\roms\\Need For Speed 4 - High Stakes [U] [SLUS-00826].cue");
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:\\Emulators\\N64\\Roms\\Super Mario 64 (U) [!].zip");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:/Emulators/N64/Roms/GoldenEye 007 (U) [!].zip");
+		//pLibretroManager->RunEmbeddedLibretro("mame_libretro.dll", "X:\\Emulators\\Arcade\\roms\\sfrush.zip");
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:\\Emulators\\N64\\Roms\\Super Mario 64 (U) [!].zip");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Jay and silent Bob Strike Back (2001).avi");
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:\\Emulators\\N64\\Roms\\Super Mario 64 (U) [!].zip");
+		
+		//pLibretroManager->RunEmbeddedLibretro("mupen64plus_libretro.dll", "X:\\Emulators\\N64\\Roms\\Super Mario 64 (U) [!].zip");
+		
+		//pLibretroManager->RunEmbeddedLibretro("mame2014_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
+		//pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
+		//pLibretroManager->RunEmbeddedLibretro("mame_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
+		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
+		//pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
 		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/TV/Beavis & Butthead/Beavis and Butthead - Season 7/731 Drinking Butt-ies.mpg");
 	
 		//pLibretroManager->RunEmbeddedLibretro("mame_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
 		//pLibretroManager->RunEmbeddedLibretro("snes9x_libretro.dll", "X:\\Emulators\\SNES\\Roms\\Donkey Kong Country - Competition Cartridge (U).smc");
-		//pLibretroManager->RunEmbeddedLibretro("mame2014_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
 		//pLibretroManager->RunEmbeddedLibretro("ffmpeg_libretro.dll", "V:/Movies/Flash Gordon (1980).avi");
 		//pLibretroManager->RunEmbeddedLibretro("mame2014_libretro.dll", "X:\\Emulators\\Arcade\\roms\\lethalen.zip");
 		
@@ -196,9 +250,9 @@ void CreateHotlink(const CCommand &args)
 
 	//DevMsg("DISPLAY MAIN MENU\n");
 	if (g_pAnarchyManager->GetSelectedEntity())
-		g_pAnarchyManager->DeselectEntity("asset://ui/items.html");
+		g_pAnarchyManager->DeselectEntity("asset://ui/libraryBrowser.html");
 	else
-		pHudBrowserInstance->SetUrl("asset://ui/items.html");
+		pHudBrowserInstance->SetUrl("asset://ui/libraryBrowser.html");
 
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
 }
@@ -208,9 +262,16 @@ void ActivateInputMode(const CCommand &args)
 {
 	// FIXME: Need to reject commands that are sent before the AArcade system is ready.
 	//bool fullscreen = (args.ArgC() > 1);
-	C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
-	if (pSelectedEmbeddedInstance)
-		g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
+	
+	// if not spawning an object, do regular stuff
+	if (!g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
+	{
+		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (pSelectedEmbeddedInstance)
+			g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
+	}
+	else
+		g_pAnarchyManager->DeactivateObjectPlacementMode(false);
 }
 ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 

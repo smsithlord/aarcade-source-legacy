@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "c_prop_shortcut.h"
 
 struct object_t
 {
@@ -42,6 +43,8 @@ public:
 
 	void SpawnObject(object_t* object);
 	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave);
+	object_t* GetInstanceObject(std::string objectId);
+	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity);
 	bool SpawnNearestObject();
 	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 

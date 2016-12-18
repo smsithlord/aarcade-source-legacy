@@ -19,12 +19,14 @@ LINK_ENTITY_TO_CLASS( prop_shortcut, CPropShortcutEntity );
 
 BEGIN_DATADESC(CPropShortcutEntity)
 	DEFINE_KEYFIELD(m_bSlave, FIELD_BOOLEAN, "slave"),
+	DEFINE_KEYFIELD(m_objectId, FIELD_STRING, "objectId"),
 	DEFINE_KEYFIELD(m_itemId, FIELD_STRING, "itemId"),
 	DEFINE_USEFUNC( UseFunc ),
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST(CPropShortcutEntity, DT_PropShortcutEntity)
 	SendPropBool(SENDINFO(m_bSlave)),
+	SendPropStringT(SENDINFO(m_objectId)),
 	SendPropStringT(SENDINFO(m_itemId)),
 END_SEND_TABLE()
 
@@ -110,4 +112,10 @@ bool CPropShortcutEntity::CreateVPhysics()
 	BaseClass::CreateVPhysics();
 	VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	return true;
+}
+
+void CPropShortcutEntity::SetItemId(std::string id)
+{
+	m_itemId = MAKE_STRING(id.c_str());
+	//Q_strcpy(m_itemId, id.c_str());
 }

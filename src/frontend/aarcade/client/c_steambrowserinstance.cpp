@@ -277,8 +277,8 @@ void C_SteamBrowserInstance::SetUrl(std::string url)
 
 void C_SteamBrowserInstance::BrowserInstanceStartRequest(HTML_StartRequest_t *pCmd)
 {
-	if (g_pAnarchyManager->IsPaused())
-		return;
+	//if (g_pAnarchyManager->IsPaused())
+	//	return;
 
 	//	if (m_unHandle != pCmd->unBrowserHandle)
 	//{
@@ -292,8 +292,8 @@ void C_SteamBrowserInstance::BrowserInstanceStartRequest(HTML_StartRequest_t *pC
 
 	//DevMsg("Start Request Detected By %s\n", m_id.c_str());
 	//C_SteamBrowserInstance* pSelf = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pCmd->unBrowserHandle);
-
 	std::string urlBuf = pCmd->pchURL;
+
 	if (m_unHandle == pCmd->unBrowserHandle)
 	{
 		if (urlBuf.find("http://www.aarcadeapicall.com.net.org/?doc=") == 0)
@@ -586,8 +586,8 @@ private:
 
 void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 {
-	if (g_pAnarchyManager->IsPaused())
-		return;
+	//if (g_pAnarchyManager->IsPaused())
+	//	return;
 
 	if (pCmd->unBrowserHandle != m_unHandle)
 		return;
@@ -1069,15 +1069,16 @@ C_EmbeddedInstance* C_SteamBrowserInstance::GetParentSelectedEmbeddedInstance()
 	return g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance();
 }
 
-void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState)
+void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	// don't send alt button for now (it can cause crashes sometimes?
 	if (code == KEY_LALT || code == KEY_RALT)
 		return;
 
+	// FIXME: Can crash at the following line, probably due to a Steamworks browser crash!!
 	steamapicontext->SteamHTMLSurface()->KeyDown(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
 
-	std::string s_output = this->GetCharTyped(code, bShiftState, bCtrlState, bAltState);
+	std::string s_output = this->GetOutput(code, bShiftState, bCtrlState, bAltState);
 	if (s_output != "")
 	{
 		char a = s_output.at(0);
@@ -1089,7 +1090,7 @@ void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftSta
 	}
 }
 
-void C_SteamBrowserInstance::OnKeyCodeReleased(vgui::KeyCode code)
+void C_SteamBrowserInstance::OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	// don't send alt button for now (it can cause crashes sometimes?
 	if (code == KEY_LALT || code == KEY_RALT)

@@ -10,7 +10,12 @@
 #include "vgui/IInput.h"
 #include "c_canvasregen.h"
 #include "c_embeddedinstance.h"
+
+#include "XUnzip.h"
+
 #include <mutex>
+
+#include <glm/glm.hpp>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -149,6 +154,10 @@ void C_LibretroInstance::Update()
 		}
 		*/
 	}
+	else if (m_info->state == 6)
+	{
+		// even though the core wants to close, don't do anything at all.  the core will keep waiting until the user closes this C_LibretroInstance like normal.
+	}
 }
 
 bool C_LibretroInstance::LoadCore(std::string coreFile)
@@ -219,11 +228,8 @@ bool C_LibretroInstance::LoadGame()
 	//Q_strcpy(filenameFixed, pFilename);
 	//V_FixSlashes(filenameFixed, '/');
 
-	bool bDidItWork = false;
-		bool bFilenameOnly = true;
-
+	// FIXME: Why always pick this pixel format???
 	info->videoformat = RETRO_PIXEL_FORMAT_0RGB1555;
-	//V:\MoviesTeenage Mutant Ninja Turtles(1990).avi
 
 	if (!g_pFullFileSystem->FileExists(filename.c_str()))
 	{
@@ -257,36 +263,149 @@ bool C_LibretroInstance::LoadGame()
 	if (bFilenameOnly && !bZipDetected && !bForceDataLoad)
 	{
 	*/
-		char name[AA_MAX_STRING];
-		Q_strcpy(name, filename.c_str());
+	bool success = false;
+	if (info->need_fullpath)
+	{
+		/*
+		std::string path = filename;
+		size_t found = path.find_last_of("/\\");
+		if (found != std::string::npos)
+			path = path.substr(0, found);
+		*/
 
 		struct retro_game_info game;
-		game.path = name;
+		game.path = filename.c_str();
 		game.data = NULL;
 		game.size = 0;
 		game.meta = NULL;
 
 		DevMsg("loading game\n");
-		if (!info->raw->load_game(&game))	// this could take a while
-		{
-			DevMsg("ERROR LOADING LIBRETRO GAME!!\n");
-			info->close = true;
-			return false;
-		}
-		else
-		{
-			DevMsg("done loading game\n");
-			if (!info->close)
-				info->state = 5;
-			else
-			{
-				DevMsg("However, the instance already wants to close. :(\n");
-				return false;
-			}
-		}
+		success = info->raw->load_game(&game);
 
 		//pLibretroInstance->OnGameLoaded();
 		//bDidItWork = s_raw->load_game(&game);
+	}
+	else
+	{
+		DevMsg("File must be loaded by frontend!\n");
+		//info->close = true;
+		//return false;
+		char pFilename[AA_MAX_STRING];
+		Q_strcpy(pFilename, filename.c_str());
+
+		bool bZipDetected = (filename.find(".zip") == filename.length() - 4 || filename.find(".ZIP") == filename.length() - 4);
+
+		if (bZipDetected)
+		{
+			DevMsg("libretro: ZIP file detected. Attempting to extract the 1st file..\n");
+			HZIP hz = OpenZip((void*)pFilename, 0, ZIP_FILENAME);
+
+			int zipIndex = 0;
+			ZIPENTRY zipEntry;
+			ZRESULT result = GetZipItem(hz, zipIndex, &zipEntry);
+
+			while (result == ZR_OK)
+			{
+				if (zipEntry.attr & FILE_ATTRIBUTE_DIRECTORY)
+				{
+					zipIndex++;
+					result = GetZipItem(hz, zipIndex, &zipEntry);
+					continue;
+				}
+
+				break;
+			}
+
+			if (result != ZR_OK)
+			{
+				DevMsg("libretro: Error - failed to locate a valid file in ZIP.");
+				CloseZip(hz);
+				return false;
+			}
+
+			//unsigned int fileSize = g_pFullFileSystem->Size(pFilename);
+			long fileSize = zipEntry.unc_size;
+
+			//unsigned char* fileData = new unsigned char[fileSize*20];
+
+			void* fileData = malloc(fileSize);
+			//Q_memcpy(dest, data, fileSize);
+
+			result = UnzipItem(hz, zipIndex, fileData, fileSize, ZIP_MEMORY);
+
+			if (result != ZR_OK && result != 1536)
+			{
+				DevMsg("libretro: Error - failed to unzip the file. ERROR CODE %i\n", result);
+				CloseZip(hz);
+
+				free(fileData);
+				return false;
+			}
+
+			//fileData[fileSize] = 0; // null terminator
+
+			CloseZip(hz);
+
+			// The unzipped file is now in fileData.  Give it to the core.
+			struct retro_game_info game;
+			game.path = pFilename;
+			game.data = fileData;
+			game.size = fileSize;
+			game.meta = NULL;
+			success = info->raw->load_game(&game);
+			free(fileData);
+		}
+		/*
+		else
+		{
+			struct retro_game_info game;
+			game.path = pFilename;
+			game.data = NULL;
+			game.size = 0;
+			game.meta = NULL;
+
+			FileHandle_t fileHandle = filesystem->Open(pFilename, "rb");
+			if (fileHandle)
+			{
+				int bufferSize = filesystem->Size(fileHandle);
+				unsigned char* fileContents = new unsigned char[bufferSize + 1];
+
+				filesystem->Read((void*)fileContents, bufferSize, fileHandle);
+				fileContents[bufferSize] = 0; // null terminator
+
+				filesystem->Close(fileHandle);
+
+				game.data = fileContents;
+				game.size = bufferSize;
+
+				bDidItWork = s_raw->load_game(&game);
+
+				delete[] fileContents;
+			}
+		}
+		*/
+	}
+
+	if (!success)	// this could take a while
+	{
+		DevMsg("ERROR LOADING LIBRETRO GAME!!\n");
+		info->close = true;
+		return false;
+	}
+	else
+	{
+		DevMsg("done loading game\n");
+		if (!info->close)
+		{
+			info->state = 5;
+			return true;
+		}
+		else
+		{
+			DevMsg("However, the instance already wants to close. :(\n");
+			return false;
+		}
+	}
 		/*
 	}
 	else
@@ -391,7 +510,7 @@ bool C_LibretroInstance::LoadGame()
 	return bDidItWork;
 	*/
 
-	return true;
+	return false;
 }
 
 void C_LibretroInstance::OnCoreLoaded()
@@ -436,11 +555,11 @@ bool C_LibretroInstance::BuildInterface(libretro_raw* raw, void* pLib)
 	raw->get_region = (unsigned(*)(void))GetProcAddress(hModule, "retro_get_region");
 	raw->get_memory_data = (void*(*)(unsigned))GetProcAddress(hModule, "retro_get_memory_data");
 	raw->get_memory_size = (size_t(*)(unsigned))GetProcAddress(hModule, "retro_get_memory_size");
-
 	return true;
 }
 
 //float lastAudioFrame = 0;
+/*
 typedef float SAMPLE;
 static int audiocallback(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void *userData)
 {
@@ -477,7 +596,7 @@ static int audiocallback(const void *inputBuffer, void *outputBuffer, unsigned l
 
 	return paContinue;
 	//Q_memcpy(outputBuffer, inputBuffer, framesPerBuffer * 2 * sizeof(int16_t));
-
+	*/
 	/*
 	unsigned int i;
 	SAMPLE *out = (SAMPLE*)outputBuffer;
@@ -501,7 +620,7 @@ static int audiocallback(const void *inputBuffer, void *outputBuffer, unsigned l
 
 	return paContinue;
 	*/
-}
+//}
 
 void C_LibretroInstance::CreateAudioStream()
 {
@@ -539,9 +658,9 @@ void C_LibretroInstance::CreateAudioStream()
 
 	info->audiostream = stream;
 
-	info->audiobuffersize = 1024;
-	info->audiobuffer = new int16_t[info->audiobuffersize];
-	info->audiobufferpos = 0;
+	//info->audiobuffersize = 1024;
+	//info->audiobuffer = new int16_t[info->audiobuffersize];
+	//info->audiobufferpos = 0;
 
 	//	info->safebuffersize = info->audiobuffersize;
 	//	info->safebuffer = new int16_t[info->safebuffersize];
@@ -597,7 +716,7 @@ unsigned MyThread(void *params)
 		CSysModule* pModule = Sys_LoadModule(info->core.c_str());
 		if (!pModule)
 		{
-			//	Msg("Failed to load %s\n", info->core.c_str());
+			DevMsg("Failed to load %s\n", info->core.c_str());
 			// FIXME FIX ME Probably need to clean up!
 			return 0;
 		}
@@ -605,7 +724,7 @@ unsigned MyThread(void *params)
 		HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
 		if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
 		{
-			//DevMsg("libretro: Failed to build interface!\n");
+			DevMsg("libretro: Failed to build interface!\n");
 			return 0;
 		}
 		else
@@ -613,34 +732,28 @@ unsigned MyThread(void *params)
 
 		info->threadid = ThreadGetCurrentId();
 		info->coreloaded = true;
+
+		struct retro_system_info system_info;
+		info->raw->get_system_info(&system_info);
+
+		info->library_name = system_info.library_name;
+		info->library_version = system_info.library_version;
+		info->valid_extensions = system_info.valid_extensions;
+		info->need_fullpath = system_info.need_fullpath;
+		info->block_extract = system_info.block_extract;
+
+		DevMsg("Loaded libretro core:\n");
+		DevMsg("\tlibrary_name: %s\n", info->library_name.c_str());
+		DevMsg("\tlibrary_version: %s\n", info->library_version.c_str());
+		DevMsg("\tvalid_extensions: %s\n", info->valid_extensions.c_str());
+		DevMsg("\tneed_fullpath: %i\n", info->need_fullpath);
+		DevMsg("\tblock_extract: %i\n", info->block_extract);
+
 		g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
+
+
+
 		DevMsg("Thread: core loaded.\n");
-
-		/*
-		// init 3d
-		if (glfwInit())
-		{
-			glfwWindowHint(GLFW_SAMPLES, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-			//glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);	// invisible window
-
-			info->window = glfwCreateWindow(640, 480, "My OPENGL", NULL, NULL);
-			if (info->window)
-			{
-				DevMsg("libretro: OpenGL window created.\n");
-				glfwMakeContextCurrent(info->window);
-				glewExperimental = true; // Needed in core profile
-				//glBindFramebuffer(GL_FRAMEBUFFER, GL_BACK_LEFT);
-				//glfwPollEvents();
-				//GLuint fbo = 0;
-				//glGenFramebuffers(1, &fbo);// info->framebuffer);
-				//glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-				//glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer);
-			}
-		}
-		*/
 
 		//	C_LibretroInstance* pLibretroInstance;
 		libretro_raw* raw = info->raw;
@@ -659,6 +772,9 @@ unsigned MyThread(void *params)
 			//raw = pLibretroInstance->GetRaw();
 			//if (!raw)
 			//			continue;
+
+			if (info->window && glfwWindowShouldClose(info->window))
+				info->close = true;
 
 			if (state == 2)
 			{
@@ -700,6 +816,7 @@ unsigned MyThread(void *params)
 			}
 			else if (state == 3)
 			{
+				//raw->set_hw_context_reset(C_LibretroInstance::cbHWContextReset);
 				raw->set_environment(C_LibretroInstance::cbEnvironment);
 				raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
 				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
@@ -713,12 +830,16 @@ unsigned MyThread(void *params)
 				// load a game if we have one
 				if (info->game != "")
 				{
-					//	DevMsg("Load the game next!!\n");
+						DevMsg("Load the game next!!\n");
 					//info->state = 5;
 					if (C_LibretroInstance::LoadGame())
 					{
 						if (info->state == 5)
+						{
+							//DevMsg("Pt A\n");
 							info->raw->run();	// complete the game loading by executing 1 run
+							//DevMsg("Pt B\n");
+						}
 					}
 					//	DevMsg("cuatro\n");
 				}
@@ -732,7 +853,83 @@ unsigned MyThread(void *params)
 				info->raw->run();
 				}
 				*/
+				//DevMsg("Pt C\n");
 				info->raw->run();
+
+				if (AA_LIBRETRO_3D)
+				{
+					info->lastrendered = gpGlobals->curtime;
+
+					if (info->readyfornextframe && !info->copyingframe)
+					{
+						info->readyfornextframe = false;
+						info->readytocopyframe = false;
+
+						if (info->samplerate == 0)
+						{
+							DevMsg("Get AV info\n");
+							struct retro_system_av_info avinfo;
+							info->raw->get_system_av_info(&avinfo);
+
+							if (avinfo.timing.sample_rate > 0)
+							{
+								info->samplerate = int(avinfo.timing.sample_rate);
+								info->framerate = int(avinfo.timing.fps);
+								C_LibretroInstance::CreateAudioStream();
+							}
+						}
+
+
+						//glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+						//glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+						//glClear(GL_COLOR_BUFFER_BIT);
+						//glfwMakeContextCurrent(info->window);
+						//glfwSwapBuffers(info->window);
+						//glfwPollEvents();	// this is what makes the window actually be responsive
+
+
+						//WORD red_mask = 0xF800;
+						//WORD green_mask = 0x7E0;
+						//WORD blue_mask = 0x1F;
+
+						//DevMsg("Doin it\n");
+
+						//DevMsg("video refresh\n");
+
+						unsigned int width = info->lastframewidth;
+						unsigned int height = info->lastframeheight;
+						size_t pitch = info->lastframepitch;
+						void* dest = malloc(pitch*height);
+						if (AA_LIBRETRO_3D && info->context_type != RETRO_HW_CONTEXT_NONE)
+						{
+							//DevMsg("Format is: %i %i x %i\n", info->videoformat, pitch, height);
+							//glfwSwapBuffers(info->window);
+							glReadPixels(0, 0, pitch / 3, height, GL_RGB, GL_UNSIGNED_BYTE, dest);// GL_RGBA8
+							//glfwSwapBuffers(info->window);
+						}
+
+						if (info->lastframedata)
+							free(info->lastframedata);
+
+						info->lastframedata = dest;
+						info->readytocopyframe = true;
+					}
+				}
+				/*
+				if (info->window)
+				{
+					//DevMsg("Pt 1\n");
+					// background color
+					glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+					glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+					glClear(GL_COLOR_BUFFER_BIT);
+					//DevMsg("Pt 2\n");
+					glfwSwapBuffers(info->window);
+					//DevMsg("Pt 3\n");
+					glfwPollEvents();
+					//DevMsg("Pt 4\n");
+				}
+				*/
 
 				/*
 				bool bShouldRender = false;
@@ -758,6 +955,10 @@ unsigned MyThread(void *params)
 				}
 				*/
 			}
+			else if (state == 6) // waiting to die (requested by the libretro core)
+			{
+				// do nothing
+			}
 		}
 	}
 
@@ -773,8 +974,11 @@ unsigned MyThread(void *params)
 		if (info->lastframedata)
 			free(info->lastframedata);
 
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glDeleteFramebuffers(1, &info->framebuffer);
+		if (AA_LIBRETRO_3D && info->framebuffer)
+		{
+			//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//glDeleteFramebuffers(1, &info->framebuffer);
+		}
 
 		info->libretrokeybinds->deleteThis();
 		info->corekeybinds->deleteThis();
@@ -890,18 +1094,35 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->samplerate = 0;
 	m_info->framerate = 30;
 	m_info->lastrendered = 0;
-	m_info->audiobuffer = null;
-	m_info->audiobuffersize = 0;
-	m_info->audiobufferpos = 0;
+//	m_info->audiobuffer = null;
+	//m_info->audiobuffersize = 0;
+	//m_info->audiobufferpos = 0;
 	//m_info->safebuffer = null;
 	//m_info->safebuffersize = 0;
 	//m_info->safebufferpos = 0;
 	m_info->processingaudio = false;
-//	m_info->window = null;
-	//m_info->framebuffer = null;
+	m_info->window = null;
+	m_info->framebuffer = null;
 	m_info->portdata = null;
 	//m_info->currentPortTypes;
 	m_info->numports = 0;
+
+	// hardware acceleration stuff
+	m_info->context_type = RETRO_HW_CONTEXT_NONE;
+	m_info->depth = false;
+	m_info->stencil = false;
+	m_info->bottom_left_origin = true;
+	m_info->version_major = 0;
+	m_info->version_minor = 0;
+	m_info->cache_context = true;
+	m_info->debug_context = false;
+
+	// system info stuff
+	m_info->library_name = "";
+	m_info->library_version = "";
+	m_info->valid_extensions = "";
+	m_info->need_fullpath = true;
+	m_info->block_extract = false;
 
 	// LIBRETRO-WIDE KEYBINDS
 	KeyValues* kv = new KeyValues("keybinds");
@@ -1092,16 +1313,37 @@ const char* GetFormatName(int format)
 		return "UNKOWN";
 }
 
+/*
+retro_hw_context_reset_t context_destroy;
+
+void v3d_context_destroy()
+{
+	DevMsg("Destroy the context!\n");
+}
+
+void v3d_context_reset()
+{
+	DevMsg("Reset the context!\n");
+}
+*/
+
 static retro_proc_address_t v3d_get_proc_address(const char * sym)
 {
-	DevMsg("Getting proc address for %s\n", sym);
-	return glfwGetProcAddress(sym);
+	//DevMsg("Getting proc address for %s\n", sym);
+	GLFWglproc proc = glfwGetProcAddress(sym);
+	//DevMsg("Found proc: %u\n", (bool)(proc));
+	return proc;
+	//return 0;
 }
 
 static uintptr_t v3d_get_current_framebuffer()
 {
-	DevMsg("Getting frame buffer...\n");
-	return 0;
+	//return 0;
+	//return 0;	// alcaro says this is related to shaders, and even tho cores don't explicity expect 0 as a response, they handle it well.
+
+	//DevMsg("Getting frame buffer...\n");
+	return (uintptr_t)0;
+	/*
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 
@@ -1110,10 +1352,27 @@ static uintptr_t v3d_get_current_framebuffer()
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
-	DevMsg("Getting frame buffer...\n");
+	DevMsg("2nd pitt stop: %u\n", info->framebuffer);
 
-	//(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
-	return GL_BACK_LEFT;// info->framebuffer;// GL_FRAMEBUFFER;// glfwGetCurrentContext();
+//	int width, height;
+//	glfwGetFramebufferSize(info->window, &width, &height);
+//	DevMsg("Width: %i Height: %i\n", width, height);
+
+	return (uintptr_t)info->framebuffer;//(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
+	//return GL_FRAMEBUFFER;// info->framebuffer;// GL_FRAMEBUFFER;// glfwGetCurrentContext();
+	*/
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	DevMsg("OpenGL framebuffer size has changed to: %i x %i\n", width, height);
+	glViewport(0, 0, width, height);
+}
+
+bool set_rumble_state(unsigned port, enum retro_rumble_effect effect, uint16_t strength)
+{
+	DevMsg("libretro: Ignoring %s rumble effect on port %u w/ strength %u\n", (effect == 0) ? "STRONG" : "WEAK", port, strength);
+	return false;
 }
 
 bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
@@ -1130,9 +1389,16 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 	//1 SET_ROTATION, no known supported core uses that. Cores are expected to deal with failures, anyways.
 	//2 GET_OVERSCAN, I have no opinion. Use the default.
+	if (cmd == RETRO_ENVIRONMENT_GET_OVERSCAN) //2
+	{
+		DevMsg("libretro: Asking frontend if overscan should be included or cropped.\n");
+		*(bool*)data = true;
+		return true;
+	}
+
 	if (cmd == RETRO_ENVIRONMENT_GET_CAN_DUPE) //3
 	{
-		DevMsg("libretro: Asking backend if CAN_DUPE.\n");
+		DevMsg("libretro: Asking frontend if CAN_DUPE.\n");
 		*(bool*)data = false;
 		return true;
 	}
@@ -1140,6 +1406,14 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	//4 was removed and can safely be ignored.
 	//5 was removed and can safely be ignored.
 	//6 SET_MESSAGE, ignored because I don't know what to do with that.
+	if (cmd == RETRO_ENVIRONMENT_SET_MESSAGE)
+	{
+		const struct retro_message* msg = (const struct retro_message*)data;
+		std::string text = msg->msg;
+		DevMsg("libretro: Set Message (%u): %s\n", msg->frames, text.c_str());
+		return true;
+	}
+
 	//7 SHUTDOWN, ignored because no supported core has any reason to have Off buttons.
 	//8 SET_PERFORMANCE_LEVEL, ignored because I don't support a wide range of powers.
 	if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY) // note that libretro path might be wanting a full file location including extension, but ignore that for now and treat it like the others.
@@ -1147,7 +1421,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		// FIXME: MEMORY LEAK
 		// FIXME: there needs to be book keeping so that these temp const char*'s can be cleaned up!!!
 		char* buf = new char[AA_MAX_STRING];
-
+		DevMsg("String requested...\n");
 		std::string folder;
 
 		if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY)
@@ -1163,6 +1437,8 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 			g_pFullFileSystem->CreateDirHierarchy(folder.c_str());
 
 		Q_strcpy(buf, folder.c_str());// corePath.c_str());
+
+		//V_FixSlashes(buf, '/');
 
 		DevMsg("libretro: Returning string for ");
 		if (cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY)
@@ -1235,15 +1511,304 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 	if (cmd == RETRO_ENVIRONMENT_SET_HW_RENDER) //14
 	{
-		DevMsg("core requested to set environment HW render\n");
-		return false;
+		if (!AA_LIBRETRO_3D)
+		{
+			DevMsg("libretro: Denying request for OpenGL context.\n");
+			return false;
+		}
+		else
+		{
+			DevMsg("libretro: Core requesting HW context: ");
 
-		struct retro_hw_render_callback * render = (struct retro_hw_render_callback*)data;
-		//render->get_current_framebuffer = //(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
-		render->get_current_framebuffer = v3d_get_current_framebuffer;
-		render->get_proc_address = v3d_get_proc_address;
-		return true;
-		
+			struct retro_hw_render_callback * render = (struct retro_hw_render_callback*)data;
+			render->get_current_framebuffer = v3d_get_current_framebuffer;
+			render->get_proc_address = v3d_get_proc_address;
+
+			info->raw->context_reset = (retro_hw_context_reset_t)render->context_reset;
+			info->raw->context_destroy = (retro_hw_context_reset_t)render->context_destroy;
+			info->context_type = render->context_type;
+			info->depth = render->depth;
+			info->stencil = render->stencil;
+			info->bottom_left_origin = render->bottom_left_origin;
+			//info->version_major;
+			//info->version_minor;
+			info->cache_context = render->cache_context;
+			info->debug_context = render->debug_context;
+
+			//GLFW_ORIGIN_UL_BIT;
+			//glfwReadImage with the GLFW_ORIGIN_UL_BIT
+
+			unsigned api;
+			switch (info->context_type)
+			{
+				case RETRO_HW_CONTEXT_NONE:
+					DevMsg("NONE (UNSUPPORTED)\n");
+					api = GLFW_NO_API;
+					info->version_major = 0;
+					info->version_minor = 0;
+					break;
+
+				case RETRO_HW_CONTEXT_OPENGL:
+					DevMsg("OpenGL (2.x)\n");
+					api = GLFW_OPENGL_API;
+					info->version_major = 2;
+					info->version_minor = 0;
+					break;
+
+				case RETRO_HW_CONTEXT_OPENGLES2:
+					DevMsg("OpenGL ES (2.0)\n");
+					api = GLFW_OPENGL_ES_API;
+					info->version_major = 2;
+					info->version_minor = 0;
+					break;
+
+				case RETRO_HW_CONTEXT_OPENGL_CORE:
+					DevMsg("OpenGL (%u.%u)\n", render->version_major, render->version_minor);
+					api = GLFW_OPENGL_API;
+					info->version_major = render->version_major;
+					info->version_minor = render->version_minor;
+					break;
+
+				case RETRO_HW_CONTEXT_OPENGLES3:
+					DevMsg("OpenGL ES (3.0)\n");
+					api = GLFW_OPENGL_ES_API;
+					info->version_major = 3;
+					info->version_minor = 0;
+					break;
+
+				case RETRO_HW_CONTEXT_OPENGLES_VERSION:
+					DevMsg("OpenGL ES (%u.%u)\n", render->version_major, render->version_minor);
+					api = GLFW_OPENGL_ES_API;
+					info->version_major = render->version_major;
+					info->version_minor = render->version_minor;
+					break;
+
+				case RETRO_HW_CONTEXT_VULKAN:
+					DevMsg("Vulkan (UNSUPPORTED)\n");
+					api = GLFW_NO_API;
+					info->version_major = 0;
+					info->version_minor = 0;
+					break;
+
+				default:
+					DevMsg("UNKNOWN (UNSUPPORTED)\n");
+					api = GLFW_NO_API;
+					info->version_major = 0;
+					info->version_minor = 0;
+					break;
+			}
+
+			DevMsg("\tdepth: %i\n", info->depth);
+			DevMsg("\tstencil: %i\n", info->stencil);
+			DevMsg("\tbottom_left_origin: %i\n", info->bottom_left_origin);
+			DevMsg("\tversion_major: %u\n", info->version_major);
+			DevMsg("\tversion_minor: %u\n", info->version_minor);
+			DevMsg("\tcache_context: %i\n", info->cache_context);
+			DevMsg("\tdebug_context: %i\n", info->debug_context);
+			
+			// init 3d
+			if (glfwInit())
+			{
+				//glfwWindowHint(GLFW_SAMPLES, 4);
+				//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+				//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+				glfwWindowHint(GLFW_CLIENT_API, api);
+				glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, info->version_major);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, info->version_minor);
+				glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+				glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+				//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+				//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);// GLFW_OPENGL_ANY_PROFILE);// GLFW_OPENGL_CORE_PROFILE);
+				glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);	// invisible window
+
+				//GLFWwindow* window = glfwCreateWindow(640, 480, "", NULL, NULL);
+				//HWND myHWnd = FindWindow(null, "AArcade: Source");
+				GLFWwindow* window = glfwCreateWindow(1280, 720, "My OPENGL", NULL, NULL);
+				//glfwGetWGLContext(window);
+
+				if (window)
+				{
+				//	render->get_current_framebuffer = v3d_get_current_framebuffer;
+					//render->get_proc_address = v3d_get_proc_address;
+				//	return true;
+
+					glewExperimental = GL_TRUE; // Needed in core profile
+					glfwMakeContextCurrent(window);
+					glewInit();
+
+					DevMsg("Window created!\n");
+					info->window = window;
+					glfwSetFramebufferSizeCallback(info->window, framebuffer_size_callback);	// to detect framebuffer size changes (probably not needed for libretro)
+					
+					//glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);	// to detect framebuffer size changes (probably not needed for libretro)
+
+					// get version info
+					const GLubyte* renderer = glGetString(GL_RENDERER); // get renderer string
+					const GLubyte* version = glGetString(GL_VERSION); // version as a string
+					DevMsg("Renderer: %s\n", renderer);
+					DevMsg("OpenGL version supported %s\n", version);
+					DevMsg("=========================\n");
+
+					//info->framebuffer = new GLuint[1];
+					//glGenFramebuffers(1, &info->framebuffer[0]);
+					//glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer[0]);
+
+
+					/*
+					info->framebuffer = new GLuint[1];
+					GLuint* tex = new GLuint[1];
+					glGenTextures(1, tex);
+					glBindTexture(GL_TEXTURE_2D, tex[0]);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1280, 720, 0, GL_RGB8, GL_UNSIGNED_BYTE, null);	// GL_RGB
+					glGenFramebuffers(1, &info->framebuffer[0]);
+					glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer[0]);
+					glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[0], 0);
+					if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+						DevMsg("Something went wrong.\n");
+					else
+					{
+						int width, height;
+						glfwGetFramebufferSize(window, &width, &height);
+						DevMsg("Frame buffer ready: %i x %i\n", width, height);
+					}
+					*/
+
+					//glfwPollEvents();
+
+					//glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+					//glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+					//glClear(GL_COLOR_BUFFER_BIT);
+					//glfwSwapBuffers(info->window);
+					//glfwPollEvents();
+
+					//render->context_reset = v3d_context_reset;
+					//render->context_destroy = v3d_context_destroy;
+
+					glDisable(GL_DEPTH_TEST);
+					//glfwSwapInterval(1);
+
+					// The depth buffer
+					/*
+					GLuint depthrenderbuffer;
+					glGenRenderbuffers(1, &depthrenderbuffer);
+					glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+					glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1280, 720);
+					glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+					glEnable(GL_DEPTH_TEST);
+					*/
+
+					//glEnable(GL_DOUBLEBUFFER);
+					//glEnable(GL_RGB);
+					//glPixelStorei(GL_PACK_ALIGNMENT, 3);
+					glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+					/*
+					if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+						DevMsg("Something went wrong.\n");
+					else
+					{
+						int width, height;
+						glfwGetFramebufferSize(window, &width, &height);
+						DevMsg("Frame buffer ready: %i x %i\n", width, height);
+					}
+					*/
+
+					//glViewport(0, 0, 1280, 720); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+					// reset the context (TODO: Make sure the window is ready to reset its context!
+					info->raw->context_reset();
+
+					DevMsg("done.\n");
+
+
+
+
+
+
+
+
+					// The texture we're going to render to
+					//GLuint renderedTexture;
+					//glGenTextures(1, &renderedTexture);
+					
+					// "Bind" the newly created texture : all future texture functions will modify this texture
+					//glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+					// Give an empty image to OpenGL ( the last "0" )
+					//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+
+					// Poor filtering. Needed !
+					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+					// just make sure to tell glfw you want depth/stencil buffers; if you're using fb0, you can't change that after creating the window
+					// Alcaro: glfw deals with context creation, if you're using that then you can ignore anything in the ifdefs
+
+					// The depth buffer
+					//GLuint depthrenderbuffer;
+					//glGenRenderbuffers(1, &depthrenderbuffer);
+					//glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
+					//glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1024, 1024);
+					//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
+
+					// Set "renderedTexture" as our colour attachement #0
+					//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+
+					// Set the list of draw buffers.
+					//GLenum DrawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
+					//glGenFramebuffers(1, &info->framebuffer);
+					//glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer);
+					//glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
+
+					// Always check that our framebuffer is ok
+					//if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+					//{
+					////	DevMsg("Something went wrong.\n");
+					//}
+					//else
+					//	DevMsg("Frame buffer ready.\n");
+
+					// Render to our framebuffer
+					//glBindFramebuffer(GL_FRAMEBUFFER, info->framebuffer);
+					//glViewport(0, 0, 1024, 1024); // Render on the whole framebuffer, complete from the lower left corner to the upper right
+
+					//glCreateContex()
+
+					//glfwGetWGLContext(window);
+
+					//glfwGetWGLContext
+
+					//DevMsg("done changing frame buffer.\n");
+				}
+				else
+					DevMsg("Failed to create openGL window.\n");
+
+				//if (info->window)
+				//{
+					//DevMsg("Painting initial frame...\n");
+					/*
+					// background color
+					glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+					glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+					glClear(GL_COLOR_BUFFER_BIT);
+
+					glfwSwapBuffers(info->window);
+					glfwPollEvents();
+					*/
+
+					//glfwPollEvents();
+					//render->context_reset = v3d_context_reset;
+					//render->context_destroy = v3d_context_destroy;
+					//render->get_current_framebuffer = //(uintptr_t)GL_FRAMEBUFFER;// (uintptr_t)info->framebuffer;// info->framebuffer;
+					//render->get_current_framebuffer = v3d_get_current_framebuffer;
+					//render->get_proc_address = v3d_get_proc_address;
+				//}
+
+				DevMsg("Fin\n");
+				return true;
+			}
+
+			return false;
+		}
 		/*
 		if (!this->create3d) return false;
 		struct retro_hw_render_callback * render = (struct retro_hw_render_callback*)data;
@@ -1342,7 +1907,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 		bool bOptionListHasChanged = true;
 		bool bOptionsHaveChanged = true;
-		
+		DevMsg("Num vars is: %i\n", numvars);
 		for (unsigned int i = 0; i<numvars; i++)
 		{
 			// Initialize to 0 index for this variable's value
@@ -1413,6 +1978,30 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	{
 		//DevMsg("libretro: Fetching if options have changed (%s).\n", (s_bOptionsHaveChanged)?"true":"false");
 		*(bool*)data = info->optionshavechanged;
+		return true;
+	}
+
+	if (cmd == RETRO_ENVIRONMENT_GET_PERF_INTERFACE) //18
+	{
+		DevMsg("libretro: UNHANDLED RETRO_ENVIRONMENT_GET_PERF_INTERFACE\n");
+		struct retro_perf_callback *cb = (struct retro_perf_callback*)data;
+
+		cb->get_time_usec = null;
+		cb->get_cpu_features = null;
+		cb->get_perf_counter = null;
+
+		cb->perf_register = null;
+		cb->perf_start = null;
+		cb->perf_stop = null;
+		cb->perf_log = null;
+		return false;
+	}
+
+	if (cmd == RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE) //23
+	{
+		struct retro_rumble_interface * iface = (struct retro_rumble_interface*)data;
+		DevMsg("libretro: Rumble interface requested.\n");
+		iface->set_rumble_state = set_rumble_state;
 		return true;
 	}
 
@@ -1532,7 +2121,8 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 	if (cmd == RETRO_ENVIRONMENT_SHUTDOWN)
 	{
-		info->close = true;
+		//info->close = true;
+		info->state = 6;
 		// should probably show some kind of related items screen when a video ends.
 		return true;
 	}
@@ -1590,9 +2180,10 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 
 void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsigned height, size_t pitch)
 {
-	if (!data)
-		return;
-
+//	if (!data || AA_LIBRETRO_3D)
+	//	return;
+		//glXSwapBuffers();
+	//DevMsg("Video Refresh: %u %u %i\n", width, height, pitch);
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 
@@ -1602,6 +2193,19 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 	if (info->close)
 		return;
+
+	info->lastframewidth = width;
+	info->lastframeheight = height;
+	info->lastframepitch = pitch;
+
+	if (!data || AA_LIBRETRO_3D)
+		return;
+
+	//if (AA_LIBRETRO_3D && info->context_type != RETRO_HW_CONTEXT_NONE && data == RETRO_HW_FRAME_BUFFER_VALID)
+		//glfwSwapBuffers(info->window);
+	
+//	if (data == RETRO_HW_FRAME_BUFFER_VALID)
+	//	DevMsg("hardware rendered frame given...\n");
 
 	//glfwSwapBuffers(info->window);
 	//return;
@@ -1628,16 +2232,36 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 		}
 	}
 
-	WORD red_mask = 0xF800;
-	WORD green_mask = 0x7E0;
-	WORD blue_mask = 0x1F;
+	
+		//glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+		//glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+		//glClear(GL_COLOR_BUFFER_BIT);
+		//glfwMakeContextCurrent(info->window);
+		//glfwSwapBuffers(info->window);
+		//glfwPollEvents();	// this is what makes the window actually be responsive
+
+
+	//WORD red_mask = 0xF800;
+	//WORD green_mask = 0x7E0;
+	//WORD blue_mask = 0x1F;
 	
 	//DevMsg("Doin it\n");
 
 	//DevMsg("video refresh\n");
 
 	void* dest = malloc(pitch*height);
-	Q_memcpy(dest, data, pitch*height);
+	if (AA_LIBRETRO_3D && info->context_type != RETRO_HW_CONTEXT_NONE && data == RETRO_HW_FRAME_BUFFER_VALID)
+	{
+		//DevMsg("Format is: %i %i x %i\n", info->videoformat, pitch, height);
+		glReadPixels(0, 0, pitch / 3, height, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, dest);// GL_RGBA8	//GL_RGB
+		//glfwSwapInterval(1);
+		//glfwSwapBuffers(info->window);
+		//glfwPollEvents();
+	}
+	else
+	{
+		Q_memcpy(dest, data, pitch*height);
+	}
 
 	if (info->lastframedata)
 		free(info->lastframedata);
@@ -1648,7 +2272,6 @@ void C_LibretroInstance::cbVideoRefresh(const void * data, unsigned width, unsig
 	info->lastframepitch = pitch;
 
 	info->readytocopyframe = true;
-
 	//pLibretroInstance->m_mutex.unlock();
 	//DevMsg("Child Unlock\n");
 }
@@ -1658,6 +2281,7 @@ void C_LibretroInstance::cbAudioSample(int16_t left, int16_t right)
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+	DevMsg("cbAudioSample\n");
 	/*
 	if (info->audiobufferpos < 512)
 	{
@@ -1710,10 +2334,12 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 
 	if (info->samplerate <= 0 || frames <= 0 || !info->audiostream ) // || s_threadAudioParams.frames
 		return 0;
+	
+	//DevMsg("Writing %u frames: %i\n", frames, data);
 
 	PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
 	return frames;
-
+	/*
 	int16_t* buffer = info->audiobuffer;
 	unsigned int size = info->audiobuffersize;
 	unsigned int pos = info->audiobufferpos;
@@ -1727,12 +2353,16 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 		Q_memcpy(buffer + (pos * 2), data, sizeof(int16_t) * processedCount * 2);
 		info->audiobufferpos += processedCount;
 	}
+
 	return processedCount;
+	*/
 }
 
 void C_LibretroInstance::cbInputPoll(void)
 {
+	//DevMsg("cbInputPoll\n");
 	// TODO: Implement this.  it might be related to timing of analog & mouse input devices because those expect offsets relative to the last time they were polled.
+	// This is likely supposed to trigger the polling of input states on the FE for the core to later retrieve with InputState.
 	//DevMsg("libretro: Input Poll called.\n");
 }
 
@@ -2005,13 +2635,106 @@ void C_LibretroInstance::ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, u
 //	DevMsg("Main Unlock\n");
 }
 
+void C_LibretroInstance::ResizeFrameFromRGB888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth)
+{
+	//DevMsg("Thread ID: %u\n", ThreadGetCurrentId);
+	//	uint uId = ThreadGetCurrentId();
+	//	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
+	//	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
+	//LibretroInstanceInfo_t* info = m_info;
+
+	//if (!m_info->lastframedata)
+	//	DevMsg("Main Lock\n");
+	if (!m_info->lastframedata)
+		return;
+
+	//	m_mutex.lock();
+	//	if (!m_info->lastframedata || !m_info->readyfornextframe)
+	//	return;
+
+
+	//m_info->readyfornextframe = false;
+
+	//DevMsg("Resizing a %ux%u %iBBP (%i pitch) image to %ux%u %iBBP (%i pitch)\n", sourceWidth, sourceHeight, sourceDepth, sourcePitch, destWidth, destHeight, destDepth, destPitch);
+	//	DevMsg("Test: %s\n", pDest);
+
+	unsigned int sourceWidthCopy = sourceWidth;
+	unsigned int sourceHeightCopy = sourceHeight;
+	size_t sourcePitchCopy = sourcePitch;
+	unsigned int sourceDepthCopy = sourceDepth;
+
+	//void* pSrcCopy = malloc(sourcePitchCopy * sourceHeightCopy);
+	//Q_memcpy(pSrcCopy, pSrc, sourcePitchCopy * sourceHeightCopy);
+
+
+	const unsigned char* pRealSrc = (const unsigned char*)pSrc;
+	unsigned char* pDstRow = (unsigned char*)pDst;
+	for (int dstY = 0; dstY<destHeight; dstY++)
+	{
+		unsigned int srcY = dstY * sourceHeight / destHeight;
+		const unsigned char* pSrcRow = pRealSrc + srcY*(sourcePitch);
+
+		unsigned char* pDstCur = pDstRow;
+
+		for (int dstX = 0; dstX<destWidth; dstX++)
+		{
+			int srcX = dstX * sourceWidth / destWidth;
+			pDstCur[0] = pSrcRow[srcX*sourceDepth + 2];
+			pDstCur[1] = pSrcRow[srcX*sourceDepth + 1];
+			pDstCur[2] = pSrcRow[srcX*sourceDepth + 0];
+
+			pDstCur[3] = 255;
+
+			pDstCur += destDepth;
+		}
+
+		pDstRow += destPitch;
+	}
+
+	/*
+	const unsigned char* pRealSrc = (const unsigned char*)pSrc;
+	unsigned char* pDstRow = (unsigned char*)pDst;
+	for (int dstY = 0; dstY<destHeight; dstY++)
+	{
+	unsigned int srcY = dstY * sourceHeight / destHeight;
+	const unsigned char* pSrcRow = pRealSrc + srcY*(sourcePitch);
+
+	unsigned char* pDstCur = pDstRow;
+
+	for (int dstX = 0; dstX<destWidth; dstX++)
+	{
+	int srcX = dstX * sourceWidth / destWidth;
+	pDstCur[0] = pSrcRow[srcX*sourceDepth + 0];
+	pDstCur[1] = pSrcRow[srcX*sourceDepth + 1];
+	pDstCur[2] = pSrcRow[srcX*sourceDepth + 2];
+
+	pDstCur[3] = 255;
+
+	pDstCur += destDepth;
+	}
+
+	pDstRow += destPitch;
+	}
+	*/
+
+	//	free(pSrcCopy);
+
+	m_info->readyfornextframe = true;
+
+	//	m_mutex.unlock();
+	//	DevMsg("Main Unlock\n");
+}
+
 void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth)
 {
-	if (m_info->copyingframe || !m_info->readytocopyframe || g_pAnarchyManager->GetSuspendEmbedded())
+	if ( m_info->copyingframe || !m_info->readytocopyframe || g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
 	m_info->copyingframe = true;
 	m_info->readytocopyframe = false;
+
+
+
 	//DevMsg("Render: Do it!\n");
 	//RETRO_PIXEL_FORMAT_0RGB1555
 
@@ -2019,12 +2742,21 @@ void C_LibretroInstance::CopyLastFrame(unsigned char* dest, unsigned int width, 
 //	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 	//LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 	//LibretroInstanceInfo_t* info = m_info;
-	if (m_info->videoformat == RETRO_PIXEL_FORMAT_RGB565)
-		this->ResizeFrameFromRGB565(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
-	else if (m_info->videoformat == RETRO_PIXEL_FORMAT_XRGB8888)
-		this->ResizeFrameFromXRGB8888(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 4, width, height, pitch, depth);
+
+
+	if (m_info->context_type != RETRO_HW_CONTEXT_NONE)
+	{
+		this->ResizeFrameFromRGB888(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
+	}
 	else
-		this->ResizeFrameFromRGB1555(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
+	{
+		if (m_info->videoformat == RETRO_PIXEL_FORMAT_RGB565)
+			this->ResizeFrameFromRGB565(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
+		else if (m_info->videoformat == RETRO_PIXEL_FORMAT_XRGB8888)
+			this->ResizeFrameFromXRGB8888(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 4, width, height, pitch, depth);
+		else
+			this->ResizeFrameFromRGB1555(m_info->lastframedata, dest, m_info->lastframewidth, m_info->lastframeheight, m_info->lastframepitch, 3, width, height, pitch, depth);
+	}
 
 	m_info->copyingframe = false;
 }

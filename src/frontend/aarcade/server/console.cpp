@@ -73,8 +73,8 @@ void SpawnShortcut(const CCommand &args)
 	MatrixToAngles(entToWorld, angles);
 	*/
 
-	Vector origin(Q_atof(args[3]), Q_atof(args[4]), Q_atof(args[5]));
-	QAngle angles(Q_atof(args[6]), Q_atof(args[7]), Q_atof(args[8]));
+	Vector origin(Q_atof(args[4]), Q_atof(args[5]), Q_atof(args[6]));
+	QAngle angles(Q_atof(args[7]), Q_atof(args[8]), Q_atof(args[9]));
 
 	// Now spawn it
 	CPropShortcutEntity *pShortcut = dynamic_cast<CPropShortcutEntity*>(CreateEntityByName("prop_shortcut"));
@@ -87,7 +87,7 @@ void SpawnShortcut(const CCommand &args)
 	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z);
 	pShortcut->KeyValue("angles", buf);
 
-	pShortcut->KeyValue("model", args[2]);
+	pShortcut->KeyValue("model", args[3]);
 	pShortcut->KeyValue("solid", "6");		// for 	V_PHYSICS
 	//pShortcut->KeyValue("solid", "0");
 	pShortcut->KeyValue("fademindist", "-1");
@@ -96,8 +96,9 @@ void SpawnShortcut(const CCommand &args)
 	pShortcut->KeyValue("MinAnimTime", "5");
 	pShortcut->KeyValue("MaxAnimTime", "10");
 	pShortcut->KeyValue("spawnflags", "8");
-	pShortcut->KeyValue("itemId", args[1]);
-	pShortcut->KeyValue("slave", args[10]);
+	pShortcut->KeyValue("objectId", args[1]);
+	pShortcut->KeyValue("itemId", args[2]);
+	pShortcut->KeyValue("slave", args[11]);
 
 	pShortcut->Precache();
 	DispatchSpawn(pShortcut);
@@ -105,7 +106,7 @@ void SpawnShortcut(const CCommand &args)
 
 	pShortcut->SetSolid(SOLID_VPHYSICS);
 
-	pShortcut->SetModelScale(Q_atof(args[9]), 0);
+	pShortcut->SetModelScale(Q_atof(args[10]), 0);
 
 	IPhysicsObject* pPhysics = pShortcut->VPhysicsGetObject();
 	if (!pPhysics && pShortcut->CreateVPhysics())
@@ -595,3 +596,74 @@ void SetCabPos(const CCommand &args)
 
 ConCommand setcabpos("setcabpos", SetCabPos, "For internal use only.");
 */
+
+void RemoveObject(const CCommand &args)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	//CPropShortcutEntity
+	//CDynamicProp* pProp = NULL;
+	//pProp = dynamic_cast<CDynamicProp*>(CBaseEntity::Instance(Q_atoi(args[1])));
+	CPropShortcutEntity* pProp = dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(Q_atoi(args[1])));
+	if (!pProp)
+	{
+		DevMsg("Invalid entindex specified for \"remove\" command!\n");
+		return;
+	}
+
+	inputdata_t emptyDummy;
+	pProp->InputKillHierarchy(emptyDummy);
+}
+ConCommand removeobject("removeobject", RemoveObject, "Deletes an object from the game.");
+
+void SetObjectItemId(const CCommand &args)
+{
+	if (args.ArgC() < 3)
+		return;
+
+	//CPropShortcutEntity
+	//CDynamicProp* pProp = NULL;
+	//pProp = dynamic_cast<CDynamicProp*>(CBaseEntity::Instance(Q_atoi(args[1])));
+	std::string itemId = args[2];
+	std::string modelFile = args[3];
+	CPropShortcutEntity* pProp = dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(Q_atoi(args[1])));
+	if (!pProp)
+	{
+		DevMsg("Invalid entindex specified for \"setobjectitemid\" command!\n");
+		return;
+	}
+
+	pProp->PrecacheModel(modelFile.c_str());
+	pProp->SetModel(modelFile.c_str());	// This might need to be done server-side (maybe in addition)
+	// does physics need to be adjusted for the new model??
+	pProp->SetItemId(itemId);
+}
+ConCommand setobjectitemid("setobjectitemid", SetObjectItemId, "");
+
+void SetScale(const CCommand &args)
+{
+	float flScale = Q_atof(args[2]);
+
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+	{
+		CPropShortcutEntity* pShortcutEntity = dynamic_cast<CPropShortcutEntity*>(pEntity);
+		pShortcutEntity->SetModelScale(flScale, 0.0f);
+	}
+}
+ConCommand setscale("setscale", SetScale, "Interal use only.", FCVAR_HIDDEN);
+
+void SetAngles(const CCommand &args)
+{
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+	{
+		QAngle angles;
+		angles.x = Q_atoi(args[2]);
+		angles.y = Q_atoi(args[3]);
+		angles.z = Q_atoi(args[4]);
+		pEntity->SetAbsAngles(angles);
+	}
+}
+ConCommand setangles("setangles", SetAngles, "Internal use only.", FCVAR_HIDDEN);

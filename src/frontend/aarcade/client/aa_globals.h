@@ -2,6 +2,10 @@
 #define AA_MAX_STRING 1024
 #endif
 
+#ifndef AA_LIBRETRO_3D
+#define AA_LIBRETRO_3D false
+#endif
+
 #ifndef AA_EMBEDDED_INSTANCE_WIDTH
 #define AA_EMBEDDED_INSTANCE_WIDTH 1280
 #endif

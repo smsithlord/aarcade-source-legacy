@@ -289,7 +289,10 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	JSObject& systemObject = result.ToObject();
 	systemObject.SetCustomMethod(WSLit("quit"), false);
 	systemObject.SetCustomMethod(WSLit("launchItem"), false);
-	systemObject.SetCustomMethod(WSLit("spawnItem"), false);
+	systemObject.SetCustomMethod(WSLit("spawnItem"), false);	// OBSOLETE!!
+	systemObject.SetCustomMethod(WSLit("spawnEntry"), false);
+	systemObject.SetCustomMethod(WSLit("setLibraryBrowserContext"), false);
+	systemObject.SetCustomMethod(WSLit("getLibraryBrowserContext"), true);
 	systemObject.SetCustomMethod(WSLit("didSelectPopupMenuItem"), true);
 	systemObject.SetCustomMethod(WSLit("didCancelPopupMenu"), true);
 	systemObject.SetCustomMethod(WSLit("loadFirstLocalApp"), false);
@@ -306,6 +309,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getSelectedWebTab"), true);
 	systemObject.SetCustomMethod(WSLit("requestActivateInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("simpleImageReady"), false);
+	systemObject.SetCustomMethod(WSLit("importSteamGames"), true);
 	systemObject.SetCustomMethod(WSLit("saveLibretroKeybind"), false);
 	systemObject.SetCustomMethod(WSLit("getLibretroKeybinds"), true);
 	//systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
@@ -321,6 +325,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
+	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));
@@ -328,25 +333,34 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 		return;
 
 	JSObject& libraryObject = result.ToObject();
+
+	// SUPER DUPER LIBRARY QUERY IN GENERALIZED ORDINARY GUY FORM
+	libraryObject.SetCustomMethod(WSLit("getFirstLibraryEntry"), true);
+	libraryObject.SetCustomMethod(WSLit("getNextLibraryEntry"), true);
+	libraryObject.SetCustomMethod(WSLit("findFirstLibraryEntry"), true);
+	libraryObject.SetCustomMethod(WSLit("findNextLibraryEntry"), true);
+	// EACH QUERY HANDLE IS CLEARED WHEN IT IS USED TO EXHAUSTION
+	// *ALL* QUERY HANDLES ARE CLEARED ON MAP TRANSITION FOR GARBAGE COLLECTION OF UNCLOSED HANDLES
+
 	libraryObject.SetCustomMethod(WSLit("getAllLibraryTypes"), true);
 	libraryObject.SetCustomMethod(WSLit("getLibraryType"), true);
 	libraryObject.SetCustomMethod(WSLit("getAllLibraryApps"), true);
 	libraryObject.SetCustomMethod(WSLit("getLibraryApp"), true);
-	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);
-	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);	// OBSOLETE!
+	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("getLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("getSelectedLibraryItem"), true);
-	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);
-	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);	// OBSOLETE!
+	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
 	libraryObject.SetCustomMethod(WSLit("createItem"), true);
 	libraryObject.SetCustomMethod(WSLit("saveItem"), true);
 
-	libraryObject.SetCustomMethod(WSLit("getFirstLibraryModel"), true);
-	libraryObject.SetCustomMethod(WSLit("getNextLibraryModel"), true);
-	libraryObject.SetCustomMethod(WSLit("findFirstLibraryModel"), true);
-	libraryObject.SetCustomMethod(WSLit("findNextLibraryModel"), true);
+	libraryObject.SetCustomMethod(WSLit("getFirstLibraryModel"), true);	// OBSOLETE!
+	libraryObject.SetCustomMethod(WSLit("getNextLibraryModel"), true);	// OBSOLETE!
+	libraryObject.SetCustomMethod(WSLit("findFirstLibraryModel"), true);	// OBSOLETE!
+	libraryObject.SetCustomMethod(WSLit("findNextLibraryModel"), true);	// OBSOLETE!
 
 	// CALLBACKS
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.callbacks"));

@@ -728,7 +728,7 @@ body
 	background-color: #333;
 }
 
-#filterTypeSelect
+#filterSelect
 {
 	width: 50%;
 }
@@ -786,7 +786,7 @@ body
 	opacity: 1.0;
 }
 
-.libraryItemType
+.libraryEntryFilter
 {
 	display: inline-block;
 	color: #999;
@@ -799,7 +799,7 @@ body
 	font-size: 16px;
 }
 
-.libraryItemTitle
+.libraryEntryTitle
 {
 	display: inline-block;
 	white-space: normal;
@@ -860,18 +860,18 @@ body
 	padding: 2px;
 }
 
-.libraryItemContainer
+.libraryEntryContainer
 {
 	width: 100%;
 }
 
-#libraryContainer .libraryItemContainer:nth-of-type(even)
+#libraryContainer .libraryEntryContainer:nth-of-type(even)
 {
 	background-color: rgba(0, 0, 0, 0.5);
 	padding: 4px;
 }
 
-#libraryContainer .libraryItemContainer:nth-of-type(odd)
+#libraryContainer .libraryEntryContainer:nth-of-type(odd)
 {
 	background-color: rgba(50, 50, 50, 0.5);/*0.7);*/
 	padding: 4px;

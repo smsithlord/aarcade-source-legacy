@@ -32,6 +32,8 @@ public:
 
 private:
 	CNetworkVar(bool, m_bSlave);
+	CNetworkVar(string_t, m_objectId);
+	char* m_objectIdBuf;
 	CNetworkVar(string_t, m_itemId);
 	char* m_itemIdBuf;
 };

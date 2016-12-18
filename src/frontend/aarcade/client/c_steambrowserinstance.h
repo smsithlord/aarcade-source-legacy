@@ -56,14 +56,15 @@ public:
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
-	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
-	void OnKeyCodeReleased(vgui::KeyCode code);
+	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
+	void OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
 
 	void InjectJavaScript(std::string code);
 
 	// accessors
 	std::string GetURL() { return m_URL; }
 	ITexture* GetTexture() { return m_pTexture; }
+	int GetLastVisibleFrame() { return m_iLastVisibleFrame; }
 	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
 	C_InputListener* GetInputListener();
 	unsigned int GetHandle() { return m_unHandle; }

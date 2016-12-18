@@ -76,6 +76,8 @@ public:
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
 
+	void BeginImportSteamGames();
+
 	void ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands);
 	
 	//void Run();
@@ -103,10 +105,12 @@ public:
 	void ScanForLegacySaveRecursive(std::string path);
 
 	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut);
-	void DeactivateObjectPlacementMode();
+	void DeactivateObjectPlacementMode(bool confirm);
 
 	// helpers
-	std::string GenerateUniqueId();
+	void GenerateUniqueId(char* result);
+	const char* GenerateUniqueId();
+	const char* GenerateUniqueId2();
 	std::string ExtractLegacyId(std::string itemFile, KeyValues* item = null);
 	const char* GenerateLegacyHash(const char* text);
 	const char* GenerateCRC32Hash(const char* text);

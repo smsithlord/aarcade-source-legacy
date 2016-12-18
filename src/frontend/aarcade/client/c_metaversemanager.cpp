@@ -4,6 +4,7 @@
 #include "aa_globals.h"
 #include "c_metaversemanager.h"
 #include "filesystem.h"
+#include "vgui/IInput.h"
 #include <algorithm>
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -17,6 +18,10 @@ C_MetaverseManager::C_MetaverseManager()
 	m_pPreviousModelSearchInfo = null;
 	m_pSpawningObject = null;
 	m_pSpawningObjectEntity = null;
+	m_iSpawningRotationAxis = 1;
+	m_spawningAngles.x = 0;
+	m_spawningAngles.y = 0;
+	m_spawningAngles.z = 0;
 }
 
 C_MetaverseManager::~C_MetaverseManager()
@@ -127,6 +132,34 @@ void C_MetaverseManager::Update()
 //		UTIL_SetOrigin(m_pSpawningObjectEntity, tr.endpos);
 //		m_pSpawningObjectEntity->SetAbsAngles(angles);
 
+		if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
+		{
+			if (vgui::input()->IsKeyDown(KEY_E))
+			{
+				int x, y;
+				vgui::input()->GetCursorPos(x, y);
+
+				switch (m_iSpawningRotationAxis)
+				{
+					case 0:
+						m_spawningAngles.x += x - ScreenWidth() / 2;
+						break;
+
+					case 1:
+						m_spawningAngles.y += x - ScreenWidth() / 2;
+						break;
+
+					case 2:
+						m_spawningAngles.z += x - ScreenWidth() / 2;
+						break;
+				}
+			}
+
+			angles.x += m_spawningAngles.x;
+			angles.y += m_spawningAngles.y;
+			angles.z += m_spawningAngles.z;
+		}
+
 		// FIXME: that stuff should be done server-side so collision boxes are updated properly...
 		engine->ServerCmd(VarArgs("setcabpos %i %f %f %f %f %f %f \"%s\";\n", m_pSpawningObjectEntity->entindex(), tr.endpos.x, tr.endpos.y, tr.endpos.z, angles.x, angles.y, angles.z, ""), false);
 	}
@@ -148,6 +181,77 @@ void C_MetaverseManager::OnMountAllWorkshopsCompleted()
 //	g_pAnarchyManager->OnMountAllWorkshopsComplete();
 }
 
+//void C_MetaverseManager::ImportSteamGame(std::string name, std::string appid)
+void C_MetaverseManager::ImportSteamGames(KeyValues* kv)
+{
+	// 1st save this out
+	kv->SaveToFile(g_pFullFileSystem, "steamGames.key", "DEFAULT_WRITE_PATH");
+
+	// now loop through it and add any missing games to the user library (but don't save them until the user makes a change to them.)
+	std::string appid;
+	std::string name;
+	std::string detailsurl;
+	std::string screenurl;
+	std::string marqueeurl;
+
+	for (KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		appid = sub->GetName();
+		appid = appid.substr(2);
+		name = sub->GetString();
+		//DevMsg("Adding game %s w/ appid %s\n", name.c_str(), appid.c_str());
+
+		// 1. try to find an item with this fileid
+		// 2. if not found, create an item for it
+		// 3. victory bowl
+
+		// build the search info
+		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
+		pSearchInfo->SetString("file", appid.c_str());
+
+		KeyValues* item = this->FindLibraryItem(pSearchInfo);
+		if (!item)
+		{
+			//DevMsg("Adding Steam game w/ id %s - %s\n", appid.c_str(), name.c_str());
+			item = new KeyValues("item");
+			item->SetInt("generation", 3);
+			item->SetInt("local/info/created", 0);
+			item->SetString("local/info/owner", "local");
+			item->SetInt("local/info/removed", 0);
+			item->SetString("local/info/remover", "");
+			item->SetString("local/info/alias", "");
+			item->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId());
+			item->SetString("local/title", name.c_str());
+			item->SetString("local/description", "");
+			item->SetString("local/file", appid.c_str());
+
+			item->SetString("local/type", this->ResolveLegacyType("pc").c_str());
+			item->SetString("local/app", this->ResolveLegacyApp("Steam").c_str());
+
+			detailsurl = "http://store.steampowered.com/app/" + appid;
+			item->SetString("local/reference", detailsurl.c_str());
+
+			item->SetString("local/preview", "");
+			item->SetString("local/download", "");
+			item->SetString("local/stream", "");
+
+			screenurl = "http://cdn.akamai.steamstatic.com/steam/apps/" + appid + "/page_bg_generated.jpg";	// not the best or most reliable url for a screenshot, but is a standard format.
+			item->SetString("local/screen", screenurl.c_str());
+
+			marqueeurl = "http://cdn.akamai.steamstatic.com/steam/apps/" + appid + "/header.jpg";
+			item->SetString("local/marquee", marqueeurl.c_str());
+
+			this->AddItem(item);
+
+			// JUST SAVE THE ITEM OUT NOW.  this way steamGames.key doesn't have to be iterated through every time AArcade starts.
+			g_pAnarchyManager->GetMetaverseManager()->SaveItem(item);
+		}
+		//else
+		//	DevMsg("Already have a Steam game w/ id %s\n", appid.c_str());
+	}
+
+	kv->deleteThis();
+}
 
 void C_MetaverseManager::AddItem(KeyValues* pItem)
 {
@@ -184,7 +288,7 @@ KeyValues* C_MetaverseManager::CreateItem(KeyValues* pInfo)
 	pItem->SetInt("generation", 3);
 
 	// add standard info
-	pItem->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId().c_str());
+	pItem->SetString("local/info/id", g_pAnarchyManager->GenerateUniqueId());
 	pItem->SetInt("local/info/created", 0);
 	pItem->SetString("local/info/owner", "local");
 	pItem->SetInt("local/info/removed", 0);
@@ -1498,6 +1602,23 @@ KeyValues* C_MetaverseManager::GetNextLibraryApp()
 	return null;
 }
 
+/*
+KeyValues* C_MetaverseManager::FindLibraryType(std::string term)
+{
+	// note: only finds exact matches.  IS case sensi
+	auto it = m_types.begin();
+	while (it != m_types.end())
+	{
+		if (it->first == term)
+			return it->second;
+
+		it++;
+	}
+
+	return null;
+}
+*/
+
 KeyValues* C_MetaverseManager::GetLibraryType(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_types.find(id);
@@ -1507,6 +1628,81 @@ KeyValues* C_MetaverseManager::GetLibraryType(std::string id)
 		return null;
 }
 
+const char* C_MetaverseManager::GetFirstLibraryEntry(KeyValues*& response, const char* category)
+{
+	//char queryId[20];
+	//const char* queryId = g_pAnarchyManager->GenerateUniqueId();
+	//g_pAnarchyManager->GenerateUniqueId(queryId);
+
+	const char* queryId = g_pAnarchyManager->GenerateUniqueId2();
+
+	std::string idBuf = std::string(queryId);
+
+	// TODO: use queryId to organize N search queries & store the category info for each.
+	//*
+	if (!Q_strcmp(category, "items"))
+	{
+		m_previousGetItemIterator = m_items.begin();
+		response = (m_previousGetItemIterator != m_items.end()) ? m_previousGetItemIterator->second : null;
+	}
+	else // models
+	{
+		m_previousGetModelIterator = m_models.begin();
+		response = (m_previousGetModelIterator != m_models.end()) ? m_previousGetModelIterator->second : null;
+	}
+	//*/
+
+	/*
+	auto categoryEntries = (!Q_strcmp(category, "items")) ? m_items : m_models;
+	auto it = (!Q_strcmp(category, "items")) ? m_previousGetItemIterator : m_previousGetModelIterator;
+
+	it = categoryEntries.begin();
+
+	if (it != categoryEntries.end())
+		response = it->second;
+	else
+		response = null;
+	*/
+
+	return idBuf.c_str();
+}
+KeyValues* C_MetaverseManager::GetNextLibraryEntry(const char* queryId, const char* category)
+{
+	///*
+	if (!Q_strcmp(category, "items"))
+	{
+		if (m_previousGetItemIterator != m_items.end())
+			m_previousGetItemIterator++;
+
+		return (m_previousGetItemIterator != m_items.end()) ? m_previousGetItemIterator->second : null;
+	}
+	else	// models
+	{
+		if (m_previousGetModelIterator != m_models.end())
+			m_previousGetModelIterator++;
+
+		return (m_previousGetModelIterator != m_models.end()) ? m_previousGetModelIterator->second : null;
+	}
+	//*/
+
+	/*
+	// TODO: use queryId to organize N search queries & store the category info for each.
+	auto categoryEntries = (!Q_strcmp(category, "items")) ? m_items : m_models;
+	auto it = (!Q_strcmp(category, "items")) ? m_previousGetItemIterator : m_previousGetModelIterator;
+
+	if (it != categoryEntries.end())
+	{
+		it++;
+
+		if (it != categoryEntries.end())
+			return it->second;
+	}
+	*/
+
+	return null;
+}
+
+// LEGACY! OBSOLETE!!
 KeyValues* C_MetaverseManager::GetFirstLibraryItem()
 {
 	m_previousGetItemIterator = m_items.begin();
@@ -1861,6 +2057,121 @@ KeyValues* C_MetaverseManager::FindLibraryModel(KeyValues* pSearchInfo, bool bEx
 }
 */
 
+KeyValues* C_MetaverseManager::FindLibraryEntry(const char* category, KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	//unsigned int i, numTokens;
+	bool bFoundMatch;
+
+	std::map<std::string, KeyValues*>* pCategoryEntries = (!Q_strcmp(category, "items")) ? &m_items : &m_models;
+
+	while (it != pCategoryEntries->end())
+	{
+		bFoundMatch = false;
+		active = this->GetActiveKeyValues(it->second);
+		if (active)
+		{
+			// active has the potential item data
+			// pSearchInfo has the search criteria
+			bool bGood = false;
+			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+			{
+				fieldName = searchField->GetName();
+				if (fieldName == "title")
+				{
+					if (!Q_strcmp(searchField->GetString(), ""))
+						bGood = true;
+					else
+					{
+						potentialBuf = active->GetString("title");
+						std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+						searchBuf = searchField->GetString();
+						std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+						/*
+						searchTokens.clear();
+						g_pAnarchyManager->Tokenize(searchBuf, searchTokens, " ");
+						numTokens = searchTokens.size();
+
+						for (i = 0; i < numTokens; i++)
+						{
+						if (searchTokens[i].length() < 2)
+						continue;
+
+						if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+						{
+						bFoundMatch = true;
+						break;
+						}
+						}
+						*/
+
+						if (potentialBuf.find(searchBuf) != std::string::npos)
+							bGood = true;
+						else
+							bGood = false;
+					}
+				}
+				/*
+				else if (categoryEntries == m_models && fieldName == "dynamic")
+				{
+					if (!Q_strcmp(searchField->GetString(), "") || !Q_strcmp(active->GetString("dynamic"), searchField->GetString()))
+						bGood = true;
+					else
+						bGood = false;
+				}*/
+				else
+				{
+					potentialBuf = active->GetString(fieldName.c_str());
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = searchField->GetString();
+					std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+					if (potentialBuf == searchBuf)
+						bGood = true;
+					else
+						bGood = false;
+				}
+				/*
+				else if (fieldName == "type")
+				{
+				if (!Q_strcmp(searchField->GetString(), "") || !Q_strcmp(active->GetString("type"), searchField->GetString()))
+				bGood = true;
+				else
+				bGood = false;
+				}
+				*/
+
+				if (!bGood)
+					break;
+			}
+
+			if (bGood)
+			{
+				bFoundMatch = true;
+				break;
+			}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
 KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
 {
 	KeyValues* potential;
@@ -1970,7 +2281,7 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo, std::map<
 
 KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 {
-	DevMsg("C_MetaverseManager: FindLibraryItem with ONLY pSearchinfo!!\n");
+	//DevMsg("C_MetaverseManager: FindLibraryItem with ONLY pSearchinfo!!\n");
 	KeyValues* potential;
 	KeyValues* active;
 	KeyValues* searchField;
@@ -1978,7 +2289,7 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 	char charBuf[AA_MAX_STRING];
 	std::vector<std::string> searchTokens;
 	unsigned int i, numTokens;
-	bool bFoundMatch;
+	bool bFoundMatch = false;
 	std::map<std::string, KeyValues*>::iterator it = m_items.begin();
 	while (it != m_items.end())
 	{
@@ -2050,6 +2361,75 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 		return it->second;
 	else
 		return null;
+}
+
+const char* C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo)
+{
+	std::string categoryBuf = std::string(category);
+
+	const char* queryId = g_pAnarchyManager->GenerateUniqueId();
+	std::string idBuf = std::string(queryId);
+
+	// TODO: use queryId to organize N search queries & store the category info for each.
+	KeyValues* pEntry;
+	KeyValues* pPreviousSearchInfo = null;
+	std::map<std::string, KeyValues*>::iterator* it;
+	std::map<std::string, KeyValues*>* categoryEntries;
+	if (categoryBuf == "items")
+	{
+		categoryEntries = &m_items;
+
+		if (m_pPreviousSearchInfo)
+		{
+			DevMsg("Cleaning up a library query context that was left open...\n");	// FIXME: This entire block should be handled differently as soon as concurrent library queries are supported, but right now we're actually limited to 1 query per category.
+			pPreviousSearchInfo->deleteThis();
+		}
+
+		m_pPreviousSearchInfo = pSearchInfo;
+		it = &m_previousFindItemIterator;
+	}
+	else if (categoryBuf == "models")
+	{
+		categoryEntries = &m_models;
+
+		if (m_pPreviousModelSearchInfo)
+		{
+			DevMsg("Cleaning up a library query context that was left open...\n");	// FIXME: This entire block should be handled differently as soon as concurrent library queries are supported, but right now we're actually limited to 1 query per category.
+			m_pPreviousModelSearchInfo->deleteThis();
+		}
+
+		m_pPreviousModelSearchInfo = pSearchInfo;
+		it = &m_previousFindModelIterator;
+	}
+	
+	// start the search
+	//m_previousFindItemIterator = categoryEntries->begin();
+	*it = categoryEntries->begin();
+	pEntry = this->FindLibraryEntry(categoryBuf.c_str(), pSearchInfo, *it);
+
+	response = pEntry;
+	return idBuf.c_str();
+}
+
+KeyValues* C_MetaverseManager::FindNextLibraryEntry(const char* queryId, const char* category)
+{
+	KeyValues* response = null;
+	if (!Q_strcmp(category, "items"))
+	{
+		// continue the search
+		m_previousFindItemIterator++;
+		if (m_previousFindItemIterator != m_items.end())
+			response = this->FindLibraryEntry(category, m_pPreviousSearchInfo, m_previousFindItemIterator);
+	}
+	else
+	{
+		// continue the search
+		m_previousFindModelIterator++;
+		if (m_previousFindModelIterator != m_items.end())
+			response = this->FindLibraryEntry(category, m_pPreviousModelSearchInfo, m_previousFindModelIterator);
+	}
+
+	return response;
 }
 
 KeyValues* C_MetaverseManager::FindFirstLibraryItem(KeyValues* pSearchInfo)
@@ -2225,6 +2605,74 @@ void C_MetaverseManager::OnDetectAllMapsCompleted()
 
 	g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
 	g_pAnarchyManager->OnDetectAllMapsComplete();
+}
+
+KeyValues* C_MetaverseManager::GetActiveKeyValues(KeyValues* entry)
+{
+	// return null if given a null argument to avoid the if-then cluster fuck of error checking each step of this common task
+	if (!entry)
+		return null;
+
+	//for (KeyValues *sub = entry->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+//		DevMsg("key value: %s %s\n", sub->GetName(), sub->GetString());
+
+	KeyValues* active = entry->FindKey("current");
+	if (!active)
+		active = entry->FindKey("local", true);
+
+	return active;
+}
+
+void C_MetaverseManager::SetLibraryBrowserContext(std::string category, std::string id, std::string search, std::string filter)
+{
+	m_libraryBrowserContextCategory = category;
+	m_libraryBrowserContextId = id;
+	m_libraryBrowserContextSearch = search;
+	m_libraryBrowserContextFilter = filter;
+}
+
+std::string C_MetaverseManager::GetLibraryBrowserContext(std::string name)
+{
+	if (name == "category")
+		return m_libraryBrowserContextCategory;
+	else if (name == "id")
+		return m_libraryBrowserContextId;
+	else if (name == "filter")
+		return m_libraryBrowserContextFilter;
+	else if (name == "search")
+		return m_libraryBrowserContextSearch;
+
+	DevMsg("Unhandled Error: Invalid context variable name.\n");
+	return "contextError";
+}
+
+void C_MetaverseManager::ScaleObject(C_PropShortcutEntity* pEntity, int iDelta)
+{
+	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pEntity->GetObjectId());
+	if (object)
+	{
+		object->scale += 0.1f * iDelta;	// NOTE: Changes are made to the object here but aren't saved yet!! (is this ok?)
+		C_PropShortcutEntity* pEntity = this->GetSpawningObjectEntity();
+		engine->ServerCmd(VarArgs("setscale %i %f", pEntity->entindex(), object->scale), false);
+	}
+}
+
+int C_MetaverseManager::CycleSpawningRotationAxis(int direction)
+{
+	m_iSpawningRotationAxis += direction;
+	if (m_iSpawningRotationAxis > 2)
+		m_iSpawningRotationAxis = 0;
+	else if (m_iSpawningRotationAxis < 0)
+		m_iSpawningRotationAxis = 2;
+
+	return m_iSpawningRotationAxis;
+}
+
+void C_MetaverseManager::ResetSpawningAngles()
+{
+	m_spawningAngles.x = 0;
+	m_spawningAngles.y = 0;
+	m_spawningAngles.z = 0;
 }
 
 void C_MetaverseManager::FlagDynamicModels()

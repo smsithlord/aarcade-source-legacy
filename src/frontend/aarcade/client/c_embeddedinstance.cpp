@@ -12,9 +12,325 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+std::map<ButtonCode_t, const char*> C_EmbeddedInstance::s_buttonMap;
+std::map<ButtonCode_t, const char*> C_EmbeddedInstance::s_shiftedButtonMap;
+
 C_EmbeddedInstance::C_EmbeddedInstance()
 {
 	DevMsg("EmbeddedInstance: Constructor\n");
+
+	if (s_buttonMap.find(KEY_0) == s_buttonMap.end())
+	{
+		s_buttonMap[KEY_0] = "0";
+		s_shiftedButtonMap[KEY_0] = ")";
+
+		s_buttonMap[KEY_1] = "1";
+		s_shiftedButtonMap[KEY_1] = "!";
+
+		s_buttonMap[KEY_2] = "2";
+		s_shiftedButtonMap[KEY_2] = "@";
+
+		s_buttonMap[KEY_3] = "3";
+		s_shiftedButtonMap[KEY_3] = "#";
+
+		s_buttonMap[KEY_4] = "4";
+		s_shiftedButtonMap[KEY_4] = "$";
+
+		s_buttonMap[KEY_5] = "5";
+		s_shiftedButtonMap[KEY_5] = "%";
+
+		s_buttonMap[KEY_6] = "6";
+		s_shiftedButtonMap[KEY_6] = "^";
+
+		s_buttonMap[KEY_7] = "7";
+		s_shiftedButtonMap[KEY_7] = "&";
+
+		s_buttonMap[KEY_8] = "8";
+		s_shiftedButtonMap[KEY_8] = "*";
+
+		s_buttonMap[KEY_9] = "9";
+		s_shiftedButtonMap[KEY_9] = "(";
+
+		s_buttonMap[KEY_A] = "a";
+		s_shiftedButtonMap[KEY_A] = "A";
+
+		s_buttonMap[KEY_B] = "b";
+		s_shiftedButtonMap[KEY_B] = "B";
+
+		s_buttonMap[KEY_C] = "c";
+		s_shiftedButtonMap[KEY_C] = "C";
+
+		s_buttonMap[KEY_D] = "d";
+		s_shiftedButtonMap[KEY_D] = "D";
+
+		s_buttonMap[KEY_E] = "e";
+		s_shiftedButtonMap[KEY_E] = "E";
+
+		s_buttonMap[KEY_F] = "f";
+		s_shiftedButtonMap[KEY_F] = "F";
+
+		s_buttonMap[KEY_G] = "g";
+		s_shiftedButtonMap[KEY_G] = "G";
+
+		s_buttonMap[KEY_H] = "h";
+		s_shiftedButtonMap[KEY_H] = "H";
+
+		s_buttonMap[KEY_I] = "i";
+		s_shiftedButtonMap[KEY_I] = "I";
+
+		s_buttonMap[KEY_J] = "j";
+		s_shiftedButtonMap[KEY_J] = "J";
+
+		s_buttonMap[KEY_K] = "k";
+		s_shiftedButtonMap[KEY_K] = "K";
+
+		s_buttonMap[KEY_L] = "l";
+		s_shiftedButtonMap[KEY_L] = "L";
+
+		s_buttonMap[KEY_M] = "m";
+		s_shiftedButtonMap[KEY_M] = "M";
+
+		s_buttonMap[KEY_N] = "n";
+		s_shiftedButtonMap[KEY_N] = "N";
+
+		s_buttonMap[KEY_O] = "o";
+		s_shiftedButtonMap[KEY_O] = "O";
+
+		s_buttonMap[KEY_P] = "p";
+		s_shiftedButtonMap[KEY_P] = "P";
+
+		s_buttonMap[KEY_Q] = "q";
+		s_shiftedButtonMap[KEY_Q] = "Q";
+
+		s_buttonMap[KEY_R] = "r";
+		s_shiftedButtonMap[KEY_R] = "R";
+
+		s_buttonMap[KEY_S] = "s";
+		s_shiftedButtonMap[KEY_S] = "S";
+
+		s_buttonMap[KEY_T] = "t";
+		s_shiftedButtonMap[KEY_T] = "T";
+
+		s_buttonMap[KEY_U] = "u";
+		s_shiftedButtonMap[KEY_U] = "U";
+
+		s_buttonMap[KEY_V] = "v";
+		s_shiftedButtonMap[KEY_V] = "V";
+
+		s_buttonMap[KEY_W] = "w";
+		s_shiftedButtonMap[KEY_W] = "W";
+
+		s_buttonMap[KEY_X] = "x";
+		s_shiftedButtonMap[KEY_X] = "X";
+
+		s_buttonMap[KEY_Y] = "y";
+		s_shiftedButtonMap[KEY_Y] = "Y";
+
+		s_buttonMap[KEY_Z] = "z";
+		s_shiftedButtonMap[KEY_Z] = "Z";
+
+		s_buttonMap[KEY_PAD_0] = "0";
+		s_shiftedButtonMap[KEY_PAD_0] = "0";
+
+		s_buttonMap[KEY_PAD_1] = "1";
+		s_shiftedButtonMap[KEY_PAD_1] = "1";
+
+		s_buttonMap[KEY_PAD_2] = "2";
+		s_shiftedButtonMap[KEY_PAD_2] = "2";
+
+		s_buttonMap[KEY_PAD_3] = "3";
+		s_shiftedButtonMap[KEY_PAD_3] = "3";
+
+		s_buttonMap[KEY_PAD_4] = "4";
+		s_shiftedButtonMap[KEY_PAD_4] = "4";
+
+		s_buttonMap[KEY_PAD_5] = "5";
+		s_shiftedButtonMap[KEY_PAD_5] = "5";
+
+		s_buttonMap[KEY_PAD_6] = "6";
+		s_shiftedButtonMap[KEY_PAD_6] = "6";
+
+		s_buttonMap[KEY_PAD_7] = "7";
+		s_shiftedButtonMap[KEY_PAD_7] = "7";
+
+		s_buttonMap[KEY_PAD_8] = "8";
+		s_shiftedButtonMap[KEY_PAD_8] = "8";
+
+		s_buttonMap[KEY_PAD_9] = "9";
+		s_shiftedButtonMap[KEY_PAD_9] = "9";
+
+		s_buttonMap[KEY_PAD_DIVIDE] = "/";
+		s_shiftedButtonMap[KEY_PAD_DIVIDE] = "/";
+
+		s_buttonMap[KEY_PAD_MULTIPLY] = "*";
+		s_shiftedButtonMap[KEY_PAD_MULTIPLY] = "*";
+
+		s_buttonMap[KEY_PAD_MINUS] = "-";
+		s_shiftedButtonMap[KEY_PAD_MINUS] = "-";
+
+		s_buttonMap[KEY_PAD_PLUS] = "+";
+		s_shiftedButtonMap[KEY_PAD_PLUS] = "+";
+
+		s_buttonMap[KEY_PAD_ENTER] = "\r";
+		s_shiftedButtonMap[KEY_PAD_ENTER] = "\r";
+
+		s_buttonMap[KEY_PAD_DECIMAL] = ".";
+		s_shiftedButtonMap[KEY_PAD_DECIMAL] = ".";
+
+		s_buttonMap[KEY_LBRACKET] = "[";
+		s_shiftedButtonMap[KEY_LBRACKET] = "{";
+
+		s_buttonMap[KEY_RBRACKET] = "]";
+		s_shiftedButtonMap[KEY_RBRACKET] = "}";
+
+		s_buttonMap[KEY_SEMICOLON] = ";";
+		s_shiftedButtonMap[KEY_SEMICOLON] = ":";
+
+		s_buttonMap[KEY_APOSTROPHE] = "'";
+		s_shiftedButtonMap[KEY_APOSTROPHE] = "\"";
+
+		s_buttonMap[KEY_BACKQUOTE] = "`";
+		s_shiftedButtonMap[KEY_BACKQUOTE] = "~";
+
+		s_buttonMap[KEY_COMMA] = ",";
+		s_shiftedButtonMap[KEY_COMMA] = "<";
+
+		s_buttonMap[KEY_PERIOD] = ".";
+		s_shiftedButtonMap[KEY_PERIOD] = ">";
+
+		s_buttonMap[KEY_SLASH] = "/";
+		s_shiftedButtonMap[KEY_SLASH] = "?";
+
+		s_buttonMap[KEY_BACKSLASH] = "\\";
+		s_shiftedButtonMap[KEY_BACKSLASH] = "|";
+
+		s_buttonMap[KEY_MINUS] = "-";
+		s_shiftedButtonMap[KEY_MINUS] = "_";
+
+		s_buttonMap[KEY_EQUAL] = "=";
+		s_shiftedButtonMap[KEY_EQUAL] = "+";
+
+		s_buttonMap[KEY_ENTER] = "\r";
+		s_shiftedButtonMap[KEY_ENTER] = "\r";
+
+		s_buttonMap[KEY_SPACE] = " ";
+		s_shiftedButtonMap[KEY_SPACE] = " ";
+
+		s_buttonMap[KEY_BACKSPACE] = "";
+		s_shiftedButtonMap[KEY_BACKSPACE] = "";
+
+		s_buttonMap[KEY_TAB] = "\t";
+		s_shiftedButtonMap[KEY_TAB] = "\t";
+
+		s_buttonMap[KEY_CAPSLOCK] = "";
+		s_shiftedButtonMap[KEY_CAPSLOCK] = "";
+
+		s_buttonMap[KEY_NUMLOCK] = "";
+		s_shiftedButtonMap[KEY_NUMLOCK] = "";
+
+		s_buttonMap[KEY_ESCAPE] = "";
+		s_shiftedButtonMap[KEY_ESCAPE] = "";
+
+		s_buttonMap[KEY_SCROLLLOCK] = "";
+		s_shiftedButtonMap[KEY_SCROLLLOCK] = "";
+
+		s_buttonMap[KEY_INSERT] = "";
+		s_shiftedButtonMap[KEY_INSERT] = "";
+
+		s_buttonMap[KEY_DELETE] = "";
+		s_shiftedButtonMap[KEY_DELETE] = "";
+
+		s_buttonMap[KEY_HOME] = "";
+		s_shiftedButtonMap[KEY_HOME] = "";
+
+		s_buttonMap[KEY_END] = "";
+		s_shiftedButtonMap[KEY_END] = "";
+
+		s_buttonMap[KEY_PAGEUP] = "";
+		s_shiftedButtonMap[KEY_PAGEUP] = "";
+
+		s_buttonMap[KEY_PAGEDOWN] = "";
+		s_shiftedButtonMap[KEY_PAGEDOWN] = "";
+
+		s_buttonMap[KEY_BREAK] = "";
+		s_shiftedButtonMap[KEY_BREAK] = "";
+
+		s_buttonMap[KEY_LSHIFT] = "";
+		s_shiftedButtonMap[KEY_LSHIFT] = "";
+
+		s_buttonMap[KEY_RSHIFT] = "";
+		s_shiftedButtonMap[KEY_RSHIFT] = "";
+
+		s_buttonMap[KEY_LALT] = "";
+		s_shiftedButtonMap[KEY_LALT] = "";
+
+		s_buttonMap[KEY_RALT] = "";
+		s_shiftedButtonMap[KEY_RALT] = "";
+
+		s_buttonMap[KEY_LCONTROL] = "";
+		s_shiftedButtonMap[KEY_LCONTROL] = "";
+
+		s_buttonMap[KEY_RCONTROL] = "";
+		s_shiftedButtonMap[KEY_RCONTROL] = "";
+
+		s_buttonMap[KEY_LWIN] = "";
+		s_shiftedButtonMap[KEY_LWIN] = "";
+
+		s_buttonMap[KEY_RWIN] = "";
+		s_shiftedButtonMap[KEY_RWIN] = "";
+
+		s_buttonMap[KEY_APP] = "";
+		s_shiftedButtonMap[KEY_APP] = "";
+
+		s_buttonMap[KEY_UP] = "";
+		s_shiftedButtonMap[KEY_UP] = "";
+
+		s_buttonMap[KEY_LEFT] = "";
+		s_shiftedButtonMap[KEY_LEFT] = "";
+
+		s_buttonMap[KEY_DOWN] = "";
+		s_shiftedButtonMap[KEY_DOWN] = "";
+
+		s_buttonMap[KEY_RIGHT] = "";
+		s_shiftedButtonMap[KEY_RIGHT] = "";
+
+		s_buttonMap[KEY_F1] = "";
+		s_shiftedButtonMap[KEY_F1] = "";
+
+		s_buttonMap[KEY_F2] = "";
+		s_shiftedButtonMap[KEY_F2] = "";
+
+		s_buttonMap[KEY_F3] = "";
+		s_shiftedButtonMap[KEY_F3] = "";
+
+		s_buttonMap[KEY_F4] = "";
+		s_shiftedButtonMap[KEY_F4] = "";
+
+		s_buttonMap[KEY_F5] = "";
+		s_shiftedButtonMap[KEY_F5] = "";
+
+		s_buttonMap[KEY_F6] = "";
+		s_shiftedButtonMap[KEY_F6] = "";
+
+		s_buttonMap[KEY_F7] = "";
+		s_shiftedButtonMap[KEY_F7] = "";
+
+		s_buttonMap[KEY_F8] = "";
+		s_shiftedButtonMap[KEY_F8] = "";
+
+		s_buttonMap[KEY_F9] = "";
+		s_shiftedButtonMap[KEY_F9] = "";
+
+		s_buttonMap[KEY_CAPSLOCKTOGGLE] = "";
+		s_shiftedButtonMap[KEY_CAPSLOCKTOGGLE] = "";
+
+		s_buttonMap[KEY_NUMLOCKTOGGLE] = "";
+		s_shiftedButtonMap[KEY_NUMLOCKTOGGLE] = "";
+
+		s_buttonMap[KEY_SCROLLLOCKTOGGLE] = "";
+		s_shiftedButtonMap[KEY_SCROLLLOCKTOGGLE] = "";
+	}
+
 //	m_iLastRenderedFrame = 0;
 }
 
@@ -29,509 +345,18 @@ std::string C_EmbeddedInstance::GetId()
 	return "";
 }
 
-std::string C_EmbeddedInstance::GetCharTyped(vgui::KeyCode code, bool bShift, bool bCtrl, bool bAlt)
+std::string C_EmbeddedInstance::GetOutput(vgui::KeyCode code, bool bShift, bool bCtrl, bool bAlt, bool bWin, bool bAutorepeat)
 {
-	bool shift = bShift;
-	bool ctrl = bCtrl;
-	bool alt = bAlt;
-	
-	std::string actualCharOutput = "";
+	std::string output = "";
 
-	switch (code)
+	// only generate output w/ modifiers that don't kill text output
+	if (!bCtrl && !bAlt && !bWin)
 	{
-	case KEY_0:
-		if (shift)
-			actualCharOutput = ')';
-		else
-			actualCharOutput = '0';
-		break;
-
-	case KEY_1:
-		if (shift)
-			actualCharOutput = '!';
-		else
-			actualCharOutput = '1';
-		break;
-
-	case KEY_2:
-		if (shift)
-			actualCharOutput = '@';
-		else
-			actualCharOutput = '2';
-		break;
-
-	case KEY_3:
-		if (shift)
-			actualCharOutput = '#';
-		else
-			actualCharOutput = '3';
-		break;
-
-	case KEY_4:
-		if (shift)
-			actualCharOutput = '$';
-		else
-			actualCharOutput = '4';
-		break;
-
-	case KEY_5:
-		if (shift)
-			actualCharOutput = '%';
-		else
-			actualCharOutput = '5';
-		break;
-
-	case KEY_6:
-		if (shift)
-			actualCharOutput = '^';
-		else
-			actualCharOutput = '6';
-		break;
-
-	case KEY_7:
-		if (shift)
-			actualCharOutput = '&';
-		else
-			actualCharOutput = '7';
-		break;
-
-	case KEY_8:
-		if (shift)
-			actualCharOutput = '*';
-		else
-			actualCharOutput = '8';
-		break;
-
-	case KEY_9:
-		if (shift)
-			actualCharOutput = '(';
-		else
-			actualCharOutput = '9';
-		break;
-
-	case KEY_A:
-		if (shift)
-			actualCharOutput = 'A';
-		else
-			actualCharOutput = 'a';
-		break;
-
-	case KEY_B:
-		if (shift)
-			actualCharOutput = 'B';
-		else
-			actualCharOutput = 'b';
-		break;
-
-	case KEY_C:
-		if (shift)
-			actualCharOutput = 'C';
-		else
-			actualCharOutput = 'c';
-		break;
-
-	case KEY_D:
-		if (shift)
-			actualCharOutput = 'D';
-		else
-			actualCharOutput = 'd';
-		break;
-
-	case KEY_E:
-		if (shift)
-			actualCharOutput = 'E';
-		else
-			actualCharOutput = 'e';
-		break;
-
-	case KEY_F:
-		if (shift)
-			actualCharOutput = 'F';
-		else
-			actualCharOutput = 'f';
-		break;
-
-	case KEY_G:
-		if (shift)
-			actualCharOutput = 'G';
-		else
-			actualCharOutput = 'g';
-		break;
-
-	case KEY_H:
-		if (shift)
-			actualCharOutput = 'H';
-		else
-			actualCharOutput = 'h';
-		break;
-
-	case KEY_I:
-		if (shift)
-			actualCharOutput = 'I';
-		else
-			actualCharOutput = 'i';
-		break;
-
-	case KEY_J:
-		if (shift)
-			actualCharOutput = 'J';
-		else
-			actualCharOutput = 'j';
-		break;
-
-	case KEY_K:
-		if (shift)
-			actualCharOutput = 'K';
-		else
-			actualCharOutput = 'k';
-		break;
-
-	case KEY_L:
-		if (shift)
-			actualCharOutput = 'L';
-		else
-			actualCharOutput = 'l';
-		break;
-
-	case KEY_M:
-		if (shift)
-			actualCharOutput = 'M';
-		else
-			actualCharOutput = 'm';
-		break;
-
-	case KEY_N:
-		if (shift)
-			actualCharOutput = 'N';
-		else
-			actualCharOutput = 'n';
-		break;
-
-	case KEY_O:
-		if (shift)
-			actualCharOutput = 'O';
-		else
-			actualCharOutput = 'o';
-		break;
-
-	case KEY_P:
-		if (shift)
-			actualCharOutput = 'P';
-		else
-			actualCharOutput = 'p';
-		break;
-
-	case KEY_Q:
-		if (shift)
-			actualCharOutput = 'Q';
-		else
-			actualCharOutput = 'q';
-		break;
-
-	case KEY_R:
-		if (shift)
-			actualCharOutput = 'R';
-		else
-			actualCharOutput = 'r';
-		break;
-
-	case KEY_S:
-		if (shift)
-			actualCharOutput = 'S';
-		else
-			actualCharOutput = 's';
-		break;
-
-	case KEY_T:
-		if (shift)
-			actualCharOutput = 'T';
-		else
-			actualCharOutput = 't';
-		break;
-
-	case KEY_U:
-		if (shift)
-			actualCharOutput = 'U';
-		else
-			actualCharOutput = 'u';
-		break;
-
-	case KEY_V:
-		if (shift)
-			actualCharOutput = 'V';
-		else
-			actualCharOutput = 'v';
-		break;
-
-	case KEY_W:
-		if (shift)
-			actualCharOutput = 'W';
-		else
-			actualCharOutput = 'w';
-		break;
-
-	case KEY_X:
-		if (shift)
-			actualCharOutput = 'X';
-		else
-			actualCharOutput = 'x';
-		break;
-
-	case KEY_Y:
-		if (shift)
-			actualCharOutput = 'Y';
-		else
-			actualCharOutput = 'y';
-		break;
-
-	case KEY_Z:
-		if (shift)
-			actualCharOutput = 'Z';
-		else
-			actualCharOutput = 'z';
-		break;
-
-	case KEY_PAD_0:
-		actualCharOutput = '0';
-		break;
-
-	case KEY_PAD_1:
-		actualCharOutput = '1';
-		break;
-
-	case KEY_PAD_2:
-		actualCharOutput = '2';
-		break;
-
-	case KEY_PAD_3:
-		actualCharOutput = '3';
-		break;
-
-	case KEY_PAD_4:
-		actualCharOutput = '4';
-		break;
-
-	case KEY_PAD_5:
-		actualCharOutput = '5';
-		break;
-
-	case KEY_PAD_6:
-		actualCharOutput = '6';
-		break;
-
-	case KEY_PAD_7:
-		actualCharOutput = '7';
-		break;
-
-	case KEY_PAD_8:
-		actualCharOutput = '8';
-		break;
-
-	case KEY_PAD_9:
-		actualCharOutput = '9';
-		break;
-
-	case KEY_PAD_DIVIDE:
-		actualCharOutput = '/';
-		break;
-
-	case KEY_PAD_MULTIPLY:
-		actualCharOutput = '*';
-		break;
-
-	case KEY_PAD_MINUS:
-		actualCharOutput = '-';
-		break;
-
-	case KEY_PAD_PLUS:
-		actualCharOutput = '+';
-		break;
-
-	case KEY_PAD_ENTER:
-		actualCharOutput = '\r';
-		break;
-
-	case KEY_PAD_DECIMAL:
-		actualCharOutput = '.';
-		break;
-
-	case KEY_LBRACKET:
-		if (shift)
-			actualCharOutput = '{';
-		else
-			actualCharOutput = '[';
-		break;
-
-	case KEY_RBRACKET:
-		if (shift)
-			actualCharOutput = '}';
-		else
-			actualCharOutput = ']';
-		break;
-
-	case KEY_SEMICOLON:
-		if (shift)
-			actualCharOutput = ':';
-		else
-			actualCharOutput = ';';
-		break;
-
-	case KEY_APOSTROPHE:
-		if (shift)
-			actualCharOutput = '"';
-		else
-			actualCharOutput = '\'';
-		break;
-
-	case KEY_BACKQUOTE:
-		if (shift)
-			actualCharOutput = '~';
-		else
-			actualCharOutput = '`';
-		break;
-
-	case KEY_COMMA:
-		if (shift)
-			actualCharOutput = '<';
-		else
-			actualCharOutput = ',';
-		break;
-
-	case KEY_PERIOD:
-		if (shift)
-			actualCharOutput = '>';
-		else
-			actualCharOutput = '.';
-		break;
-
-	case KEY_SLASH:
-		if (shift)
-			actualCharOutput = '?';
-		else
-			actualCharOutput = '/';
-		break;
-
-	case KEY_BACKSLASH:
-		if (shift)
-			actualCharOutput = '|';
-		else
-			actualCharOutput = '\\';
-		break;
-
-	case KEY_MINUS:
-		if (shift)
-			actualCharOutput = '_';
-		else
-			actualCharOutput = '-';
-		break;
-
-	case KEY_EQUAL:
-		if (shift)
-			actualCharOutput = '+';
-		else
-			actualCharOutput = '=';
-		break;
-
-	case KEY_ENTER:
-		actualCharOutput = '\r';
-		break;
-
-	case KEY_SPACE:
-		actualCharOutput = ' ';
-		break;
-
-	case KEY_BACKSPACE:
-		break;
-
-	case KEY_TAB:
-		break;
-
-	case KEY_CAPSLOCK:
-		break;
-
-	case KEY_NUMLOCK:
-		break;
-
-		//		case KEY_ESCAPE:
-		//			virtualKeyCode = 0x1B;
-		//			DevMsg("ESCAPE PRESSED!\n");
-		//			break;
-
-	case KEY_SCROLLLOCK:
-		break;
-
-	case KEY_INSERT:
-		break;
-
-	case KEY_DELETE:
-		break;
-
-	case KEY_HOME:
-		break;
-
-	case KEY_END:
-		break;
-
-	case KEY_PAGEUP:
-		break;
-
-	case KEY_PAGEDOWN:
-		break;
-
-	case KEY_LSHIFT:
-		break;
-
-	case KEY_RSHIFT:
-		break;
-
-	case KEY_LALT:
-		break;
-
-	case KEY_RALT:
-		break;
-
-	case KEY_LCONTROL:
-		break;
-
-	case KEY_RCONTROL:
-		break;
-
-	case KEY_LWIN:
-		break;
-
-	case KEY_RWIN:
-		break;
-
-	case KEY_APP:
-		break;
-
-	case KEY_UP:
-		break;
-
-	case KEY_LEFT:
-		break;
-
-	case KEY_DOWN:
-		break;
-
-	case KEY_RIGHT:
-		break;
+		auto it = (bShift) ? s_shiftedButtonMap.find(code) : s_buttonMap.find(code);
+		auto endIt = (bShift) ? s_shiftedButtonMap.end() : s_buttonMap.end();
+		if (it != endIt)
+			output = it->second;
 	}
 
-	if (actualCharOutput.length() > 0)
-	{
-		char outputChar = actualCharOutput.at(0);
-		actualCharOutput = outputChar;
-	}
-
-	bool hasChar = false;
-	
-	// If this key generates text output...
-	if (actualCharOutput != "")
-		hasChar = true;
-
-	if (hasChar)
-		return actualCharOutput;
-	else
-		return "";
+	return output.c_str();
 }

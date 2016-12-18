@@ -15,7 +15,9 @@
 // Include GLEW. Always include it before gl.h and glfw.h, since it's a bit magic.
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-//#include <glm/glm.hpp>
+#define GLFW_EXPOSE_NATIVE_WIN32 true
+#define GLFW_EXPOSE_NATIVE_WGL true
+#include <GLFW/glfw3native.h>
 //#include <mutex>
 //#include "c_libretrosurfaceregen.h"
 //#include <map>
@@ -55,6 +57,10 @@ struct libretro_raw {
 	unsigned(*get_region)(void);
 	void* (*get_memory_data)(unsigned id);
 	size_t(*get_memory_size)(unsigned id);
+
+	// hardware acceleration stuff
+	retro_hw_context_reset_t context_reset;
+	retro_hw_context_reset_t context_destroy;
 };
 
 struct libretro_core_option {
@@ -104,16 +110,60 @@ struct LibretroInstanceInfo_t
 	int samplerate;
 	int framerate;
 	float lastrendered;
-	int16_t* audiobuffer;
-	unsigned int audiobuffersize;
-	unsigned int audiobufferpos;
+	//int16_t* audiobuffer;
+	//unsigned int audiobuffersize;
+	//unsigned int audiobufferpos;
 	//int16_t* safebuffer;
 	//unsigned int safebuffersize;
 	//unsigned int safebufferpos;
 	bool processingaudio;
 	//std::map<std::string, float> inputstate;
-	//GLFWwindow* window;
-//	GLuint framebuffer;
+	GLFWwindow* window;
+	GLuint* framebuffer;
+
+
+	//used elements:
+	//context_type - handled
+	//context_reset - TODO
+	//get_current_framebuffer - handled externally
+	//get_proc_address - handled externally
+	//depth - handled
+	//stencil - handled
+	//bottom_left_origin - TODO
+	//version_major - handled
+	//version_minor - handled
+	//cache_context - ignored (treated as always true)
+	//context_destroy - TODO
+	//debug_context - handled
+	/*
+	video* out_chain;
+	sh_vercoordloc;
+	sh_texcoordloc;
+	sh_texcoordbuf;
+	sh_vertexbuf_first;
+	hdc;
+	bool is3d;
+	in_texwidth;
+	in_texheight;
+	in_lastwidth;
+	in_lastheight;
+	out_width;
+	out_height;
+	in_texwidth;
+	in_texheight;
+
+	unsigned int sh_passes;
+	GLuint sh_prog;
+	GLuint sh_tex;
+	GLuint sh_fbo;
+	in2_fmt;
+	in2_type;
+	in2_bytepp;
+	in3;//
+	in3_renderbuffer;
+	*/
+
+
 	const retro_controller_info* portdata;
 	std::vector<int> currentPortTypes;
 	unsigned int numports;
@@ -123,6 +173,24 @@ struct LibretroInstanceInfo_t
 	KeyValues* inputstate;
 	KeyValues* coreCoreOptions;
 	KeyValues* gameCoreOptions;
+
+	// hardware acceleration stuff
+	retro_hw_context_type context_type;
+	bool depth;
+	bool stencil;
+	bool bottom_left_origin;
+	unsigned version_major;
+	unsigned version_minor;
+	bool cache_context;
+	bool debug_context;
+
+	// system info stuff
+	std::string library_name;      // Descriptive name of library. Should not contain any version numbers, etc.
+	std::string library_version;   // Descriptive version of core.
+	std::string valid_extensions;  // A string listing probably content extensions the core will be able to load, separated with pipe. I.e. "bin|rom|iso". Typically used for a GUI to filter out extensions.
+	bool need_fullpath;	// If true, retro_load_game() is guaranteed to provide a valid pathname in retro_game_info::path. ::data and ::size are both invalid. If false, ::data and ::size are guaranteed to be valid, but ::path might not be valid. This is typically set to true for libretro implementations that must load from file. Implementations should strive for setting this to false, as it allows the frontend to perform patching, etc.
+	bool block_extract;	// If true, the frontend is not allowed to extract any archives before loading the real content. Necessary for certain libretro implementations that load games from zipped archives.
+
 	//KeyValues* activekeybinds;
 };
 
@@ -179,6 +247,7 @@ public:
 	void ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void ResizeFrameFromRGB1555(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
+	void ResizeFrameFromRGB888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
 	void CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth);
 
 	void OnProxyBind(C_BaseEntity* pBaseEntity);
@@ -193,6 +262,7 @@ public:
 	libretro_raw* GetRaw() { return m_raw; }
 	LibretroInstanceInfo_t* GetInfo() { return m_info; }
 	ITexture* GetTexture() { return m_pTexture; }
+	int GetLastVisibleFrame() { return m_iLastVisibleFrame; }
 	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
 	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;

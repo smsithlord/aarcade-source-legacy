@@ -111,4 +111,31 @@ inline const char* WebStringToCharString(WebString web_string)
 	return VarArgs("%s", title.c_str());
 }
 
+inline const char* WebStringToCharString2(WebString web_string)
+{
+	int len = web_string.ToUTF8(null, 0);
+	char* buf = new char[len + 1];
+	web_string.ToUTF8(buf, len);
+	buf[len] = 0;	// null terminator
+
+	std::string title = buf;
+	delete[] buf;
+
+	return title.c_str();
+}
+/*
+inline std::string WebStringToString(WebString web_string)
+{
+	int len = web_string.ToUTF8(null, 0);
+	char* buf = new char[len + 1];
+	web_string.ToUTF8(buf, len);
+	buf[len] = 0;	// null terminator
+
+	std::string title = buf;
+	delete[] buf;
+
+	return title;
+}
+*/
+
 #endif

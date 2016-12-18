@@ -438,7 +438,10 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 						if (m_pMaterialTextureVar && testerInstance && testerInstance->GetTexture())
 						{
 							m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
-							testerInstance->Update();
+
+							if (testerInstance->GetLastVisibleFrame() != gpGlobals->framecount)
+								testerInstance->Update();
+
 							bSwappedEmbeddedInstanceIn = true;
 						}
 					}

@@ -18,6 +18,9 @@ public:
 	//void OnWebTabCreated(C_WebTab* pWebTab);
 	void OnMountAllWorkshopsCompleted();
 
+	//void ImportSteamGame(std::string name, std::string appid);
+	void ImportSteamGames(KeyValues* kv);
+
 	void AddItem(KeyValues* pItem);
 	void SaveItem(KeyValues* pItem);
 	KeyValues* CreateItem(KeyValues* pInfo);
@@ -52,7 +55,10 @@ public:
 	KeyValues* LoadNextLocalApp();
 	void LoadLocalAppClose();
 
-	KeyValues* GetFirstLibraryItem();
+	const char* GetFirstLibraryEntry(KeyValues*& response, const char* category);
+	KeyValues* GetNextLibraryEntry(const char* queryId, const char* category);
+
+	KeyValues* GetFirstLibraryItem();	// LEGACY OBSOLETE
 	KeyValues* GetNextLibraryItem();
 	KeyValues* GetLibraryItem(std::string id);
 
@@ -65,6 +71,11 @@ public:
 
 	KeyValues* GetLibraryModel(std::string id);
 	//KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
+
+	const char* FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo);
+	KeyValues* FindNextLibraryEntry(const char* queryId, const char* category);	// TODO: get rid of category and store that info in the search context (just like pSearchInfo is.)
+	
+	KeyValues* FindLibraryEntry(const char* category, KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
 
 	KeyValues* FindFirstLibraryItem(KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryItem();
@@ -92,10 +103,23 @@ public:
 	void OnDetectAllMapsCompleted();
 	void FlagDynamicModels();
 
+	KeyValues* GetActiveKeyValues(KeyValues* entry);
+
+	//KeyValues* FindLibraryType(std::string term);
+
 	//void DetectMapClose();
+
+	void SetLibraryBrowserContext(std::string category, std::string id, std::string search, std::string filter);
+	std::string GetLibraryBrowserContext(std::string name);
+
+	void ScaleObject(C_PropShortcutEntity* pEntity, int iDelta);
+
+	int CycleSpawningRotationAxis(int direction);
+	void ResetSpawningAngles();
 
 	// accessors
 	// FIXME: All of these spawning stuff should be in INSTANCE MANAGER not here!!
+	int GetSpawningRotationAxis() { return m_iSpawningRotationAxis; }
 	C_PropShortcutEntity* GetSpawningObjectEntity() { return m_pSpawningObjectEntity; }
 	object_t* GetSpawningObject() { return m_pSpawningObject; }
 
@@ -104,6 +128,7 @@ public:
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 
 	// mutators
+	void SetSpawningRotationAxis(int value) { m_iSpawningRotationAxis = value; }
 	void SetSpawningObjectEntity(C_PropShortcutEntity* pShortcut) { m_pSpawningObjectEntity = pShortcut; }
 	void SetSpawningObject(object_t* pObject) { m_pSpawningObject = pObject; }
 	void SetPreviousLocaLocalItemLegacyWorkshopIds(std::string value) { m_previousLocaLocalItemLegacyWorkshopIds = value; }	// SHOULDN'T EVER BE USED EXCEPT FOR IN CASE OF HACKMERGENCY
@@ -111,8 +136,15 @@ public:
 private:
 	object_t* m_pSpawningObject;
 	C_PropShortcutEntity* m_pSpawningObjectEntity;
+	QAngle m_spawningAngles;
+	int m_iSpawningRotationAxis;
 	C_WebTab* m_pWebTab;
 	std::map<std::string, std::string> m_mapScreenshots;
+
+	std::string m_libraryBrowserContextCategory;
+	std::string m_libraryBrowserContextId;
+	std::string m_libraryBrowserContextFilter;
+	std::string m_libraryBrowserContextSearch;
 
 	std::map<std::string, KeyValues*> m_maps;
 	std::map<std::string, KeyValues*> m_apps;

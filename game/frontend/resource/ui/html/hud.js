@@ -21,12 +21,110 @@ function ArcadeHud()
 	this.DOMReady = false;
 	this.addressElem;
 	this.DOMParser;
+	this.lastMousePassThru = false;
 	this.fileBrowseHandles = {};
 	this.metaScrapeHandles = {};
 	this.activeScraper = null;
 	this.activeScraperItemId = "";
 	this.activeScraperField = "";
 	this.scrapers = {
+		"importSteamGames":
+		{
+			"id": "importSteamGames",
+			"title": "Import Steam Games",
+			"search": "http://www.google.com/search?q=$TERM",	// should never be used. this is an abnormal scraper only called when importing games from a user's Steam profile.
+			"fields": {
+				"all": 100
+			},
+			"run": function(url, field, doc)
+			{
+				//var response = {};
+
+				var rawGames = doc;
+				var numRawGames = rawGames.length;
+				var steamItems = [];
+				var i, steamItem;
+				for( i = 0; i < numRawGames; i++ )
+				{
+					//steamItem = {
+					//	"name": rawGames[i].name_escaped,
+					//	"appid": rawGames[i].appid
+					//};
+
+					//steamItems.push(steamItem);
+
+					steamItems.push(rawGames[i].name_escaped);
+					steamItems.push(rawGames[i].appid + "");
+				}
+
+				//aaapi.system.importSteamGames(steamItems);
+				console.log("There are " + (steamItems.length / 2) + " Steam items to return to AArcade.");
+				return steamItems;
+
+				/*
+				var videoId = doc.querySelector("meta[itemprop='videoId']").getAttribute("content");
+				var goodUri = "http://www.youtube.com/watch?v=" + videoId;
+
+				// reference
+				response.reference = goodUri;
+
+				// file
+				response.file = goodUri;
+
+				// preview
+				response.preview = goodUri;
+				
+				// screen
+				var screenElem = doc.querySelector("link[itemprop='thumbnailUrl']");
+				response.screen = screenElem.getAttribute("href");
+
+				// stream
+				response.stream = goodUri;
+
+				// title
+				var titleElem = doc.querySelector("meta[itemprop='name']");
+				response.title = titleElem.getAttribute("content");
+
+				// description
+				var descriptionElem = doc.querySelector("meta[itemprop='description']");
+				response.description = descriptionElem.getAttribute("content");
+
+				// type
+				response.type = "youtube";
+				*/
+
+				//return response;
+			},
+			"test": function(url, doc, callback)
+			{
+				var validForScrape = false;
+				var redirect = false;
+				
+				if( Array.isArray(doc) )
+					validForScrape = true;
+
+				/*
+				var rawGames = doc;
+				var numRawGames = rawGames.length;
+				var steamItems = [];
+				var i, steamItem;
+				for( i = 0; i < numRawGames; i++ )
+				{
+					steamItem = {
+						"name": rawGames[i].name_escaped,
+						"appid": rawGames[i].appid
+					};
+
+					steamItems.push(steamitem);
+				}
+
+				aaapi.system.importSteamGames(steamItems);
+				*/
+				callback({"validForScrape": validForScrape, "redirect": redirect});
+			},
+			"testDelay": 2000,
+			"runDelay": 0
+		},
 		"currenturi":
 		{
 			"id": "currenturi",
@@ -110,12 +208,12 @@ function ArcadeHud()
 			},
 			"test": function(url, doc, callback)
 			{
+				//callback({"validForScrape": true, "redirect": false});
 				var validForScrape = false;
 				var redirect = false;
-				
+
 				var pageElem = doc.querySelector("#page");
 				var pageType = pageElem.className;
-				console.log(pageType);
 				if( pageType.indexOf(" search ") >= 0 )
 				{
 					// perform search results logic
@@ -638,7 +736,9 @@ function ArcadeHud()
 				response.description = ps.innerHTML;
 
 				return response;
-			}
+			},
+			"testDelay": 2000,	// added in December to try and fix the search results page glitch when scraping.
+			"runDelay": 0
 		},
 		"thegamesdb":
 		{
@@ -1125,32 +1225,39 @@ function ArcadeHud()
 
 		document.body.addEventListener("mousedown", function(e)
 		{
-//			console.log("mouse down: " + (e.target === document.body));
+			//console.log("mouse down: " + (e.target === document.body));
 
-//			if(e.target === document.body)
-//			{
+			this.lastMousePassThru = (e.target === document.body);
+			if(this.lastMousePassThru)
+			{
 				var buttonCode = 0;
 				if( e.button === 1 )
 					buttonCode = 1;
 				else if( e.button === 2 )
 					buttonCode = 2;
-				aaapi.system.hudMouseDown(buttonCode, (e.target === document.body));
-//			}
-		}, true);
+				aaapi.system.hudMouseDown(buttonCode, (this.lastMousePassThru));
+			}
+		}.bind(this), true);
 
 		document.body.addEventListener("mouseup", function(e)
 		{
-//			console.log("mouse up: " + (e.target === document.body));
+			//console.log("mouse up: " + (e.target === document.body) + " vs " + this.lastMousePassThru);
 
-//			if(e.target === document.body)
-//			{
+			if(this.lastMousePassThru)
+			{
 				var buttonCode = 0;
 				if( e.button === 1 )
 					buttonCode = 1;
 				else if( e.button === 2 )
 					buttonCode = 2;
-				aaapi.system.hudMouseUp(buttonCode, (e.target === document.body));
-//			}
+				aaapi.system.hudMouseUp(buttonCode, (this.lastMousePassThru));
+			}
+		}.bind(this), true);
+
+		document.body.addEventListener("selectstart", function(e)
+		{
+			e.preventDefault();
+			return false;
 		}, true);
 
 /*
@@ -1697,6 +1804,7 @@ ArcadeHud.prototype.showScraperPopupMenu = function(popupId, x, y, width, height
 	var optionSearchForm = document.createElement("form");
 	optionSearchForm.addEventListener("submit", function(e)
 	{
+		console.log("FIRST ONE");
 		//console.log(e.srcElement.firstChild.popupMenuItems.childNodes);
 		var elem = e.srcElement.firstChild;
 
@@ -1715,7 +1823,7 @@ ArcadeHud.prototype.showScraperPopupMenu = function(popupId, x, y, width, height
 			}
 		}
 
-		if( count === 1 )
+		if( count > 0 )//count === 1 )
 		{
 			var optionElem = elem.popupMenuItems.childNodes[firstIndex];
 			//aaapi.system.didSelectPopupMenuItem(optionElem.blackout.popup.popupId, optionElem.blackout.popup.items.indexOf(optionElem.popupItem));
@@ -1866,6 +1974,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	var optionSearchForm = document.createElement("form");
 	optionSearchForm.addEventListener("submit", function(e)
 	{
+		console.log("SECOND ONE");
 		//console.log(e.srcElement.firstChild.popupMenuItems.childNodes);
 		var elem = e.srcElement.firstChild;
 
@@ -1884,7 +1993,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 			}
 		}
 
-		if( count === 1 )
+		if( count > 0 )// === 1 )
 		{
 			var optionElem = elem.popupMenuItems.childNodes[firstIndex];
 			aaapi.system.didSelectPopupMenuItem(optionElem.blackout.popup.popupId, optionElem.blackout.popup.items.indexOf(optionElem.popupItem));
@@ -2011,6 +2120,9 @@ ArcadeHud.prototype.addHelpMessage = function(text)
 
 ArcadeHud.prototype.metaSearchEasy = function()
 {
+	console.log("Scooby do!");
+	console.log(this.scraper);
+
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
 		window.location='asset://ui/metaSearch.html?id=' + encodeURIComponent(item.info.id);
@@ -2038,63 +2150,82 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 {
 	this.metaScrape(this.activeScraper.id, this.activeScraperField, function(scrapedData)
 	{
-		console.log("Scraped data is: ");
-		console.log(scrapedData);
-		var usedFields = [];
-		var args = [];
-		var x, field;
-		for( x in scrapedData)
+		if( this.activeScraper.id === "importSteamGames" )
 		{
-			field = scrapedData[x];
-			//if( field === "" || (this.activeScraperField !== "all" && this.activeScraperField !== x))
-			if( this.activeScraperField !== "all" && this.activeScraperField !== x)
-				continue;
+			console.log("Time to send " + (scrapedData.length / 2) + " Steam items to AArcade...");
 
-			if( x === "type" )
+			var success = aaapi.system.importSteamGames(scrapedData);
+
+			if( success )
 			{
-				var allTypes = aaapi.library.getAllLibraryTypes();
-				var y;
-				for( y in allTypes )
+				console.log("Steam games imported!");
+
+				//aaapi.system.autoInspect(this.activeScraperItemId);
+				aaapi.system.deactivateInputMode(true);
+			}
+			else
+				console.log("Import rejected!");
+		}
+		else
+		{
+			console.log("Scraped data is: ");
+			console.log(scrapedData);
+			var usedFields = [];
+			var args = [];
+			var x, field;
+			for( x in scrapedData)
+			{
+				field = scrapedData[x];
+				//if( field === "" || (this.activeScraperField !== "all" && this.activeScraperField !== x))
+				if( this.activeScraperField !== "all" && this.activeScraperField !== x)
+					continue;
+
+				if( x === "type" )
 				{
-					console.log(allTypes[y].title);
-					if( allTypes[y].title === field )
+					var allTypes = aaapi.library.getAllLibraryTypes();
+					var y;
+					for( y in allTypes )
 					{
-						field = allTypes[y].info.id;
+						console.log(allTypes[y].title);
+						if( allTypes[y].title === field )
+						{
+							field = allTypes[y].info.id;
+							break;
+						}
+					}
+				}
+				
+				/*
+				var inputs = document.querySelectorAll("input, select");
+				var i;
+				for( i = 0; i < inputs.length; i++ )
+				{
+					if( inputs[i].field === x )
+					{
+						//inputs[i].focus();
+						inputs[i].value = field;
 						break;
 					}
 				}
+				*/
+
+				args.push(x);
+				args.push(field);
+				usedFields.push(x);
 			}
-			
-			/*
-			var inputs = document.querySelectorAll("input, select");
-			var i;
-			for( i = 0; i < inputs.length; i++ )
+
+			var success = aaapi.library.updateItem(this.activeScraperItemId, args);
+
+			if( success )
 			{
-				if( inputs[i].field === x )
-				{
-					//inputs[i].focus();
-					inputs[i].value = field;
-					break;
-				}
+				console.log("Item updated!");
+
+				aaapi.system.autoInspect(this.activeScraperItemId);
+				aaapi.system.deactivateInputMode();
 			}
-			*/
-
-			args.push(x);
-			args.push(field);
-			usedFields.push(x);
+			else
+				console.log("Item update rejected!");
 		}
-
-		var success = aaapi.library.updateItem(this.activeScraperItemId, args);
-
-		if( success )
-		{
-			console.log("Item updated!");
-
-			aaapi.system.autoInspect(this.activeScraperItemId);
-			aaapi.system.deactivateInputMode();
-		}
-		else
-			console.log("Item update rejected!");
 	}.bind(this));
 };
 
@@ -2118,104 +2249,111 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 
 			var results = this.scraper.run(url, this.field, doc);
 
-			// strip everything out of the response except what was asked for.
-			if( this.field !== "all" )
+			if( Array.isArray(results) )
 			{
-				var shitList = [];
-
-				var x;
-				for( x in results )
+				//aaapi.system.importSteamGames(steamItems);	// do this on what ever is calling run.
+			}
+			else
+			{
+				// strip everything out of the response except what was asked for.
+				if( this.field !== "all" )
 				{
-					if( dummy.field !== x )
-						shitList.push(x);
+					var shitList = [];
+
+					var x;
+					for( x in results )
+					{
+						if( dummy.field !== x )
+							shitList.push(x);
+					}
+
+					var i;
+					var max = shitList.length;
+					for( i = 0; i < max; i++ )
+						delete results[shitList[i]];
 				}
 
-				var i;
-				var max = shitList.length;
-				for( i = 0; i < max; i++ )
-					delete results[shitList[i]];
-			}
+				// eliminate duplicates intellegently
+				if( !!results.file && results.file !== "" )
+				{
+					// if there is a file, do not use duplicates on anything else
+					if( results.file === results.reference )
+						results.reference = "";
+						//delete results["reference"];
 
-			// eliminate duplicates intellegently
-			if( !!results.file && results.file !== "" )
-			{
-				// if there is a file, do not use duplicates on anything else
-				if( results.file === results.reference )
-					results.reference = "";
-					//delete results["reference"];
+					if( results.file === results.preview )
+						results.preview = "";
+	//					delete results["preview"];
 
-				if( results.file === results.preview )
-					results.preview = "";
-//					delete results["preview"];
+					if( results.file === results.stream )
+						results.stream = "";
+						//delete results["stream"];
 
-				if( results.file === results.stream )
-					results.stream = "";
-					//delete results["stream"];
+					if( results.file === results.download )
+						results.download = "";
+						//delete results["download"];
 
-				if( results.file === results.download )
-					results.download = "";
-					//delete results["download"];
+					if( results.file === results.screen )
+						results.screen = "";
+						//delete results["screen"];
 
-				if( results.file === results.screen )
-					results.screen = "";
-					//delete results["screen"];
+					if( results.file === results.marquee )
+						results.marquee = "";
+						//delete results["marquee"];
+				}
 
-				if( results.file === results.marquee )
-					results.marquee = "";
-					//delete results["marquee"];
-			}
+				if( !!results.stream && results.stream !== "" )
+				{
+					// if there is a stream, do not use duplicates on anything
+					if( results.stream === results.preview )
+						results.preview = "";
+						//delete results["preview"];
 
-			if( !!results.stream && results.stream !== "" )
-			{
-				// if there is a stream, do not use duplicates on anything
-				if( results.stream === results.preview )
-					results.preview = "";
-					//delete results["preview"];
+					if( results.stream === results.download )
+						results.download = "";
+						//delete results["download"];
+				}
 
-				if( results.stream === results.download )
-					results.download = "";
-					//delete results["download"];
-			}
+				if( !!results.preview && results.preview !== "" )
+				{
+					// if there is a preview, do not use duplicates on anything
+					if( results.preview === results.download )
+						results.download = "";
+						//delete results["download"];
 
-			if( !!results.preview && results.preview !== "" )
-			{
-				// if there is a preview, do not use duplicates on anything
-				if( results.preview === results.download )
-					results.download = "";
-					//delete results["download"];
+					if( results.file === results.screen )
+						results.screen = "";
+						//delete results["screen"];
 
-				if( results.file === results.screen )
-					results.screen = "";
-					//delete results["screen"];
+					if( results.file === results.marquee )
+						results.marquee = "";
+						//delete results["marquee"];
+				}
 
-				if( results.file === results.marquee )
-					results.marquee = "";
-					//delete results["marquee"];
-			}
+				if( !!results.download && results.download !== "" )
+				{
+					// if there is a download, do not use duplicates on anything
+					if( results.download === results.screen )
+						results.screen = "";
+						//delete results["screen"];
 
-			if( !!results.download && results.download !== "" )
-			{
-				// if there is a download, do not use duplicates on anything
-				if( results.download === results.screen )
-					results.screen = "";
-					//delete results["screen"];
+					if( results.download === results.marquee )
+						results.marquee = "";
+						//delete results["marquee"];
+				}
 
-				if( results.download === results.marquee )
-					results.marquee = "";
-					//delete results["marquee"];
-			}
-
-			if( !!results.screen && results.screen !== "" )
-			{
-				// if there is a screen, do not use duplicates on anything
-				if( results.screen === results.marquee )
-					results.marquee = "";
-					//delete results["marquee"];
+				if( !!results.screen && results.screen !== "" )
+				{
+					// if there is a screen, do not use duplicates on anything
+					if( results.screen === results.marquee )
+						results.marquee = "";
+						//delete results["marquee"];
+				}
 			}
 
 			this.callback(results);
 		}.bind(dummy)};
-		aaapi.system.getDOM(id);
+		aaapi.system.getDOM(id, scraperId);
 	}
 	else
 		console.log("ERROR: Invalid scraper ID received.");
@@ -2247,6 +2385,7 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 		console.log(typeof scraper.test);
 		if(typeof scraper.test === "function")
 		{
+			console.log("yarrrrrrr");
 			//scraper.test();
 			var id = "meta" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
 			//var id = "test";
@@ -2293,11 +2432,11 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 			if( !!!delay )
 				delay = 0;
 
-			var dummy2 = {"id": id};
+			var dummy2 = {"id": id, "scraper": scraper};
 			setTimeout(function()
 			{
 				console.log("Get that DOM: " + this.id);
-				aaapi.system.getDOM(this.id);
+				aaapi.system.getDOM(this.id, this.scraper.id);
 			}.bind(dummy2), delay);
 		}
 
@@ -2313,6 +2452,18 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 	//}
 	//console.log("Main frame just finished loading " + url);
 	//console.log("Should any scrapers analyze the newly loaded page?");
+};
+
+ArcadeHud.prototype.getParameterByName = function(name, url)
+{
+	// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
 };
 
 ArcadeHud.prototype.viewStream = function()
@@ -2336,18 +2487,49 @@ ArcadeHud.prototype.encodeRFC5987ValueChars = function(str){
 
 ArcadeHud.prototype.onDOMGot = function(url, response)
 {
-	console.log(response);
+/*
+	var totalSource = response;
+	var partialSource;
+	while( totalSource.length > 0 )
+	{
+		partialSource = totalSource.substring(0, 1000);
+		totalSource = totalSource.substring(1000);
+		console.log(partialSource);
+	}
+*/
+	
 	var index = response.indexOf("AAAPICALL");
 	var callId = response.substring(0, index);
 	if( !!this.metaScrapeHandles[callId] )
 	{
-		var content = response.substring(index + 9);
-		content = "<html>" + decodeURIComponent(content) + "</html>";
-
-		var doc = arcadeHud.DOMParser.parseFromString(content, "text/html");
-
 		var scraper = this.metaScrapeHandles[callId].scraper;
 		var callback = this.metaScrapeHandles[callId].callback;
+
+		var doc;
+		var content = response.substring(index + 9);
+		if( scraper.id === "importSteamGames")
+		{
+			doc = JSON.parse(decodeURIComponent(content));
+		}
+		else
+		{
+//			var crap = decodeURIComponent(content);
+			content = "<html>" + decodeURIComponent(content) + "</html>";
+			doc = arcadeHud.DOMParser.parseFromString(content, "text/html");
+/*
+					if( false || content.indexOf("id=\"page\"") >= 0 )
+					{
+						var elemm = document.createElement("textarea");
+						elemm.value = crap;
+						elemm.style.cssText = "position: absolute; width: 80%; height: 80%; top: 20px; left: 20px;";
+						document.body.appendChild(elemm);
+						elemm.focus();
+						elemm.select();
+					}*/
+		}
+
+		//var scraper = this.metaScrapeHandles[callId].scraper;
+		//var callback = this.metaScrapeHandles[callId].callback;
 		delete this.metaScrapeHandles[callId];
 
 		// FIXME: WHEN DOES THE BROWSER INSTANCE CLEAR ITS ACTIVE SCRAPER????? It doesn't, but it needs to.

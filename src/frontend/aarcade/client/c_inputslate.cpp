@@ -285,11 +285,14 @@ void CInputSlate::OnCursorMoved(int x, int y)
 
 void CInputSlate::OnMouseDoublePressed(MouseCode code)
 {
+	return;
+	/*
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
 //	g_pAnarchyManager->GetInputManager()->MousePress(code);
 	g_pAnarchyManager->GetInputManager()->MousePress(code);
+	*/
 }
 
 void CInputSlate::OnMousePressed(MouseCode code)
@@ -321,7 +324,12 @@ void CInputSlate::OnKeyCodePressed(KeyCode code)
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	g_pAnarchyManager->GetInputManager()->KeyCodePressed(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
+	g_pAnarchyManager->GetInputManager()->KeyCodePressed(code,
+		(input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)),
+		(input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)),
+		(input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)),
+		(input()->IsKeyDown(KEY_LWIN) || input()->IsKeyDown(KEY_RWIN)),
+		false);
 }
 
 void CInputSlate::SetFullscreenMode(bool bFullscreenMode)
@@ -384,7 +392,12 @@ void CInputSlate::OnKeyCodeReleased(KeyCode code)
 		//return;
 	//}
 
-	g_pAnarchyManager->GetInputManager()->KeyCodeReleased(code, (input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)), (input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)), (input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)));
+	g_pAnarchyManager->GetInputManager()->KeyCodeReleased(code,
+		(input()->IsKeyDown(KEY_LSHIFT) || input()->IsKeyDown(KEY_RSHIFT)),
+		(input()->IsKeyDown(KEY_LCONTROL) || input()->IsKeyDown(KEY_RCONTROL)),
+		(input()->IsKeyDown(KEY_LALT) || input()->IsKeyDown(KEY_RALT)),
+		(input()->IsKeyDown(KEY_LWIN) || input()->IsKeyDown(KEY_RWIN)),
+		false);
 	/*
 	using namespace Awesomium;
 

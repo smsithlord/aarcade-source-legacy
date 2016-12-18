@@ -21,6 +21,7 @@
 
 IMPLEMENT_CLIENTCLASS_DT(C_PropShortcutEntity, DT_PropShortcutEntity, CPropShortcutEntity)
 	RecvPropBool(RECVINFO(m_bSlave)),
+	RecvPropString(RECVINFO(m_objectId)),
 	RecvPropString(RECVINFO(m_itemId)),
 END_RECV_TABLE()
 
@@ -44,7 +45,18 @@ void C_PropShortcutEntity::Initialize()
 	{
 		// THIS IS THE OBJECT THE CURRENT USER IS SPAWNING!!
 		//Precache();
-		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		//SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		std::string modelId = (pSpawningObject->modelId != "") ? pSpawningObject->modelId : pSpawningObject->itemId;// g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
+		std::string modelFile;
+
+		KeyValues* entryModel = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(modelId);
+		KeyValues* activeModel = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(entryModel);
+		if (activeModel)
+			modelFile = activeModel->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID), "models\\cabinets\\two_player_arcade.mdl");	// uses default model if key value read fails
+		else
+			modelFile = "models\\cabinets\\two_player_arcade.mdl";
+
+		SetModel(modelFile.c_str());
 		SetSolid(SOLID_NONE);
 		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 		//SetRenderMode(kRenderTransTexture);
@@ -103,7 +115,7 @@ void C_PropShortcutEntity::Release()
 
 void C_PropShortcutEntity::Precache(void)
 {
-	PrecacheModel("models\\cabinets\\two_player_arcade.mdl");
+	//PrecacheModel("models\\cabinets\\two_player_arcade.mdl");	// FIXME: Probably can precache the correct model here.
 	BaseClass::Precache();
 }
 
@@ -161,6 +173,11 @@ void C_PropShortcutEntity::Spawn()
 std::string C_PropShortcutEntity::GetItemId()
 {
 	return std::string(m_itemId);
+}
+
+std::string C_PropShortcutEntity::GetObjectId()
+{
+	return std::string(m_objectId);
 }
 
 bool C_PropShortcutEntity::GetSlave()

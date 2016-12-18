@@ -43,8 +43,8 @@ public:
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
 	void OnMouseWheeled(int delta);
-	void KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
-	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState);
+	void KeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
+	void KeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
 
 	void MouseWheelDown();
 	void MouseWheelUp();

@@ -4,6 +4,7 @@
 #include "c_inputlistener.h"
 //#include "c_canvas.h"
 #include <string>
+#include <map>
 
 class C_EmbeddedInstance
 {
@@ -26,10 +27,11 @@ public:
 	virtual void Close() {};
 	virtual std::string GetURL() { return ""; }
 
-	std::string GetCharTyped(vgui::KeyCode code, bool bShift = false, bool bCtrl = false, bool bAlt = false);
+	std::string GetOutput(vgui::KeyCode code, bool bShift = false, bool bCtrl = false, bool bAlt = false, bool bWin = false, bool bAutorepeat = false);
 
 	// accessors
 	virtual int GetLastRenderedFrame() { return -1; }
+	virtual int GetLastVisibleFrame() { return -1; }
 	virtual ITexture* GetTexture() { return null; }
 	virtual C_InputListener* GetInputListener() { return null; }
 	virtual std::string GetOriginalItemId() { return ""; }
@@ -38,7 +40,8 @@ public:
 	virtual void SetOriginalItemId(std::string itemId) {}
 	
 private:
-
+	static std::map<ButtonCode_t, const char*> s_buttonMap;
+	static std::map<ButtonCode_t, const char*> s_shiftedButtonMap;
 };
 
 #endif
