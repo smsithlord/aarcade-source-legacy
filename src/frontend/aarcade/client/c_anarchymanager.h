@@ -83,6 +83,9 @@ public:
 	//void Run();
 	void RunAArcade();	// initializes AArcade's loading of libraries and stuff.
 
+	void HudStateNotify();
+	void SetSlaveScreen(bool bVal);
+
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void AnarchyStartup();
 	void OnWebManagerReady();
@@ -104,8 +107,10 @@ public:
 
 	void ScanForLegacySaveRecursive(std::string path);
 
-	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut);
+	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut, const char* mode = "spawn");
 	void DeactivateObjectPlacementMode(bool confirm);
+
+	void ShowEngineOptionsMenu();
 
 	// helpers
 	void GenerateUniqueId(char* result);
@@ -121,6 +126,7 @@ public:
 
 	void xCastSetLiveURL();
 	void TestSQLite();
+	void TestSQLite2();
 
 	// accessors
 	bool GetSuspendEmbedded() { return m_bSuspendEmbedded; }

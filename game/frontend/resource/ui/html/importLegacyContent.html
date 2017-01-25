@@ -1,0 +1,35 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 30%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/options.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Import Legacy Content
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<div style="font-family: Arial; font-size: 18px; font-weight: bold; padding: 10px;"><u>Early Access Users</u><br />
+			Your Steam workshop subscriptions from Early Access automatically carryover into Redux.<br /><br />
+			<font style="color: #ffff00;">If you also want to import your library, saves, & other customizations from Early Access, click CONTINUE for instructions.</font><br /><br />
+			</div>
+			<div class="mainButton helpNote" style="width: 350px;" onclick="window.location='asset://ui/importLegacyContentWizard.html';" help="Learn more about importing Early Access content.">Continue</div>
+			<div class="mainButton helpNote" style="width: 350px;" onclick="window.location='asset://ui/options.html';" help="Go back.">Cancel</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

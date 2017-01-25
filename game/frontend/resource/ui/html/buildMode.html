@@ -312,6 +312,12 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 			var category = libraryBrowserContext.category;
 			var titleElem = document.querySelector("#title");
 			titleElem.innerHTML = (category === "items") ? "CABINETS" : "PROPS";
+			if( mode === "move")
+			{
+				titleElem.innerHTML = (category === "items") ? "MOVE SHORTCUT" : "MOVE OBJECT";
+				if( category === "models" )
+					document.querySelector("#entryContainer").style.display = "none";
+			}
 
 			document.addEventListener("keypress", function(e)
 			{
@@ -381,7 +387,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					next.timerHandle = setTimeout(function()
 					{
 						console.log("category is " + category + " and mode is " + mode);
-						if( mode === "spawn" && category === "items" )
+						if( category === "items" ) //mode === "spawn" && 
 							aaapi.system.cabinetSelected(this.entry.info.id);
 						else
 							aaapi.system.modelSelected(this.entry.info.id);
@@ -419,7 +425,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					// (this allows you to skip past entries you don't want to load)
 					prev.timerHandle = setTimeout(function()
 					{
-						if( mode === "spawn" && category === "items" )
+						if( category === "items" ) //mode === "spawn" && 
 							aaapi.system.cabinetSelected(this.entry.info.id);
 						else
 							aaapi.system.modelSelected(this.entry.info.id);
@@ -468,92 +474,118 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				return false;
 			}, false);
 
-
-			//var model = aaapi.library.findFirstLibraryModel("", 1);
 			var searchCategory;
 			var response;
+			var method;
 			if( libraryBrowserContext.category === "items" )
 			{
+				method = "find";
 				searchCategory = "models";
-					response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", "", "dynamic", "1");
+				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", "", "dynamic", "1");
 			}
-			else if( libraryBrowserContext.filter === "" )
+			else if( mode !== "move" && libraryBrowserContext.filter === "" )
 			{
-				searchCategory = libraryBrowserContext.category;
-				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", libraryBrowserContext.search);
+				//searchCategory = libraryBrowserContext.category;
+				var searchText = libraryBrowserContext.search;
+				if( searchText != "" )
+				{
+					method = "find";
+					response = aaapi.library.findFirstLibraryEntry(category, "title", searchText);
+				}
+				else
+				{
+					method = "get";
+					response = aaapi.library.getFirstLibraryEntry(searchCategory);
+				}
 			}
-			else
+			else if( mode !== "move" )
 			{
-				searchCategory = libraryBrowserContext.category;
+				//searchCategory = libraryBrowserContext.category;
+				var searchText = libraryBrowserContext.search;
+				var filterText = libraryBrowserContext.filter;
+				method = "find";
 				// FIXME: (maybe) This always assumes that the filter field of the item is "type".
-				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", libraryBrowserContext.search, "type", libraryBrowserContext.filter);
+				response = aaapi.library.findFirstLibraryEntry(category, "title", searchText, "type", filterText);
 			}
 
-			var queryId = response.queryId;
-			var entry = response.entry;
-			var entryElem;
-			var prettyName;
-
-			var entries = [];
-
-			while( response.success )
+			if( mode !== "move" || category === "items" )
 			{
-				entries.push(entry);
-				response = aaapi.library.findNextLibraryEntry(this.queryId, searchCategory);
+				var queryId = response.queryId;
+				var entry = response.entry;
+				var entryElem;
+				var prettyName;
 
-				entry = response.entry;
-				//entry = aaapi.library.findNextLibraryModel();
-			}
+				var entries = [];
 
-			entries.sort(function(a, b)
-			{
-				/*
-				var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
-				var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+				var count = 0;
+				var max = 99;
+				while( response.success && count < max )
+				{
+					entries.push(entry);
 
-				if( letterA < letterB )
-					return -1;
-				else if( letterA > letterB )
-					return 1;
-				else
-					return 0;
-				*/
+					if( method === "get" )
+						response = aaapi.library.getNextLibraryEntry(queryId, searchCategory);
+					else
+						response = aaapi.library.findNextLibraryEntry(queryId, searchCategory);
 
-				var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
-				var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+					entry = response.entry;
+					count++;
+					//entry = aaapi.library.findNextLibraryModel();
+				}
 
-				if( lettersA < lettersB )
-					return -1;
-				else if( lettersA > lettersB )
-					return 1;
-				else
-					return 0;
-			});
+				entries.sort(function(a, b)
+				{
+					/*
+					var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+					var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
 
-			var i;
-			var max = entries.length;
-			for( i = 0; i < max; i++ )
-			{
-				entry = entries[i];
-				entryElem = document.createElement("div");
-				entryElem.entry = entry;
+					if( letterA < letterB )
+						return -1;
+					else if( letterA > letterB )
+						return 1;
+					else
+						return 0;
+					*/
 
-				prettyName = entry.platforms[sourcePlatformId].file;
-				prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
-				prettyName = prettyName.substring(0, prettyName.length - 4);
-				prettyName = prettyName.replace(/_/g, " ");
-				prettyName = prettyName.toUpperCase();
+					var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+					var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
 
-				namePlateElem = document.createElement("div");
-				namePlateElem.className = "namePlate";
-				namePlateElem.innerHTML = prettyName;
+					if( lettersA < lettersB )
+						return -1;
+					else if( lettersA > lettersB )
+						return 1;
+					else
+						return 0;
+				});
 
-				entryElem.appendChild(namePlateElem);
+				var i;
+				var max = entries.length;
+				for( i = 0; i < max; i++ )
+				{
+					entry = entries[i];
+					entryElem = document.createElement("div");
+					entryElem.entry = entry;
 
-				entryContainerElem.appendChild(entryElem);
+					prettyName = entry.platforms[sourcePlatformId].file;
+					prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+					prettyName = prettyName.substring(0, prettyName.length - 4);
+					prettyName = prettyName.replace(/_/g, " ");
+					prettyName = prettyName.toUpperCase();
 
-				//console.log(JSON.stringify(entry));
-				//entry = aaapi.library.findNextLibraryModel();
+					namePlateElem = document.createElement("div");
+					namePlateElem.className = "namePlate";
+					namePlateElem.innerHTML = prettyName;
+
+					//if(entry.info.id === libraryBrowserContext.id)
+					//	namePlateElem.className += " selectedNamePlate";
+
+					entryElem.appendChild(namePlateElem);
+
+					entryContainerElem.appendChild(entryElem);
+
+					//console.log(JSON.stringify(entry));
+					//entry = aaapi.library.findNextLibraryModel();
+				}
 			}
 
 			function randoSelect()

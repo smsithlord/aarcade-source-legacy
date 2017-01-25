@@ -27,6 +27,7 @@ public:
 	void UseFunc( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int ObjectCaps()	{ return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE); }
 	void SetItemId(std::string id);
+	void SetModelId(std::string id);
 
 	void PrepForTransit(char* &memberBuf, const char* value);
 
@@ -36,6 +37,8 @@ private:
 	char* m_objectIdBuf;
 	CNetworkVar(string_t, m_itemId);
 	char* m_itemIdBuf;
+	CNetworkVar(string_t, m_modelId);
+	char* m_modelIdBuf;
 };
 
 #endif //PROP_SHORTCUT_ENTITY_H

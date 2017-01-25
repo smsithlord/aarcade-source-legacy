@@ -169,7 +169,7 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 }
 */
 
-bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
+bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance, bool bPreTest)
 {
 	bool bIsPriorityEmbeddedInstance = this->IsPriorityEmbeddedInstance(pEmbeddedInstance);
 
@@ -216,7 +216,8 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 		// always render the 1st time
 		if (m_iLastPriorityRenderedFrame <= 0)
 		{
-			m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
+			if (!bPreTest)
+				m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
 //			if (m_iVisibleCanvasesLastFrame > 0 && m_iLastAllowedRenderedFrame < gpGlobals->framecount - 1)
 //				return false;
 //			else
@@ -234,7 +235,8 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 //		if (gpGlobals->framecount - m_iLastPriorityRenderedFrame >= m_iVisiblePriorityCanvasesLastFrame + iExtraOne)
 		if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisiblePriorityCanvasesLastFrame * factor) - 1)
 		{
-			m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
+			if (!bPreTest)
+				m_iLastAllowedPriorityRenderedFrame = gpGlobals->framecount;
 		//	if (m_iVisibleCanvasesLastFrame > 0 && m_iLastAllowedRenderedFrame < gpGlobals->framecount - 1)
 	//			return false;
 //			else
@@ -280,7 +282,9 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 		// always render the 1st time
 		if (m_iLastRenderedFrame <= 0)
 		{
-			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			if (!bPreTest)
+				m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+
 			if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastAllowedPriorityRenderedFrame < gpGlobals->framecount - 1)
 				return false;
 			else
@@ -302,7 +306,8 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 
 		if (m_iVisiblePriorityCanvasesLastFrame > 0 && m_iLastAllowedPriorityRenderedFrame < gpGlobals->framecount - 1)//m_iLastAllowedPriorityRenderedFrame != gpGlobals->framecount - 1)
 		{
-			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			if (!bPreTest)
+				m_iLastAllowedRenderedFrame = gpGlobals->framecount;
 			return false;
 		}
 
@@ -323,7 +328,8 @@ bool C_CanvasManager::ShouldRender(C_EmbeddedInstance* pEmbeddedInstance)
 		//if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisibleCanvasesLastFrame * factor) - 1)
 		if (gpGlobals->framecount - iLastRenderedFrame >= (m_iVisibleCanvasesLastFrame * factor) - 1)
 		{
-			m_iLastAllowedRenderedFrame = gpGlobals->framecount;
+			if (!bPreTest)
+				m_iLastAllowedRenderedFrame = gpGlobals->framecount;
 			return true;
 		}
 

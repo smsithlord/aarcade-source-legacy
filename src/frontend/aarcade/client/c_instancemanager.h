@@ -9,11 +9,17 @@
 
 struct object_t
 {
+	std::string objectId;
+	unsigned int created;
+	std::string creator;
+	unsigned int removed;
+	std::string remover;
+	unsigned int modified;
+	std::string modifier;
 	std::string itemId;
 	std::string modelId;
-	std::string objectId;
 	Vector origin;
-	Vector angles;
+	QAngle angles;
 	bool spawned;
 	float scale;
 	bool slave;
@@ -39,10 +45,14 @@ public:
 
 	void Update();
 
+	void LoadInstance(std::string instanceId);
 	void LoadLegacyInstance(std::string instanceId);
 
-	void SpawnObject(object_t* object);
-	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave);
+	void ApplyChanges(std::string id, C_PropShortcutEntity* pShortcut);
+	void ResetObjectChanges(C_PropShortcutEntity* pShortcut);
+
+	void SpawnObject(object_t* object, bool bShouldGhost = false);
+	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string creator = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "");
 	object_t* GetInstanceObject(std::string objectId);
 	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity);
 	bool SpawnNearestObject();
@@ -55,7 +65,7 @@ public:
 	void LegacyMapIdFix(std::string legacyMapName, std::string mapId);
 
 	void SpawnActionPressed();
-	void ChangeModel(C_BaseEntity* pEntity, std::string in_modelFile);
+	void ChangeModel(C_BaseEntity* pEntity, std::string modelId, std::string in_modelFile);
 	//void SpawnItem(std::string id);
 
 	// accessors
@@ -63,6 +73,7 @@ public:
 	// mutators
 	
 private:
+	KeyValues* m_pInstanceKV;
 	unsigned int m_uNextFlashedObject;
 	float m_fLastSpawnActionPressed;
 	float m_fNearestSpawnDist;

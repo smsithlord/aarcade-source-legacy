@@ -7,8 +7,6 @@
 		</script>
 	</head>
 	<body>
-		<div class="hudHeaderContainer"></div>
-
 		<div class="hudContent" style="width: 50%; position: fixed; left: 0; right: 0; top: 45%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
@@ -30,7 +28,7 @@
 			<div id="itemContainer"></div>
 		</div>
 
-		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
@@ -212,7 +210,7 @@ function getParameterByName(name, url) {
 
 				if( x == "file" || x == "marquee" || x == "screen" || x == "preview" )
 				{
-					fieldValue.style.width = "69%";
+					fieldValue.style.width = "73%";
 
 					var buttonBrowseContainer = document.createElement("div");
 					buttonBrowseContainer.className = "button";
@@ -281,7 +279,7 @@ function getParameterByName(name, url) {
 					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
 					buttonGlobeContainer.appendChild(buttonGlobeImage);
 					fieldContainer.appendChild(buttonGlobeContainer);
-
+/*
 					var buttonCurrentContainer = document.createElement("div");
 					buttonCurrentContainer.className = "button";
 					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
@@ -291,7 +289,7 @@ function getParameterByName(name, url) {
 					buttonCurrentImage.src = "scrapeicon.png";
 					buttonCurrentImage.field = x;
 					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
-
+*/
 					/*		
 					buttonCurrentImage.addEventListener("click", function(e)
 					{
@@ -321,13 +319,13 @@ function getParameterByName(name, url) {
 					}.bind(buttonCurrentImage), true);
 					*/
 					
-					buttonCurrentContainer.appendChild(buttonCurrentImage);
-					fieldContainer.appendChild(buttonCurrentContainer);
+					//buttonCurrentContainer.appendChild(buttonCurrentImage);
+					//fieldContainer.appendChild(buttonCurrentContainer);
 				}
 
 				if( x == "stream" || x == "download" || x == "reference" )
 				{
-					fieldValue.style.width = "73%";
+					fieldValue.style.width = "77%";
 
 					var buttonGlobeContainer = document.createElement("div");
 					buttonGlobeContainer.className = "button";
@@ -340,7 +338,7 @@ function getParameterByName(name, url) {
 					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
 					buttonGlobeContainer.appendChild(buttonGlobeImage);
 					fieldContainer.appendChild(buttonGlobeContainer);
-
+/*
 					var buttonCurrentContainer = document.createElement("div");
 					buttonCurrentContainer.className = "button";
 					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
@@ -350,6 +348,7 @@ function getParameterByName(name, url) {
 					buttonCurrentImage.src = "scrapeicon.png";
 					buttonCurrentImage.field = x;	
 					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
+					*/
 					/*			
 					buttonCurrentImage.addEventListener("click", function(e)
 					{
@@ -376,8 +375,8 @@ function getParameterByName(name, url) {
 					}.bind(buttonCurrentImage), true);
 */
 
-					buttonCurrentContainer.appendChild(buttonCurrentImage);	
-					fieldContainer.appendChild(buttonCurrentContainer);
+					//buttonCurrentContainer.appendChild(buttonCurrentImage);	
+					//fieldContainer.appendChild(buttonCurrentContainer);
 				}
 
 				help = fieldHelp[x];
@@ -399,9 +398,10 @@ function getParameterByName(name, url) {
 			buttonGlobeImage.field = "all";
 			buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
 			buttonGlobeContainer.appendChild(buttonGlobeImage);
-			metaScrapeContainer.insertBefore(buttonGlobeContainer, metaScrapeContainer.firstChild);
+			metaScrapeContainer.appendChild(buttonGlobeContainer);
+			//metaScrapeContainer.insertBefore(buttonGlobeContainer, metaScrapeContainer.firstChild);
 			//metaScrapeContainer.appendChild(buttonGlobeContainer);
-
+/*
 			var buttonCurrentContainer = document.createElement("div");
 			buttonCurrentContainer.className = "button";
 			buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
@@ -414,7 +414,7 @@ function getParameterByName(name, url) {
 			
 			buttonCurrentContainer.appendChild(buttonCurrentImage);
 			metaScrapeContainer.appendChild(buttonCurrentContainer);
-
+*/
 			function metaScrapeButtonClicked(e)
 			{
 				console.log("enterprisexx:");

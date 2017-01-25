@@ -203,7 +203,7 @@ void C_AnarchyManager::LevelInitPostEntity()
 	DevMsg("AnarchyManager: LevelInitPostEntity\n");
 
 	if (m_instanceId != "")
-		g_pAnarchyManager->GetInstanceManager()->LoadLegacyInstance(m_instanceId);
+		g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_instanceId);
 
 	m_bSuspendEmbedded = false;
 
@@ -477,6 +477,9 @@ void C_AnarchyManager::Update(float frametime)
 			m_pInstanceManager = new C_InstanceManager();
 			m_pMetaverseManager = new C_MetaverseManager();
 			m_pInputManager = new C_InputManager();
+
+			// auto-load aarcade stuff
+			g_pAnarchyManager->RunAArcade();
 
 			/*
 			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
@@ -965,6 +968,64 @@ void C_AnarchyManager::RunAArcade()
 	pHudBrowserInstance->SetUrl("asset://ui/startup.html");
 }
 
+void C_AnarchyManager::HudStateNotify()
+{
+	std::vector<std::string> params;
+	params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
+	params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
+	params.push_back(VarArgs("%i", engine->IsInGame()));
+	params.push_back(VarArgs("%i", (g_pAnarchyManager->GetSelectedEntity() != null)));
+
+	int entIndex = -1;
+	int isItemSelected = 0;
+	C_PropShortcutEntity* pShortcut = null;
+	C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+	if (pEntity)
+	{
+		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+		if (pShortcut && pShortcut->GetItemId() != "")
+			isItemSelected = 1;
+	}
+	params.push_back(VarArgs("%i", isItemSelected));
+	params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())));
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+	if (pEmbeddedInstance && pEmbeddedInstance != pHudBrowserInstance)
+	{
+		params.push_back(pEmbeddedInstance->GetURL());
+
+		if (pShortcut && pEmbeddedInstance->GetOriginalEntIndex() == pShortcut->entindex())
+			entIndex = pShortcut->entindex();
+	}
+	else
+		params.push_back("");
+
+	params.push_back(VarArgs("%i", entIndex));
+	
+	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
+}
+
+void C_AnarchyManager::SetSlaveScreen(bool bVal)
+{
+	C_PropShortcutEntity* pShortcut = null;
+	C_BaseEntity* pEntity = this->GetSelectedEntity();
+	if (pEntity)
+		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+	if (pShortcut)
+	{
+		std::string objectId = pShortcut->GetObjectId();
+		object_t* pObject = this->GetInstanceManager()->GetInstanceObject(objectId);
+		if (pObject)
+		{
+			//pObject->slave = bVal;
+			pShortcut->SetSlave(bVal);
+			this->GetInstanceManager()->ApplyChanges(objectId, pShortcut);	// will also update the object
+		}
+	}
+}
+
 void C_AnarchyManager::PostRender()
 {
 	//DevMsg("AnarchyManager: PostRender\n");
@@ -1304,7 +1365,6 @@ const char* C_AnarchyManager::GenerateCRC32Hash(const char* text)
 
 const char* C_AnarchyManager::GenerateLegacyHash(const char* text)
 {
-//	DevMsg("hashing: %\s", text);
 	char input[AA_MAX_STRING];
 	Q_strcpy(input, text);
 
@@ -1341,7 +1401,6 @@ const char* C_AnarchyManager::GenerateLegacyHash(const char* text)
 		}
 	}
 
-//	DevMsg(" Hash was %08x\n", m_crc);
 	return VarArgs("%08x", m_crc);
 }
 
@@ -1439,32 +1498,40 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 	*/
 
 	// add legacy search paths
-	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-	// and legacy workshop search paths (from workshop folder)
-	std::string workshopMapsPath = path + "workshop\\workshopmaps\\";
-	//g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "MOD", PATH_ADD_TO_TAIL);
-	g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-	std::string workshopFile;
-	FileFindHandle_t findHandle;
-	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", path.c_str()), "", &findHandle);
-	while (pFilename != NULL)
+	KeyValues* pLegacyLogKV = new KeyValues("legacy");
+	if (pLegacyLogKV->LoadFromFile(g_pFullFileSystem, "legacy_log.key", "DEFAULT_WRITE_PATH"))
 	{
-		workshopFile = path + "workshop\\" + std::string(pFilename);
-
-		if (workshopFile.find(".vpk") == workshopFile.length() - 4 ) //g_pFullFileSystem->FindIsDirectory(findHandle)
+		if (pLegacyLogKV->GetInt("exported"))
 		{
-			DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
-			//g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "MOD", PATH_ADD_TO_TAIL);
-			g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
-			//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, workshopFile, "", "");
-		}
+			std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+			g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
+			g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
 
-		pFilename = g_pFullFileSystem->FindNext(findHandle);
+			// and legacy workshop search paths (from workshop folder)
+			std::string workshopMapsPath = path + "workshop\\workshopmaps\\";
+			//g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "MOD", PATH_ADD_TO_TAIL);
+			g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+			std::string workshopFile;
+			FileFindHandle_t findHandle;
+			const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", path.c_str()), "", &findHandle);
+			while (pFilename != NULL)
+			{
+				workshopFile = path + "workshop\\" + std::string(pFilename);
+
+				if (workshopFile.find(".vpk") == workshopFile.length() - 4) //g_pFullFileSystem->FindIsDirectory(findHandle)
+				{
+					DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
+					//g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "MOD", PATH_ADD_TO_TAIL);
+					g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
+					//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, workshopFile, "", "");
+				}
+
+				pFilename = g_pFullFileSystem->FindNext(findHandle);
+			}
+		}
 	}
+	pLegacyLogKV->deleteThis();
 
 	/* DISABLE MOUNTING OF LEGACY AARCADE CONTENT
 	std::string pathDownload = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\download\\";	// for resolving cached images
@@ -1507,6 +1574,9 @@ bool C_AnarchyManager::AttemptSelectEntity()
 		// finished positioning & choosing model, ie: changes confirmed
 		DevMsg("CHANGES CONFIRMED\n");
 		g_pAnarchyManager->DeactivateObjectPlacementMode(true);
+
+		std::string id = pShortcut->GetObjectId();
+		m_pInstanceManager->ApplyChanges(id, pShortcut);
 
 		return SelectEntity(pShortcut);
 	}
@@ -1816,8 +1886,11 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 							DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
 
 							C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
-							pSteamBrowserInstance->Init(tabTitle, uri);
-							pSteamBrowserInstance->SetOriginalItemId(itemId);
+							pSteamBrowserInstance->Init(tabTitle, uri, null, pShortcut->entindex());
+							pSteamBrowserInstance->SetOriginalItemId(itemId);	// FIXME: do we need to do this for original entindex too???
+							//pSteamBrowserInstance->SetOriginalEntIndex(pShortcut->entindex());	// probably NOT needed??
+
+
 							pEmbeddedInstance = pSteamBrowserInstance;
 						}
 					}
@@ -1870,11 +1943,14 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 			DevMsg("ERROR: No embedded instance!!\n");
 			DevMsg("ID on this item is: %s", pShortcut->GetItemId().c_str());
 		}
+		//C_AwesomiumBrowserInstance* pHudWebTab = this->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
 		//m_pWebManager->SelectWebTab(pWebTab);
 
 		//break;
 	}
 
+	g_pAnarchyManager->HudStateNotify();
 	return true;
 	//*/
 }
@@ -1891,6 +1967,7 @@ bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 		m_pInputManager->SetEmbeddedInstance(null);
 		//m_pWebManager->DeselectWebTab(pWebTab);
 
+		/*
 		if (nextUrl != "none")
 		{
 			if (nextUrl != "")
@@ -1898,10 +1975,19 @@ bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 			else
 				pHudBrowserInstance->SetUrl("asset://ui/blank.html");
 		}
+		*/
 
 		// ALWAYS close the selected web tab when de-selecting entities. (this has to be accounted for or changed when the continous play button gets re-enabled!)
 		if (bCloseInstance && pEmbeddedInstance != pHudBrowserInstance)
-			pEmbeddedInstance->Close();
+			pEmbeddedInstance->Close();	// FIXME: (maybe) This might cause blank.html to be loaded into the HUD layer because the entity that initiated all this is still set as m_pSelectedEntity at this point...
+	}
+
+	if (nextUrl != "none")
+	{
+		if (nextUrl != "")
+			pHudBrowserInstance->SetUrl(nextUrl);
+		else
+			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
 	}
 
 	RemoveGlowEffect(m_pSelectedEntity);
@@ -2005,7 +2091,8 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 				}
 
 //				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), goodMapName.c_str(), title, file, "", "");
+				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), goodMapName.c_str(), title, file, "", "");
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, "", "");
 				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
 			}
 		}
@@ -2016,6 +2103,15 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
 	g_pFullFileSystem->FindClose(findHandle);
 }
 
+void C_AnarchyManager::ShowEngineOptionsMenu()
+{
+	//// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
+	//if (engine->IsInGame())
+	//	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+	engine->ClientCmd("gamemenucommand OpenOptionsDialog\n");
+}
+
 void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 {
 	C_PropShortcutEntity* pShortcut = m_pMetaverseManager->GetSpawningObjectEntity();
@@ -2023,6 +2119,8 @@ void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 	{
 		if (confirm)
 		{
+			engine->ServerCmd(VarArgs("makenonghost %i;\n", pShortcut->entindex()), false);
+			/*
 			pShortcut->SetRenderColorA(255);
 			pShortcut->SetRenderMode(kRenderNormal);
 
@@ -2039,13 +2137,20 @@ void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 					pPhysics->EnableMotion(false);
 				}
 			}
+			*/
 		}
 		else
 		{
 			// CANCEL
 			this->GetMetaverseManager()->SetSpawningObjectEntity(null);
 			this->GetMetaverseManager()->SetSpawningObject(null);
-			this->GetInstanceManager()->RemoveEntity(pShortcut);
+
+			//object_t* pObject = this->GetInstanceManager()->GetInstanceObject(pShortcut->GetObjectId());
+			//if ( pObject )
+			//	this->GetInstanceManager()->ResetObjectChanges(pShortcut);
+			//else
+			//this->GetInstanceManager()->RemoveEntity(pShortcut);
+			this->GetInstanceManager()->ResetObjectChanges(pShortcut);	// this will also delete the object if there's nothing to revert to!!
 		}
 
 		m_pMetaverseManager->SetSpawningObjectEntity(null);
@@ -2059,17 +2164,52 @@ void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 	m_pInputManager->DeactivateInputMode(true);
 }
 
-void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut)
+void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut, const char* mode)
 {
 	m_pMetaverseManager->ResetSpawningAngles();
 	m_pMetaverseManager->SetSpawningRotationAxis(1);
 	m_pMetaverseManager->SetSpawningObjectEntity(pShortcut);
 
+	std::string objectId = pShortcut->GetObjectId();
+	//DevMsg("At placement id is: %s\n", objectId.c_str());
+	object_t* theObject = m_pInstanceManager->GetInstanceObject(objectId);
+	//DevMsg("Object val: %s\n", theObject->itemId.c_str());
+	m_pMetaverseManager->SetSpawningObject(theObject);
+
+	//std::string moreParams = "";
+	if (!Q_strcmp(mode, "move"))
+	{
+		//SetLibraryBrowserContext(std::string category, std::string id, std::string search, std::string filter)
+		std::string category = "";
+		KeyValues* itemKv = m_pMetaverseManager->GetLibraryItem(pShortcut->GetItemId());
+		if (itemKv)
+			category = "items";
+		else
+		{
+			// no item found, probably a model
+			// FIXME: This is just ASSUMING that it is a model.
+			category = "models";
+			//moreParams = "&title=" + 
+			//KeyValues* modelKv = m_pMetaverseManager->GetLibraryModel(pShortcut->GetItemId());
+			//if (modelKv)
+			//	category = "models";
+		}
+		m_pMetaverseManager->SetLibraryBrowserContext(category, std::string("automove"), "", "");
+		engine->ServerCmd(VarArgs("makeghost %i;\n", pShortcut->entindex()), false);
+		/*	// do this stuff server-side now
+		pShortcut->SetSolid(SOLID_NONE);
+		pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		//SetRenderMode(kRenderTransTexture);
+		pShortcut->SetRenderMode(kRenderTransColor);
+		pShortcut->SetRenderColorA(160);
+		*/
+	}
+
 	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	//pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
 	//std::string category = this->GetMetaverseManager()->GetLibraryBrowserContext("category");
 	//pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=spawn&category=%s", category.c_str()));
-	pHudInstance->SetUrl("asset://ui/buildMode.html?mode=spawn");
+	pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=%s", mode));
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, true);
 
 	/*
@@ -2126,68 +2266,70 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
 	if (!m_pMountManager)	// it is our first time here
 	{
-		//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-		//this->ScanForLegacySaveRecursive(path);
-
 		/*
-		std::string workshopPath;
-		unsigned int max = m_pWorkshopManager->GetNumDetails();
-		for (unsigned int i = 0; i < max; i++)
+		bool bObsoleteLegacyTester = true;
+		if (bObsoleteLegacyTester)
 		{
-			SteamUGCDetails_t* pDetails = m_pWorkshopManager->GetDetails(i);
-			workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
-			this->ScanForLegacySaveRecursive(workshopPath);
-		}
-		*/
+			std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+			this->ScanForLegacySaveRecursive(path);
 
-		/*
-		// detect any .set files in the legacy folder too
-		std::string file;
-		KeyValues* kv = new KeyValues("instance");
-		FileFindHandle_t findHandle;
-		//DevMsg("Tester folder: %smaps\\*.set", path);
-		//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-		//const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
-		const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "GAME", &findHandle);
-		while (pFilename != NULL)
-		{
-			if (g_pFullFileSystem->FindIsDirectory(findHandle))
+			std::string workshopPath;
+			unsigned int max = m_pWorkshopManager->GetNumDetails();
+			for (unsigned int i = 0; i < max; i++)
 			{
-				pFilename = g_pFullFileSystem->FindNext(findHandle);
-				continue;
+				SteamUGCDetails_t* pDetails = m_pWorkshopManager->GetDetails(i);
+				workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
+				this->ScanForLegacySaveRecursive(workshopPath);
 			}
 
-			//file = std::string(path) + "maps\\" + std::string(pFilename);
-			file = "maps\\" + std::string(pFilename);
-
-			// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
-			if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+			// detect any .set files in the legacy folder too
+			std::string file;
+			KeyValues* kv = new KeyValues("instance");
+			FileFindHandle_t findHandle;
+			//DevMsg("Tester folder: %smaps\\*.set", path);
+			//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+			//const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
+			const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "GAME", &findHandle);
+			while (pFilename != NULL)
 			{
-				if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+				if (g_pFullFileSystem->FindIsDirectory(findHandle))
 				{
-					//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
-					// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
-					// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
-
-					std::string title = kv->GetString("title");
-					if (title == "")
-					{
-						//title = "Unnamed";
-						title = file;
-						size_t found = title.find_last_of("/\\");
-						if (found != std::string::npos)
-							title = title.substr(found + 1);
-					}
-
-					g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
-					//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
+					pFilename = g_pFullFileSystem->FindNext(findHandle);
+					continue;
 				}
-			}
 
-			kv->Clear();
-			pFilename = g_pFullFileSystem->FindNext(findHandle);
+				//file = std::string(path) + "maps\\" + std::string(pFilename);
+				file = "maps\\" + std::string(pFilename);
+
+				// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
+				if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+				{
+					if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
+					{
+						//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+						// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
+						// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
+
+						std::string title = kv->GetString("title");
+						if (title == "")
+						{
+							//title = "Unnamed";
+							title = file;
+							size_t found = title.find_last_of("/\\");
+							if (found != std::string::npos)
+								title = title.substr(found + 1);
+						}
+
+						g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
+						//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
+					}
+				}
+
+				kv->Clear();
+				pFilename = g_pFullFileSystem->FindNext(findHandle);
+			}
+			g_pFullFileSystem->FindClose(findHandle);
 		}
-		g_pFullFileSystem->FindClose(findHandle);
 		*/
 
 		m_pMountManager = new C_MountManager();
@@ -2486,8 +2628,9 @@ void C_AnarchyManager::xCastSetLiveURL()
 	//DevMsg("Done doing anarchybot stuff!!\n");
 }
 
-void C_AnarchyManager::TestSQLite()
+void C_AnarchyManager::TestSQLite2()
 {
+	DevMsg("LOAD SQL TEST...\n");
 	int rc;
 	char *error;
 
@@ -2509,20 +2652,123 @@ void C_AnarchyManager::TestSQLite()
 	}
 
 	// Execute SQL
-	DevMsg("Creating MyTable ...\n");
-	const char *sqlCreateTable = "CREATE TABLE MyTable (id INTEGER PRIMARY KEY, value STRING);";
-	rc = sqlite3_exec(db, sqlCreateTable, NULL, NULL, &error);
+	sqlite3_stmt *stmt = NULL;
+	rc = sqlite3_prepare(db, "SELECT * from MyTable", -1, &stmt, NULL);
+	//rc = sqlite3_prepare(db, "INSERT INTO MyTable VALUES(NULL, ?)", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(db));
+
+	int length;
+	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		KeyValues* pTesterKV = new KeyValues("anotherTester");
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		pTesterKV->ReadAsBinary(buf);
+		DevMsg("Value here is: %s\n", pTesterKV->GetString("originalTesterKey"));
+
+		/*
+		void* buffer = malloc(length);
+		memcpy(buffer, sqlite3_column_blob(stmt, 0), length);
+		buf.Put(buffer, length);
+		pTesterKV->ReadAsBinary(buf);
+		DevMsg("Buf value has: %s\n", pTesterKV->GetString("originalTesterKey"));
+		pTesterKV->deleteThis();
+		*/
+
+	//	buf.Put
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+
+	// Close Database
+	DevMsg("Closing MyDb.db ...\n");
+	sqlite3_close(db);
+	DevMsg("Closed MyDb.db\n");
+}
+
+void C_AnarchyManager::TestSQLite()
+{
+	int rc;
+	char *error;
+
+	// create the library database
+	DevMsg("Create library database...\n");
+
+	sqlite3 *db;
+	rc = sqlite3_open("aarcade_user/library.db", &db);
 	if (rc)
+	{
+		DevMsg("Error opening SQLite3 database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	// create the tables
+	const char *sqlCreateAppsTable = "CREATE TABLE apps (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateAppsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
 	{
 		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
 		sqlite3_free(error);
 	}
-	else
+
+	const char *sqlCreateItemsTable = "CREATE TABLE items (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateItemsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
 	{
-		DevMsg("Created MyTable.\n");
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
 	}
 
+	const char *sqlCreateMapsTable = "CREATE TABLE maps (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateMapsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateModelsTable = "CREATE TABLE models (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateModelsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreatePlatformsTable = "CREATE TABLE platforms (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreatePlatformsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateTypesTable = "CREATE TABLE types (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateTypesTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateInstancesTable = "CREATE TABLE instances (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateInstancesTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	// FIXME: TODO: Add the default stuff to the database by default?  or maybe this should be done through a higher-level system.
+
+	// DATABASE IS NOW CREATED WITH THE PROPER TABLES, BUT IS COMPLETELY EMPTY.
+	sqlite3_close(db);
+	DevMsg("Library created.\n");
 	// Execute SQL
+	/*
 	DevMsg("Inserting a value into MyTable ...\n");
 	const char *sqlInsert = "INSERT INTO MyTable VALUES(NULL, 'A Value');";
 	rc = sqlite3_exec(db, sqlInsert, NULL, NULL, &error);
@@ -2535,7 +2781,41 @@ void C_AnarchyManager::TestSQLite()
 	{
 		DevMsg("Inserted a value into MyTable.\n");
 	}
+	*/
+	/*
+	DevMsg("Inserting a BINARY value into MyTable ...\n");
+	sqlite3_stmt *stmt = NULL;
+	rc = sqlite3_prepare(db,
+		"INSERT INTO MyTable VALUES(NULL, ?)", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed!\n");
 
+	// SQLITE_STATIC because the statement is finalized
+	// before the buffer is freed:
+
+	CUtlBuffer buf;
+	KeyValues* pObjectKV = new KeyValues("originalTester");//pInstanceObjectsKV->FindKey(VarArgs("%s/local", objectId.c_str()), true);
+	pObjectKV->SetString("originalTesterKey", "yup");
+	pObjectKV->WriteAsBinary(buf);
+	pObjectKV->deleteThis();
+
+	int size = buf.Size();
+
+	rc = sqlite3_bind_blob(stmt, 1, buf.Base(), size, SQLITE_STATIC);
+	if (rc != SQLITE_OK)
+		DevMsg("bind failed: %s\n", sqlite3_errmsg(db));
+	else
+	{
+		rc = sqlite3_step(stmt);
+		if (rc != SQLITE_DONE)
+			DevMsg("execution failed: %s\n", sqlite3_errmsg(db));
+		else
+			DevMsg("execution worked!\n");
+	}
+
+	sqlite3_finalize(stmt);
+	*/
+	/*
 	// Display MyTable
 	DevMsg("Retrieving values in MyTable ...\n");
 	const char *sqlSelect = "SELECT * FROM MyTable;";
@@ -2582,11 +2862,27 @@ void C_AnarchyManager::TestSQLite()
 		}
 	}
 	sqlite3_free_table(results);
+	*/
 
 	// Close Database
-	DevMsg("Closing MyDb.db ...\n");
-	sqlite3_close(db);
-	DevMsg("Closed MyDb.db\n");
+	//DevMsg("Closing MyDb.db ...\n");
+	//sqlite3_close(db);
+	//DevMsg("Closed MyDb.db\n");
+
+
+	/*
+		CUtlBuffer buf;
+		//buf.Get()
+		KeyValues* pObjectKV = new KeyValues("originalTester");//pInstanceObjectsKV->FindKey(VarArgs("%s/local", objectId.c_str()), true);
+		pObjectKV->SetString("originalTesterKey", "yup");
+		pObjectKV->WriteAsBinary(buf);
+		pObjectKV->deleteThis();
+
+		KeyValues* pTesterKV = new KeyValues("reduxTester");
+		pTesterKV->ReadAsBinary(buf);
+		DevMsg("Annd here the big result is: %s\n", pTesterKV->GetString("originalTesterKey"));
+		pTesterKV->deleteThis();
+	*/
 }
 
 /*

@@ -285,14 +285,14 @@ void CInputSlate::OnCursorMoved(int x, int y)
 
 void CInputSlate::OnMouseDoublePressed(MouseCode code)
 {
-	return;
-	/*
+//	return;
+	///*
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
 //	g_pAnarchyManager->GetInputManager()->MousePress(code);
 	g_pAnarchyManager->GetInputManager()->MousePress(code);
-	*/
+	//*/
 }
 
 void CInputSlate::OnMousePressed(MouseCode code)

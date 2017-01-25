@@ -344,8 +344,15 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					// create a web tab
 					//m_pEmbeddedInstance = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
 				//	m_pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->CreateAwesomiumBrowserInstance(m_originalId, m_originalUrl, false);
+
+					// try to get the object ID
+					// TODO: actually try to get the object id. using pC_BaseEntity
 					C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
-					pSteamBrowserInstance->Init(m_originalId, m_originalUrl);
+
+					//pSteamBrowserInstance->Init(m_originalId, m_originalUrl);
+
+					C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pC_BaseEntity);
+					pSteamBrowserInstance->Init(m_originalId, m_originalUrl, null, (pShortcut) ? pShortcut->entindex() : -1);
 
 					m_pEmbeddedInstance = pSteamBrowserInstance;
 					m_pCurrentEmbeddedInstance = m_pEmbeddedInstance;
@@ -439,7 +446,9 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 						{
 							m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
 
-							if (testerInstance->GetLastVisibleFrame() != gpGlobals->framecount)
+							// instead, try to use same logic as ShouldRender
+							//if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(testerInstance, true))	// not enough to fix the issue.
+							if (testerInstance->GetLastVisibleFrame() != gpGlobals->framecount)	// FIXME: This doesn't take into account that this slave web tab is the same as the original
 								testerInstance->Update();
 
 							bSwappedEmbeddedInstanceIn = true;

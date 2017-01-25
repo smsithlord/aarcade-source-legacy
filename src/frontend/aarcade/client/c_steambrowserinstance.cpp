@@ -86,6 +86,7 @@ m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged)
 	m_unHandle = 0;
 	m_iLastVisibleFrame = -1;
 	m_URL = "";
+	m_iOriginalEntIndex = -1;
 }
 
 C_SteamBrowserInstance::~C_SteamBrowserInstance()
@@ -128,7 +129,7 @@ void C_SteamBrowserInstance::SelfDestruct()
 	delete this;
 }
 
-void C_SteamBrowserInstance::Init(std::string id, std::string url, const char* pchPostData)
+void C_SteamBrowserInstance::Init(std::string id, std::string url, const char* pchPostData, int entindex)
 {
 	m_id = id;
 
@@ -137,6 +138,7 @@ void C_SteamBrowserInstance::Init(std::string id, std::string url, const char* p
 
 	m_initialURL = url;
 	m_pPostData = (void*)pchPostData;
+	m_iOriginalEntIndex = entindex;
 
 	g_pAnarchyManager->GetSteamBrowserManager()->AddFreshSteamBrowserInstance(this);
 
@@ -596,14 +598,16 @@ void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 
 	// notify the HUD
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (pHudBrowserInstance)
+	{
+		std::vector<std::string> params;
+		params.push_back(m_URL);
+		params.push_back(m_scraperId);
+		params.push_back(m_scraperItemId);
+		params.push_back(m_scraperField);
 
-	std::vector<std::string> params;
-	params.push_back(m_URL);
-	params.push_back(m_scraperId);
-	params.push_back(m_scraperItemId);
-	params.push_back(m_scraperField);
-
-	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onURLChanged", params);
+		pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onURLChanged", params);
+	}
 
 	//)
 	//m_URL

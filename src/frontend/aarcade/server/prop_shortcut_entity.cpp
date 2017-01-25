@@ -21,6 +21,7 @@ BEGIN_DATADESC(CPropShortcutEntity)
 	DEFINE_KEYFIELD(m_bSlave, FIELD_BOOLEAN, "slave"),
 	DEFINE_KEYFIELD(m_objectId, FIELD_STRING, "objectId"),
 	DEFINE_KEYFIELD(m_itemId, FIELD_STRING, "itemId"),
+	DEFINE_KEYFIELD(m_modelId, FIELD_STRING, "modelId"),
 	DEFINE_USEFUNC( UseFunc ),
 END_DATADESC()
 
@@ -28,6 +29,7 @@ IMPLEMENT_SERVERCLASS_ST(CPropShortcutEntity, DT_PropShortcutEntity)
 	SendPropBool(SENDINFO(m_bSlave)),
 	SendPropStringT(SENDINFO(m_objectId)),
 	SendPropStringT(SENDINFO(m_itemId)),
+	SendPropStringT(SENDINFO(m_modelId)),
 END_SEND_TABLE()
 
 #define	ENTITY_MODEL	"models/cabinets/two_player_arcade.mdl"
@@ -88,14 +90,18 @@ void CPropShortcutEntity::UseFunc(CBaseEntity *pActivator, CBaseEntity *pCaller,
 
 void CPropShortcutEntity::PrepForTransit(char* &memberBuf, const char* value)
 {
+	//Q_strcpymemberBuf = value;
+	///*
 	if (memberBuf)
 		delete[] memberBuf;
 
 	std::string buf = value;
 
-	memberBuf = new char[buf.size() + 1];
+	//memberBuf = new char[buf.size() + 1];
+	memberBuf = new char[buf.length() + 1];
 	std::copy(buf.begin(), buf.end(), memberBuf);
-	memberBuf[buf.size()] = '\0';
+	memberBuf[buf.length()] = '\0';
+	//*/
 }
 
 /*
@@ -116,6 +122,32 @@ bool CPropShortcutEntity::CreateVPhysics()
 
 void CPropShortcutEntity::SetItemId(std::string id)
 {
-	m_itemId = MAKE_STRING(id.c_str());
+	this->PrepForTransit(m_itemIdBuf, id.c_str());
+	m_itemId.Set(MAKE_STRING(m_itemIdBuf));
+	//NetworkStateChanged();
+	//m_itemId = MAKE_STRING(id.c_str());
+	//Q_strcpy(m_itemId, id.c_str());
+}
+
+void CPropShortcutEntity::SetModelId(std::string id)
+{
+	DevMsg("Setting model ID to: %s\n", id.c_str());
+	//string_t buf = id.c_str();
+	//m_modelId.Set(MAKE_STRING(id.c_str()));
+
+	//if (m_modelIdBuf)
+		//delete[] m_modelIdBuf;
+
+	//m_modelIdBuf = new char(id.length)
+
+	//DevMsg("Setting model ID to: %s\n", id.c_str());
+	this->PrepForTransit(m_modelIdBuf, id.c_str());
+	m_modelId.Set(MAKE_STRING(m_modelIdBuf));
+	//NetworkStateChanged();
+
+	DevMsg("And val here on server is: %s\n", m_modelId.m_Value.ToCStr());
+	//m_modelId = MAKE_STRING(id.c_str());
+	//Q_strcpy(m_modelIdBuf, id.c_str());
+	//m_modelId = MAKE_STRING(m_modelIdBuf);
 	//Q_strcpy(m_itemId, id.c_str());
 }

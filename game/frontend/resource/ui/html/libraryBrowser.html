@@ -65,7 +65,7 @@
 									<table style="width: 80%;"><tr>
 										<td>
 											<nobr>
-												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div>
+												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div> <div class="button" onclick="window.location='asset://ui/scrapers.html';" style="display: inline-block;">&nbsp;Scrapers&nbsp;</div>
 											</nobr>
 										</td>
 									</tr></table>
@@ -93,7 +93,7 @@
 			</div>
 		</div>
 
-		<a href="javascript:location.reload();" class="devReload">Reload</a>
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
 			// FUNCTIONS
@@ -226,7 +226,10 @@
 				}
 
 				if( !response.success )
-					console.log("ERROR: FAILED TO GET LIBRARY ENTRY!");
+				{
+					//console.log("ERROR: FAILED TO GET LIBRARY ENTRY!");
+					return;
+				}
 
 				var libraryQueryId = response.queryId;
 
@@ -256,7 +259,9 @@
 					else
 					{
 						// spawnEntry(category, entryId, search, filter)
-						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+						//aaapi.system.setLibraryBrowserContext("items", "", searchText, filterText);
+						// FIXME: Automatically switch to items mode (but what about spawning models directly?)
+						aaapi.system.spawnEntry("items", libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
 					}
 				}
 				else if( entryValueInputElem.value !== "" )
@@ -264,8 +269,31 @@
 					// entry does NOT exist yet
 					if( category === "items" )
 					{
-						// start the wizard for creating a new item
-						createNewItemWizard();
+						var tunedVal = entryValueInputElem.value;
+						if( tunedVal.indexOf("https") === 0 )
+							tunedVal = "http" + tunedVal.substring(5);
+
+						// first, check if an item that matches this one already exists...
+			 			var item = aaapi.library.findLibraryItem("file", entryValueInputElem.value);
+			 			if( !item )
+			 				item = aaapi.library.findLibraryItem("refrence", entryValueInputElem.value);
+
+						if( !item )
+							item = aaapi.library.findLibraryItem("file", tunedVal);
+						
+			 			if( !item )
+			 				item = aaapi.library.findLibraryItem("refrence", tunedVal);
+
+			 			if( item )
+			 			{
+			 				aaapi.system.setLibraryBrowserContext("items", item.info.id, "", "");
+			 				aaapi.system.spawnItem(item.info.id);
+			 			}
+			 			else
+			 			{
+							// start the wizard for creating a new item
+							createNewItemWizard();
+						}
 					}
 					else
 						console.log("UNHANDLED CREATE NEW");
@@ -321,6 +349,7 @@
 				//dblclick
 				entryContainer.addEventListener("dblclick", function(e)
 				{
+					console.log("dbl clicked!");
 					if(libraryContainer.selectedEntry)
 					{
 						// we have chosen it
@@ -561,6 +590,8 @@
 
 			// focus the search box for user input
 			searchBox.querySelector("input").focus();
+			searchBox.querySelector("input").select();
+			//searchBox.querySelector("input").setSelectionRange(0, searchBox.value.length);
 		</script>
 	</body>
 </html>

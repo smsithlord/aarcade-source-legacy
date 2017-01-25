@@ -4,6 +4,9 @@
 #include "c_webtab.h"
 #include "filesystem.h"
 #include "c_instancemanager.h"
+//#include "c_prop_shortcut.h"
+#include "../../sqlite/include/sqlite/sqlite3.h"
+
 //#include <string>
 //#include <vector>
 
@@ -23,9 +26,12 @@ public:
 
 	void AddItem(KeyValues* pItem);
 	void SaveItem(KeyValues* pItem);
+	void SaveSQL(const char* tableName, const char* id, KeyValues* kv);
 	KeyValues* CreateItem(KeyValues* pInfo);
 
 	void SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst = true);// , bool bFullMerg, bool bRefreshArtworkIfNeeded = true);
+
+	bool LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv);
 
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
@@ -72,7 +78,7 @@ public:
 	KeyValues* GetLibraryModel(std::string id);
 	//KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
 
-	const char* FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo);
+	std::string FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryEntry(const char* queryId, const char* category);	// TODO: get rid of category and store that info in the search context (just like pSearchInfo is.)
 	
 	KeyValues* FindLibraryEntry(const char* category, KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
@@ -134,6 +140,7 @@ public:
 	void SetPreviousLocaLocalItemLegacyWorkshopIds(std::string value) { m_previousLocaLocalItemLegacyWorkshopIds = value; }	// SHOULDN'T EVER BE USED EXCEPT FOR IN CASE OF HACKMERGENCY
 	
 private:
+	sqlite3* m_db;
 	object_t* m_pSpawningObject;
 	C_PropShortcutEntity* m_pSpawningObjectEntity;
 	QAngle m_spawningAngles;

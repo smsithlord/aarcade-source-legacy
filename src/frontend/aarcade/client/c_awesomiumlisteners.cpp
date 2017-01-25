@@ -130,11 +130,18 @@ void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is
 		//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
 
 		// load ALL local apps
+		/*
 		KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalApp("MOD");
 		if (app)
 			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
 		else
 			g_pAnarchyManager->OnLoadAllLocalAppsComplete();
+		*/
+
+		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalApps();
+		num = VarArgs("%u", uCount);
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
+		g_pAnarchyManager->OnLoadAllLocalAppsComplete();
 
 		g_pAnarchyManager->SetInitialized(true);
 	}

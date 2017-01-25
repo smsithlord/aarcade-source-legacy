@@ -23,6 +23,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_PropShortcutEntity, DT_PropShortcutEntity, CPropShort
 	RecvPropBool(RECVINFO(m_bSlave)),
 	RecvPropString(RECVINFO(m_objectId)),
 	RecvPropString(RECVINFO(m_itemId)),
+	RecvPropString(RECVINFO(m_modelId)),
 END_RECV_TABLE()
 
 C_PropShortcutEntity::C_PropShortcutEntity()
@@ -178,6 +179,11 @@ std::string C_PropShortcutEntity::GetItemId()
 std::string C_PropShortcutEntity::GetObjectId()
 {
 	return std::string(m_objectId);
+}
+
+std::string C_PropShortcutEntity::GetModelId()
+{
+	return std::string(m_modelId);
 }
 
 bool C_PropShortcutEntity::GetSlave()

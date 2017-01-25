@@ -17,7 +17,7 @@ public:
 
 	void SelfDestruct();
 
-	void Init(std::string id = "", std::string url = "", const char* pchPostData = null);
+	void Init(std::string id = "", std::string url = "", const char* pchPostData = null, int entindex = -1);
 	CCallResult<C_SteamBrowserInstance, HTML_BrowserReady_t> m_CreateBrowserInstance;
 	void OnBrowserInstanceCreated(HTML_BrowserReady_t *pResult, bool bIOFailure);
 
@@ -73,6 +73,7 @@ public:
 	std::string GetScraperItemId() { return m_scraperItemId; }
 	std::string GetScraperField() { return m_scraperItemId; }
 	std::string GetOriginalItemId() { return m_originalItemId; }
+	int GetOriginalEntIndex() { return m_iOriginalEntIndex; }
 
 	// mutators	
 	void SetTexture(ITexture* pTexture) { m_pTexture = pTexture; }
@@ -111,6 +112,7 @@ private:
 	std::string m_initialURL;
 	void* m_pPostData;
 	bool m_bIsDirty;
+	int m_iOriginalEntIndex;
 };
 
 #endif

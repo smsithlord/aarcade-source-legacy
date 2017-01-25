@@ -315,15 +315,32 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 	{
 	//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
 		//if (pWebManager->GetSelectedWebTab() && !g_pAnarchyManager->GetSelectedEntity())
-		if (m_pEmbeddedInstance && !g_pAnarchyManager->GetSelectedEntity())
+		C_PropShortcutEntity* pSelectedEntity = dynamic_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity());
+		if (m_pEmbeddedInstance && !pSelectedEntity)
 		{
 			m_pEmbeddedInstance->Deselect();
 			m_pEmbeddedInstance->Blur();
 		}
+		/*
+		else if (pSelectedEntity)
+		{
+			// if there is still an entity selected when this (probably context) menu is closed, set the 1st embedded instance found on it as the focused embedded instance.
+			std::vector<C_EmbeddedInstance*> embeddedInstances;
+			pSelectedEntity->GetEmbeddedInstances(embeddedInstances);
+
+			if (embeddedInstances.size() > 0 && embeddedInstances[0] != m_pEmbeddedInstance)
+			{
+				DevMsg("Re-selecting embedded instance of the selected entity.\n");
+				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(embeddedInstances[0]);
+			}
+		}
+		*/
 			//pWebManager->DeselectWebTab(pWebManager->GetSelectedWebTab());
 		
 		if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
+		{
 			engine->ClientCmd("gamemenucommand ResumeGame");
+		}
 	}
 //	*/
 
@@ -336,6 +353,11 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 	//m_pEmbeddedInstance = null;
 	//ShowCursor(false);
 	InputSlate->Destroy();
+
+	// automatically destroy instances that have "scrape" in the front of their ID
+	C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pOldInstance);
+	if (pSteamBrowserInstance && pSteamBrowserInstance->GetId().find("scrape") == 0)
+		g_pAnarchyManager->GetSteamBrowserManager()->DestroySteamBrowserInstance(pSteamBrowserInstance);
 }
 
 void C_InputManager::MouseMove(float x, float y)

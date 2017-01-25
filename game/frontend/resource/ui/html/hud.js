@@ -125,7 +125,7 @@ function ArcadeHud()
 			"testDelay": 2000,
 			"runDelay": 0
 		},
-		"currenturi":
+		"currenturi": 	// SHOULD USE GOOGLE AS ITS "HOMEPAGE"
 		{
 			"id": "currenturi",
 			"title": "Use Current Address",
@@ -157,6 +157,7 @@ function ArcadeHud()
 		{
 			"id": "youtube",
 			"title": "YouTube",
+			"homepage": "http://www.youtube.com/",
 			"search": "http://www.youtube.com/results?search_query=$TERM",
 			"fields":
 			{
@@ -253,6 +254,7 @@ function ArcadeHud()
 		{
 			"id": "origin",
 			"title": "Origin Store",
+			"homepage": "http://www.origin.com/",
 			"search": "http://www.origin.com/search?searchString=$TERM",
 			"fields":
 			{
@@ -373,6 +375,7 @@ function ArcadeHud()
 		{
 			"id": "steamstore",
 			"title": "Steam Store",
+			"homepage": "http://store.steampowered.com/",
 			"search": "http://store.steampowered.com/search/?term=$TERM",
 			"fields":
 			{
@@ -454,6 +457,7 @@ function ArcadeHud()
 		{
 			"id": "googleimages",
 			"title": "Google Images",
+			"homepage": "http://www.google.com/imghp",
 			"search": "http://www.google.com/search?tbm=isch&q=$TERM",
 			"fields":
 			{
@@ -520,6 +524,7 @@ function ArcadeHud()
 		{
 			"id": "themoviedb",
 			"title": "TheMovieDb",
+			"homepage": "http://www.themoviedb.org/",
 			"search": "http://www.themoviedb.org/search?query=$TERM",
 			"fields":
 			{
@@ -689,6 +694,7 @@ function ArcadeHud()
 		{
 			"id": "netflix",
 			"title": "Netflix",
+			"homepage": "http://www.netflix.com/",
 			"search": "http://www.netflix.com/search/$TERM",
 			"fields":
 			{
@@ -744,6 +750,7 @@ function ArcadeHud()
 		{
 			"id": "thegamesdb",
 			"title": "TheGamesDB",
+			"homepage": "http://www.thegamesdb.net/",
 			"search": "http://thegamesdb.net/search/?string=$TERM",
 			"fields":
 			{
@@ -878,6 +885,7 @@ function ArcadeHud()
 		{
 			"id": "giantbomb",
 			"title": "Giant Bomb",
+			"homepage": "http://www.giantbomb.com/",
 			"search": "http://www.giantbomb.com/search/?q=$TERM",
 			"fields":
 			{
@@ -1018,14 +1026,57 @@ function ArcadeHud()
 			// navigation container
 			var navigationElem = document.createElement("div");
 			navigationElem.className = "hudHeaderNavigationContainer";
-			navigationElem.style.cssText = "text-align: center;";
+			navigationElem.style.cssText = "text-align: center; font-size: 20px; font-family: Arial;";
+
+			// address form
+			var addressFormElem = document.createElement("form");
+			addressFormElem.style.cssText = "display: inline-block;";
+
+			addressFormElem.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				arcadeHud.navigateToURI(arcadeHud.addressElem.value);
+				//return false;
+			}, true);
+
+			// address label
+			var addressLabelElem = document.createElement("div");//createTextNode("Internet Address:");
+			addressLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			addressLabelElem.innerText = "Internet Address";
+			addressFormElem.appendChild(addressLabelElem);
+			//navigationElem.appendChild(addressLabelElem);
 
 			// address
 			this.addressElem = document.createElement("input");
-			this.addressElem.style.cssText= "width: 600px;";
+			this.addressElem.style.cssText= "width: 600px; font-size: 20px; font-family: Arial;";
+			this.addressElem.addEventListener("focus", function()
+			{
+				arcadeHud.addressElem.select();
+				//arcadeHud.addressElem.setSelectionRange(0, arcadeHud.addressElem.value.length);
+			}, true);
 			
-			navigationElem.appendChild(this.addressElem);
+			addressFormElem.appendChild(this.addressElem);
+			navigationElem.appendChild(addressFormElem);
+			//navigationElem.appendChild(this.addressElem);
 			//navigationElem.innerHTML = "helloo world";
+
+			// back label
+			var backLabelElem = document.createElement("div");//createTextNode("Internet Address:");
+			backLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			backLabelElem.innerHTML = "&#x25c0;";
+			navigationElem.appendChild(backLabelElem);
+
+			// home label
+			var homeLabelElem = document.createElement("div");//createTextNode("Internet Address:");
+			homeLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			homeLabelElem.innerHTML = "&#10070;";
+			navigationElem.appendChild(homeLabelElem);
+
+			// fav label
+			var favLabelElem = document.createElement("div");//createTextNode("Internet Address:");
+			favLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			favLabelElem.innerHTML = "&#9733;";
+			navigationElem.appendChild(favLabelElem);
 
 			// browser tabs container table
 			var topTabsTableElem = document.createElement("div");
@@ -1131,7 +1182,7 @@ function ArcadeHud()
 		//this.hudMetaScrapeContainerElem = document.body.querySelector("#hudMetaScrapeContainer");
 //		this.closeContentButtonElem = document.body.querySelector(".hudContentHeaderCell:nth-of-type(3) .hudContentHeaderButton");
 		
-		aaapi.system.requestActivateInputMode();
+		//aaapi.system.requestActivateInputMode();
 
 		this.helpElem = document.createElement("div");
 		this.helpElem.className = "helpContainer";
@@ -1323,19 +1374,33 @@ function ArcadeHud()
 	}.bind(this));
 }
 
+ArcadeHud.prototype.navigateToURI = function(uri)
+{
+	if( uri !== "" )
+		aaapi.system.navigateToURI(uri);
+};
+
 ArcadeHud.prototype.play = function()
 {
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
 		window.location='asset://ui/launchItem.html?id=' + encodeURIComponent(item.info.id);
-}
+};
 
 ArcadeHud.prototype.edit = function()
 {
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
 		window.location='asset://ui/editItem.html?id=' + encodeURIComponent(item.info.id);
-}
+};
+
+ArcadeHud.prototype.objectEdit = function()
+{
+	//var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	//if( item )
+	//	window.location='asset://ui/editItem.html?id=' + encodeURIComponent(item.info.id);
+	window.location = 'asset://ui/editObject.html';
+};
 
 ArcadeHud.prototype.expandAddressMenu = function()
 {
@@ -1359,15 +1424,17 @@ ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 
 	if( !!this.addressElem && this.addressElem.value !== this.url )
 	{
+		//aaapi.system.requestActivateInputMode();	// FIXME: this gets called needlessly when an object gets DEselected
+		
 		this.addressElem.value = this.url;
 
-		console.log("URL changed to " + url + " and we are " + document.location.href);
+		//console.log("URL changed to " + url + " and we are " + document.location.href);
 		if( scraperId !== "" )
 			this.onBrowserFinishedRequest(url, scraperId, itemId, field);
 	}
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url)
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url, isSelectedObject)
 {
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
@@ -1375,13 +1442,13 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	isObjectSelected = parseInt(isObjectSelected);
 	isItemSelected = parseInt(isItemSelected);
 	isMainMenu = parseInt(isMainMenu);
+	isSelectedObject = parseInt(isSelectedObject);	// it is THE selected object
 
 //this.addressTabElem
 
 ///*
 	if( isItemSelected )
 	{
-		console.log("yar");
 		var elems = document.body.querySelectorAll(".hudSideContainerButton");
 		var i;
 		for( i = 0; i < elems.length; i++ )
@@ -1404,36 +1471,36 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	{
 		if( isFullscreen )
 		{
-			if( !!this.pinHudButtonElem )
-				this.pinHudButtonElem.style.display = "none";
+			//if( !!this.pinHudButtonElem )
+			//	this.pinHudButtonElem.style.display = "none";
 
-			if( !!this.returnHudButtonElem )
-				this.returnHudButtonElem.style.display = "none";
+			//if( !!this.returnHudButtonElem )
+			//	this.returnHudButtonElem.style.display = "none";
 		}
 		else
 		{
 			if( isHudPinned )
 			{
-				if( !!this.pinHudButtonElem )
-					this.pinHudButtonElem.style.display = "none";
+				//if( !!this.pinHudButtonElem )
+				//	this.pinHudButtonElem.style.display = "none";
 
-				if( !!this.returnHudButtonElem )
-					this.returnHudButtonElem.style.display = "inline-block";
+				//if( !!this.returnHudButtonElem )
+				//	this.returnHudButtonElem.style.display = "inline-block";
 			}
 			else
 			{
-				if( !!this.returnHudButtonElem )
-					this.returnHudButtonElem.style.display = "none";
+				//if( !!this.returnHudButtonElem )
+				//	this.returnHudButtonElem.style.display = "none";
 				
 				if( isMapLoaded )
 				{
-					if( !!this.pinHudButtonElem )
-						this.pinHudButtonElem.style.display = "inline-block";
+				//	if( !!this.pinHudButtonElem )
+				//		this.pinHudButtonElem.style.display = "inline-block";
 				}
 				else
 				{
-					if( !!this.pinHudButtonElem )
-						this.pinHudButtonElem.style.display = "none";
+				//	if( !!this.pinHudButtonElem )
+				//		this.pinHudButtonElem.style.display = "none";
 				}
 			}
 		}
@@ -1443,20 +1510,27 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	}
 	else
 	{
-		if( !!this.pinHudButtonElem )
-			this.pinHudButtonElem.style.display = "none";
+		//if( !!this.pinHudButtonElem )
+		//	this.pinHudButtonElem.style.display = "none";
 
-		if( !!this.returnHudButtonElem )
-			this.returnHudButtonElem.style.display = "none";
+		//if( !!this.returnHudButtonElem )
+		//	this.returnHudButtonElem.style.display = "none";
 
-		//if( !!this.closeContentButtonElem )
-		//	this.closeContentButtonElem.style.display = "none";
+		////if( !!this.closeContentButtonElem )
+		////	this.closeContentButtonElem.style.display = "none";
 	}
 
 	if( isFullscreen )
 		this.cursorImageElem.style.display = "none";
 	else
 		this.cursorImageElem.style.display = "block";
+
+	var elem = document.querySelector("#objectMenu");
+	//console.log("Is selected object: " + isSelectedObject);
+	if( isSelectedObject === -1 )
+		elem.style.display = "none";
+	else
+		elem.style.display = "block";
 
 
 /*
@@ -2120,8 +2194,8 @@ ArcadeHud.prototype.addHelpMessage = function(text)
 
 ArcadeHud.prototype.metaSearchEasy = function()
 {
-	console.log("Scooby do!");
-	console.log(this.scraper);
+	//console.log("Scooby do!");
+	//console.log(this.scraper);
 
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
@@ -2131,9 +2205,9 @@ ArcadeHud.prototype.metaSearchEasy = function()
 ArcadeHud.prototype.metaSearch = function(itemId, field, scraperId, term)
 {
 	var scraper = this.scrapers[scraperId];
-	if( !!scraper && !!scraper.search && scraper.search.indexOf("$TERM") >= 0 )
+	if( !!scraper && !!scraper.search && (term === "" || scraper.search.indexOf("$TERM") >= 0) )
 	{
-		var query = scraper.search.replace("$TERM", term);
+		var query = (term !== "") ? scraper.search.replace("$TERM", term) : scraper.homepage;
 
 		// set this as the active scraper so it can handle page loaded events with scraper logic
 		//console.log("set active scraper");
@@ -2214,17 +2288,42 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 				usedFields.push(x);
 			}
 
-			var success = aaapi.library.updateItem(this.activeScraperItemId, args);
-
-			if( success )
+			if( this.activeScraperItemId !== "" )
 			{
-				console.log("Item updated!");
+				var success = aaapi.library.updateItem(this.activeScraperItemId, args);				
 
-				aaapi.system.autoInspect(this.activeScraperItemId);
-				aaapi.system.deactivateInputMode();
+				if( success )
+				{
+					console.log("Item updated!");
+
+					aaapi.system.autoInspect(this.activeScraperItemId);
+					aaapi.system.deactivateInputMode();
+				}
+				else
+					console.log("Item update rejected!");
 			}
 			else
-				console.log("Item update rejected!");
+			{
+				// first, check if an item that matches this one already exists...
+	 			var item = aaapi.library.findLibraryItem("file", scrapedData.file);
+	 			if( !item && !!scrapedData.refrence && scrapedData.refrence !== "" )
+	 				item = aaapi.library.findLibraryItem("refrence", scrapedData.refrence);
+
+	 			if( item )
+	 			{
+	 				aaapi.system.setLibraryBrowserContext("items", item.info.id, "", "");
+	 				aaapi.system.spawnItem(item.info.id);
+	 			}
+	 			else
+	 			{
+					var createdItemId = aaapi.library.saveItem(this.activeScraperItemId, args);	// the response is actually the item ID or FALSE
+					if( createdItemId )
+					{
+						aaapi.system.setLibraryBrowserContext("items", createdItemId, "", "");
+						aaapi.system.spawnItem(createdItemId);
+					}
+				}
+			}
 		}
 	}.bind(this));
 };

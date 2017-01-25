@@ -35,9 +35,11 @@ public:
 	virtual ITexture* GetTexture() { return null; }
 	virtual C_InputListener* GetInputListener() { return null; }
 	virtual std::string GetOriginalItemId() { return ""; }
+	virtual int GetOriginalEntIndex() { return -1; }
 	
 	// mutators
 	virtual void SetOriginalItemId(std::string itemId) {}
+	virtual void SetOriginalEntIndex(int index) {};
 	
 private:
 	static std::map<ButtonCode_t, const char*> s_buttonMap;

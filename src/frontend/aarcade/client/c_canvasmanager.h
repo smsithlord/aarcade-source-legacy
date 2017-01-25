@@ -19,7 +19,7 @@ public:
 
 	bool IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance);
 	unsigned int GetNumPriorityEmbeddedInstances() { return 2; }	// the selected instance, and the hud instance
-	bool ShouldRender(C_EmbeddedInstance* pEmbeddedInstance);	// ALL EMBEDDED INSTANCES DECENDANTS SHOULD ACTUALLY RENDER IF THIS FUNCTION RETURNS TRUE, FOR BOOKKEEPING REASONS!!!
+	bool ShouldRender(C_EmbeddedInstance* pEmbeddedInstance, bool bPreTest = false);	// ALL EMBEDDED INSTANCES DECENDANTS SHOULD ACTUALLY RENDER IF THIS FUNCTION RETURNS TRUE, FOR BOOKKEEPING REASONS!!! (unless pretest = true)
 	// FIXME: That means that all isDirty tests need to take place FROM HERE, or PRIOR to calling this method.
 	// The above 2 comments are probably bullshit and uneeded.  Look int oit if you want, or take my fuckin word for it and remove it.
 

@@ -6,6 +6,7 @@
 #include "c_anarchymanager.h"
 
 #include "c_openglmanager.h"
+#include "filesystem.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -35,7 +36,7 @@ void TestFunction( const CCommand &args )
 	//webviewinput->Create();
 	//DevMsg("Planel created.\n");
 
-//	g_pAnarchyManager->TestSQLite();
+	g_pAnarchyManager->TestSQLite();
 
 	/*
 	DevMsg("Setting url to overlay test...\n");
@@ -79,17 +80,59 @@ void TestFunction( const CCommand &args )
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSteamBrowserInstance);
 	*/
 
-	g_pAnarchyManager->BeginImportSteamGames();
+	// GOOD STEAM GAMES IMPOOOOOOORT!!
+	//g_pAnarchyManager->BeginImportSteamGames();
+
+	/*
+	KeyValues* kv = new KeyValues("tester");
+	kv->SetString("val", "Will it work? xxxxxx");
+
+	// NOTE: The Source filesystem will try to auto-lowercase file names!!!
+	// So the file must be created case-correct outside of the Source filesystem and already exist before the Source filesystem writes to it.
+	kv->SaveToFile(g_pFullFileSystem, "tEsTeR.key", "DEFAULT_WRITE_PATH");
+	*/
+
+
+	/*
+	CUtlBuffer buf;
+	KeyValues* pObjectKV = new KeyValues("originalTester");//pInstanceObjectsKV->FindKey(VarArgs("%s/local", objectId.c_str()), true);
+	pObjectKV->SetString("originalTesterKey", "yup");
+	pObjectKV->SetString("originalTesterKey2", "yup2");
+	pObjectKV->SetString("originalTesterKey3", "yup3");
+	pObjectKV->WriteAsBinary(buf);
+	pObjectKV->deleteThis();
+
+	int size = buf.Size();
+	DevMsg("Buffer size here is: %i\n", size);
+	void* mem = malloc(size);
+	Q_memcpy(mem, buf.Base(), size);
+
+	CUtlBuffer buf2(0, size, 0);
+	buf2.CopyBuffer(mem, size);
+	int size2 = buf2.Size();
+	DevMsg("Processed buffer size is: %i\n", size2);
+	
+	KeyValues* pTesterKV = new KeyValues("reduxTester");
+	pTesterKV->ReadAsBinary(buf2);
+	DevMsg("Annd here the big result is: %s\n", pTesterKV->GetString("originalTesterKey"));
+	pTesterKV->deleteThis();
+	*/
 }
 ConCommand test_function( "testfunc", TestFunction, "Usage: executes an arbitrary hard-coded C++ routine" );
 
 void TestFunctionOff(const CCommand &args)
 {
-
-	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+	g_pAnarchyManager->TestSQLite2();
+	//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	//g_pAnarchyManager->GetHUDManager
 }
-ConCommand test_function_off("testfuncoff", TestFunctionOff, "Usage: executes an arbitrary hard-coded C++ routine");
+ConCommand test_function_off("testfunc2", TestFunctionOff, "Usage: executes an arbitrary hard-coded C++ routine");
+
+void ImportSteamGames(const CCommand &args)
+{
+	g_pAnarchyManager->BeginImportSteamGames();
+}
+ConCommand import_steam_games("import_steam_games", ImportSteamGames, "Usage: imports your steam games from your public profile");
 
 void WheelUp(const CCommand &args)
 {
@@ -246,15 +289,55 @@ ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy 
 
 void CreateHotlink(const CCommand &args)
 {
+	// check if a propshortcut is under the player's crosshair
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	//if (!pPlayer)
+		//return;
+
+	//if (pPlayer->GetHealth() <= 0)
+		//return;
+
+	bool bAutoChooseLibrary = true;
+
+	// fire a trace line
+	trace_t tr;
+	Vector forward;
+	pPlayer->EyeVectors(&forward);
+	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+	C_BaseEntity *pEntity = (tr.DidHitNonWorldEntity()) ? tr.m_pEnt : null;
+
+	// only allow prop shortcuts
+	C_PropShortcutEntity* pShortcut = (pEntity) ? dynamic_cast<C_PropShortcutEntity*>(pEntity) : null;
+	if (pShortcut && tr.fraction != 1.0 )
+		bAutoChooseLibrary = false;	// TODO: If you want to highlight the object that the context menu applies to, now's the time.
+
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	if (bAutoChooseLibrary)
+	{
+		//DevMsg("DISPLAY MAIN MENU\n");
+		if (g_pAnarchyManager->GetSelectedEntity())
+			g_pAnarchyManager->DeselectEntity("asset://ui/libraryBrowser.html");
+		else
+			pHudBrowserInstance->SetUrl("asset://ui/libraryBrowser.html");
 
-	//DevMsg("DISPLAY MAIN MENU\n");
-	if (g_pAnarchyManager->GetSelectedEntity())
-		g_pAnarchyManager->DeselectEntity("asset://ui/libraryBrowser.html");
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
+	}
 	else
-		pHudBrowserInstance->SetUrl("asset://ui/libraryBrowser.html");
+	{
+		//DevMsg("DISPLAY BUILD MODE CONTEXT MENU\n");
+		if (g_pAnarchyManager->GetInputManager()->GetInputMode())
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
-	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
+		if (g_pAnarchyManager->GetSelectedEntity())
+			g_pAnarchyManager->DeselectEntity("asset://ui/buildModeContext.html");
+		else
+			pHudBrowserInstance->SetUrl("asset://ui/buildModeContext.html");
+
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
+	}
+
+	return;
 }
 ConCommand createhotlink("createhotlink", CreateHotlink, "Open up the library.", FCVAR_NONE);
 
@@ -271,7 +354,20 @@ void ActivateInputMode(const CCommand &args)
 			g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
 	}
 	else
+	{
+		//g_pAnarchyManager->DeactivateObjectPlacementMode(false);
+
+		// undo changes AND cancel
+		C_PropShortcutEntity* pShortcut = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
 		g_pAnarchyManager->DeactivateObjectPlacementMode(false);
+
+		//std::string id = pShortcut->GetObjectId();
+		//g_pAnarchyManager->GetInstanceManager()->ResetObjectChanges(pShortcut);
+
+		// "save" cha
+		//m_pInstanceManager->ApplyChanges(id, pShortcut);
+		DevMsg("CHANGES REVERTED\n");
+	}
 }
 ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 

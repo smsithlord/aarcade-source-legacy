@@ -73,8 +73,8 @@ void SpawnShortcut(const CCommand &args)
 	MatrixToAngles(entToWorld, angles);
 	*/
 
-	Vector origin(Q_atof(args[4]), Q_atof(args[5]), Q_atof(args[6]));
-	QAngle angles(Q_atof(args[7]), Q_atof(args[8]), Q_atof(args[9]));
+	Vector origin(Q_atof(args[5]), Q_atof(args[6]), Q_atof(args[7]));
+	QAngle angles(Q_atof(args[8]), Q_atof(args[9]), Q_atof(args[10]));
 
 	// Now spawn it
 	CPropShortcutEntity *pShortcut = dynamic_cast<CPropShortcutEntity*>(CreateEntityByName("prop_shortcut"));
@@ -87,7 +87,7 @@ void SpawnShortcut(const CCommand &args)
 	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z);
 	pShortcut->KeyValue("angles", buf);
 
-	pShortcut->KeyValue("model", args[3]);
+	pShortcut->KeyValue("model", args[4]);
 	pShortcut->KeyValue("solid", "6");		// for 	V_PHYSICS
 	//pShortcut->KeyValue("solid", "0");
 	pShortcut->KeyValue("fademindist", "-1");
@@ -98,7 +98,8 @@ void SpawnShortcut(const CCommand &args)
 	pShortcut->KeyValue("spawnflags", "8");
 	pShortcut->KeyValue("objectId", args[1]);
 	pShortcut->KeyValue("itemId", args[2]);
-	pShortcut->KeyValue("slave", args[11]);
+	pShortcut->KeyValue("modelId", args[3]);
+	pShortcut->KeyValue("slave", args[12]);
 
 	pShortcut->Precache();
 	DispatchSpawn(pShortcut);
@@ -106,7 +107,7 @@ void SpawnShortcut(const CCommand &args)
 
 	pShortcut->SetSolid(SOLID_VPHYSICS);
 
-	pShortcut->SetModelScale(Q_atof(args[10]), 0);
+	pShortcut->SetModelScale(Q_atof(args[11]), 0);
 
 	IPhysicsObject* pPhysics = pShortcut->VPhysicsGetObject();
 	if (!pPhysics && pShortcut->CreateVPhysics())
@@ -119,6 +120,9 @@ void SpawnShortcut(const CCommand &args)
 		else
 			pPhysics->EnableMotion(true);
 	}
+
+	if (Q_atoi(args[13]) == 1)
+		engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
 
 //	pShortcut->SetModelScale(Q_atof(args[9]), 0);
 	/*	// from server-side code...
@@ -347,28 +351,44 @@ ConCommand setcabpos("setcabpos", SetCabPos, "For internal use only.");
 
 void SwitchModel(const CCommand &args)
 {
-	const char *TheModel = args[1];
-	int TheEntity = Q_atoi(args.Arg(2));
+	const char* modelId = args[1];
+	const char *TheModel = args[2];
+	int TheEntity = Q_atoi(args.Arg(3));
 
 	edict_t *pHotlinkEdict = INDEXENT(TheEntity);
 	if (pHotlinkEdict && !pHotlinkEdict->IsFree())
 	{
 		//CPropHotlinkEntity* pHotlink = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
-		CBaseEntity* pHotlink = GetContainingEntity(pHotlinkEdict);
+		CBaseEntity* pEntity = GetContainingEntity(pHotlinkEdict);
+		CPropShortcutEntity* pHotlink = dynamic_cast<CPropShortcutEntity*>(pEntity);
 
 		//CDynamicProp* pEntity = dynamic_cast<CDynamicProp*>(pHotlink);
 
 		if (!engine->IsModelPrecached(TheModel))
 		{
-			int result = pHotlink->PrecacheModel(TheModel);
+			int result = pEntity->PrecacheModel(TheModel);
 			DevMsg("Cache result for %s is: %i\n\n\n", TheModel, result);
 
 			//			IMaterial* pMaterial;
 			//		modelinfo->GetModelMaterials(modelinfo->FindOrLoadModel(TheModel), 1, &pMaterial);
 		}
 
-		UTIL_SetModel(pHotlink, TheModel);
-		pHotlink->SetModel(TheModel);
+		if (pHotlink)
+			pHotlink->SetModelId(std::string(modelId));
+
+		UTIL_SetModel(pEntity, TheModel);
+		pEntity->SetModel(TheModel);
+
+		if (args.ArgC() > 4 && Q_atoi(args[4]) == 1)
+		{
+			pEntity->SetSolid(SOLID_NONE);
+			pEntity->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+			//SetRenderMode(kRenderTransTexture);
+			pEntity->SetRenderMode(kRenderTransColor);
+			pEntity->SetRenderColorA(160);
+		}
+
+		pEntity->NetworkStateChanged();
 	}
 }
 
@@ -617,7 +637,7 @@ void RemoveObject(const CCommand &args)
 }
 ConCommand removeobject("removeobject", RemoveObject, "Deletes an object from the game.");
 
-void SetObjectItemId(const CCommand &args)
+void SetObjectIds(const CCommand &args)
 {
 	if (args.ArgC() < 3)
 		return;
@@ -626,7 +646,8 @@ void SetObjectItemId(const CCommand &args)
 	//CDynamicProp* pProp = NULL;
 	//pProp = dynamic_cast<CDynamicProp*>(CBaseEntity::Instance(Q_atoi(args[1])));
 	std::string itemId = args[2];
-	std::string modelFile = args[3];
+	std::string modelId = args[3];
+	std::string modelFile = args[4];
 	CPropShortcutEntity* pProp = dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(Q_atoi(args[1])));
 	if (!pProp)
 	{
@@ -638,8 +659,56 @@ void SetObjectItemId(const CCommand &args)
 	pProp->SetModel(modelFile.c_str());	// This might need to be done server-side (maybe in addition)
 	// does physics need to be adjusted for the new model??
 	pProp->SetItemId(itemId);
+	pProp->SetModelId(modelId);
+
+	if (args.ArgC() > 5 && Q_atoi(args[5]) == 1)
+	{
+		pProp->SetSolid(SOLID_NONE);
+		pProp->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		//SetRenderMode(kRenderTransTexture);
+		pProp->SetRenderMode(kRenderTransColor);
+		pProp->SetRenderColorA(160);
+	}
+		//engine->ServerCommand(UTIL_VarArgs("makeghost %i 0;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
+
+	pProp->NetworkStateChanged();
 }
-ConCommand setobjectitemid("setobjectitemid", SetObjectItemId, "");
+ConCommand setobjectids("setobjectids", SetObjectIds, "");
+
+void MakeGhost(const CCommand &args)
+{
+	CBaseEntity* pShortcut = CBaseEntity::Instance(Q_atoi(args[1]));
+	pShortcut->SetSolid(SOLID_NONE);
+	pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+	//SetRenderMode(kRenderTransTexture);
+	pShortcut->SetRenderMode(kRenderTransColor);
+	pShortcut->SetRenderColorA(160);
+	pShortcut->NetworkStateChanged();
+}
+ConCommand makeghost("makeghost", MakeGhost, "Interal use only.", FCVAR_HIDDEN);
+
+void MakeNonGhost(const CCommand &args)
+{
+	CBaseEntity* pShortcut = CBaseEntity::Instance(Q_atoi(args[1]));
+	pShortcut->SetRenderColorA(255);
+	pShortcut->SetRenderMode(kRenderNormal);
+
+	// make the prop solid
+	pShortcut->SetSolid(SOLID_VPHYSICS);
+	pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+	pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
+
+	if (pShortcut->CreateVPhysics())
+	{
+		IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
+		if (pPhysics)
+		{
+			pPhysics->EnableMotion(false);
+		}
+	}
+	pShortcut->NetworkStateChanged();
+}
+ConCommand makenonghost("makenonghost", MakeNonGhost, "Interal use only.", FCVAR_HIDDEN);
 
 void SetScale(const CCommand &args)
 {

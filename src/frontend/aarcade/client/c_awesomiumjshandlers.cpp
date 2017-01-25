@@ -21,7 +21,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("spawnItem"))
 	{
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		//if (pSteamBrowserInstance && pSteamBrowserInstance->GetId().find("scrape") == 0)
+			//g_pAnarchyManager->GetSteamBrowserManager()->DestroySteamBrowserInstance(pSteamBrowserInstance);
 
 		std::string id = WebStringToCharString(args[0].ToString());
 
@@ -650,7 +655,6 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		std::string mapId = WebStringToCharString(args[0].ToString());
 		std::string instanceId = WebStringToCharString(args[1].ToString());
-		g_pAnarchyManager->SetNextInstanceId(instanceId);
 
 		KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->GetMap(mapId);
 		KeyValues* active = map->FindKey("current");
@@ -659,6 +663,34 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		std::string mapName = active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
 		mapName = mapName.substr(0, mapName.length() - 4);
+
+		if (instanceId == "")
+		{
+			// DO WORK
+			// (create a new instance, save it to the db, then overwrite the instanceId with the newly created id.)
+
+			instanceId = g_pAnarchyManager->GenerateUniqueId();
+
+			KeyValues* kv = new KeyValues("instance");
+			kv->SetInt("generation", 3);
+
+			KeyValues* info = kv->FindKey("info", true);
+			info->SetString("id", instanceId.c_str());
+			info->SetString("title", instanceId.c_str());
+			info->SetString("map", mapId.c_str());
+			info->SetString("style", mapName.c_str());	// for nodes
+			//info->SetString("created", "0");	// store unsigned ints as strings, then %llu them
+			info->SetString("creator", "local");
+
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", instanceId.c_str(), kv);
+
+			g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, mapId, instanceId, "", "", "");
+			kv->deleteThis();
+			kv = null;
+		}
+
+		g_pAnarchyManager->SetNextInstanceId(instanceId);
+
 		engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
 	}
 	else if (method_name == WSLit("deactivateInputMode"))
@@ -804,17 +836,25 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		//C_AwesomiumBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(caller);
 		
+
+
+
+		g_pAnarchyManager->HudStateNotify();
+
+		/*
 		std::vector<std::string> params;
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetFullscreenMode())));
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetInputManager()->GetWasForceInputMode())));
 		params.push_back(VarArgs("%i", engine->IsInGame()));
 		params.push_back(VarArgs("%i", (g_pAnarchyManager->GetSelectedEntity() != null)));
 
+		int entIndex = -1;
 		int isItemSelected = 0;
+		C_PropShortcutEntity* pShortcut = null;
 		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
 		if (pEntity)
 		{
-			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
 			if (pShortcut && pShortcut->GetItemId() != "")
 				isItemSelected = 1;
 		}
@@ -824,11 +864,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 		if (pEmbeddedInstance && pEmbeddedInstance != pHudBrowserInstance)
+		{
 			params.push_back(pEmbeddedInstance->GetURL());
+
+			if (pShortcut && pEmbeddedInstance->GetOriginalEntIndex() == pShortcut->entindex())
+				entIndex = pShortcut->entindex();
+		}
 		else
 			params.push_back("");
 
+		params.push_back(VarArgs("%i", entIndex));
+
 		pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
+		*/
 
 
 
@@ -878,10 +926,148 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					active = model->FindKey("local", true);
 
 				std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelFile);
+				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelId, modelFile);
 			}
 		}
 
+	}
+	else if (method_name == WSLit("moveObject"))
+	{
+		// DO WORK
+
+		// MOVE
+		C_PropShortcutEntity* pShortcut = null;
+		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+		if (pEntity)
+			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+		if (!pShortcut)
+		{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			Vector forward;
+			pPlayer->EyeVectors(&forward);
+
+			trace_t tr;
+			UTIL_TraceLine(pPlayer->EyePosition(),
+				pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+				pPlayer, COLLISION_GROUP_NONE, &tr);
+
+			if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+			{
+				pEntity = tr.m_pEnt;
+				if (pEntity)
+				{
+					pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+					//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObjectEntity(null);
+					//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(null);
+				}
+			}
+		}
+
+		if (pShortcut)
+		{
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+			g_pAnarchyManager->ActivateObjectPlacementMode(pShortcut, "move");
+		}
+	}
+	else if (method_name == WSLit("beginImportSteamGames"))
+	{
+		g_pAnarchyManager->BeginImportSteamGames();
+	}
+	else if (method_name == WSLit("setSlaveScreen"))
+	{
+		// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		bool val = args[0].ToBoolean();
+		g_pAnarchyManager->SetSlaveScreen(val);
+	}
+	else if (method_name == WSLit("navigateToURI"))
+	{
+		std::string uri = WebStringToCharString(args[0].ToString());
+
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		// BEHAVIOR: An existing SteamBrowserInstance will get re-used (FIXME: it should get its active scraper reset!!),
+		// any other non-hud selected instance gets destroyed and replaced with a SteamBrowserInstance with same ID.
+		// If the HUD IS the selected instance, then a brand NEW instance gets created.  and since there is no instanceID
+		// to clone, this new SteamBrowserInstance is given a special name so that it gets auto-closed when input mode gets
+		// deactivated.
+
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+		if (!pBrowserInstance)
+		{
+			std::string oldId;
+			if (pEmbeddedInstance && pEmbeddedInstance->GetId() != "hud")
+			{
+				oldId = pEmbeddedInstance->GetId();
+
+				// close this instance
+				DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
+
+				pEmbeddedInstance->Blur();
+				pEmbeddedInstance->Deselect();
+				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+				pEmbeddedInstance->Close();
+			}
+			else	// FIXME: These should probably just take the ID of the currently active instance so it won't need any special treatment. (!!!!!)
+				oldId = "scrape" + std::string(g_pAnarchyManager->GenerateUniqueId());	// name starts with scrape even tho its not scraping so that it can auto-close properly when input move is deactivated
+
+			pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+			pBrowserInstance->Init(oldId, uri.c_str(), null);
+		}
+		else
+			pBrowserInstance->SetUrl(uri);	// reuse the current focused steam browser if it exists
+
+		pBrowserInstance->SetActiveScraper("", "", "");
+		pBrowserInstance->Select();
+		pBrowserInstance->Focus();
+
+		g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pBrowserInstance);
+	}
+	else if (method_name == WSLit("showEngineOptionsMenu"))
+	{
+		// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
+		//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		g_pAnarchyManager->ShowEngineOptionsMenu();
+	}
+	else if (method_name == WSLit("deleteObject"))
+	{
+		// DO WORK
+
+
+		// CANCEL
+		//C_BaseEntity* pEntity = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+
+		trace_t tr;
+		UTIL_TraceLine(pPlayer->EyePosition(),
+			pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+			pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+		{
+			C_BaseEntity* pEntity = tr.m_pEnt;
+			if (pEntity)
+			{
+				C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+				//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObjectEntity(null);
+				//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(null);
+				if (pShortcut)
+				{
+					g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+					if (g_pAnarchyManager->GetSelectedEntity() == pShortcut)
+						g_pAnarchyManager->DeselectEntity();
+
+					g_pAnarchyManager->GetInstanceManager()->RemoveEntity(pShortcut);
+				}
+			}
+		}
 	}
 	else if (method_name == WSLit("modelSelected"))
 	{
@@ -904,7 +1090,9 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 			pEntity->PrecacheModel(modelFile.c_str());	// not needed.  handled server-side?
 			pEntity->SetModel(modelFile.c_str());	// not needed.  handled server-side?
-			engine->ServerCmd(VarArgs("setobjectitemid %i \"%s\" \"%s\";\n", pEntity->entindex(), modelId.c_str(), modelFile.c_str()), false);
+			engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\" 1;\n", pEntity->entindex(), modelId.c_str(), modelId.c_str(), modelFile.c_str()), false);
+			//engine->ServerCmd(VarArgs("makeghost %i;\n", pEntity->entindex()), false);	// might be over-kill, all we're trying to do is make sure it stays non-solid
+			//pEntity->SetSolid(SOLID_NONE);
 		}
 
 		// Swap the current object out for the new one according to the given ID.
@@ -1050,23 +1238,25 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string field = WebStringToCharString(args[2].ToString());
 		std::string query = WebStringToCharString(args[3].ToString());
 
-		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+		if (itemId == "")
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
-		KeyValues* active = pItem->FindKey("current");
+		//KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
 
-		if (!active)
-			active = pItem->FindKey("local", true);
+		//KeyValues* active = pItem->FindKey("current");
+		//if (!active)
+		//	active = pItem->FindKey("local", true);
 
-		if (active)
-		{
-			bool bIsEntityInstance = false;
+		//if (active)
+		//{
+			//bool bIsEntityInstance = false;
 
 			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 			C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 			if (!pBrowserInstance)
 			{
 				std::string oldId;
-				if (pEmbeddedInstance)
+				if (pEmbeddedInstance && pEmbeddedInstance->GetId() != "hud")
 				{
 					oldId = pEmbeddedInstance->GetId();
 
@@ -1078,6 +1268,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
 					pEmbeddedInstance->Close();
 				}
+				else
+					oldId = "scrape" + std::string(g_pAnarchyManager->GenerateUniqueId());
 
 				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
 				pBrowserInstance->Init(oldId, query.c_str(), null);
@@ -1091,7 +1283,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pBrowserInstance->Focus();
 
 			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
-		}
+
+			if (itemId == "")
+				g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pBrowserInstance);
+		//}
 	}
 	else if (method_name == WSLit("saveLibretroOption"))
 	{
@@ -1465,14 +1660,17 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	}
 	else if (method_name == WSLit("getFirstLibraryEntry"))
 	{
-		const char* category = WebStringToCharString(args[0].ToString());
+		//const char* 
+		std::string category = WebStringToCharString(args[0].ToString());
 
 		JSObject response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
 
 		// get the first entry
 		KeyValues* pEntry;
-		const char* queryId = g_pAnarchyManager->GetMetaverseManager()->GetFirstLibraryEntry(pEntry, category);
-		response.SetProperty(WSLit("queryId"), WSLit(queryId));
+		//const char*
+		std::string queryId = g_pAnarchyManager->GetMetaverseManager()->GetFirstLibraryEntry(pEntry, category.c_str());
+		//DevMsg("The query ID here is: %s\n", queryId.c_str());
+		response.SetProperty(WSLit("queryId"), WSLit(queryId.c_str()));
 
 		// put the entry into the response
 		KeyValues* pActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pEntry);
@@ -1490,16 +1688,19 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	}
 	else if (method_name == WSLit("getNextLibraryEntry"))
 	{
-		const char* queryId = WebStringToCharString(args[0].ToString());
+		//const char* queryId = WebStringToCharString(args[0].ToString());
+		std::string queryId = WebStringToCharString(args[0].ToString());
+		//DevMsg("Hereeee the ID is: %s\n", queryId.c_str());
 
 		// FOR TESTING ONLY!! THIS DATA SHOULD BE SAVED AS PART OF THE ORIGINAL QUERY!!
-		const char* debugCategory = WebStringToCharString(args[1].ToString());
+		//const char* 
+		std::string debugCategory = WebStringToCharString(args[1].ToString());
 
 		JSObject response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
-		response.SetProperty(WSLit("queryId"), WSLit(queryId));
+		response.SetProperty(WSLit("queryId"), WSLit(queryId.c_str()));
 
 		// get the next entry
-		KeyValues* pEntry = g_pAnarchyManager->GetMetaverseManager()->GetNextLibraryEntry(queryId, debugCategory);
+		KeyValues* pEntry = g_pAnarchyManager->GetMetaverseManager()->GetNextLibraryEntry(queryId.c_str(), debugCategory.c_str());
 
 		// put the entry into the response
 		KeyValues* pActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pEntry);	// return null if given a null argument to avoid the if-then cluster fuck of error checking each step of this common task
@@ -1559,8 +1760,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	else if (method_name == WSLit("findFirstLibraryEntry"))
 	{
 		// Grab the variables (watch out for thread safety)
-		const char* category = WebStringToCharString(args[0].ToString());
-		std::string catBuf = std::string(category);
+		//const char*
+		std::string category = WebStringToCharString(args[0].ToString());
+		//std::string catBuf = std::string(category);
 
 
 		JSObject response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
@@ -1580,8 +1782,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		// find the first entry that matches the search params
 		KeyValues* pEntry;
-		const char* queryId = g_pAnarchyManager->GetMetaverseManager()->FindFirstLibraryEntry(pEntry, catBuf.c_str(), pSearchInfo);	// EXPENSIVE
-		response.SetProperty(WSLit("queryId"), WSLit(queryId));
+		std::string queryId = g_pAnarchyManager->GetMetaverseManager()->FindFirstLibraryEntry(pEntry, category.c_str(), pSearchInfo);	// EXPENSIVE
+		//DevMsg("The query ID here is: %s\n", queryId.c_str());
+		response.SetProperty(WSLit("queryId"), WSLit(queryId.c_str()));
 
 		// add the entry to the response
 		KeyValues* pActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pEntry);
@@ -1600,16 +1803,18 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	else if (method_name == WSLit("findNextLibraryEntry"))
 	{
 		// Grab the variables
-		const char* queryId = WebStringToCharString(args[0].ToString());
+		//const char*
+		std::string queryId = WebStringToCharString(args[0].ToString());
 
 		// FOR TESTING ONLY!! THIS DATA SHOULD BE SAVED AS PART OF THE ORIGINAL QUERY CONTEXT!!
-		const char* debugCategory = WebStringToCharString(args[1].ToString());
+		//const char*
+		std::string debugCategory = WebStringToCharString(args[1].ToString());
 
 		JSObject response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
-		response.SetProperty(WSLit("queryId"), WSLit(queryId));
+		response.SetProperty(WSLit("queryId"), WSLit(queryId.c_str()));
 
 		// find the next matching entry
-		KeyValues* pEntry = g_pAnarchyManager->GetMetaverseManager()->FindNextLibraryEntry(queryId, debugCategory);
+		KeyValues* pEntry = g_pAnarchyManager->GetMetaverseManager()->FindNextLibraryEntry(queryId.c_str(), debugCategory.c_str());
 
 		// add the entry to the response
 		KeyValues* pActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pEntry);
@@ -1809,6 +2014,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	{
 		// construct a new KeyValues for the item
 		std::string id = WebStringToCharString(args[0].ToString());
+		if (id == "")
+			id = g_pAnarchyManager->GenerateUniqueId();
+
 		KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
 		if (pItem)
 		{
@@ -1864,7 +2072,8 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			//if (bNeedsTextureUpdate)
 			//	g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "ALL");
 
-			return JSValue(true);
+			return WSLit(id.c_str());
+			//return JSValue(true);
 		}
 		else
 			return JSValue(0);

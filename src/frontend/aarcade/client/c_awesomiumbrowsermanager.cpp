@@ -326,6 +326,12 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
+	systemObject.SetCustomMethod(WSLit("moveObject"), false);
+	systemObject.SetCustomMethod(WSLit("deleteObject"), false);
+	systemObject.SetCustomMethod(WSLit("beginImportSteamGames"), false);
+	systemObject.SetCustomMethod(WSLit("showEngineOptionsMenu"), false);
+	systemObject.SetCustomMethod(WSLit("setSlaveScreen"), false);
+	systemObject.SetCustomMethod(WSLit("navigateToURI"), false);
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));

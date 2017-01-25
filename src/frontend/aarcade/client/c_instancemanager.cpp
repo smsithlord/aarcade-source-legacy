@@ -16,6 +16,7 @@ C_InstanceManager::C_InstanceManager()
 	m_fNearestSpawnDist = 0;
 	m_fLastSpawnActionPressed = 0;
 	m_uNextFlashedObject = 0;
+	m_pInstanceKV = null;
 }
 
 C_InstanceManager::~C_InstanceManager()
@@ -24,7 +25,163 @@ C_InstanceManager::~C_InstanceManager()
 	m_instances.clear();
 }
 
-void C_InstanceManager::SpawnObject(object_t* object)
+void C_InstanceManager::ResetObjectChanges(C_PropShortcutEntity* pShortcut)
+{
+	KeyValues* pEntryKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", pShortcut->GetObjectId().c_str()));
+
+	// check if this object has been saved to the KV yet
+	if (pEntryKV)
+	{
+		// yes, it already exists and has values to revert to
+		object_t* pObject = this->GetInstanceObject(pShortcut->GetObjectId());
+		// revert
+		// TODO: everything should be condensed into a single server-command
+
+		// FOR NOW: start by setting object ID's
+		std::string modelId = pObject->modelId;// pShortcut->GetModelId();
+		std::string modelFile;
+
+		KeyValues* entryModel = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(modelId);
+		KeyValues* activeModel = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(entryModel);
+		if (activeModel)
+			modelFile = activeModel->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID), "models\\cabinets\\two_player_arcade.mdl");	// uses default model if key value read fails
+		else
+			modelFile = "models\\cabinets\\two_player_arcade.mdl";
+
+		pShortcut->PrecacheModel(modelFile.c_str());	// not needed.  handled server-side?
+		pShortcut->SetModel(modelFile.c_str());	// not needed.  handled server-side?
+		//engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\";\n", pShortcut->entindex(), modelId.c_str(), modelId.c_str(), modelFile.c_str()), false);
+
+		// FOR NOW: then do position, rotation, and scale
+		//Vector origin = pShortcut->GetAbsOrigin();
+		//QAngle angles = pShortcut->GetAbsAngles();
+		//engine->ServerCmd(VarArgs("setcabpos %i %f %f %f %f %f %f;\n", pShortcut->entindex(), pObject->origin.x, pObject->origin.y, pObject->origin.z, pObject->angles.x, pObject->angles.y, pObject->angles.z), false);	// FIXME: Other calls to setcabpos in client code may have an additional unused blank string param at the end that the server-side code doesn't ask for.  Fix that.  No extra param should be sent.
+
+		// FOR NOW: lastly, do scale
+//		engine->ServerCmd(VarArgs("switchmodel \"%s\" \"%s\" %i;\n", modelId.c_str(), modelFile.c_str(), pShortcut->entindex()));	// TODO: This shouldn't be required cu setobjectids is supposed to do everything this does...
+		engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\";\n", pShortcut->entindex(), pObject->itemId.c_str(), modelId.c_str(), modelFile.c_str()), false);
+		engine->ServerCmd(VarArgs("setcabpos %i %f %f %f %f %f %f;\n", pShortcut->entindex(), pObject->origin.x, pObject->origin.y, pObject->origin.z, pObject->angles.x, pObject->angles.y, pObject->angles.z), false);	// FIXME: Other calls to setcabpos in client code may have an additional unused blank string param at the end that the server-side code doesn't ask for.  Fix that.  No extra param should be sent.
+		engine->ServerCmd(VarArgs("setscale %i %f;\n", pShortcut->entindex(), pObject->scale), false);
+
+		//engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\"; setcabpos %i %f %f %f %f %f %f; setscale %i %f;", pShortcut->entindex(), pObject->itemId.c_str(), modelId.c_str(), modelFile.c_str(), pShortcut->entindex(), pObject->origin.x, pObject->origin.y, pObject->origin.z, pObject->angles.x, pObject->angles.y, pObject->angles.z, pShortcut->entindex(), pObject->scale), false);
+		
+		// undo build mode FX
+		engine->ServerCmd(VarArgs("makenonghost %i;\n", pShortcut->entindex()), false);
+		/*
+		pShortcut->SetRenderColorA(255);
+		pShortcut->SetRenderMode(kRenderNormal);
+
+		// make the prop solid
+		pShortcut->SetSolid(SOLID_VPHYSICS);
+		pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+		pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
+
+		if (pShortcut->CreateVPhysics())
+		{
+			IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
+			if (pPhysics)
+			{
+				pPhysics->EnableMotion(false);
+			}
+		}
+		*/
+	}
+	else
+	{
+		// nothing to revert to, just remove it.
+		this->RemoveEntity(pShortcut);
+	}
+}
+
+void C_InstanceManager::ApplyChanges(std::string id, C_PropShortcutEntity* pShortcut)
+{
+	KeyValues* pObjectKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()));
+	if (!pObjectKV)
+	{
+		//KeyValues* pInstanceObjectsKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()), true);
+		pObjectKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()), true);//pInstanceObjectsKV->FindKey(VarArgs("%s", id.c_str()), true);
+
+		KeyValues* pObjectInfoKV = pObjectKV->FindKey("local/info", true);
+		pObjectInfoKV->SetString("id", id.c_str());
+		//pObjectInfoKV->SetString("style", kv->GetString("nodestyle"));	// for nodes
+		//pObjectInfoKV->SetString("created", "0");
+		pObjectInfoKV->SetString("creator", "local");
+		//pObjectInfoKV->SetString("removed", "0");
+		//pObjectInfoKV->SetString("remover", "0");
+		//pObjectInfoKV->SetString("modified", "0");
+		//pObjectInfoKV->SetString("modifier", "0");
+
+		/*
+		std::string modelId = this->GenerateHashX(sub->GetString("model"));
+
+		pObjectKV->SetString("item", itemId.c_str());
+		pObjectKV->SetString("model", modelId.c_str());
+		pObjectKV->SetString("position", sub->GetString("origin"));
+		pObjectKV->SetString("rotation", sub->GetString("angles"));
+
+		float bufFloat = sub->GetFloat("scale", 1.0f);
+		if (bufFloat != 1.0f)
+			pObjectKV->SetFloat("scale", bufFloat);
+
+		int bufInt = sub->GetInt("slave");
+		if (bufInt != 0)
+			pObjectKV->SetInt("slave", bufInt);
+
+		bufInt = (sub->GetInt("nophysics") == 0) ? 1 : 0;
+		if (bufInt != 0)
+			pObjectKV->SetInt("physics", bufInt);
+
+		bufInt = sub->GetInt("ischild");
+		if (bufInt != 0)
+			pObjectKV->SetInt("child", bufInt);
+			*/
+	}
+	//pObjectKV->SetString("local/")
+	//object
+	//object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f, false);
+
+	//DevMsg("Object ID IS: %s\n", id.c_str());
+	//DevMsg("Model ID IS: %s\n", pShortcut->GetModelId().c_str());
+
+	// also update this object's object_t
+	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pShortcut->GetObjectId());
+	if (!object)
+		DevMsg("FATAL ERROR: This shortcut has no object data struct!\n");
+
+	object->scale = pShortcut->GetModelScale();
+	object->itemId = pShortcut->GetItemId();
+	object->modelId = pShortcut->GetModelId();
+	DevMsg("Aaaaand here the model ID is: %s\n", object->modelId.c_str());
+	object->origin = pShortcut->GetAbsOrigin();
+	object->angles = pShortcut->GetAbsAngles();
+	object->slave = pShortcut->GetSlave();
+
+	pObjectKV->SetString("local/item", object->itemId.c_str());
+	pObjectKV->SetString("local/model", object->modelId.c_str());
+
+	//Vector origin = pShortcut->GetAbsOrigin();
+	//QAngle angles = pShortcut->GetAbsAngles();
+
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->origin.x, object->origin.y, object->origin.z);
+	pObjectKV->SetString("local/position", buf);
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->angles.x, object->angles.y, object->angles.z);
+	pObjectKV->SetString("local/rotation", buf);
+
+	pObjectKV->SetFloat("local/scale", object->scale);
+
+	int slave = (object->slave) ? 1 : 0;
+	pObjectKV->SetInt("local/slave", slave);
+	////bool slave = (sub->GetInt("local/slave") > 0);	// FIXME: slave mode needs to be determined somehow
+	//bool physics = (sub->GetInt("slave") > 0); // FIXME: TODO: Use the physics stuff too!
+
+	// now save out to the SQL
+	//g_pAnarchyManager->GetMetaverseManager()->SaveItem()
+	g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+}
+
+void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 {
 	auto it = std::find(m_unspawnedObjects.begin(), m_unspawnedObjects.end(), object);
 	if (it != m_unspawnedObjects.end())
@@ -46,16 +203,25 @@ void C_InstanceManager::SpawnObject(object_t* object)
 	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(model);
 	std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
 
-	std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i\n", object->objectId.c_str(), object->itemId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave);
+	//if( !g_pFullFileSystem->FileExists(modelFile.c_str(), "GAME")
+
+	int ghost = (bShouldGhost) ? 1 : 0;
+	std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i %i\n", object->objectId.c_str(), object->itemId.c_str(), goodModelId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave, ghost);
 	engine->ServerCmd(msg.c_str(), false);
 }
 
-object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave)
+object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created, std::string creator, unsigned int removed, std::string remover, unsigned int modified, std::string modifier)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
-
+	DevMsg("Object ID here is: %s\n", goodObjectId.c_str());
 	object_t* pObject = new object_t();
 	pObject->objectId = goodObjectId;
+	pObject->created = created;
+	pObject->creator = creator;
+	pObject->removed = removed;
+	pObject->remover = remover;
+	pObject->modified = modified;
+	pObject->modifier = modifier;
 	pObject->itemId = itemId;
 	pObject->modelId = modelId;
 	pObject->origin.Init(origin.x, origin.y, origin.z);
@@ -81,6 +247,20 @@ object_t* C_InstanceManager::GetInstanceObject(std::string objectId)
 
 void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity)
 {
+	// FIXME: Entry should be removed from the instance KV also, or at least flag it as "removed" so deleted objects can be undone.
+	KeyValues* pObjectsKV = m_pInstanceKV->FindKey("objects", true);
+	if (pObjectsKV)
+	{
+		KeyValues* pEntryKV = pObjectsKV->FindKey(pShortcutEntity->GetObjectId().c_str());
+		if (pEntryKV)
+		{
+			pObjectsKV->RemoveSubKey(pEntryKV);
+
+			// save out the instance KV
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+		}
+	}
+
 	// 1. find the object associated with this entity
 	// 2. get rdy to delete the object
 	// 3. remove the entity
@@ -149,6 +329,13 @@ bool C_InstanceManager::SpawnNearestObject()
 
 void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds)
 {
+	auto it = m_instances.find(instanceId);
+	if (it != m_instances.end())
+	{
+		DevMsg("WARNING: Instance already exists with id %s, aborting.\n", instanceId.c_str());
+		return;
+	}
+
 	//DevMsg("Add instance for mapid %s with title %s and with file %s\n", mapId.c_str(), title.c_str(), file.c_str());
 	instance_t* pInstance = new instance_t();
 	pInstance->id = instanceId;
@@ -206,7 +393,10 @@ void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string ma
 	{
 		//if (it->second->mapId == legacyMapName)
 		if (!Q_stricmp(it->second->mapId.c_str(), legacyMapName.c_str()))
+		{
+			DevMsg("LegacyMapIdFixing: %s to %s\n", it->second->mapId.c_str(), mapId.c_str());
 			it->second->mapId = mapId;
+		}
 
 		it++;
 	}
@@ -355,13 +545,15 @@ void C_InstanceManager::SpawnActionPressed()
 	}
 }
 
-void C_InstanceManager::ChangeModel(C_BaseEntity* pEntity, std::string in_modelFile)
+void C_InstanceManager::ChangeModel(C_BaseEntity* pEntity, std::string modelId, std::string in_modelFile)
 {
 	std::string modelFile = in_modelFile;
 	if (!g_pFullFileSystem->FileExists(modelFile.c_str()))
 		modelFile = "models/icons/missing.mdl";
 
-	engine->ServerCmd(VarArgs("switchmodel \"%s\" %i;\n", modelFile.c_str(), pEntity->entindex()));
+	DevMsg("Here the model id is: %s\n", modelId.c_str());
+
+	engine->ServerCmd(VarArgs("switchmodel \"%s\" \"%s\" %i 1;\n", modelId.c_str(), modelFile.c_str(), pEntity->entindex()));
 }
 
 
@@ -449,6 +641,12 @@ void C_InstanceManager::LevelShutdownPostEntity()
 
 	m_objects.clear();
 	m_unspawnedObjects.clear();
+
+	if (m_pInstanceKV)
+	{
+		m_pInstanceKV->deleteThis();
+		m_pInstanceKV = null;
+	}
 }
 
 void C_InstanceManager::Update()
@@ -521,9 +719,70 @@ void C_InstanceManager::Update()
 	}
 }
 
-void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
+void C_InstanceManager::LoadInstance(std::string instanceId)
 {
 	DevMsg("Load the instance!!!\n");
+	instance_t* pInstance = this->GetInstance(instanceId);
+	if (pInstance->file != "")
+		this->LoadLegacyInstance(instanceId);
+	else
+	{
+		DevMsg("Loading instance w/ ID: %s\n", instanceId.c_str());
+		KeyValues* instanceKV = new KeyValues("instance");
+		//if (!instanceKV->LoadFromFile(g_pFullFileSystem, VarArgs("library\\instances\\%s.key", pInstance->id.c_str())))
+		if (!g_pAnarchyManager->GetMetaverseManager()->LoadSQLKevValues("instances", pInstance->id.c_str(), instanceKV))
+		{
+			DevMsg("ERROR: Could not load instance!\n");
+		}
+		else
+		{
+			std::string objectId;
+			std::string itemId;
+			std::string modelId;
+			for (KeyValues *sub = instanceKV->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				objectId = sub->GetString("local/info/id");
+				itemId = sub->GetString("local/item");
+				modelId = sub->GetString("local/model");
+
+				// alright, spawn this object
+				Vector origin;
+				UTIL_StringToVector(origin.Base(), sub->GetString("local/position", "0 0 0"));
+
+				QAngle angles;
+				UTIL_StringToVector(angles.Base(), sub->GetString("local/rotation", "0 0 0"));
+
+				float scale = sub->GetFloat("local/scale", 1.0f);
+
+				// FIXME: TODO: OBSOLETE: this isn't needed after the exporter in legacy is fixed!
+				if (scale == 0)
+					scale = 1.0f;
+
+				bool slave = (sub->GetInt("local/slave") > 0);
+				//bool physics = (sub->GetInt("slave") > 0); // FIXME: TODO: Use the physics stuff too!
+
+
+				DevMsg("IDs here are: %s\n", objectId.c_str());// , sub->GetName());
+				this->AddObject(objectId, itemId, modelId, origin, angles, scale, slave);
+				/*
+				item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+				if (item)
+				{
+				activeItem = item->FindKey("current");
+				if (!activeItem)
+				activeItem = item->FindKey("local", true);
+				}
+				*/
+			}
+		}
+		m_pInstanceKV = instanceKV;
+		//instanceKV->deleteThis();
+	}
+}
+
+void C_InstanceManager::LoadLegacyInstance(std::string instanceId)
+{
+	DevMsg("Load the LEGACYinstance!!!\n");
 
 	instance_t* pInstance = this->GetInstance(instanceId);
 	

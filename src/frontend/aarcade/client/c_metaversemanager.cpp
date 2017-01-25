@@ -22,6 +22,82 @@ C_MetaverseManager::C_MetaverseManager()
 	m_spawningAngles.x = 0;
 	m_spawningAngles.y = 0;
 	m_spawningAngles.z = 0;
+
+	// create or open the library.db
+	int rc;
+	char *error;
+
+	// create the library database
+	DevMsg("Create library database...\n");
+
+	rc = sqlite3_open("aarcade_user/library.db", &m_db);
+	if (rc)
+	{
+		DevMsg("Error opening SQLite3 database: %s\n", sqlite3_errmsg(m_db));
+		sqlite3_close(m_db);
+	//	return;
+	}
+
+	// check if the tables exist already
+	// (maybe we don't need to if there is proper error handling when WRITING to the tables)
+	/*
+	// create the tables
+	const char *sqlCreateAppsTable = "CREATE TABLE apps (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateAppsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateItemsTable = "CREATE TABLE items (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateItemsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateMapsTable = "CREATE TABLE maps (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateMapsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateModelsTable = "CREATE TABLE models (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateModelsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreatePlatformsTable = "CREATE TABLE platforms (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreatePlatformsTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateTypesTable = "CREATE TABLE types (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateTypesTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+
+	const char *sqlCreateInstancesTable = "CREATE TABLE instances (id INTEGER PRIMARY KEY, value BLOB);";
+	rc = sqlite3_exec(db, sqlCreateInstancesTable, NULL, NULL, &error);
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(db));
+		sqlite3_free(error);
+	}
+	*/
 }
 
 C_MetaverseManager::~C_MetaverseManager()
@@ -69,6 +145,9 @@ C_MetaverseManager::~C_MetaverseManager()
 		m_types.begin()->second->deleteThis();
 		m_types.erase(m_types.begin());
 	}
+
+	sqlite3_close(m_db);
+	// TODO: error objects for sqlite must also be cleaned up
 }
 /*
 void C_MetaverseManager::OnWebTabCreated(C_WebTab* pWebTab)
@@ -266,6 +345,32 @@ void C_MetaverseManager::AddItem(KeyValues* pItem)
 	}
 }
 
+void C_MetaverseManager::SaveSQL(const char* tableName, const char* id, KeyValues* kv)
+{
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, VarArgs("REPLACE INTO %s VALUES(\"%s\", ?)", tableName, id), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	// SQLITE_STATIC because the statement is finalized before the buffer is freed:
+	CUtlBuffer buf;
+	kv->WriteAsBinary(buf);
+
+	int size = buf.Size();
+	rc = sqlite3_bind_blob(stmt, 1, buf.Base(), size, SQLITE_STATIC);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: bind failed: %s\n", sqlite3_errmsg(m_db));
+	else
+	{
+		rc = sqlite3_step(stmt);
+		if (rc != SQLITE_DONE)
+			DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(m_db));
+	}
+	sqlite3_finalize(stmt);
+
+	DevMsg("Saved instance.\n");
+}
+
 void C_MetaverseManager::SaveItem(KeyValues* pItem)
 {
 	KeyValues* pTargetKey = pItem->FindKey("loadedFromLegacy");
@@ -276,8 +381,30 @@ void C_MetaverseManager::SaveItem(KeyValues* pItem)
 	if (!active)
 		active = pItem->FindKey("local");
 
-	pItem->SaveToFile(g_pFullFileSystem, VarArgs("library/items/%s.key", active->GetString("info/id")), "DEFAULT_WRITE_PATH");
-	DevMsg("Saved item %s to library/items/%s.key\n", active->GetString("title"), active->GetString("info/id"));
+	// FIXME: SAVING TO .KEY FILES DISABLED FOR MYSQL MIGRATION!!
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, VarArgs("REPLACE INTO items VALUES(\"%s\", ?)", active->GetString("info/id")), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	// SQLITE_STATIC because the statement is finalized before the buffer is freed:
+	CUtlBuffer buf;
+	pItem->WriteAsBinary(buf);
+
+	int size = buf.Size();
+	rc = sqlite3_bind_blob(stmt, 1, buf.Base(), size, SQLITE_STATIC);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: bind failed: %s\n", sqlite3_errmsg(m_db));
+	else
+	{
+		rc = sqlite3_step(stmt);
+		if (rc != SQLITE_DONE)
+			DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(m_db));
+	}
+	sqlite3_finalize(stmt);
+	//return rc;
+	//pItem->SaveToFile(g_pFullFileSystem, VarArgs("library/items/%s.key", active->GetString("info/id")), "DEFAULT_WRITE_PATH");
+	//DevMsg("Saved item %s to library/items/%s.key\n", active->GetString("title"), active->GetString("info/id"));
 }
 
 KeyValues* C_MetaverseManager::CreateItem(KeyValues* pInfo)
@@ -577,6 +704,30 @@ void C_MetaverseManager::SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, 
 	*/
 }
 
+bool C_MetaverseManager::LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv)
+{
+	sqlite3_stmt *stmt = NULL;
+	DevMsg("loading from table name: %s _id %s\n", tableName, id);
+	int rc = sqlite3_prepare(m_db, VarArgs("SELECT * from %s WHERE id = \"%s\"", tableName, id), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	bool bSuccess = false;
+	int length;
+	if (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		if( kv->ReadAsBinary(buf) )
+			bSuccess = true;
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+
+	return bSuccess;
+}
+
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath, std::string workshopIds, std::string mountIds)
 {
 	//KeyValues* pItem2 = new KeyValues("item");
@@ -618,11 +769,11 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			pItem->SetInt("generation", 3);
 
 			// add standard info (except for id)
-			pItem->SetInt("local/info/created", 0);
+			//pItem->SetInt("local/info/created", 0);
 			pItem->SetString("local/info/owner", "local");
-			pItem->SetInt("local/info/removed", 0);
-			pItem->SetString("local/info/remover", "");
-			pItem->SetString("local/info/alias", "");
+			//pItem->SetInt("local/info/removed", 0);
+			//pItem->SetString("local/info/remover", "");
+			//pItem->SetString("local/info/alias", "");
 
 			// determine if this is a model or not
 			std::string modelFile = pItem->GetString("filelocation");
@@ -642,8 +793,8 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 					goodTitle = VarArgs("%s - %s", pItem->GetString("group"), goodTitle.c_str());
 
 				pItem->SetString("local/title", goodTitle.c_str());
-				pItem->SetString("local/keywords", "");
-				pItem->SetInt("local/dynamic", 0);
+				//pItem->SetString("local/keywords", "");
+				//pItem->SetInt("local/dynamic", 0);
 				pItem->SetString(VarArgs("local/platforms/%s/id", AA_PLATFORM_ID), AA_PLATFORM_ID);
 				pItem->SetString(VarArgs("local/platforms/%s/file", AA_PLATFORM_ID), modelFile.c_str());
 				pItem->SetString(VarArgs("local/platforms/%s/download", AA_PLATFORM_ID), "");
@@ -689,7 +840,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 				pItem->SetString("local/reference", pItem->GetString("detailsurl"));
 				pItem->SetString("local/preview", pItem->GetString("trailerurl"));
 				pItem->SetString("local/download", pItem->GetString("downloadurl"));
-				pItem->SetString("local/stream", "");
+				//pItem->SetString("local/stream", "");
 
 				// NEEDS RESOLVING!!
 				std::string resolvedScreen = pItem->GetString("screens/low");
@@ -1295,6 +1446,7 @@ void C_MetaverseManager::ResolveLoadLocalItemLegacyBuffer()
 
 KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string filePath)
 {
+	// TODO: IS THIS OBSOLETE?
 	KeyValues* pType = new KeyValues("type");
 	bool bLoaded;
 
@@ -1336,6 +1488,46 @@ KeyValues* C_MetaverseManager::LoadLocalType(std::string file, std::string fileP
 
 unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
 {
+	// make it use the new shinnit
+	unsigned int count = 0;
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, "SELECT * from types", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	int length;
+	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		KeyValues* pType = new KeyValues("type");
+
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		pType->ReadAsBinary(buf);
+
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pType->FindKey("current");
+		if (!pActive)
+			pActive = pType->FindKey("local");
+
+		if (pActive)
+		{
+			std::string id = pActive->GetString("info/id");
+			m_types[id] = pType;
+			count++;
+			//DevMsg("adding type: %s\n", id.c_str());
+		}
+		else
+		{
+			pType->deleteThis();
+			pType = null;
+		}
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+	return count;
+
+	/*
 	unsigned int count = 0;
 	FileFindHandle_t testFileHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%slibrary\\types\\*.key", filePath.c_str()), &testFileHandle);
@@ -1368,6 +1560,7 @@ unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
 
 	g_pFullFileSystem->FindClose(testFileHandle);
 	return count;
+	*/
 }
 
 std::string C_MetaverseManager::ResolveLegacyType(std::string legacyType)
@@ -1426,6 +1619,45 @@ KeyValues* C_MetaverseManager::LoadLocalApp(std::string file, std::string filePa
 
 unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 {
+	// make it use the new shinnit
+	unsigned int count = 0;
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, "SELECT * from apps", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	int length;
+	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		KeyValues* pApp = new KeyValues("app");
+
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		pApp->ReadAsBinary(buf);
+
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pApp->FindKey("current");
+		if (!pActive)
+			pActive = pApp->FindKey("local");
+
+		if (pActive)
+		{
+			std::string id = pActive->GetString("info/id");
+			m_types[id] = pApp;
+			count++;
+			//DevMsg("adding type: %s\n", id.c_str());
+		}
+		else
+		{
+			pApp->deleteThis();
+			pApp = null;
+		}
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+	return count;
+	/*
 	unsigned int count = 0;
 	FileFindHandle_t testFileHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%slibrary\\apps\\*.key", filePath.c_str()), &testFileHandle);
@@ -1458,6 +1690,7 @@ unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 
 	g_pFullFileSystem->FindClose(testFileHandle);
 	return count;
+	*/
 }
 
 std::string C_MetaverseManager::ResolveLegacyApp(std::string legacyApp)
@@ -1634,9 +1867,11 @@ const char* C_MetaverseManager::GetFirstLibraryEntry(KeyValues*& response, const
 	//const char* queryId = g_pAnarchyManager->GenerateUniqueId();
 	//g_pAnarchyManager->GenerateUniqueId(queryId);
 
-	const char* queryId = g_pAnarchyManager->GenerateUniqueId2();
+	//const char*
+	std::string queryId = g_pAnarchyManager->GenerateUniqueId();
+	DevMsg("Here id is: %s\n", queryId.c_str());
 
-	std::string idBuf = std::string(queryId);
+	//std::string idBuf = std::string(queryId);
 
 	// TODO: use queryId to organize N search queries & store the category info for each.
 	//*
@@ -1664,13 +1899,15 @@ const char* C_MetaverseManager::GetFirstLibraryEntry(KeyValues*& response, const
 		response = null;
 	*/
 
-	return idBuf.c_str();
+	return queryId.c_str();
 }
 KeyValues* C_MetaverseManager::GetNextLibraryEntry(const char* queryId, const char* category)
 {
 	///*
+	//DevMsg("AAaaannnd here it is: %s and %s\n", queryId, category);
 	if (!Q_strcmp(category, "items"))
 	{
+		//DevMsg("Has it: %i\n", m_previousGetItemIterator);
 		if (m_previousGetItemIterator != m_items.end())
 			m_previousGetItemIterator++;
 
@@ -2363,19 +2600,23 @@ KeyValues* C_MetaverseManager::FindLibraryItem(KeyValues* pSearchInfo)
 		return null;
 }
 
-const char* C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo)
+std::string C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo)
 {
-	std::string categoryBuf = std::string(category);
+	//std::string categoryBuf = std::string(category);
 
-	const char* queryId = g_pAnarchyManager->GenerateUniqueId();
-	std::string idBuf = std::string(queryId);
+	//if (categoryBuf == "")
+	//	categoryBuf = "items";
+
+	std::string queryId = g_pAnarchyManager->GenerateUniqueId();
+	//DevMsg("Query ID point A: %s\n", queryId.c_str());
+	//std::string idBuf = std::string(queryId);
 
 	// TODO: use queryId to organize N search queries & store the category info for each.
 	KeyValues* pEntry;
 	KeyValues* pPreviousSearchInfo = null;
 	std::map<std::string, KeyValues*>::iterator* it;
 	std::map<std::string, KeyValues*>* categoryEntries;
-	if (categoryBuf == "items")
+	if (!Q_strcmp(category, "items"))
 	{
 		categoryEntries = &m_items;
 
@@ -2388,7 +2629,7 @@ const char* C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, cons
 		m_pPreviousSearchInfo = pSearchInfo;
 		it = &m_previousFindItemIterator;
 	}
-	else if (categoryBuf == "models")
+	else// if (categoryBuf == "models")
 	{
 		categoryEntries = &m_models;
 
@@ -2405,10 +2646,11 @@ const char* C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, cons
 	// start the search
 	//m_previousFindItemIterator = categoryEntries->begin();
 	*it = categoryEntries->begin();
-	pEntry = this->FindLibraryEntry(categoryBuf.c_str(), pSearchInfo, *it);
+	pEntry = this->FindLibraryEntry(category, pSearchInfo, *it);
 
 	response = pEntry;
-	return idBuf.c_str();
+	//std::string idBuf = std::string(queryId);
+	return queryId.c_str();
 }
 
 KeyValues* C_MetaverseManager::FindNextLibraryEntry(const char* queryId, const char* category)
@@ -2570,20 +2812,99 @@ void C_MetaverseManager::DetectAllLegacyCabinets()
 
 void C_MetaverseManager::DetectAllMaps()
 {
-	// detext all saves now
-	std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-	g_pAnarchyManager->ScanForLegacySaveRecursive(path);
-
-	///*
-	std::string workshopPath;
-	unsigned int max = g_pAnarchyManager->GetWorkshopManager()->GetNumDetails();
-	for (unsigned int i = 0; i < max; i++)
+	/*
+	bool bObsoleteLegacyTester = false;// true;
+	if (bObsoleteLegacyTester)
 	{
-		SteamUGCDetails_t* pDetails = g_pAnarchyManager->GetWorkshopManager()->GetDetails(i);
-		workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
-		g_pAnarchyManager->ScanForLegacySaveRecursive(workshopPath);
+		// detect all saves now // OBSOLETE: save are exported from legacy mode now.  HOWEVER, the exporter only uses the 1st path, it doesn't search for saves in the workshop paths.
+		std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
+		g_pAnarchyManager->ScanForLegacySaveRecursive(path);
+
+		std::string workshopPath;
+		unsigned int max = g_pAnarchyManager->GetWorkshopManager()->GetNumDetails();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			SteamUGCDetails_t* pDetails = g_pAnarchyManager->GetWorkshopManager()->GetDetails(i);
+			workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
+			g_pAnarchyManager->ScanForLegacySaveRecursive(workshopPath);
+		}
 	}
-	//*/
+	else
+	{
+	*/
+		// Load all the .key files from the library/instances folder.
+		// then add their instances:
+
+		// make it use the new shinnit
+		unsigned int count = 0;
+		sqlite3_stmt *stmt = NULL;
+		int rc = sqlite3_prepare(m_db, "SELECT * from instances", -1, &stmt, NULL);
+		if (rc != SQLITE_OK)
+			DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+		int length;
+		std::string instanceId;
+		std::string goodStyleName;
+		std::string goodTitle;
+		std::string goodLegacyFile;
+		KeyValues* kv;
+		while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+		{
+			length = sqlite3_column_bytes(stmt, 1);
+
+			// FIXME: TODO: Detect if the map is from a workshop or mount id too!
+			kv = new KeyValues("instance");
+			//if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("library\\instances\\%s", pFilename), "MOD"))
+			if (this->LoadSQLKevValues("instances", (const char*)sqlite3_column_text(stmt, 0), kv))
+			{
+				instanceId = kv->GetString("info/id");
+				goodStyleName = kv->GetString("info/style");
+				goodTitle = kv->GetString("info/title", kv->GetString("info/id"));
+				goodLegacyFile = "";
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, kv->GetString("info/map"), goodTitle, goodLegacyFile, "", "");
+				//g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, goodStyleName, goodTitle, goodLegacyFile, "", "");
+				//g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, goodStyleName, goodTitle, goodLegacyFile, "", "");
+			}
+			kv->deleteThis();
+		}
+		sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+		//return count;
+		/*
+		DevMsg("NOW ADD THEIR INSTANCES TO THE MANAGER...\n");
+
+		FileFindHandle_t testFileHandle;
+		const char *pFilename = g_pFullFileSystem->FindFirstEx("library\\instances\\*.key", "MOD", &testFileHandle);
+
+		std::string instanceId;
+		std::string goodStyleName;
+		std::string goodTitle;
+		std::string goodLegacyFile;
+		KeyValues* kv;
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(testFileHandle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(testFileHandle);
+				continue;
+			}
+
+			// FIXME: TODO: Detect if the map is from a workshop or mount id too!
+			kv = new KeyValues("instance");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("library\\instances\\%s", pFilename), "MOD"))
+			{
+				instanceId = kv->GetString("info/id");
+				goodStyleName = kv->GetString("info/style");
+				goodTitle = kv->GetString("info/title", kv->GetString("info/id"));
+				goodLegacyFile = "";
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, goodStyleName, goodTitle, goodLegacyFile, "", "");
+			}
+
+			kv->deleteThis();
+			pFilename = g_pFullFileSystem->FindNext(testFileHandle);
+		}
+		g_pFullFileSystem->FindClose(testFileHandle);
+		*/
+	//}
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	bool bAlreadyExists;
@@ -2648,6 +2969,11 @@ std::string C_MetaverseManager::GetLibraryBrowserContext(std::string name)
 
 void C_MetaverseManager::ScaleObject(C_PropShortcutEntity* pEntity, int iDelta)
 {
+	float goodScale = pEntity->GetModelScale() + 0.1f * iDelta;
+
+//	C_PropShortcutEntity* pEntity = this->GetSpawningObjectEntity();
+	engine->ServerCmd(VarArgs("setscale %i %f", pEntity->entindex(), goodScale), false);
+	/*
 	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pEntity->GetObjectId());
 	if (object)
 	{
@@ -2655,6 +2981,7 @@ void C_MetaverseManager::ScaleObject(C_PropShortcutEntity* pEntity, int iDelta)
 		C_PropShortcutEntity* pEntity = this->GetSpawningObjectEntity();
 		engine->ServerCmd(VarArgs("setscale %i %f", pEntity->entindex(), object->scale), false);
 	}
+	*/
 }
 
 int C_MetaverseManager::CycleSpawningRotationAxis(int direction)
@@ -2745,7 +3072,15 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 		map->SetInt("generation", 3);
 
 		// add standard info
-		std::string id = g_pAnarchyManager->GenerateUniqueId();
+		//std::string id = g_pAnarchyManager->GenerateUniqueId();
+
+		std::string goodTitle = pFilename;
+		size_t found = goodTitle.find(".");
+		if (found != std::string::npos)
+			goodTitle = goodTitle.substr(0, found);
+
+		std::string id = g_pAnarchyManager->GenerateLegacyHash(goodTitle.c_str());
+
 		map->SetString("local/info/id", id.c_str());
 		map->SetInt("local/info/created", 0);
 		map->SetString("local/info/owner", "local");
@@ -2820,7 +3155,16 @@ KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
 		map->SetInt("generation", 3);
 
 		// add standard info
-		std::string id = g_pAnarchyManager->GenerateUniqueId();
+		//std::string id = g_pAnarchyManager->GenerateUniqueId();
+
+		std::string goodTitle = pFilename;
+		size_t found = goodTitle.find(".");
+		if (found != std::string::npos)
+			goodTitle = goodTitle.substr(0, found);
+
+		//DevMsg("Generating hash based on: %s\n", goodTitle.c_str());
+		std::string id = g_pAnarchyManager->GenerateLegacyHash(goodTitle.c_str());
+
 		map->SetString("local/info/id", id.c_str());
 		map->SetInt("local/info/created", 0);
 		map->SetString("local/info/owner", "local");
@@ -2943,6 +3287,88 @@ KeyValues* C_MetaverseManager::LoadLocalItem(std::string file, std::string fileP
 
 unsigned int C_MetaverseManager::LoadAllLocalItems(std::string filePath)
 {
+	// make it use the new shinnit
+	unsigned int count = 0;
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, "SELECT * from items", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	int length;
+	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		KeyValues* pItem = new KeyValues("item");
+
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		pItem->ReadAsBinary(buf);
+
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pItem->FindKey("current");
+		if (!pActive)
+			pActive = pItem->FindKey("local");
+
+		count++;
+
+		std::string id = pActive->GetString("info/id");
+
+		std::vector<std::string> defaultFields;
+		defaultFields.push_back("title");
+		defaultFields.push_back("description");
+		defaultFields.push_back("file");
+		defaultFields.push_back("type");
+		defaultFields.push_back("app");
+		defaultFields.push_back("reference");
+		defaultFields.push_back("preview");
+		defaultFields.push_back("download");
+		defaultFields.push_back("stream");
+		defaultFields.push_back("screen");
+		defaultFields.push_back("marquee");
+		defaultFields.push_back("model");
+
+		unsigned int max = defaultFields.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (!pActive->FindKey(defaultFields[i].c_str()))
+				pActive->SetString(defaultFields[i].c_str(), "");
+		}
+
+		if (!pActive->FindKey("type") || !Q_strcmp(pActive->GetString("type"), ""))
+			pActive->SetString("type", "-KKa1MHJTls2KqNphWFM");
+		/*
+		auto it = m_items.find(id);
+		if (it != m_items.end())
+		{
+			// FIXME: Merg with existing item (keeping in mind that non-legacy items overpower legacy items
+			if (it->second->GetBool("loadedFromLegacy"))
+			{
+				this->SmartMergItemKVs(pItem, it->second);
+				it->second->deleteThis();
+				it->second = pItem;
+
+				// Then remove the loadedFromLegacy tag, if it exits.
+				KeyValues* pTargetKey = pItem->FindKey("loadedFromLegacy");
+				if (pTargetKey)
+					pItem->RemoveSubKey(pTargetKey);
+			}
+			else
+			{
+				this->SmartMergItemKVs(it->second, pItem);
+				pItem->deleteThis();
+				pItem = it->second;
+			}
+		}
+		else
+			m_items[id] = pItem;
+		*/
+		m_items[id] = pItem;
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+	return count;
+
+	/*
 	unsigned int count = 0;
 	FileFindHandle_t testFileHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%slibrary\\items\\*.key", filePath.c_str()), &testFileHandle);
@@ -2975,6 +3401,7 @@ unsigned int C_MetaverseManager::LoadAllLocalItems(std::string filePath)
 
 	g_pFullFileSystem->FindClose(testFileHandle);
 	return count;
+	*/
 }
 
 KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string filePath)
@@ -3027,6 +3454,69 @@ KeyValues* C_MetaverseManager::LoadLocalModel(std::string file, std::string file
 
 unsigned int C_MetaverseManager::LoadAllLocalModels(std::string filePath)
 {
+	// make it use the new shinnit
+	unsigned int count = 0;
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, "SELECT * from models", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
+
+	int length;
+	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
+	{
+		length = sqlite3_column_bytes(stmt, 1);
+
+		KeyValues* pModel = new KeyValues("model");
+
+		CUtlBuffer buf(0, length, 0);
+		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+		pModel->ReadAsBinary(buf);
+
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pModel->FindKey("current");
+		if (!pActive)
+			pActive = pModel->FindKey("local");
+
+		count++;
+
+		std::string id = pActive->GetString("info/id");
+
+		std::vector<std::string> defaultFields;	// Should platform specific fields be expected as well?  Jump off that bridge when you cross it.
+		defaultFields.push_back("title");
+		defaultFields.push_back("keywords");
+		defaultFields.push_back("dynamic");
+
+		unsigned int max = defaultFields.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (!pActive->FindKey(defaultFields[i].c_str()))
+				pActive->SetString(defaultFields[i].c_str(), "");
+		}
+
+		m_models[id] = pModel;
+		/*
+		// TODO: Look up any alias here first!!
+		KeyValues* pActive = pModel->FindKey("current");
+		if (!pActive)
+			pActive = pModel->FindKey("local");
+
+		if (pActive)
+		{
+			std::string id = pActive->GetString("info/id");
+			m_types[id] = pModel;
+			count++;
+			//DevMsg("adding type: %s\n", id.c_str());
+		}
+		else
+		{
+			pModel->deleteThis();
+			pModel = null;
+		}
+		*/
+	}
+	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
+	return count;
+	/*
 	unsigned int count = 0;
 	FileFindHandle_t testFileHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%slibrary\\models\\*.key", filePath.c_str()), &testFileHandle);
@@ -3059,6 +3549,7 @@ unsigned int C_MetaverseManager::LoadAllLocalModels(std::string filePath)
 
 	g_pFullFileSystem->FindClose(testFileHandle);
 	return count;
+	*/
 }
 
 std::string C_MetaverseManager::ResolveLegacyModel(std::string legacyModel)

@@ -40,7 +40,9 @@
 			<br />
 			<div id="saveButton" class="mainButton">Save to Library</div>
 		</div>
-		<a href="javascript:location.reload();" class="devReload">&bull;</a>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		
 		<script>
  			var fileLocation = decodeURIComponent(getParameterByName("fileLocation"));
 
@@ -85,18 +87,53 @@
 
 						if( x === "type" )
 						{
+							// auto-set type for images, pc, and other
+							// also local images aren't having themselves used as their screen.
 							var fieldValueSelect = document.createElement("select");
-
 							var types = aaapi.library.getAllLibraryTypes();
 							var y;
+							var standaloneFieldValueOption;
+							var needsStandaloneType = true;
 							for( y in types )
 							{
 								var type = types[y];
 								var fieldValueOption = document.createElement("option");
 								fieldValueOption.value = type.info.id;
 								fieldValueOption.text = type.title;
+
+								if( type.title === "Standalone" )
+									standaloneFieldValueOption = fieldValueOption;
+
+								var fileVal = (item.hasOwnProperty("file")) ? item["file"] : "";
+								if( type.title === "images" )
+								{
+									var regEx = /(.jpg|.jpeg|.gif|.png|.tga)$/i;
+									var matches = regEx.exec(fileVal);
+									if( matches )
+									{
+										fieldValueOption.selected = true;
+										needsStandaloneType = false;
+									}
+								}
+
+								fileVal = (item.hasOwnProperty("file")) ? item["file"] : "";
+								if( type.title === "websites" )
+								{
+									var regEx = /((http|https):\/\/|(www\.|www\d\.))([^\-][a-zA-Z0-9\-]+)?(\.\w+)(\/\w+){0,}(\.\w+){0,}(\?\w+\=\w+){0,}(\&\w+\=\w+)?/i;
+									var matches = regEx.exec(fileVal);
+									if( matches )
+									{
+										fieldValueOption.selected = true;
+										needsStandaloneType = false;
+									}
+								}
+
 								fieldValueSelect.appendChild(fieldValueOption);
 							}
+
+							// select Standalone if no val
+							if( needsStandaloneType )
+								standaloneFieldValueOption.selected = true;
 
 							fieldValueSelect.value = val;
 							fieldValueSelect.field = x;
@@ -121,7 +158,7 @@
 							var y;
 							for( y in apps )
 							{
-								app =apps[y];
+								app = apps[y];
 								fieldValueOption = document.createElement("option");
 								fieldValueOption.value = app.info.id;
 								fieldValueOption.text = app.title;
@@ -211,6 +248,47 @@
 							// auto-set to a movies format
 						}
 						*/
+					}
+
+					// give auto-title if type is not youtube
+					var allInputs = document.querySelectorAll("input, select");
+					var titleInput;
+					var typeInput;
+					var fileInput;
+					var testInput;
+					var testIndex;
+					for( testIndex = 0; testIndex < allInputs.length; testIndex++)
+					{
+						testInput = allInputs[testIndex];
+						if( testInput.hasOwnProperty("field") )
+						{
+							if( testInput.field === "title" )
+								titleInput = testInput;
+							else if( testInput.field === "type" )
+								typeInput = testInput;
+							else if( testInput.field === "file" )
+								fileInput = testInput;
+						}
+					}
+
+					if( !!titleInput && !!typeInput && !!fileInput )
+					{
+						// make sure we are not a YT video
+						if( typeInput.options[typeInput.selectedIndex].text.toLowerCase().indexOf("youtube") === -1 )
+						{
+							// create a title
+							var regEx = /(?=[^\\/]*$).+$/i;
+							var matches = regEx.exec(fileInput.value);
+							if( matches )
+							{
+								var titleVal = matches[matches.length-1];
+								var foundDot = titleVal.lastIndexOf(".");
+								if( foundDot >= titleVal.length - 4)
+									titleVal = titleVal.substring(0, foundDot);
+
+								titleInput.value = titleVal;
+							}
+						}
 					}
 				}
 	 		}

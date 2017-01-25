@@ -266,7 +266,12 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 						if (title == "")
 							title = "Unnamed";
 
-						g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
+						std::string goodMapName = pFilename;
+						goodMapName = goodMapName.substr(0, goodMapName.find("."));
+
+						std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
+						g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
+						//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
 					}
 				}
 

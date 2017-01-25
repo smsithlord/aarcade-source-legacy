@@ -3,13 +3,13 @@
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
 	</head>
-	<body>
+	<body style="background-color: transparent;">
 		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell"></div>
 					<div class="hudContentHeaderCell">
-						Main
+						Build Mode
 					</div>
 					<div class="hudContentHeaderCell">
 						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
@@ -17,14 +17,23 @@
 				</div>
 			</div>
 
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map.">Play</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library.">Library</div>
-			<div class="mainButton disabledButton">Multiplayer</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine.">Options</div>
-			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
+			<div class="mainButton helpNote" onclick="moveObject();" help="Select & move the object under your crosshair.">Move Object</div>
+			<div class="mainButton helpNote" onclick="deleteObject();" help="Remove the object under your crosshair from the map.">Delete Object</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn.">Library Browser</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
+		<script>
+			function moveObject()
+			{
+				aaapi.system.moveObject();
+			}
+
+			function deleteObject()
+			{
+				aaapi.system.deleteObject();
+			}
+		</script>
 	</body>
 </html>
