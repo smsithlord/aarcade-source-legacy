@@ -34,12 +34,29 @@
 			var mapsContainer = document.querySelector("#mapsContainer");
 
 			var screenshots = aaapi.system.detectAllMapScreenshots();
-			var maps = aaapi.system.getAllMaps();
+			var mapz = aaapi.system.getAllMaps();
+
+			var maps = new Array();
+			for( var y in mapz )
+				maps.push(mapz[y]);
+
+			maps.sort(function(a, b)
+				{
+					if( a.platforms[arcadeHud.platformId].file < b.platforms[arcadeHud.platformId].file)
+						return -1;
+					else if( a.platforms[arcadeHud.platformId].file > b.platforms[arcadeHud.platformId].file )
+						return 1;
+					else
+						return 0;
+				});
 
 			var count = 0;
 			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
-			for( x in maps )
+			//for( x in maps )
+			var x;
+			for( x = 0; x < maps.length; x++)
 			{
+				//x = maps[i].info.id;
 				mapName = maps[x].platforms[arcadeHud.platformId].file;
 				mapName = mapName.substring(0, mapName.length-4);
 
@@ -54,7 +71,7 @@
 				}.bind(mapContainer), true);
 
 				mapImage = document.createElement("img");
-				if( !!screenshots[mapName] )
+				if( false && !!screenshots[mapName] )
 					mapImage.src = "asset://screenshots/" + screenshots[mapName];
 				else
 					mapImage.src = "asset://ui/map.jpg";

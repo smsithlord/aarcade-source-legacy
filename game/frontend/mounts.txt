@@ -3,6 +3,7 @@
 	"mount"
 	{
 		"id" "240"
+		"title" "Counter-Strike: Source"
 		"base" "Counter-Strike Source/cstrike"
 		"installed" 0
 		"active" 0
@@ -17,6 +18,7 @@
 	"mount"
 	{
 		"id" "440"
+		"title" "Team Fortress 2"
 		"base" "Team Fortress 2/tf"
 		"installed" 0
 		"active" 0
@@ -34,6 +36,7 @@
 	"mount"
 	{
 		"id" "400"
+		"title" "Portal"
 		"base" "Portal/portal"
 		"installed" 0
 		"active" 0
@@ -46,6 +49,7 @@
 	"mount"
 	{
 		"id" "320"
+		"title" "Half-Life 2: Deathmatch"
 		"base" "Half-Life 2 Deathmatch/hl2mp"
 		"installed" 0
 		"active" 0
@@ -58,6 +62,7 @@
 	"mount"
 	{
 		"id" "420"
+		"title" "Half-Life 2: Episode 2"
 		"base" "Half-Life 2/ep2"
 		"installed" 0
 		"active" 0
@@ -70,6 +75,7 @@
 	"mount"
 	{
 		"id" "380"
+		"title" "Half-Life 2: Episode 1"
 		"base" "Half-Life 2/episodic"
 		"installed" 0
 		"active" 0
@@ -82,6 +88,7 @@
 	"mount"
 	{
 		"id" "220"
+		"title" "Half-Life 2"
 		"base" "Half-Life 2/hl2"
 		"installed" 0
 		"active" 0
@@ -98,6 +105,7 @@
 	"mount"
 	{
 		"id" "340"
+		"title" "Half-Life 2: Lost Coast"
 		"base" "Half-Life 2/lostcoast"
 		"installed" 0
 		"active" 0
@@ -110,6 +118,7 @@
 	"mount"
 	{
 		"id" "4000"
+		"title" "Garry's Mod"
 		"base" "GarrysMod/garrysmod"
 		"installed" 0
 		"active" 0
@@ -122,6 +131,7 @@
 	"mount"
 	{
 		"id" "317360"
+		"title" "Double Action"
 		"base" "Double Action/dab"
 		"installed" 0
 		"active" 0
@@ -133,6 +143,7 @@
 	"mount"
 	{
 		"id" "224260"
+		"title" "No More Room In Hell"
 		"base" "nmrih/nmrih"
 		"installed" 0
 		"active" 0
@@ -145,6 +156,7 @@
 	"mount"
 	{
 		"id" "300"
+		"title" "Day of Defeat: Source"
 		"base" "Day of Defeat Source/dod"
 		"installed" 0
 		"active" 0
@@ -157,6 +169,7 @@
 	"mount"
 	{
 		"id" "17570"
+		"title" "Pirates, Vikings, and Knights II"
 		"base" "pirates, vikings and knights ii/pvkii"
 		"installed" 0
 		"active" 0
@@ -169,6 +182,7 @@
 	"mount"
 	{
 		"id" "17510"
+		"title" "Age of Chivalry"
 		"base" "Source SDK Base 2007/ageofchivalry"
 		"installed" 0
 		"active" 0
@@ -180,6 +194,7 @@
 	"mount"
 	{
 		"id" "17530"
+		"title" "D.I.P.R.I.P"
 		"base" "Source SDK Base 2007/diprip"
 		"installed" 0
 		"active" 0
@@ -191,6 +206,7 @@
 	"mount"
 	{
 		"id" "17580"
+		"title" "Dystopia"
 		"base" "Dystopia/dystopia"
 		"installed" 0
 		"active" 0
@@ -203,6 +219,7 @@
 	"mount"
 	{
 		"id" "17740"
+		"title" "Empires Mod"
 		"base" "Empires/empires"
 		"installed" 0
 		"active" 0
@@ -214,6 +231,7 @@
 	"mount"
 	{
 		"id" "17550"
+		"title" "Eternal Silence"
 		"base" "Source SDK Base/esmod"
 		"installed" 0
 		"active" 0
@@ -225,6 +243,7 @@
 	"mount"
 	{
 		"id" "265630"
+		"title" "Fistful of Frags"
 		"base" "Fistful of Frags/fof"
 		"installed" 0
 		"active" 0
@@ -237,6 +256,7 @@
 	"mount"
 	{
 		"id" "244630"
+		"title" "Neotokyo"
 		"base" "NEOTOKYO/NeotokyoSource"
 		"installed" 0
 		"active" 0
@@ -248,6 +268,7 @@
 	"mount"
 	{
 		"id" "235780"
+		"title" "Minerva"
 		"base" "MINERVA/metastasis"
 		"installed" 0
 		"active" 0
@@ -259,6 +280,7 @@
 	"mount"
 	{
 		"id" "bg2"
+		"title" "Battlegrounds 2"
 		"base" "bg2/bg2"
 		"installed" 0
 		"active" 0
@@ -270,6 +292,7 @@
 	"mount"
 	{
 		"id" "jurassic"
+		"title" "Jurassic"
 		"base" "jurassic"
 		"installed" 0
 		"active" 0
@@ -281,6 +304,7 @@
 	"mount"
 	{
 		"id" "gesource"
+		"title" "GoldenEye: Source"
 		"base" "gesource"
 		"installed" 0
 		"active" 0
@@ -292,6 +316,7 @@
 	"mount"
 	{
 		"id" "blackmesa"
+		"title" "Black Mesa Mod"
 		"base" "blackmesa"
 		"installed" 0
 		"active" 0
@@ -303,6 +328,7 @@
 	"mount"
 	{
 		"id" "pdark"
+		"title" "Perfect Dark"
 		"base" "pdark"
 		"installed" 0
 		"active" 0
@@ -314,6 +340,7 @@
 	"mount"
 	{
 		"id" "Halloween"
+		"title" "Halloween"
 		"base" "Halloween"
 		"installed" 0
 		"active" 0
@@ -325,6 +352,7 @@
 	"mount"
 	{
 		"id" "WeekdayWarrior"
+		"title" "WeekdayWarrior"
 		"base" "WeekdayWarrior"
 		"installed" 0
 		"active" 0
@@ -336,6 +364,7 @@
 	"mount"
 	{
 		"id" "hidden"
+		"title" "Hidden"
 		"base" "hidden"
 		"installed" 0
 		"active" 0
@@ -347,6 +376,7 @@
 	"mount"
 	{
 		"id" "Korsakovia"
+		"title" "Korsakovia"
 		"base" "Korsakovia"
 		"installed" 0
 		"active" 0
@@ -358,6 +388,7 @@
 	"mount"
 	{
 		"id" "DearEsther"
+		"title" "Dear Esther"
 		"base" "Dear Esther"
 		"installed" 0
 		"active" 0
@@ -369,6 +400,7 @@
 	"mount"
 	{
 		"id" "17700"
+		"title" "Insurgency Mod"
 		"base" "Source SDK Base/insurgency"
 		"installed" 0
 		"active" 0

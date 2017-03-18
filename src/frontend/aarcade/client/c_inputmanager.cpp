@@ -14,8 +14,9 @@ C_InputManager::C_InputManager()
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
 	m_bWasForcedInputMode = false;
+	m_bInputCapture = true;
 	m_bFullscreenMode = false;
-	m_bOverlayMode = false;
+	//m_bOverlayMode = false;
 	m_bMainMenuMode = false;
 	//m_pInputListener = null;
 	//m_pInputCanvasTexture = null;
@@ -191,13 +192,13 @@ void C_InputManager::ForceInputMode()
 	m_bWasForcedInputMode = true;
 }
 
-void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_EmbeddedInstance* pEmbeddedInstance, bool bOverlay)//C_InputListener* pListener)
+void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_EmbeddedInstance* pEmbeddedInstance, bool bInputCapture)//C_InputListener* pListener)
 {
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
 //	/*
-	if (m_bInputMode || (!bFullscreen && !g_pAnarchyManager->GetSelectedEntity() && !bOverlay))
+	if (m_bInputMode || (!bFullscreen && !g_pAnarchyManager->GetSelectedEntity() && bInputCapture))
 		return;
 //	*/
 
@@ -215,7 +216,7 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 //	*/
 
 	//m_bFullscreenMode = bFullscreen;	// this is probably not supposed to be here.  delete it & this comment.
-	m_bOverlayMode = bOverlay;
+	m_bInputCapture = bInputCapture;
 
 	//m_pInputListener = pListener;
 	m_pEmbeddedInstance = pEmbeddedInstance;
@@ -311,7 +312,7 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 		g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
 //		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
-	if (m_bFullscreenMode && !m_bOverlayMode)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
+	if (m_bFullscreenMode && m_bInputCapture)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
 	{
 	//	C_WebManager* pWebManager = g_pAnarchyManager->GetWebManager();
 		//if (pWebManager->GetSelectedWebTab() && !g_pAnarchyManager->GetSelectedEntity())
@@ -337,18 +338,20 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 		*/
 			//pWebManager->DeselectWebTab(pWebManager->GetSelectedWebTab());
 		
-		if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
+		if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode() && engine->IsInGame() )
 		{
 			engine->ClientCmd("gamemenucommand ResumeGame");
 		}
 	}
 //	*/
 
+	// THE DEFAULT VALUES OF STUFF (mostly from the constructor)
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
 	m_bWasForcedInputMode = false;
 	m_bFullscreenMode = false;
-	m_bOverlayMode = false;
+	//m_bOverlayMode = false;
+	m_bInputCapture = true;
 	m_bMainMenuMode = false;
 	//m_pEmbeddedInstance = null;
 	//ShowCursor(false);

@@ -99,53 +99,7 @@
 			{
 				display: inline;
 			}
-/*
-			.hudSideContainerRow .hudSideContainerButton img
-			{
-				display: inline;
-			}
 
-			.hudSideContainerRow:hover .hudSideContainerButton img
-			{
-				display: none;
-			}
-
-			.hudSideContainerRow .hudSideContainerButton .buttonText
-			{
-				display: none;
-			}
-
-			.hudSideContainerRow:hover .hudSideContainerButton .buttonText
-			{
-				display: inline;
-			}
-
-			.hudSideContainerButton:hover .buttonText
-			{
-				display: inline;
-			}
-			*/
-/*
-			.hudSideContainerButton + #metaSearchButton table
-			{
-				display: none;
-			}
-
-			.hudSideContainerButton:hover + #metaSearchButton table
-			{
-				display: table;
-			}
-
-			.hudSideContainerButton + #metaSearchButton:hover table
-			{
-				display: table;
-			}
-
-			.hudSideContainerButton buttonText
-			{
-				display: inline-block;
-			}
-*/
 			#hudSideScrapeContainer
 			{
 				display: none;
@@ -274,7 +228,7 @@
 							<div class="buttonText">Stream</div>
 						</td></tr>
 					</table>
-				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Run this item on the in-game screen using Libretro.">
+				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="" help="Run this item on the in-game screen using Libretro.">
 					<table style="width: 100%; height: 100%;">
 						<tr><td style="white-space: nowrap;">
 							<img src="runicon.png" style="vertical-align: middle;" />
@@ -299,18 +253,36 @@
 		</div>
 
 		<script>
-			function tester()
+			var hudHeaderContainerElem = document.querySelector(".hudHeaderContainer");
+			var hudSideContainerElem = document.querySelector(".hudSideContainer");
+
+			hudHeaderContainerElem.style.display = "none";
+			hudSideContainerElem.style.display = "none";
+
+			var autoHideHandle = null;
+			document.addEventListener("mousemove", function()
 			{
-				window.location = "libretro.html";
-				//var response = aaapi.system.getLibretroOptions();
-				//console.log(response.options.length);
-			}
+				if( autoHideHandle )
+					clearTimeout(autoHideHandle);
+
+				if( hudHeaderContainerElem.style.display !== "block" )
+				{
+					hudHeaderContainerElem.style.display = "block";
+					hudSideContainerElem.style.display = "block";
+				}
+
+				autoHideHandle = setTimeout(function()
+				{
+					hudHeaderContainerElem.style.display = "none";
+					hudSideContainerElem.style.display = "none";
+				}, 6000);
+			}, false);
 		</script>
 
 		<!--
 		<a href="javascript:tester();" class="devReload" style="right: 100px";>xxx</a>
 		-->
-		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a> <a href="betasplash.html" class="devReload" style="padding-right: 20px;">x&nbsp;</a>
 
 		<script>
 			var rows = document.querySelectorAll(".hudSideContainerRow");

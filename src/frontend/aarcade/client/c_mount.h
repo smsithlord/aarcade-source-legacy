@@ -10,17 +10,22 @@ public:
 	C_Mount();
 	~C_Mount();
 
-	void Init(std::string id, std::string base, std::vector<std::string> paths);
+	void Init(std::string id, std::string title, std::string base, std::vector<std::string> paths);
 	bool Activate();
+
+	bool DoesOwn(std::string file);
 //	void Update();
 
 	// accessors
+	std::string GetId() { return m_id; }
+	std::string GetTitle() { return m_title; }
 
 	// mutators
 	
 private:
 	bool m_bActive;
 	std::string m_id;
+	std::string m_title;
 	std::string m_base;
 	std::vector<std::string> m_paths;
 	std::vector<std::string> m_mountedPaths;

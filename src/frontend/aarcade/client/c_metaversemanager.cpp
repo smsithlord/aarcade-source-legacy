@@ -23,6 +23,11 @@ C_MetaverseManager::C_MetaverseManager()
 	m_spawningAngles.y = 0;
 	m_spawningAngles.z = 0;
 
+	m_libraryBrowserContextCategory = "items";
+	m_libraryBrowserContextId = "";
+	m_libraryBrowserContextSearch = "";
+	m_libraryBrowserContextFilter = "";
+
 	// create or open the library.db
 	int rc;
 	char *error;
@@ -31,10 +36,11 @@ C_MetaverseManager::C_MetaverseManager()
 	DevMsg("Create library database...\n");
 
 	rc = sqlite3_open("aarcade_user/library.db", &m_db);
-	if (rc)
+	if (!m_db)
 	{
-		DevMsg("Error opening SQLite3 database: %s\n", sqlite3_errmsg(m_db));
-		sqlite3_close(m_db);
+		DevMsg("Critical error opening SQLite3 database\n");
+		//DevMsg("Error opening SQLite3 database: %s\n", sqlite3_errmsg(m_db));
+		//sqlite3_close(m_db);
 	//	return;
 	}
 
@@ -149,6 +155,231 @@ C_MetaverseManager::~C_MetaverseManager()
 	sqlite3_close(m_db);
 	// TODO: error objects for sqlite must also be cleaned up
 }
+
+void C_MetaverseManager::Init()
+{
+	// confirm that default stuff exists
+	bool bNeedsDefault = true;
+
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(m_db, "SELECT * from  maps", -1, &stmt, NULL);
+	if (rc == SQLITE_OK)
+	{
+		int length;
+		while (sqlite3_step(stmt) == SQLITE_ROW)
+		{
+			length = sqlite3_column_bytes(stmt, 1);
+
+			if (length == 0)
+			{
+				DevMsg("WARNING: Zero-byte KeyValues skipped.\n");
+				continue;
+			}
+
+			KeyValues* pMap = new KeyValues("map");
+
+			CUtlBuffer buf(0, length, 0);
+			buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+			pMap->ReadAsBinary(buf);
+
+			// TODO: Look up any alias here first!!
+			pMap = this->GetActiveKeyValues(pMap);
+			if (pMap)
+				bNeedsDefault = false;
+
+			break;
+		}
+		sqlite3_finalize(stmt);
+	}
+
+	// no maps means empty library
+	// TODO: Improve this check
+
+
+//	int rc;
+	char *error;
+
+	if (bNeedsDefault)
+	{
+		// create the tables
+		const char *sqlCreateAppsTable = "CREATE TABLE apps (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateAppsTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreateItemsTable = "CREATE TABLE items (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateItemsTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreateMapsTable = "CREATE TABLE maps (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateMapsTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreateModelsTable = "CREATE TABLE models (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateModelsTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreatePlatformsTable = "CREATE TABLE platforms (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreatePlatformsTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreateTypesTable = "CREATE TABLE types (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateTypesTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		const char *sqlCreateInstancesTable = "CREATE TABLE instances (id STRING PRIMARY KEY, value BLOB);";
+		rc = sqlite3_exec(m_db, sqlCreateInstancesTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_free(error);
+		}
+
+		// NOW LOAD IN ALL DEFAULTLIBRARY KEYVALUES & ADD THEM TO THE LIBRARY (and copy scraper.js files into the right folder)
+		FileFindHandle_t handle;
+		const char *pFilename;
+		KeyValues* kv;
+
+		// APPS
+		pFilename = g_pFullFileSystem->FindFirstEx("defaultLibrary\\apps\\*.txt", "MOD", &handle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(handle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(handle);
+				continue;
+			}
+
+			kv = new KeyValues("app");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\apps\\%s", pFilename), "MOD"))
+			{
+				KeyValues* active = this->GetActiveKeyValues(kv);
+				this->SaveSQL("apps", active->GetString("info/id"), kv);
+			}
+			kv->deleteThis();
+
+			pFilename = g_pFullFileSystem->FindNext(handle);
+		}
+		g_pFullFileSystem->FindClose(handle);
+
+		// CABINETS
+		pFilename = g_pFullFileSystem->FindFirstEx("defaultLibrary\\cabinets\\*.txt", "MOD", &handle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(handle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(handle);
+				continue;
+			}
+
+			kv = new KeyValues("model");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\cabinets\\%s", pFilename), "MOD"))
+			{
+				KeyValues* active = this->GetActiveKeyValues(kv);
+				this->SaveSQL("models", active->GetString("info/id"), kv);
+			}
+			kv->deleteThis();
+
+			pFilename = g_pFullFileSystem->FindNext(handle);
+		}
+		g_pFullFileSystem->FindClose(handle);
+
+		// MAPS
+		pFilename = g_pFullFileSystem->FindFirstEx("defaultLibrary\\maps\\*.txt", "MOD", &handle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(handle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(handle);
+				continue;
+			}
+
+			kv = new KeyValues("map");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\maps\\%s", pFilename), "MOD"))
+			{
+				KeyValues* active = this->GetActiveKeyValues(kv);
+				this->SaveSQL("maps", active->GetString("info/id"), kv);
+			}
+			kv->deleteThis();
+
+			pFilename = g_pFullFileSystem->FindNext(handle);
+		}
+		g_pFullFileSystem->FindClose(handle);
+
+		// MODELS
+		pFilename = g_pFullFileSystem->FindFirstEx("defaultLibrary\\models\\*.txt", "MOD", &handle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(handle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(handle);
+				continue;
+			}
+
+			kv = new KeyValues("model");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\models\\%s", pFilename), "MOD"))
+			{
+				KeyValues* active = this->GetActiveKeyValues(kv);
+				this->SaveSQL("models", active->GetString("info/id"), kv);
+			}
+			kv->deleteThis();
+
+			pFilename = g_pFullFileSystem->FindNext(handle);
+		}
+		g_pFullFileSystem->FindClose(handle);
+
+		// TYPES
+		pFilename = g_pFullFileSystem->FindFirstEx("defaultLibrary\\types\\*.txt", "MOD", &handle);
+		while (pFilename != NULL)
+		{
+			if (g_pFullFileSystem->FindIsDirectory(handle))
+			{
+				pFilename = g_pFullFileSystem->FindNext(handle);
+				continue;
+			}
+
+			kv = new KeyValues("type");
+			if (kv->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\types\\%s", pFilename), "MOD"))
+			{
+				KeyValues* active = this->GetActiveKeyValues(kv);
+				this->SaveSQL("types", active->GetString("info/id"), kv);
+			}
+			kv->deleteThis();
+
+			pFilename = g_pFullFileSystem->FindNext(handle);
+		}
+		g_pFullFileSystem->FindClose(handle);
+
+		// SCRAPERS
+		// TODO: work
+	}
+
+	this->UpdateScrapersJS();
+}
+
 /*
 void C_MetaverseManager::OnWebTabCreated(C_WebTab* pWebTab)
 {
@@ -239,8 +470,22 @@ void C_MetaverseManager::Update()
 			angles.z += m_spawningAngles.z;
 		}
 
+		// add in the current transform
+		transform_t* pTransform = g_pAnarchyManager->GetInstanceManager()->GetTransform();
+		tr.endpos.x += pTransform->offX;
+		tr.endpos.y += pTransform->offY;
+		tr.endpos.z += pTransform->offZ;
+
+		angles.x += pTransform->rotP;
+		angles.y += pTransform->rotY;
+		angles.z += pTransform->rotR;
+
 		// FIXME: that stuff should be done server-side so collision boxes are updated properly...
 		engine->ServerCmd(VarArgs("setcabpos %i %f %f %f %f %f %f \"%s\";\n", m_pSpawningObjectEntity->entindex(), tr.endpos.x, tr.endpos.y, tr.endpos.z, angles.x, angles.y, angles.z, ""), false);
+
+		float currentScale = m_pSpawningObjectEntity->GetModelScale();
+		if (abs(pTransform->scale - currentScale) > 0.04)
+			g_pAnarchyManager->GetMetaverseManager()->SetObjectScale(g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity(), pTransform->scale);
 	}
 }
 
@@ -704,6 +949,41 @@ void C_MetaverseManager::SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, 
 	*/
 }
 
+void C_MetaverseManager::UpdateScrapersJS()
+{
+	std::vector<std::string> scraperList;
+
+	// get a list of all the .js files in the folder
+	FileFindHandle_t handle;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx("resource\\ui\\html\\scrapers\\*.js", "MOD", &handle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(handle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(handle);
+			continue;
+		}
+
+		scraperList.push_back(pFilename);
+		pFilename = g_pFullFileSystem->FindNext(handle);
+	}
+
+	// generate code
+	std::string code = "";
+	unsigned int max = scraperList.size();
+	for (unsigned int i = 0; i < max; i++)
+		code += "arcadeHud.loadHeadScript(\"scrapers/" + scraperList[i] + "\");\n";
+
+	// open up scrapers.js and replace it.  this path is greated when AArcade is started.
+	FileHandle_t fh = filesystem->Open("resource\\ui\\html\\scrapers.js", "w", "DEFAULT_WRITE_PATH");
+	if (fh)
+	{
+		//filesystem->FPrintf(fh, "%s", code.c_str());
+		filesystem->Write(code.c_str(), V_strlen(code.c_str()), fh);
+		filesystem->Close(fh);
+	}
+}
+
 bool C_MetaverseManager::LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv)
 {
 	sqlite3_stmt *stmt = NULL;
@@ -718,10 +998,15 @@ bool C_MetaverseManager::LoadSQLKevValues(const char* tableName, const char* id,
 	{
 		length = sqlite3_column_bytes(stmt, 1);
 
-		CUtlBuffer buf(0, length, 0);
-		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
-		if( kv->ReadAsBinary(buf) )
-			bSuccess = true;
+		if (length > 0)
+		{
+			CUtlBuffer buf(0, length, 0);
+			buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
+			if (kv->ReadAsBinary(buf))
+				bSuccess = true;
+		}
+		else
+			bSuccess = false;
 	}
 	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
 
@@ -1500,6 +1785,12 @@ unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
 	{
 		length = sqlite3_column_bytes(stmt, 1);
 
+		if (length == 0)
+		{
+			DevMsg("WARNING: Zero-byte KeyValues skipped.\n");
+			continue;
+		}
+
 		KeyValues* pType = new KeyValues("type");
 
 		CUtlBuffer buf(0, length, 0);
@@ -1631,6 +1922,12 @@ unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 	{
 		length = sqlite3_column_bytes(stmt, 1);
 
+		if (length == 0)
+		{
+			DevMsg("WARNING: Zero-byte KeyValues skipped.\n");
+			continue;
+		}
+
 		KeyValues* pApp = new KeyValues("app");
 
 		CUtlBuffer buf(0, length, 0);
@@ -1645,7 +1942,7 @@ unsigned int C_MetaverseManager::LoadAllLocalApps(std::string filePath)
 		if (pActive)
 		{
 			std::string id = pActive->GetString("info/id");
-			m_types[id] = pApp;
+			m_apps[id] = pApp;
 			count++;
 			//DevMsg("adding type: %s\n", id.c_str());
 		}
@@ -2745,6 +3042,23 @@ std::map<std::string, std::string>& C_MetaverseManager::DetectAllMapScreenshots(
 	return m_mapScreenshots;
 }
 
+KeyValues* C_MetaverseManager::FindMap(const char* mapFile)
+{
+	KeyValues* map;
+	std::map<std::string, KeyValues*>::iterator it = m_maps.begin();
+	while (it != m_maps.end())
+	{
+		map = this->GetActiveKeyValues(it->second);
+		//DevMsg("Map name is: %s\n", map->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+		if (!Q_stricmp(map->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), mapFile))
+			return it->second;
+
+		it++;
+	}
+
+	return null;
+}
+
 KeyValues* C_MetaverseManager::GetMap(std::string mapId)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_maps.find(mapId);
@@ -2773,34 +3087,40 @@ void C_MetaverseManager::DetectAllLegacyCabinets()
 		cat->Clear();
 		if (cat->LoadFromFile(g_pFullFileSystem, VarArgs("resource\\models\\%s", pFilename), "GAME"))
 		{
-			pModel = new KeyValues("model");
-
-			// update us to 3rd generation
-			pModel->SetInt("generation", 3);
-
-			// add standard info (except for id)
-			pModel->SetInt("local/info/created", 0);
-			pModel->SetString("local/info/owner", "local");
-			pModel->SetInt("local/info/removed", 0);
-			pModel->SetString("local/info/remover", "");
-			pModel->SetString("local/info/alias", "");
-
 			modelId = g_pAnarchyManager->GenerateLegacyHash(cat->GetString("model"));
-			pModel->SetString("local/info/id", modelId.c_str());
 
-			pModel->SetString("local/title", pModel->GetString("name"));
-			pModel->SetString("local/keywords", "");
-			pModel->SetInt("local/dynamic", 0);
-			pModel->SetString(VarArgs("local/platforms/%s/id", AA_PLATFORM_ID), AA_PLATFORM_ID);
-			pModel->SetString(VarArgs("local/platforms/%s/file", AA_PLATFORM_ID), cat->GetString("model"));
-			pModel->SetString(VarArgs("local/platforms/%s/download", AA_PLATFORM_ID), "");
+			std::map<std::string, KeyValues*>::iterator oldIt = m_models.find(modelId);
+			if (oldIt == m_models.end())
+			{
+				pModel = new KeyValues("model");
 
-			pModel->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), "");
-			pModel->SetString(VarArgs("local/platforms/%s/mountId", AA_PLATFORM_ID),"");
+				// update us to 3rd generation
+				pModel->SetInt("generation", 3);
 
-			// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
-			DevMsg("Loading cabinet model with ID %s and model %s\n", modelId.c_str(), cat->GetString("model"));
-			m_models[modelId] = pModel;
+				// add standard info (except for id)
+				pModel->SetInt("local/info/created", 0);
+				pModel->SetString("local/info/owner", "local");
+				pModel->SetInt("local/info/removed", 0);
+				//pModel->SetString("local/info/remover", "");
+				//pModel->SetString("local/info/alias", "");
+
+
+				pModel->SetString("local/info/id", modelId.c_str());
+
+				pModel->SetString("local/title", cat->GetString("name"));
+				pModel->SetString("local/keywords", cat->GetString("category"));
+				pModel->SetInt("local/dynamic", 1);
+				pModel->SetString(VarArgs("local/platforms/%s/id", AA_PLATFORM_ID), AA_PLATFORM_ID);
+				pModel->SetString(VarArgs("local/platforms/%s/file", AA_PLATFORM_ID), cat->GetString("model"));
+				//pModel->SetString(VarArgs("local/platforms/%s/download", AA_PLATFORM_ID), "");
+
+				//pModel->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), "");
+				//pModel->SetString(VarArgs("local/platforms/%s/mountId", AA_PLATFORM_ID), "");
+
+				// models can be loaded right away because they don't depend on anything else, like items do. (items depend on models)
+				DevMsg("Loading cabinet model with ID %s and model %s\n", modelId.c_str(), cat->GetString("model"));
+				m_models[modelId] = pModel;
+			}
 		}
 
 		pFilename = g_pFullFileSystem->FindNext(handle);
@@ -2861,7 +3181,7 @@ void C_MetaverseManager::DetectAllMaps()
 				goodStyleName = kv->GetString("info/style");
 				goodTitle = kv->GetString("info/title", kv->GetString("info/id"));
 				goodLegacyFile = "";
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, kv->GetString("info/map"), goodTitle, goodLegacyFile, "", "");
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, kv->GetString("info/map"), goodTitle, goodLegacyFile, "", "", "");
 				//g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, goodStyleName, goodTitle, goodLegacyFile, "", "");
 				//g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, goodStyleName, goodTitle, goodLegacyFile, "", "");
 			}
@@ -2984,6 +3304,11 @@ void C_MetaverseManager::ScaleObject(C_PropShortcutEntity* pEntity, int iDelta)
 	*/
 }
 
+void C_MetaverseManager::SetObjectScale(C_PropShortcutEntity* pEntity, float scale)
+{
+	engine->ServerCmd(VarArgs("setscale %i %f", pEntity->entindex(), scale), false);
+}
+
 int C_MetaverseManager::CycleSpawningRotationAxis(int direction)
 {
 	m_iSpawningRotationAxis += direction;
@@ -3002,22 +3327,225 @@ void C_MetaverseManager::ResetSpawningAngles()
 	m_spawningAngles.z = 0;
 }
 
+void C_MetaverseManager::GetObjectInfo(object_t* pObject, KeyValues* &pObjectInfo, KeyValues* &pItemInfo, KeyValues* &pModelInfo)
+{
+	pObjectInfo = new KeyValues("objectInfo");
+
+	pObjectInfo->SetString("id", pObject->objectId.c_str());
+	pObjectInfo->SetBool("slave", pObject->slave);
+	pObjectInfo->SetFloat("scale", pObject->scale);
+
+	KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pObject->itemId));
+	if (pItemKV)
+	{
+		pItemInfo = new KeyValues("itemInfo");
+
+		pItemInfo->SetString("id", pItemKV->GetString("info/id"));
+		pItemInfo->SetString("title", pItemKV->GetString("title"));
+		//pItemInfo->SetString("workshopIds", "TBD");
+	}
+
+	KeyValues* pModelKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pObject->modelId));
+	if (pModelKV)
+	{
+		pModelInfo = new KeyValues("modelInfo");
+
+		pModelInfo->SetString("id", pModelKV->GetString("info/id"));
+		pModelInfo->SetString("title", pModelKV->GetString("title"));
+		
+		KeyValues* someInfoKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForModelFile(pModelKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
+		for (KeyValues *sub = someInfoKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			pModelInfo->SetString(VarArgs("%s", sub->GetName()), sub->GetString());
+		someInfoKV->deleteThis();
+
+		//pModelInfo->SetString("mountIds", "TBD");
+		
+		//pModelInfo->SetString("file", pModelKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
+	}
+}
+
+KeyValues* C_MetaverseManager::DetectRequiredWorkshopForMapFile(std::string mapFile)
+{
+	// BEST CAST: this map already has an entry in the library
+	// TODO: work
+
+	// else, WORST CASE: figure out where the map is from based on its file location
+	char* fullPath = new char[AA_MAX_STRING];
+	PathTypeQuery_t pathTypeQuery;
+	//std::string fullPathBuf;
+
+	std::string mapBuf = mapFile;
+	
+	size_t found = mapBuf.find_last_of("/\\");
+	if (found != std::string::npos)
+		mapBuf = mapBuf.substr(found + 1);
+
+	mapBuf = std::string("maps/") + mapBuf;
+
+	g_pFullFileSystem->RelativePathToFullPath(mapBuf.c_str(), "GAME", fullPath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
+	mapBuf = fullPath;
+
+	// mapBuf is now a full file path to the BSP
+	std::string workshopId;
+	std::string mountId;
+	std::string mountTitle;
+	bool bIsWorkshop = false;
+	bool bIsLegacyWorkshop = false;
+	bool bIsLegacyImported = false;
+	bool bIsLegacyImportedGen1Workshop = false;	// legacy imported GEN 1 workshop maps get treated like regular legacy imported non-workshop maps
+
+	std::string baseDir = engine->GetGameDirectory();
+	std::string importedLegacyDir = g_pAnarchyManager->GetLegacyFolder();
+	std::string workshopDir = g_pAnarchyManager->GetWorkshopFolder();
+
+	// Source gives the map path in all-lowercase (WHY GABE N?!) so the paths we test against also need to be lowercase
+	std::transform(baseDir.begin(), baseDir.end(), baseDir.begin(), ::tolower);
+	std::transform(importedLegacyDir.begin(), importedLegacyDir.end(), importedLegacyDir.begin(), ::tolower);
+	std::transform(workshopDir.begin(), workshopDir.end(), workshopDir.begin(), ::tolower);
+
+	if (importedLegacyDir != "" && importedLegacyDir.find_last_of("\\") == importedLegacyDir.length() - 1)
+	{
+		// check for the very old GEN1 workshop maps being imported from a legacy folder.  importing these are not supported (but subscribing to them is)
+		std::string legacyWorkshopGen1MapsDir = importedLegacyDir + "workshop\\workshopmaps\\maps\\";
+
+		if (mapBuf.find(legacyWorkshopGen1MapsDir) == 0)
+			bIsLegacyImportedGen1Workshop = true;
+	}
+	
+	if (!bIsLegacyImportedGen1Workshop)
+	{
+		// check for content from the workshop
+		if (mapBuf.find(workshopDir) == 0)
+		{
+			bIsWorkshop = true;
+			// extract the workshop ID
+			workshopId = mapBuf.substr(workshopDir.length());
+			workshopId = workshopId.substr(0, workshopId.find_last_of("\\"));
+			workshopId = workshopId.substr(0, workshopId.find_last_of("\\"));
+
+			// TODO: determine if this is a legacy workshop map (somehow)
+			//bIsLegacyWorkshop = ?;
+		}
+	}
+
+	C_Mount* pMount = g_pAnarchyManager->GetMountManager()->FindOwningMount(mapBuf);
+	if (pMount)
+	{
+		//	DevMsg("Yar.\n");
+		mountId = pMount->GetId();
+		mountTitle = pMount->GetTitle();
+	}
+
+	// populate mapInfo with stuff
+	KeyValues* mapInfo = new KeyValues("mapInfo");
+	mapInfo->SetString("fullfile", mapBuf.c_str());
+	mapInfo->SetString("workshopIds", workshopId.c_str());
+	mapInfo->SetString("mountIds", mountId.c_str());
+	mapInfo->SetString("mountTitle", mountTitle.c_str());
+	mapInfo->SetBool("bIsWorkshop", bIsWorkshop);
+	mapInfo->SetBool("bIsLegacyImportedGen1Workshop", bIsLegacyImportedGen1Workshop);
+	return mapInfo;
+}
+
+KeyValues* C_MetaverseManager::DetectRequiredWorkshopForModelFile(std::string modelFile)
+{
+	// BEST CAST: this model already has an entry in the library
+	// TODO: work
+
+	// else, WORST CASE: figure out where the map is from based on its file location
+	char* fullPath = new char[AA_MAX_STRING];
+	PathTypeQuery_t pathTypeQuery;
+	//std::string fullPathBuf;
+
+	std::string modelBuf = modelFile;
+
+	/*
+	size_t found = modelBuf.find_last_of("/\\");
+	if (found != std::string::npos)
+		modelBuf = modelBuf.substr(found + 1);
+
+	modelBuf = std::string("maps/") + modelBuf;
+	*/
+	DevMsg("Here model is: %s\n", modelBuf.c_str());
+	g_pFullFileSystem->RelativePathToFullPath(modelBuf.c_str(), "GAME", fullPath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
+	modelBuf = fullPath;
+	DevMsg("And now it is: %s\n", modelBuf.c_str());
+
+	// modelBuf is now a full file path to the BSP
+	std::string workshopId;
+	std::string mountId;
+	std::string mountTitle;
+	bool bIsWorkshop = false;
+	bool bIsLegacyImported = false;
+	//bool bIsLegacyWorkshop = false;
+
+	std::string baseDir = engine->GetGameDirectory();
+	std::string importedLegacyDir = g_pAnarchyManager->GetLegacyFolder();
+	std::string workshopDir = g_pAnarchyManager->GetWorkshopFolder();
+
+	// Source gives the model path in all-lowercase (WHY GABE N?!) so the paths we test against also need to be lowercase
+	std::transform(baseDir.begin(), baseDir.end(), baseDir.begin(), ::tolower);
+	std::transform(importedLegacyDir.begin(), importedLegacyDir.end(), importedLegacyDir.begin(), ::tolower);
+	std::transform(workshopDir.begin(), workshopDir.end(), workshopDir.begin(), ::tolower);
+
+	if (modelBuf.find(importedLegacyDir) == 0)
+		bIsLegacyImported = true;
+
+	// check for content from the workshop
+	if (modelBuf.find(workshopDir) == 0)
+	{
+		bIsWorkshop = true;
+
+		// extract the workshop ID
+		workshopId = modelBuf.substr(workshopDir.length());
+		workshopId = workshopId.substr(0, workshopId.find("\\"));
+
+		// TODO: determine if this is a legacy workshop model (somehow)
+		//bIsLegacyWorkshop = ?;
+	}
+
+	// determine mount ID
+
+	C_Mount* pMount = g_pAnarchyManager->GetMountManager()->FindOwningMount(modelBuf);
+	if (pMount)
+	{
+	//	DevMsg("Yar.\n");
+		mountId = pMount->GetId();
+		mountTitle = pMount->GetTitle();
+	}
+
+	// populate mapInfo with stuff
+	KeyValues* modelInfo = new KeyValues("modelInfo");
+	modelInfo->SetString("fullfile", modelBuf.c_str());
+	modelInfo->SetString("workshopIds", workshopId.c_str());
+	modelInfo->SetString("mountIds", mountId.c_str());
+	modelInfo->SetString("mountTitle", mountTitle.c_str());	// FIXME: This is singluar while the other ones are plural.  Hmmmmm.
+	modelInfo->SetBool("bIsWorkshop", bIsWorkshop);
+	modelInfo->SetBool("bIsLegacyImported", bIsLegacyImported);
+	return modelInfo;
+}
+
 void C_MetaverseManager::FlagDynamicModels()
 {
+	// technically shouldn't be needed, but it does allow addon cabinet models to be added to the list just by living in the right folder, and thats cool.
 	std::string buf;
 	KeyValues* active;
 	std::map<std::string, KeyValues*>::iterator it = m_models.begin();
 	while (it != m_models.end())
 	{
-		active = it->second->FindKey("current");
-		if (!active)
-			active = it->second->FindKey("local", true);
+		active = this->GetActiveKeyValues(it->second);
+		//active = it->second->FindKey("current");
+		//if (!active)
+		//	active = it->second->FindKey("local", true);
 
-		buf = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-		if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0 || buf.find("models\\banners\\") == 0 || buf.find("models/banners/") == 0 || buf.find("models\\frames\\") == 0 || buf.find("models/frames/") == 0 || buf.find("models\\icons\\") == 0 || buf.find("models/icons/") == 0)
+		if (active->GetInt("dynamic") != 1)
 		{
-			active->SetInt("dynamic", 1);
-			DevMsg("Flagged %s as dynamic model\n", buf.c_str());
+			buf = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+			if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0 || buf.find("models\\banners\\") == 0 || buf.find("models/banners/") == 0 || buf.find("models\\frames\\") == 0 || buf.find("models/frames/") == 0 || buf.find("models\\icons\\") == 0 || buf.find("models/icons/") == 0)
+			{
+				active->SetInt("dynamic", 1);
+				DevMsg("Flagged %s as dynamic model\n", buf.c_str());
+			}
 		}
 
 		it++;
@@ -3092,6 +3620,14 @@ KeyValues* C_MetaverseManager::DetectFirstMap(bool& bAlreadyExists)
 		map->SetString("local/title", mapName.c_str());
 		map->SetString("local/keywords", "");
 		map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/file", foundName.c_str());
+
+		KeyValues* stuffKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForMapFile(foundName.c_str());
+		if (stuffKV)
+		{
+			map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/workshopIds", stuffKV->GetString("workshopIds"));
+			map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/mountIds", stuffKV->GetString("mountIds"));
+			stuffKV->deleteThis();
+		}
 
 		m_maps[id.c_str()] = map;
 		bAlreadyExists = false;
@@ -3176,6 +3712,14 @@ KeyValues* C_MetaverseManager::DetectNextMap(bool& bAlreadyExists)
 		map->SetString("local/title", mapName.c_str());
 		map->SetString("local/keywords", "");
 		map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/file", foundName.c_str());
+
+		KeyValues* stuffKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForMapFile(foundName.c_str());
+		if (stuffKV)
+		{
+			map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/workshopIds", stuffKV->GetString("workshopIds"));
+			map->SetString("local/platforms/-KJvcne3IKMZQTaG7lPo/mountIds", stuffKV->GetString("mountIds"));
+			stuffKV->deleteThis();
+		}
 
 		m_maps[id.c_str()] = map;
 		bAlreadyExists = false;
@@ -3298,6 +3842,12 @@ unsigned int C_MetaverseManager::LoadAllLocalItems(std::string filePath)
 	while (sqlite3_step(stmt) == SQLITE_ROW)	// THIS IS WHERE THE LOOP CAN BE BROKEN UP AT!!
 	{
 		length = sqlite3_column_bytes(stmt, 1);
+
+		if (length == 0)
+		{
+			DevMsg("WARNING: Zero-byte KeyValues skipped.\n");
+			continue;
+		}
 
 		KeyValues* pItem = new KeyValues("item");
 
@@ -3466,6 +4016,12 @@ unsigned int C_MetaverseManager::LoadAllLocalModels(std::string filePath)
 	{
 		length = sqlite3_column_bytes(stmt, 1);
 
+		if (length == 0)
+		{
+			DevMsg("WARNING: Zero-byte KeyValues skipped.\n");
+			continue;
+		}
+
 		KeyValues* pModel = new KeyValues("model");
 
 		CUtlBuffer buf(0, length, 0);
@@ -3494,25 +4050,6 @@ unsigned int C_MetaverseManager::LoadAllLocalModels(std::string filePath)
 		}
 
 		m_models[id] = pModel;
-		/*
-		// TODO: Look up any alias here first!!
-		KeyValues* pActive = pModel->FindKey("current");
-		if (!pActive)
-			pActive = pModel->FindKey("local");
-
-		if (pActive)
-		{
-			std::string id = pActive->GetString("info/id");
-			m_types[id] = pModel;
-			count++;
-			//DevMsg("adding type: %s\n", id.c_str());
-		}
-		else
-		{
-			pModel->deleteThis();
-			pModel = null;
-		}
-		*/
 	}
 	sqlite3_finalize(stmt);	// TODO: error checking?  Maybe not needed, if this is like a close() operation.
 	return count;

@@ -3,6 +3,7 @@
 
 #include "c_mount.h"
 #include <vector>
+#include <map>
 
 class C_MountManager
 {
@@ -16,11 +17,13 @@ public:
 
 	// accessors
 	std::vector<std::string>* GetLibraryPaths() { return &m_libraryPaths; }
+	C_Mount* FindOwningMount(std::string file);
 
 	// mutators
 	
 private:
 	std::vector<std::string> m_libraryPaths;
+	std::map<std::string, C_Mount*> m_mounts;
 	//std::map<std::string, C_Mount*> m_webTabs;
 };
 

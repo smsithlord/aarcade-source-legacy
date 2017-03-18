@@ -80,7 +80,7 @@
 			<select id="fieldSelect" style="width: 100%; font-size: 20px;"></select>
 			<input id="term" style="width: 100%; font-size: 20px;" placeholder="Search Term"></input>
 			<div id="searchTagsContainer">
-				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+boxart</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="preview">+gameplay</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
+				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+boxart</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="stream">+stream</div> <div field="preview">+gameplay</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
 			</div>
 		</div>
 
@@ -101,8 +101,6 @@ function getParameterByName(name, url) {
 }
 
 		var givenField = getParameterByName("field");
-		console.log(givenField);
-		console.log("booooi");
 
 		var termInput = document.querySelector("#term");
 		var fieldSelect = document.querySelector("#fieldSelect");
@@ -132,7 +130,11 @@ function getParameterByName(name, url) {
 
 					if( term !== "clear" )
 					{
-						termInput.value = termInput.placeholder + " " + term;
+						if( term === "stream" )	// don't add "stream" to search text
+							termInput.value = termInput.placeholder;
+						else
+							termInput.value = termInput.placeholder + " " + term;
+						
 						fieldSelect.value = this.getAttribute("field");
 					}
 					else
@@ -160,7 +162,7 @@ function getParameterByName(name, url) {
 				scraper = arcadeHud.scrapers[x];
 
 				//if( !!!scraper.fields["all"] )
-				if( !!!scraper.fields[field] )
+				if( !!!scraper.fields[field] || scraper.id === "importSteamGames" )
 					continue;
 
 				button = document.createElement("div");

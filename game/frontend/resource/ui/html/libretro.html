@@ -30,9 +30,9 @@
 				</div>
 			</div>
 
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroGame.html';" help="Configure the options this core uses on THIS game only.">Game Options</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroCore.html';" help="Configure the default options this core uses on ALL games.">Core Options</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretroMain.html';" help="Configure the options that Libretro uses on ALL games & cores.">Libretro Options</div>
+			<div class="mainButton disabledButton helpNote" onclick="window.location='asset://ui/libretroGame.html';" help="Configure the options this core uses on THIS game only.">Game Options</div>
+			<div class="mainButton disabledButton helpNote" onclick="window.location='asset://ui/libretroCore.html';" help="Configure the default options this core uses on ALL games.">Core Options</div>
+			<div class="mainButton disabledButton helpNote" onclick="window.location='asset://ui/libretroMain.html';" help="Configure the options that Libretro uses on ALL games & cores.">Libretro Options</div>
 			<div class="devicesContainer"></div>
 		</div>
 
@@ -126,6 +126,9 @@
 
 				deviceSelectCellElem = document.createElement("td");
 				optionSelectElem = document.createElement("select");
+
+				// DISABLED FOR NOW
+				optionSelectElem.style.pointerEvents = "none";
 
 /*
 				optionNothingElem = document.createElement("option");

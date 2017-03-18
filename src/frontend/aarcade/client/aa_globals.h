@@ -38,9 +38,11 @@
 #define AA_PLATFORM_ID "-KJvcne3IKMZQTaG7lPo"
 #endif
 
+/*
 #ifndef AA_LIBRETRO_PATH
 #define AA_LIBRETRO_PATH "D:\\Projects\\AArcade-Source\\game\\frontend\\libretro\\cores"
 #endif
+*/
 //#include "cbase.h"
 
 //#include "c_liveView.h"

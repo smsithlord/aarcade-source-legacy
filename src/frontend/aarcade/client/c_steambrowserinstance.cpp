@@ -68,8 +68,8 @@ C_SteamBrowserInstance::C_SteamBrowserInstance() : m_StartRequest(this, &C_Steam
 m_FinishedRequest(this, &C_SteamBrowserInstance::BrowserInstanceFinishedRequest),
 m_NeedsPaint(this, &C_SteamBrowserInstance::BrowserInstanceNeedsPaint),
 m_NewWindow(this, &C_SteamBrowserInstance::BrowserPopupHTMLWindow),
-m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged)
-//m_ChangeTitle(this, &C_SteamBrowserInstance::BrowserSetHTMLTitle),
+m_URLChanged(this, &C_SteamBrowserInstance::BrowserURLChanged),
+m_ChangeTitle(this, &C_SteamBrowserInstance::BrowserSetHTMLTitle)
 //m_FinishedRequest(this, &C_SteamBrowserInstance::BrowserFinishedRequest)
 //m_StatusText(this, &C_SteamBrowserInstance::BrowserStatusText)
 {
@@ -616,12 +616,9 @@ void C_SteamBrowserInstance::BrowserURLChanged(HTML_URLChanged_t *pCmd)
 }
 
 //void C_SteamBrowserInstance::BrowserStatusText(HTML_StatusText_t *pCmd)
-/*
+
 void C_SteamBrowserInstance::BrowserSetHTMLTitle(HTML_ChangedTitle_t *pCmd)
 {
-	return;
-
-	DevMsg("Dos\n");
 	if (pCmd->unBrowserHandle != m_unHandle)
 		return;
 
@@ -629,11 +626,10 @@ void C_SteamBrowserInstance::BrowserSetHTMLTitle(HTML_ChangedTitle_t *pCmd)
 	params.push_back(pCmd->pchTitle);
 
 	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	pHudInstance->DispatchJavaScriptMethod("arcadeHud", "onDOMGot", params);
+	pHudInstance->DispatchJavaScriptMethod("arcadeHud", "onTitleChanged", params);
 
 	//DevMsg("Response is: %s\n", pCmd->pchTitle);
 }
-*/
 
 
 

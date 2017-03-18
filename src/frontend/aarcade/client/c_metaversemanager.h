@@ -15,6 +15,8 @@ class C_MetaverseManager
 public:
 	C_MetaverseManager();
 	~C_MetaverseManager();
+
+	void Init();
 	
 	void Update();
 
@@ -32,6 +34,8 @@ public:
 	void SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst = true);// , bool bFullMerg, bool bRefreshArtworkIfNeeded = true);
 
 	bool LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv);
+
+	void UpdateScrapersJS();
 
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
@@ -100,8 +104,12 @@ public:
 	std::map<std::string, std::string>& GetAllMapScreenshots() { return m_mapScreenshots; }
 
 
+	KeyValues* FindMap(const char* mapFile);
 	KeyValues* GetMap(std::string mapId);
 	std::map<std::string, KeyValues*>& GetAllMaps() { return m_maps; }
+	std::map<std::string, KeyValues*>& GetAllModels() { return m_models; }
+	std::map<std::string, KeyValues*>& GetAllTypes() { return m_types; }
+	std::map<std::string, KeyValues*>& GetAllApps() { return m_apps; }
 	void DetectAllLegacyCabinets();
 	void DetectAllMaps();
 	KeyValues* DetectFirstMap(bool& bAlreadyExists);
@@ -119,9 +127,17 @@ public:
 	std::string GetLibraryBrowserContext(std::string name);
 
 	void ScaleObject(C_PropShortcutEntity* pEntity, int iDelta);
+	void SetObjectScale(C_PropShortcutEntity* pEntity, float scale);
 
 	int CycleSpawningRotationAxis(int direction);
 	void ResetSpawningAngles();
+
+	// if this function returns non-null, the CALLER is responsible for cleaning up the KV!
+	KeyValues* DetectRequiredWorkshopForMapFile(std::string mapFile);
+	KeyValues* DetectRequiredWorkshopForModelFile(std::string modelFile);
+
+	// if this function returns non-null, the CALLER is responsible for cleaning up the KVs!
+	void GetObjectInfo(object_t* pObject, KeyValues* &pObjectInfo, KeyValues* &pItemInfo, KeyValues* &pModelInfo);
 
 	// accessors
 	// FIXME: All of these spawning stuff should be in INSTANCE MANAGER not here!!

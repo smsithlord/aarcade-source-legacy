@@ -136,6 +136,9 @@ function FindCRC(data_in) {
 
 			ImageLoader.prototype.isImageExtension = function(value)
 			{
+				if( value.indexOf("cdn.steamcommunity") > -1 )
+					return true;
+
 				var extensions = "::tbn::jpg::jpeg::tiff::gif::bmp::png::webp::";
 				var ext = value;
 				var found = ext.lastIndexOf(".");
@@ -311,7 +314,7 @@ function FindCRC(data_in) {
 						//	imageRequest.cacheExhausted.push(testerField);
 						//}
 
-						if( (!!!NextYouTubeId && !imageLoader.isImageExtension(fieldVal)) || fieldVal == "" )
+						if( (!!!NextYouTubeId && (!imageLoader.isImageExtension(fieldVal)) || fieldVal == "") )
 						{
 							imageRequest.cacheExhausted.push(testerField);
 							imageRequest.usedFields.push(testerField);

@@ -143,7 +143,7 @@ void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is
 		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
 		g_pAnarchyManager->OnLoadAllLocalAppsComplete();
 
-		g_pAnarchyManager->SetInitialized(true);
+		//g_pAnarchyManager->SetInitialized(true);	// wait to do this later, when everything is actually done loading.
 	}
 }
 

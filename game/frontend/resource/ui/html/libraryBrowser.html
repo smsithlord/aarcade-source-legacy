@@ -261,7 +261,10 @@
 						// spawnEntry(category, entryId, search, filter)
 						//aaapi.system.setLibraryBrowserContext("items", "", searchText, filterText);
 						// FIXME: Automatically switch to items mode (but what about spawning models directly?)
-						aaapi.system.spawnEntry("items", libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+
+						//aaapi.system.spawnEntry("items", libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+
+						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
 					}
 				}
 				else if( entryValueInputElem.value !== "" )

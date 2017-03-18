@@ -17,14 +17,29 @@
 				</div>
 			</div>
 
-			<div class="mainButton helpNote" onclick="moveObject();" help="Select & move the object under your crosshair.">Move Object</div>
-			<div class="mainButton helpNote" onclick="deleteObject();" help="Remove the object under your crosshair from the map.">Delete Object</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn.">Library Browser</div>
+
+
+			<div style="width: 90%; display: block; text-align: center; margin-left: 5%;">
+				<div class="mainButton helpNote" style="width: 70%; display: inline-block; float: left;" onclick="viewObjectInfo();" help="View mount & workshop info about this object.">Object Info</div>
+				<div class="mainButton helpNote" style="width: 25%; display: inline-block; float: right;" onclick="deleteObject();" help="Remove this object from the world.">Delete</div>
+			</div>
+			<!--
+			<div class="mainButton helpNote" onclick="" help="View mount & workshop info about this object.">Object Info</div>-->
+			<div class="mainButton helpNote" onclick="moveObject();" help="Select & move the object under your crosshair.">Move</div>
+			<!--
+			<div class="mainButton helpNote" onclick="deleteObject();" help="Remove the object under your crosshair from the map.">Delete Object</div>-->
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn.">Library</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+		//window.location='asset://ui/objectInfo.html';
+			function viewObjectInfo()
+			{
+				aaapi.system.viewObjectInfo();
+			}
+
 			function moveObject()
 			{
 				aaapi.system.moveObject();

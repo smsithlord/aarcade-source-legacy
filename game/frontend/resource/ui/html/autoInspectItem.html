@@ -18,7 +18,7 @@ function ExtractYouTubeId(trailerURL)
 {
   if( typeof trailerURL === "undefined" )
     return trailerURL;
-
+  
   var youtubeid;
   if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
   {
@@ -27,7 +27,7 @@ function ExtractYouTubeId(trailerURL)
     var found = youtubeid.indexOf("&");
     if( found > -1 )
     {
-      youtubeid = youtubeid.substr(0, found);
+      youtubeid = youtubeid.substring(0, found);
     }
   }
   else
@@ -35,12 +35,12 @@ function ExtractYouTubeId(trailerURL)
     var found = trailerURL.indexOf("youtu.be/");
     if( found != -1 )
     {
-      youtubeid = trailerURL.substr(found+9);
+      youtubeid = trailerURL.substring(found+9);
 
       found = youtubeid.indexOf("&");
       if( found != -1 )
       {
-        youtubeid = youtubeid.substr(0, found);
+        youtubeid = youtubeid.substring(0, found);
       }
     }
   }
@@ -48,43 +48,31 @@ function ExtractYouTubeId(trailerURL)
   return youtubeid;
 }
 
-			var preview = decodeURIComponent(getParameterByName("preview"));
-			var file = decodeURIComponent(getParameterByName("file"));
-			var screen = decodeURIComponent(getParameterByName("screen"));
-			var marquee = decodeURIComponent(getParameterByName("marquee"));
+function ExtractTwitchId(trailerURL)
+{
+    if( typeof trailerURL === "undefined" )
+      return trailerURL;
 
-      console.log(screen);
+    var twitchid;
+    var test = trailerURL;
+    var found = test.indexOf("twitch.tv/");
+    if( found >= 0 )
+    {
+      twitchid = test.substr(found + 10);
 
-      // FIXME: This needs to pass the php all of its known YouTubeIds, so the player can try them all until it finds one that actually works.
+      found = twitchid.indexOf("/");
+      if( found > 0 )
+        twitchid = twitchid - twitchid.substring(0, found);
+    }
 
-			var youTubeIds = [];
-      var youTubeId = ExtractYouTubeId(preview);
-      if( !!youTubeId )
-        youTubeIds.push(youTubeId);
+    return twitchid;
+}
 
-      youTubeId = ExtractYouTubeId(file);
-			if( !!youTubeId )
-				youTubeId = youTubeIds.push(youTubeId);
-
-      youTubeId = youTubeIds[0];  // legacy
-
-			if( !!youTubeId )
-				window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeId + "&autoplay=1";
-			else
-			{
+      function isImageEnding(val)
+      {
         var imageEndings = ["jpg", "jpeg", "gif", "png"];
-
-        var fieldValue = "";
-				if( preview != "")
-          fieldValue = preview;
-				else if( file.indexOf("http") === 0 )
-          fieldValue = file;
-				else if( screen != "" )
-          fieldValue = screen;
-				else if( marquee != "" )
-          fieldValue = marquee;
-
-        var extension = fieldValue;
+        var extension = val;
+        extension = extension.toLowerCase();
         var found = extension.lastIndexOf("/");
         if( found >= 0 )
           extension = extension.substring(found+1);
@@ -105,10 +93,65 @@ function ExtractYouTubeId(trailerURL)
         if( found >= 0 )
           extension = extension.substring(found+1);
         
-        if( imageEndings.indexOf(extension) >= 0 )
-          window.location = "showImage.html?uri=" + encodeURIComponent(fieldValue);//window.location = "asset://ui/showImage.html?uri=" + encodeURIComponent(fieldValue);
+        return (imageEndings.indexOf(extension) >= 0);
+      }
+
+			var preview = decodeURIComponent(getParameterByName("preview"));
+			var file = decodeURIComponent(getParameterByName("file"));
+			var screen = decodeURIComponent(getParameterByName("screen"));
+			var marquee = decodeURIComponent(getParameterByName("marquee"));
+
+      var fieldValue = "";
+      if( preview != "")
+        fieldValue = preview;
+      else if( file.indexOf("http") === 0 )
+        fieldValue = file;
+      else if( screen != "" )
+        fieldValue = screen;
+      else if( marquee != "" )
+        fieldValue = marquee;
+
+      // FIXME: This needs to pass the php all of its known YouTubeIds, so the player can try them all until it finds one that actually works.
+
+      // prefer preview urls
+      var youTubeIds = {};
+      var youTubeId;
+
+      youTubeId = ExtractYouTubeId(file);
+      if( !!youTubeId )
+        youTubeIds["file"] = youTubeId;
+
+      youTubeId = ExtractYouTubeId(preview);
+      if( !!youTubeId )
+        youTubeIds["preview"] = youTubeId;
+
+      var twitchId = ExtractTwitchId(file);
+
+      if( preview !== "" )
+      {
+        if( !!youTubeIds["preview"] )
+          window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeIds["preview"] + "&autoplay=1";
         else
-				  window.location = fieldValue;
+        {
+          if( isImageEnding(fieldValue) )
+            window.location = "showImage.html?uri=" + encodeURIComponent(fieldValue);
+          else
+            window.location = fieldValue;
+        }
+      }
+      else
+      {
+        if( !!youTubeIds["file"] )
+          window.location = "http://smarcade.net/dlcv2/view_youtube.php?id=" + youTubeIds["file"] + "&autoplay=1";
+        else if( !!twitchId )
+          window.location = "http://www.twitch.tv/" + twitchId + "/popout";
+        else
+        {
+          if( isImageEnding(fieldValue) )
+            window.location = "showImage.html?uri=" + encodeURIComponent(fieldValue);
+          else
+            window.location = fieldValue;
+        }
 			}
 		</script>
 	</body>

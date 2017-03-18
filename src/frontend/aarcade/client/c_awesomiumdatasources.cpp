@@ -71,6 +71,16 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	size_t found = requestPath.find_first_of("#?");
 	std::string shortPath = requestPath.substr(0, found);
 
+	// load scarpers.js and anything from the scrapers folder from the DEFAULT_WRITE search path instead of the UI search path. (to allow for organization of local user mods w/o touching the frontend folder)
+	// OBSOLETE COMMENT ABOVE: Now userable folders are added directly to the UI search path.
+	std::string UISearchPath;
+//	if (shortPath.find("scrapers.js") == 0 || shortPath.find("scrapers/") == 0 || shortPath.find("scrapers\\") == 0)
+//		UISearchPath = "DEFAULT_WRITE_PATH";
+//	else
+		UISearchPath = "UI";
+
+	std::string localBase = (UISearchPath == "UI") ? "" : "resource\\ui\\html\\";
+
 	enum datatype_t {
 		RESOURCE_UNKNOWN = 0,
 		RESOURCE_BINARY = 1,
@@ -116,7 +126,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 		if (shortPath.find(".html") == shortPath.length() - 5)
 		{
 			CUtlBuffer buf;
-			if (filesystem->ReadFile(shortPath.c_str(), "UI", buf))
+			if (filesystem->ReadFile(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), UISearchPath.c_str(), buf))
 			{
 				char* data = new char[buf.Size() + 1];
 				//buf.GetString(data);
@@ -133,7 +143,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 		else if (shortPath.find(".js") == shortPath.length() - 3)
 		{
 			CUtlBuffer buf;
-			if (filesystem->ReadFile(shortPath.c_str(), "UI", buf))
+			if (filesystem->ReadFile(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), UISearchPath.c_str(), buf))
 			{
 				char* data = new char[buf.Size() + 1];
 				//buf.GetString(data);
@@ -149,7 +159,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 		}
 		else if (shortPath.find(".css") == shortPath.length() - 4)
 		{
-			FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "r", "UI");
+			FileHandle_t fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), "r", UISearchPath.c_str());
 
 			if (fileHandle)
 			{
@@ -169,7 +179,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 //		else
 	//	{
 			/*	This method probably only works for non-binary files.
-			FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb", "AAPROTECTED");
+			FileHandle_t fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), localFile.c_str()), "rb", "AAPROTECTED");
 
 			if( fileHandle )
 			{
@@ -187,7 +197,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 			}
 			*/
 		/*
-			FileHandle_t fileHandle = filesystem->Open(requestPath.c_str(), "rb", "UI");
+			FileHandle_t fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), requestPath.c_str()), "rb", UISearchPath.c_str());
 
 			if (fileHandle)
 			{
@@ -208,7 +218,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	}
 	else if (datatype == RESOURCE_BINARY)
 	{
-		FileHandle_t fileHandle = filesystem->Open(shortPath.c_str(), "rb", "UI");
+		FileHandle_t fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), "rb", UISearchPath.c_str());
 
 		if (fileHandle)
 		{

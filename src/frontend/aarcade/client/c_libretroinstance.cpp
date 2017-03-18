@@ -90,19 +90,19 @@ void C_LibretroInstance::Init(std::string id)
 	//pRegen->SetEmbeddedInstance(this);
 	m_pTexture->SetTextureRegenerator(pRegen);
 	
-	m_corePath = engine->GetGameDirectory();
-	m_corePath += "\\libretro\\cores";
+	//m_corePath = engine->GetGameDirectory();
+	m_corePath = "\\libretro\\cores";
 
-	std::string userBase = engine->GetGameDirectory();// "libretro\\assets";
-	size_t found = userBase.find_last_of("/\\");
+	m_userBase = engine->GetGameDirectory();// "libretro\\assets";
+	size_t found = m_userBase.find_last_of("/\\");
 	if (found != std::string::npos)
-		userBase = userBase.substr(0, found);
+		m_userBase = m_userBase.substr(0, found);
 
-	userBase += "\\aarcade_user";
+	m_userBase += "\\aarcade_user";
 
-	m_assetsPath += userBase + "\\libretro\\assets";
-	m_systemPath += userBase + "\\libretro\\system";
-	m_savePath += userBase + "\\libretro\\save";
+	m_assetsPath += m_userBase + "\\libretro\\assets";
+	m_systemPath += m_userBase + "\\libretro\\system";
+	m_savePath += m_userBase + "\\libretro\\save";
 
 	m_raw = new libretro_raw();
 }
@@ -164,11 +164,22 @@ bool C_LibretroInstance::LoadCore(std::string coreFile)
 {
 	if (coreFile != "")
 	{
-		std::string core = m_corePath + "\\" + coreFile;	//std::string(AA_LIBRETRO_PATH) + "\\" + coreFile;
+		// first check for cores in the user folder, then check for cores in the frontend folder.
+
+		std::string core = m_userBase + m_corePath + std::string("\\") + coreFile;
 		if (g_pFullFileSystem->FileExists(core.c_str()))
 		{
 			CreateWorkerThread(core);
 			return true;
+		}
+		else
+		{
+			core = engine->GetGameDirectory() + m_corePath + std::string("\\") + coreFile;
+			if (g_pFullFileSystem->FileExists(core.c_str()))
+			{
+				CreateWorkerThread(core);
+				return true;
+			}
 		}
 	}
 
@@ -1060,6 +1071,8 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	}
 	*/
 
+	std::string corePath = core.substr(0, core.find_last_of("/\\") + 1);
+
 	m_info = new LibretroInstanceInfo_t;
 	m_info->state = 0;
 	m_info->close = false;
@@ -1071,7 +1084,7 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->coreloaded = false;
 	m_info->gameloaded = false;
 	m_info->raw = m_raw;
-	m_info->corepath = m_corePath;
+	m_info->corepath = corePath;// m_corePath;
 	m_info->assetspath = m_assetsPath;
 	m_info->systempath = m_systemPath;
 	m_info->savepath = m_savePath;

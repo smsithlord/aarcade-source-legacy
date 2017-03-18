@@ -1,9 +1,11 @@
 function ArcadeHud()
 {
 	//this.selectedItem;
+	this.pageTitle = "Untitled";
 	this.platformId = "-KJvcne3IKMZQTaG7lPo";
 	this.url = "";
 	this.selectedWebTab = null;
+	this.libretroHudButtonElem;
 	this.pinHudButtonElem;
 	this.returnHudButtonElem;
 	//this.closeContentButtonElem;
@@ -38,62 +40,18 @@ function ArcadeHud()
 			},
 			"run": function(url, field, doc)
 			{
-				//var response = {};
-
 				var rawGames = doc;
 				var numRawGames = rawGames.length;
 				var steamItems = [];
 				var i, steamItem;
 				for( i = 0; i < numRawGames; i++ )
 				{
-					//steamItem = {
-					//	"name": rawGames[i].name_escaped,
-					//	"appid": rawGames[i].appid
-					//};
-
-					//steamItems.push(steamItem);
-
 					steamItems.push(rawGames[i].name_escaped);
 					steamItems.push(rawGames[i].appid + "");
 				}
 
-				//aaapi.system.importSteamGames(steamItems);
 				console.log("There are " + (steamItems.length / 2) + " Steam items to return to AArcade.");
 				return steamItems;
-
-				/*
-				var videoId = doc.querySelector("meta[itemprop='videoId']").getAttribute("content");
-				var goodUri = "http://www.youtube.com/watch?v=" + videoId;
-
-				// reference
-				response.reference = goodUri;
-
-				// file
-				response.file = goodUri;
-
-				// preview
-				response.preview = goodUri;
-				
-				// screen
-				var screenElem = doc.querySelector("link[itemprop='thumbnailUrl']");
-				response.screen = screenElem.getAttribute("href");
-
-				// stream
-				response.stream = goodUri;
-
-				// title
-				var titleElem = doc.querySelector("meta[itemprop='name']");
-				response.title = titleElem.getAttribute("content");
-
-				// description
-				var descriptionElem = doc.querySelector("meta[itemprop='description']");
-				response.description = descriptionElem.getAttribute("content");
-
-				// type
-				response.type = "youtube";
-				*/
-
-				//return response;
 			},
 			"test": function(url, doc, callback)
 			{
@@ -124,7 +82,7 @@ function ArcadeHud()
 			},
 			"testDelay": 2000,
 			"runDelay": 0
-		},
+		}/*,
 		"currenturi": 	// SHOULD USE GOOGLE AS ITS "HOMEPAGE"
 		{
 			"id": "currenturi",
@@ -152,834 +110,12 @@ function ArcadeHud()
 				response.stream = url;
 				return response;
 			}
-		},
-		"youtube":
-		{
-			"id": "youtube",
-			"title": "YouTube",
-			"homepage": "http://www.youtube.com/",
-			"search": "http://www.youtube.com/results?search_query=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"reference": 100,
-				"file": 100,
-				"preview": 100,
-				"screen": 100,
-				"stream": 100,
-				"title": 100,
-				"description": 100,
-				"type": 100
-			},
-			"run": function(url, field, doc)
-			{
-				var response = {};
-
-				var videoId = doc.querySelector("meta[itemprop='videoId']").getAttribute("content");
-				var goodUri = "http://www.youtube.com/watch?v=" + videoId;
-
-				// reference
-				response.reference = goodUri;
-
-				// file
-				response.file = goodUri;
-
-				// preview
-				response.preview = goodUri;
-				
-				// screen
-				var screenElem = doc.querySelector("link[itemprop='thumbnailUrl']");
-				response.screen = screenElem.getAttribute("href");
-
-				// stream
-				response.stream = goodUri;
-
-				// title
-				var titleElem = doc.querySelector("meta[itemprop='name']");
-				response.title = titleElem.getAttribute("content");
-
-				// description
-				var descriptionElem = doc.querySelector("meta[itemprop='description']");
-				response.description = descriptionElem.getAttribute("content");
-
-				// type
-				response.type = "youtube";
-
-				return response;
-			},
-			"test": function(url, doc, callback)
-			{
-				//callback({"validForScrape": true, "redirect": false});
-				var validForScrape = false;
-				var redirect = false;
-
-				var pageElem = doc.querySelector("#page");
-				var pageType = pageElem.className;
-				if( pageType.indexOf(" search ") >= 0 )
-				{
-					// perform search results logic
-				}
-				else if( pageType.indexOf(" watch ") >= 0 )
-				{
-					console.log("what meow");
-					//var container = doc.querySelector(".metaScrapeContainer");
-					//container.style.display = "block";
-
-
-					/*
-					backstab
-					volitile
-					lacerate
-					lacerate
-					root with knife throw
-					try to backstab
-					good shiv
-					try to backstab
-					lacerate
-					lacerate
-					volitile
-					*/
-
-					// hud-notify that this page can be scraped
-					validForScrape = true;
-				}
-				//<div id="page" class=" search branded-page-v2-secondary-column-wide no-flex">
-				//console.log("You Tube is examining the page...");
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"testDelay": 2000,
-			"runDelay": 0
-		},
-		"origin":
-		{
-			"id": "origin",
-			"title": "Origin Store",
-			"homepage": "http://www.origin.com/",
-			"search": "http://www.origin.com/search?searchString=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"reference": 100,
-				"description": 100,
-				"title": 100,
-				"screen": 100,
-				"marquee": 100,
-				"preview": 100,
-				"type": 99
-			},
-			"run": function(url, field, doc)
-			{
-				// helper function for extracting YT ID's from YT URLs
-				function extractYouTubeId(trailerURL)
-				{
-					if( typeof trailerURL === "undefined" )
-						return trailerURL;
-
-					var youtubeid;
-					if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
-					{
-						youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
-
-						var found = youtubeid.indexOf("&");
-						if( found > -1 )
-						{
-							youtubeid = youtubeid.substr(0, found);
-						}
-					}
-					else
-					{
-						var bases = ["youtu.be/", "/embed/"]
-						var found = trailerURL.indexOf("youtu.be/");
-						if( found >= 0 )
-							youtubeid = trailerURL.substr(found+9);
-						else
-						{
-							found = trailerURL.indexOf("/embed/");
-							if( found >= 0 )
-								youtubeid = trailerURL.substr(found+7);
-						}
-
-						if( !!youtubeid )
-						{
-							found = youtubeid.indexOf("?");
-							if( found > 0 )
-								youtubeid = youtubeid.substr(0, found);
-							else
-							{
-								found = youtubeid.indexOf("&");
-								if( found > 0 )
-									youtubeid = youtubeid.substr(0, found);
-							}
-						}
-					}
-
-				  return youtubeid;
-				}
-
-				var response = {};
-
-				// reference
-				response.reference = url;
-
-				// description
-				var descriptionElem = doc.querySelector("meta[property='og:description']");
-				response.description = descriptionElem.getAttribute("content");
-
-				// title
-				var titleElem = doc.querySelector("meta[property='og:title']");
-				response.title = titleElem.getAttribute("content");
-
-				// screen
-				var screenElem = doc.querySelector(".origin-store-blurimage-image");
-				response.screen = screenElem.getAttribute("ng-src");
-				
-				/*
-				var screenElem = doc.querySelector("img .origin-carouselimageitem-thumb");
-				response.screen = screenElem.getAttribute("ng-src");
-				*/
-
-				// marquee
-				var marqueeElem = doc.querySelector("meta[property='og:image']");
-				response.marquee = marqueeElem.getAttribute("content");
-
-				// preview
-				var previewElem = doc.querySelector(".origin-store-carousel-media-videoitem-videothumb");
-				//var extractedId = extractYouTubeId(previewElem.getAttribute("ng-src"));
-				var extractedId = previewElem.getAttribute("ng-src");
-				extractedId = extractedId.substring(0, extractedId.length - 6);
-				extractedId = extractedId.substring(extractedId.lastIndexOf("/") + 1);
-				if( extractedId != "")
-					response.preview = "http://www.youtube.com/watch?v=" + extractedId;
-
-				// type
-				response.type = "pc";
-				
-				return response;
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = false;
-				
-				var previewElem = doc.querySelector(".origin-store-carousel-media-videoitem-videothumb");
-				console.log(previewElem);
-				if( !!previewElem )
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"testDelay": 4000,
-			"runDelay": 0
-		},
-		"steamstore":
-		{
-			"id": "steamstore",
-			"title": "Steam Store",
-			"homepage": "http://store.steampowered.com/",
-			"search": "http://store.steampowered.com/search/?term=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"reference": 100,
-				"description": 100,
-				"title": 100,
-				"screen": 100,
-				"marquee": 100,
-				"preview": 100,
-				"file": 50
-			},
-			"run": function(url, field, doc)
-			{
-				var response = {};
-
-				// reference
-				var referenceElem = doc.querySelector("link[rel='canonical']");
-				response.reference = referenceElem.getAttribute("href");
-				/*
-				var referenceValue = url;
-				if( referenceValue.indexOf("https") === 0 )
-					referenceValue = "http" + referenceValue.substring(5);
-				referenceValue = referenceValue.substring(0, referenceValue.indexOf("?"));
-				response.reference = referenceValue;
-				*/				
-
-				// description
-				var descriptionElem = doc.querySelector("meta[name='Description']");
-				response.description = descriptionElem.getAttribute("content");
-
-				// title
-				var titleElem = doc.querySelector("span[itemprop='name']");
-				response.title = titleElem.innerHTML;
-
-				var appId = response.reference.substring(0, response.reference.length-1);
-				appId = appId.substring(appId.lastIndexOf("/") + 1);
-
-				// screen
-				var screenElem = doc.querySelector(".highlight_strip_screenshot");
-				var screenId = screenElem.getAttribute("id");
-				var screenId = screenId.substring(17);//thumb_screenshot_
-				response.screen = "http://cdn.akamai.steamstatic.com/steam/apps/" + appId + "/" + screenId;
-
-				// marquee
-				response.marquee = "http://cdn.akamai.steamstatic.com/steam/apps/" + appId + "/header.jpg";
-
-				// preview
-				var previewElem = doc.querySelector(".highlight_strip_movie");
-				if( !!previewElem )
-					response.preview = "http://store.steampowered.com/video/" + appId;
-
-				// file
-				response.file = appId;
-
-				return response;
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = false;
-
-				// title
-				//var titleElem = doc.querySelector("span[itemprop='name']");
-				//if( titleElem )
-				//	validForScrape = true;
-				//response.title = titleElem.innerHTML;
-
-				var screenElem = doc.querySelector(".highlight_strip_screenshot");
-				if( !!screenElem )
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"testDelay": 0,
-			"runDelay": 0
-		},
-		"googleimages":
-		{
-			"id": "googleimages",
-			"title": "Google Images",
-			"homepage": "http://www.google.com/imghp",
-			"search": "http://www.google.com/search?tbm=isch&q=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"screen": 100,
-				"marquee": 100,
-				"file": 100
-			},
-			"run": function(url, doc)
-			{
-				var response = {};
-
-				var goodUri = url;
-
-				var index = goodUri.indexOf("?");
-				if(index === -1)
-					index = goodUri.indexOf("&");
-
-				if(index === -1)
-					index = goodUri.indexOf("#");
-
-				if( index > 0 )
-					goodUri = goodUri.substring(0, index);
-
-				var imageEndings = ["jpg", "jpeg", "gif", "png"];
-				var extension = goodUri.substring(goodUri.lastIndexOf(".")+1).toLowerCase();
-				if( imageEndings.indexOf(extension) >= 0)
-				{
-					response.file = goodUri;
-					response.screen = goodUri;
-					response.marquee = goodUri;
-				}
-
-				return response;
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = false;
-				
-				var goodUri = url;
-
-				var index = goodUri.indexOf("?");
-				if(index === -1)
-					index = goodUri.indexOf("&");
-
-				if(index === -1)
-					index = goodUri.indexOf("#");
-
-				if( index > 0 )
-					goodUri = goodUri.substring(0, index);
-
-				var imageEndings = ["jpg", "jpeg", "gif", "png"];
-				var extension = goodUri.substring(goodUri.lastIndexOf(".")+1).toLowerCase();
-				if( imageEndings.indexOf(extension) >= 0)
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"testDelay": 2000,
-			"runDelay": 0
-		},
-		"themoviedb":
-		{
-			"id": "themoviedb",
-			"title": "TheMovieDb",
-			"homepage": "http://www.themoviedb.org/",
-			"search": "http://www.themoviedb.org/search?query=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"marquee": 100,
-				"screen": 100,
-				"preview": 100,
-				"description": 100,
-				"reference": 100,
-				"title": 100,
-				"type": 80
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = "";
-				//<meta property="og:type" content="movie"/>
-				var elem = doc.querySelector("meta[property='og:type']");
-				if( elem && elem.getAttribute("content") === "movie" )
-					validForScrape = true;
-
-				if( !validForScrape && url.indexOf("themoviedb.org/search?query=") >= 0 )
-				{
-					// check how many search results there are
-					var items = doc.querySelectorAll(".item");
-					console.log("Num results: " + items.length);
-
-					if( items.length === 1 )
-					{
-						var anchor = items[0].querySelector("a");
-						if(!!anchor)
-							redirect = "http://www.themoviedb.org" + anchor.getAttribute("href");
-					}
-				}
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"run": function(uri, field, doc)
-			{
-				// helper function for extracting YT ID's from YT URLs
-				function extractYouTubeId(trailerURL)
-				{
-					if( typeof trailerURL === "undefined" )
-						return trailerURL;
-
-					var youtubeid;
-					if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
-					{
-						youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
-
-						var found = youtubeid.indexOf("&");
-						if( found > -1 )
-						{
-							youtubeid = youtubeid.substr(0, found);
-						}
-					}
-					else
-					{
-						var bases = ["youtu.be/", "/embed/"]
-						var found = trailerURL.indexOf("youtu.be/");
-						if( found >= 0 )
-							youtubeid = trailerURL.substr(found+9);
-						else
-						{
-							found = trailerURL.indexOf("/embed/");
-							if( found >= 0 )
-								youtubeid = trailerURL.substr(found+7);
-						}
-
-						if( !!youtubeid )
-						{
-							found = youtubeid.indexOf("?");
-							if( found > 0 )
-								youtubeid = youtubeid.substr(0, found);
-							else
-							{
-								found = youtubeid.indexOf("&");
-								if( found > 0 )
-									youtubeid = youtubeid.substr(0, found);
-							}
-						}
-					}
-
-				  return youtubeid;
-				}
-
-				// marqueeBase: http://image.tmdb.org/t/p/original/
-				var response = {};
-
-				// reference
-				var goodUri = uri.substring(0, uri.indexOf("-")).replace("https", "http");
-				response.reference = goodUri;
-
-				// title
-				var goodTitle = doc.querySelector("meta[property='og:title']").getAttribute("content");
-
-				// type
-				var goodType = doc.querySelector("meta[property='og:type']").getAttribute("content");
-				if( goodType === "movie" )
-				{
-					// fix the type to be an AArcade type
-					goodType += "s";
-
-					// need to find a date to append if this movie's title
-					var releaseDate = doc.querySelector(".release_date").innerHTML;
-					if( releaseDate )
-						goodTitle += " " + releaseDate;
-				}
-
-				response.type = goodType;
-				response.title = goodTitle;
-
-				// preview
-				var yt = doc.querySelector(".original_content iframe");
-				if(!!yt)
-				{
-					yt = yt.getAttribute("src");
-					yt = extractYouTubeId(yt);
-				}
-
-				if(!!!yt)
-					yt = "";
-				else
-					yt = "http://www.youtube.com/watch?v=" + yt;
-
-				response.preview = yt;
-
-				// description
-				response.description = doc.querySelector("meta[name='description']").getAttribute("content");
-
-				// screen
-				var screen = doc.querySelector(".original_content div .backdrop");
-				
-				if(!!screen)
-				{
-					screen = screen.getAttribute("data-src");
-					screen = screen.substring(screen.lastIndexOf("/") + 1);
-				}
-
-				if(!!!screen)
-					screen = "";
-				else
-					screen = "http://image.tmdb.org/t/p/original/" + screen;
-
-				response.screen = screen;
-
-				// marquee
-				var marquee = doc.querySelector(".original_content div .poster");
-				
-				if(!!marquee)
-				{
-					marquee = marquee.getAttribute("data-src");
-					marquee = marquee.substring(marquee.lastIndexOf("/") + 1);
-				}
-
-				if(!!!marquee)
-					marquee = "";
-				else
-					marquee = "http://image.tmdb.org/t/p/original/" + marquee;
-
-				response.marquee = marquee;
-//console.log("Yaaaaar: " + JSON.stringify(response));
-				return response;
-			}
-		},
-		"netflix":
-		{
-			"id": "netflix",
-			"title": "Netflix",
-			"homepage": "http://www.netflix.com/",
-			"search": "http://www.netflix.com/search/$TERM",
-			"fields":
-			{
-				"all": 100,
-				"description": 100,
-				"stream": 100,
-				"title": 100,
-				"type": 80
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = "";
-
-				/*
-				var elem = doc.querySelector(".content");
-				if(!!elem)
-					validForScrape = true;
-				console.log(elem);
-				*/
-
-				if( url.indexOf("netflix.com/watch/") >= 0 )
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"run": function(uri, field, doc)
-			{
-				// marqueeBase: http://image.tmdb.org/t/p/original/
-				var response = {};
-
-				// stream
-				response.stream = uri.substring(0, uri.indexOf("?")).replace("https", "http");
-
-				// title
-				var elem = doc.querySelector(".content");
-				response.title = elem.querySelector("h2").innerHTML;
-
-				// type
-				response.type = "movies";
-
-				// description
-				var ps = elem.querySelectorAll("p");
-				ps = ps[ps.length-1];
-				response.description = ps.innerHTML;
-
-				return response;
-			},
-			"testDelay": 2000,	// added in December to try and fix the search results page glitch when scraping.
-			"runDelay": 0
-		},
-		"thegamesdb":
-		{
-			"id": "thegamesdb",
-			"title": "TheGamesDB",
-			"homepage": "http://www.thegamesdb.net/",
-			"search": "http://thegamesdb.net/search/?string=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"reference": 100,
-				"description": 100,
-				"title": 100,
-				"screen": 100,
-				"marquee": 100,
-				"type": 80
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = "";
-
-				var elem = doc.querySelector("#gameTitle");
-				if(!!elem)
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"run": function(uri, field, doc)
-			{
-				var response = {};
-
-				// reference
-				var referenceElem = doc.querySelector("link[rel='canonical']");
-				response.reference = referenceElem.getAttribute("href");
-
-				// title
-				var titleElem = doc.querySelector("#gameTitle > h1");
-				response.title = titleElem.innerHTML;
-
-				// marquee
-				var marqueeElem = doc.querySelector("#gameCovers > img");
-				if( !!marqueeElem )
-					response.marquee = marqueeElem.getAttribute("src");
-
-				if( !!response.marquee && response.marquee.indexOf("placeholders") >= 0 )
-					delete response["marquee"];
-
-				response.marquee = response.marquee.replace("_gameviewcache/", "");
-
-				if( !!response.marquee && response.marquee.indexOf("http") !== 0 )
-					response.marquee = "http://thegamesdb.net" + response.marquee;
-
-				// screen
-				var screenElem = doc.querySelector("#screens img");
-				if( !!!screenElem )
-					screenElem = doc.querySelector("#fanartScreens img")
-				if( !!screenElem )
-					response.screen = screenElem.getAttribute("src");
-
-				if( !!response.screen && response.screen.indexOf("placeholders") >= 0 )
-					delete response["screen"];
-
-				if( !!response.screen && response.screen.indexOf("http") !== 0 )
-					response.screen = "http://thegamesdb.net" + response.screen;
-
-				// description
-				var descriptionElem = doc.querySelector("#gameInfo > p");
-				if( !!descriptionElem )
-					response.description = descriptionElem.innerText;
-
-				// type
-				var typeElem = doc.querySelector("#gameinfo > h2 > a");
-				if( typeElem )
-				{
-					var goodType = typeElem.innerHTML;
-
-					if( goodType === "Sega Genesis" )
-						goodType = "genesis";
-					else if( goodType === "Nintendo GameCube")
-						goodType = "gamecube";
-					else if( goodType === "Nintendo 64" )
-						goodType = "n64";
-					else if( goodType === "Super Nintendo (SNES)" )
-						goodType = "snes";
-					else if( goodType === "Nintendo Entertainment System (NES)" )
-						goodType = "nes";
-					else if( goodType === "Nintendo 3DS" )
-						goodType = "3ds";
-					else if( goodType === "Nintendo DS" )
-						goodType = "ds";
-					else if( goodType === "Nintendo Wii U" )
-						goodType = "wiiu";
-					else if( goodType === "Sonly Playstation" )
-						goodType = "ps";
-					else if( goodType === "Arcade" )
-						goodType = "arcade";
-					else if( goodType === "Atari 2600" )
-						goodType = "atari2600";
-					else if( goodType === "Neo Geo" )
-						goodType = "arcade";
-					else if( goodType === "Nintendo Game Boy" )
-						goodType = "gameboy";
-					else if( goodType === "Nintendo Game Boy Advance" )
-						goodType = "gba";
-					else if( goodType === "Nintendo Game Boy Color" )
-						goodType = "gbc";
-					else if( goodType === "Nintendo Virtual Boy" )
-						goodType = "virtualboy";
-					else if( goodType === "Nintendo Wii" )
-						goodType = "wii";
-					else if( goodType === "PC" )
-						goodType = "pc";
-					else if( goodType === "Sega 32X" )
-						goodType = "32x";
-					else if( goodType === "Sega Master System" )
-						goodType = "mastersystem";
-					else if( goodType === "Sega Saturn" )
-						goodType = "saturn";
-					else if( goodType === "Sony Playstation 2" )
-						goodType = "ps2";
-					else if( goodType === "Sony Playstation 3" )
-						goodType = "ps3";
-					else if( goodType === "Sony Playstation 4" )
-						goodType = "ps4";
-					else if( goodType === "Sony Playstation Vita" )
-						goodType = "vita";
-					else if( goodType === "Sony PSP" )
-						goodType = "psp";
-
-					response.type = goodType;
-				}
-
-				return response;
-			}
-		},
-		"giantbomb":
-		{
-			"id": "giantbomb",
-			"title": "Giant Bomb",
-			"homepage": "http://www.giantbomb.com/",
-			"search": "http://www.giantbomb.com/search/?q=$TERM",
-			"fields":
-			{
-				"all": 100,
-				"reference": 100,
-				"description": 100,
-				"title": 100,
-				"screen": 100,
-				"marquee": 100
-			},
-			"test": function(url, doc, callback)
-			{
-				var validForScrape = false;
-				var redirect = "";
-
-				var elem = doc.querySelector(".wiki-details table tbody tr td div span a");
-				if(!!elem)
-					validForScrape = true;
-
-				callback({"validForScrape": validForScrape, "redirect": redirect});
-			},
-			"run": function(uri, field, doc)
-			{
-				var response = {};
-
-				// description
-				var descriptionElem = doc.querySelector("meta[name='description']");
-				response.description = descriptionElem.innerHTML;
-
-				var detailsTable = doc.querySelector(".wiki-details table tbody");
-				var rows = detailsTable.querySelectorAll("tr");
-
-				var i;
-				var foundRow;
-				var max = rows.length;
-				
-				// title & reference
-				foundRow = null;
-				for( i = 0; i < max; i++ )
-				{
-					if( rows[i].querySelector("th").innerHTML === "Name" )
-					{
-						foundRow = rows[i];
-						break;
-					}
-				}
-
-				if( foundRow )
-				{
-					var titleElem = foundRow.querySelector("td a");
-					response.title = titleElem.innerHTML;
-					response.reference = "http://www.giantbomb.com" + titleElem.getAttribute("href");
-				}
-
-				// CAN'T RESOLVE TYPE FROM HERE BECAUSE IT LISTS ALL TYPES
-
-				// marquee
-				var marqueeElem = doc.querySelector(".wiki-boxart img");
-				if( !!marqueeElem )
-					response.marquee = marqueeElem.getAttribute("src").replace("scale_small", "original");
-
-				// screen
-				var screenElem = doc.querySelector("div[class='display-view'] figure a");
-				if( !!screenElem )
-					response.screen = screenElem.getAttribute("href");
-				else
-				{
-					var screenElems = doc.querySelectorAll("div[class='gallery-box-pod'] figure a");
-					console.log(screenElems.length);
-					var numScreenElems = screenElems.length;
-					for( i = 1; i < numScreenElems; i++ )
-					{
-						if( Math.random() > 0.5 )
-						{
-							screenElem = screenElems[i];
-							break;
-						}
-					}
-
-					if( !!!screenElem && numScreenElems > 1 )
-						screenElem = screenElems[2];
-
-					if( !!screenElem )
-						response.screen = screenElem.getAttribute("href");
-
-					console.log(response.screen);
-				}
-				
-				return response;
-			}
-		}
+		}*/
 	};
+
 	this.onDOMReady().then(function()
 	{
+		console.log("body ready");
 		this.DOMParser = new DOMParser();
 
 		/*
@@ -1132,6 +268,23 @@ function ArcadeHud()
 				aaapi.system.deactivateInputMode();
 			}.bind(this), true);
 
+			// libretro browser tab
+			var libretroBrowserTabElem = document.createElement("div");
+			libretroBrowserTabElem.className = "hudHeaderButtonContainer";
+			//libretroBrowserTabElem.style.right = "20%";
+			libretroBrowserTabElem.id = "libretroHudButton";
+
+			// libretro tab label
+			//console.log("shiiit");
+			var libretroTabLabelElem = document.createElement("div");
+			libretroTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
+			libretroTabLabelElem.setAttribute("help", "Libretro Menu");
+			libretroTabLabelElem.innerHTML = "&nbsp;<img src=\"asset://ui/runicon.png\" />&nbsp;";
+			libretroTabLabelElem.addEventListener("click", function()
+			{
+				window.location = "asset://ui/libretro.html";
+			}.bind(this), true);
+
 			// pin browser tab
 			var pinBrowserTabElem = document.createElement("div");
 			pinBrowserTabElem.className = "hudHeaderButtonContainer";
@@ -1156,8 +309,10 @@ function ArcadeHud()
 
 			unpinBrowserTabElem.appendChild(unpinTabLabelElem);
 			pinBrowserTabElem.appendChild(pinTabLabelElem);
+			libretroBrowserTabElem.appendChild(libretroTabLabelElem);
 			otherBrowserTabsCell.appendChild(unpinBrowserTabElem);
 			otherBrowserTabsCell.appendChild(pinBrowserTabElem);
+			otherBrowserTabsCell.appendChild(libretroBrowserTabElem);
 
 			topTabsRowElem.appendChild(blankBrowserTabsCell);
 			topTabsRowElem.appendChild(aarcadeBrowserTabsCell);
@@ -1176,6 +331,7 @@ function ArcadeHud()
 		this.startupLoadingMessagesContainer = document.body.querySelector("#startupLoadingMessagesContainer");	// usually undefined
 
 		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
+		this.libretroHudButtonElem = document.body.querySelector("#libretroHudButton");
 		this.returnHudButtonElem = document.body.querySelector("#returnHudButton");
 		this.addressTabElem = document.body.querySelector("#addressTab");
 		this.hudHeaderContainerElem = document.body.querySelector(".hudHeaderContainer");
@@ -1191,6 +347,8 @@ function ArcadeHud()
 		this.hudLoadingMessagesContainer.className = "hudLoadingMessagesContainer";
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
 		document.body.appendChild(this.helpElem);
+
+		aaapi.system.requestActivateInputMode();	// gets called needlessly when an object is de-selected, but fuck it.
 
 		/*
 		this.metaScrapeElem = document.createElement("div");
@@ -1434,7 +592,7 @@ ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 	}
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url, isSelectedObject)
+ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url, isSelectedObject, embeddedInstanceType)
 {
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
@@ -1444,8 +602,15 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	isMainMenu = parseInt(isMainMenu);
 	isSelectedObject = parseInt(isSelectedObject);	// it is THE selected object
 
-//this.addressTabElem
+	// handle all aaOnlyIfMapLoaded elems
+	var elems = document.querySelectorAll(".aaOnlyIfMapLoaded");
+	var num = elems.length;
+	var i;
+	for( i = 0; i < num; i++ )
+		elems[i].style.display = (isMapLoaded) ? "block" : "none";
 
+//this.addressTabElem
+//console.log("Is object selected: " + isObjectSelected);
 ///*
 	if( isItemSelected )
 	{
@@ -1526,11 +691,12 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 		this.cursorImageElem.style.display = "block";
 
 	var elem = document.querySelector("#objectMenu");
-	//console.log("Is selected object: " + isSelectedObject);
-	if( isSelectedObject === -1 )
-		elem.style.display = "none";
-	else
+	console.log("Is selected object: " + isSelectedObject + " and " + (isSelectedObject === 1));
+	if( isSelectedObject === 1 )
 		elem.style.display = "block";
+	//else
+	//	elem.style.display = "none";
+		
 
 
 /*
@@ -1552,6 +718,13 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	*/
 
 //	document.body.style.backgroundColor = "transparent";
+	if( !!this.libretroHudButtonElem )
+	{
+		if( embeddedInstanceType === "Libretro" )
+			this.libretroHudButtonElem.style.display = "inline-block";
+		else
+			this.libretroHudButtonElem.style.display = "none";
+	}
 
 	this.onURLChanged(url);
 };
@@ -2243,7 +1416,7 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 		else
 		{
 			console.log("Scraped data is: ");
-			console.log(scrapedData);
+			console.log(JSON.stringify(scrapedData));
 			var usedFields = [];
 			var args = [];
 			var x, field;
@@ -2251,6 +1424,7 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 			{
 				field = scrapedData[x];
 				//if( field === "" || (this.activeScraperField !== "all" && this.activeScraperField !== x))
+				console.log(this.activeScraperField);
 				if( this.activeScraperField !== "all" && this.activeScraperField !== x)
 					continue;
 
@@ -2260,7 +1434,7 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 					var y;
 					for( y in allTypes )
 					{
-						console.log(allTypes[y].title);
+						//console.log(allTypes[y].title);
 						if( allTypes[y].title === field )
 						{
 							field = allTypes[y].info.id;
@@ -2311,11 +1485,18 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 
 	 			if( item )
 	 			{
+	 				//console.log("ybi A");
 	 				aaapi.system.setLibraryBrowserContext("items", item.info.id, "", "");
 	 				aaapi.system.spawnItem(item.info.id);
 	 			}
 	 			else
 	 			{
+	 				//// make sure the item has all fields
+	 				//var vitalFields = ["title", "type", "app", "file", "reference", "download", "stream", "preview", "screen", "marquee", "description"];
+	 				//for( var w = 0; w < vitalFields.length; w++ )
+	 				//	if( !!!item[vitalFields[w]] )
+	 				//		item[vitalFields[w]] = "";
+	 					
 					var createdItemId = aaapi.library.saveItem(this.activeScraperItemId, args);	// the response is actually the item ID or FALSE
 					if( createdItemId )
 					{
@@ -2340,7 +1521,8 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 		dummy.callback = callback;
 		dummy.field = field;
 		//this.metaScrapeHandles[id] = {"scraper": scraper, "callback": callback};
-		this.metaScrapeHandles[id] = {"scraper": scraper, "callback": function(callId, url, doc)
+
+		var scraperObject = {"scraper": scraper, "callback": function(callId, url, doc)
 		{
 			// clear the a active scraper
 			//console.log("clear active scraper");
@@ -2384,20 +1566,20 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 						results.preview = "";
 	//					delete results["preview"];
 
-					if( results.file === results.stream )
-						results.stream = "";
+					//if( results.file === results.stream )
+					//	results.stream = "";
 						//delete results["stream"];
 
 					if( results.file === results.download )
 						results.download = "";
 						//delete results["download"];
 
-					if( results.file === results.screen )
-						results.screen = "";
+				//	if( results.file === results.screen )
+				//		results.screen = "";
 						//delete results["screen"];
 
-					if( results.file === results.marquee )
-						results.marquee = "";
+				//	if( results.file === results.marquee )
+				//		results.marquee = "";
 						//delete results["marquee"];
 				}
 
@@ -2452,7 +1634,18 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 
 			this.callback(results);
 		}.bind(dummy)};
-		aaapi.system.getDOM(id, scraperId);
+
+		if( scraper.id === "netflix" )
+		{
+			var content = "<html><title>" + this.pageTitle + "</title></html>";
+			var doc = arcadeHud.DOMParser.parseFromString(content, "text/html");
+			scraperObject.callback.call(dummy, id, this.url, doc);
+		}
+		else
+		{
+			this.metaScrapeHandles[id] = scraperObject;
+			aaapi.system.getDOM(id, scraperId);
+		}
 	}
 	else
 		console.log("ERROR: Invalid scraper ID received.");
@@ -2534,8 +1727,39 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 			var dummy2 = {"id": id, "scraper": scraper};
 			setTimeout(function()
 			{
-				console.log("Get that DOM: " + this.id);
-				aaapi.system.getDOM(this.id, this.scraper.id);
+				//console.log("Get that DOM: " + this.id);
+
+				// don't get the DOM of Netflix, just check the URL.
+				// TODO: Add a standard way for scrapers to do this.
+				if( this.scraper.id === "netflix" )
+				{
+					this.scraper.test(url, null, function(response)
+					{
+						var container = document.querySelector("#hudSideScrapeContainer");
+						if(container)
+						{
+							if( response.validForScrape )
+							{
+								//console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
+								container.style.display = "block";
+								container.scraperId = this.scraper.id;
+								container.itemId = this.itemId;
+								container.field = this.field;
+								return;
+							}
+							else
+								container.style.display = "none";
+						}
+
+						if( !response.validForScrape && !!response.redirect && response.redirect !== "")
+						{
+							//var dummy3 = {"scraper": this.scraper, ""};
+							aaapi.system.metaSearch(this.scraper.id, this.itemId, this.field, response.redirect);
+						}
+					}.bind(this));
+				}
+				else
+					aaapi.system.getDOM(this.id, this.scraper.id);
 			}.bind(dummy2), delay);
 		}
 
@@ -2565,6 +1789,12 @@ ArcadeHud.prototype.getParameterByName = function(name, url)
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 };
 
+ArcadeHud.prototype.loadItemMarqueeImage = function(imageElem, item)
+{
+	imageElem.src = item.marquee;
+	imageElem.style.display = "block";
+};
+
 ArcadeHud.prototype.viewStream = function()
 {
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
@@ -2582,6 +1812,12 @@ ArcadeHud.prototype.encodeRFC5987ValueChars = function(str){
             // The following are not required for percent-encoding per RFC5987, 
             // so we can allow for a little better readability over the wire: |`^
             replace(/%(?:7C|60|5E)/g, unescape);
+};
+
+ArcadeHud.prototype.onTitleChanged = function(title)
+{
+	//console.log("Page title changed to: " + title);
+	this.pageTitle = title;
 };
 
 ArcadeHud.prototype.onDOMGot = function(url, response)
@@ -2661,4 +1897,29 @@ ArcadeHud.prototype.onDOMReady = function()
 		};
 };
 
+ArcadeHud.prototype.loadHeadScript = function(scriptName)
+{
+	// load all scrapers before the body loads
+	var xhrObj = new XMLHttpRequest();
+	xhrObj.open('GET', scriptName, false);
+	xhrObj.send('');
+
+	var se = document.createElement('script');
+	se.type = "text/javascript";
+	se.text = xhrObj.responseText;
+
+	document.getElementsByTagName('head')[0].appendChild(se);
+};
+
+ArcadeHud.prototype.addScraper = function(scraper)
+{
+	this.scrapers[scraper.id] = scraper;
+};
+
+ArcadeHud.prototype.init = function()
+{
+	this.loadHeadScript("scrapers.js");
+};
+
 var arcadeHud = new ArcadeHud();
+arcadeHud.init();

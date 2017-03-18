@@ -63,6 +63,10 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	NewWindowDataSource* pNewWindowDataSource = new NewWindowDataSource();
 	m_pWebSession->AddDataSource(WSLit("newwindow"), pNewWindowDataSource);
 
+	// also add the aarcade_user folder
+	DevMsg("wtf: %s\n", g_pAnarchyManager->GetAArcadeUserFolder().c_str());
+	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", g_pAnarchyManager->GetAArcadeUserFolder().c_str()), "UI");
+
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
 
 	UiDataSource* pUiDataSource = new UiDataSource();
@@ -323,6 +327,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("metaSearch"), false);
 	systemObject.SetCustomMethod(WSLit("getDOM"), false);
 	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
+	systemObject.SetCustomMethod(WSLit("disconnect"), false);
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
@@ -332,6 +337,14 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("showEngineOptionsMenu"), false);
 	systemObject.SetCustomMethod(WSLit("setSlaveScreen"), false);
 	systemObject.SetCustomMethod(WSLit("navigateToURI"), false);
+	systemObject.SetCustomMethod(WSLit("getWorldInfo"), true);
+	systemObject.SetCustomMethod(WSLit("viewObjectInfo"), false);
+	systemObject.SetCustomMethod(WSLit("getObjectInfo"), true);
+	systemObject.SetCustomMethod(WSLit("getTransformInfo"), true);
+	systemObject.SetCustomMethod(WSLit("adjustObjectOffset"), false);
+	systemObject.SetCustomMethod(WSLit("adjustObjectRot"), false);
+	systemObject.SetCustomMethod(WSLit("adjustObjectScale"), false);
+
 
 	// LIBRARY
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.library"));

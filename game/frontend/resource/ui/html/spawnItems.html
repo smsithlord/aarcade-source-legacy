@@ -104,7 +104,6 @@ function getParameterByName(name, url) {
 		}, true);
 
 		//document.body.querySelector(".mainButton").innerHTML = getParameterByName("max");
-		aaapi.system.spawnNearestObject(parseFloat(getParameterByName("max")));
 
 		function spawnAll()
 		{
@@ -120,6 +119,12 @@ function getParameterByName(name, url) {
 
 			aaapi.system.setNearestObjectDist(99999999999.9);
 		}
+
+		aaapi.system.spawnNearestObject(parseFloat(getParameterByName("max")));
+
+		// automatically spawn all if max is a huge number.
+		if( parseFloat(getParameterByName("max")) == 99999999999.9 )
+			spawnAll();
 
 		</script>
 	</body>

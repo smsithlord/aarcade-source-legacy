@@ -2,6 +2,26 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+
+		<link rel="stylesheet" type="text/css" href="rangeslider.css">
+		<script src="jquery-2.1.3.min.js"></script>
+		<script src="rangeslider.min.js"></script>
+		<script>
+		    // Initialize a new plugin instance for all
+		    // e.g. $('input[type="range"]') elements.
+		    $('input[type="range"]').rangeslider();
+
+		    // Destroy all plugin instances created from the
+		    // e.g. $('input[type="range"]') elements.
+		    $('input[type="range"]').rangeslider('destroy');
+
+		    // Update all rangeslider instances for all
+		    // e.g. $('input[type="range"]') elements.
+		    // Usefull if you changed some attributes e.g. `min` or `max` etc.
+		    $('input[type="range"]').rangeslider('update', true);
+		</script>
+
+		
 	</head>
 	<body>
 		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
@@ -17,6 +37,11 @@
 				</div>
 			</div>
 
+			<div class="aaOnlyIfMapLoaded" style="width: 90%; display: block; text-align: center; margin-left: 5%; display: none;">
+				<div class="mainButton helpNote" style="width: 70%; display: inline-block; float: left;" onclick="window.location='asset://ui/worldInfo.html';" help="View mount & workshop info about this world.">World Info</div>
+				<div class="mainButton helpNote" style="width: 25%; display: inline-block; float: right;" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu.">Leave</div>
+			</div>
+
 			<div class="mainButton helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map.">Play</div>
 			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library.">Library</div>
 			<div class="mainButton disabledButton">Multiplayer</div>
@@ -26,5 +51,9 @@
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
+		<script>
+			//var elem = document.querySelector("#worldInfoButton");
+			//console.log()
+		</script>
 	</body>
 </html>

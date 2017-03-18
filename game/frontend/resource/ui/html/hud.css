@@ -166,6 +166,11 @@ body
 	pointer-events: none;
 }
 
+.hudHeaderContainerCell:nth-of-type(odd)
+{
+	text-align: left;
+}
+
 .hudHeaderButtonContainer
 {
 	display: inline-block;
@@ -904,6 +909,11 @@ body
 }
 
 #returnHudButton
+{
+	display: none;
+}
+
+#libretroHudButton
 {
 	display: none;
 }

@@ -1,0 +1,78 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/manageLibrary.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Default Library Settings
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+<!--
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>-->
+
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Web scrapers allow you to easily apply images & meta info from the in-game browser onto your shortcuts."><div style=' padding: 10px;'><input type="checkbox" style="pointer-events: none;" checked readonly /> BASIC WEB SCRAPERS</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="This collection of scrapers lets you easily decorate games, or find generic images & videos to use.">
+				<center>
+					Includes support for Google Images, Steam store, Origin store, Giant Bomb, TheGamesDb, & YouTube.<br /><br />
+				</center>
+			</div>
+
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Types keep your library organized & make it easy to find your stuff."><div style=' padding: 10px;'><input type="checkbox" style="pointer-events: none;" checked readonly /> BASIC TYPES</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="These general types should cover everything you do on your PC.">
+				<center>
+					Includes support for websites, youtube, images, twitch, videos, cards, pc, movies, tv, comics, music, books, maps, & other.<br /><br />
+				</center>
+			</div>
+
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Apps are what actually launch your shortcuts.  Most shortcuts just use Windows."><div style=' padding: 10px;'><input type="checkbox" style="pointer-events: none;" checked readonly /> BASIC APPS</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="These 2 apps can handle nearly everything you want to launch.">
+				<center>
+					Includes support for Windows & Steam.<br /><br />
+				</center>
+			</div>
+
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Web scrapers allow you to easily apply images & meta info from the in-game browser onto your shortcuts."><div style=' padding: 10px;'><input type="checkbox" checked /> MEDIA WEB SCRAPERS</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="This collection of scrapers lets you easily decorate movies & TV shows.">
+				<center>
+					Includes support for TheMovieDb & Netflix.<br /><br />
+				</center>
+			</div>
+			
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Types keep your library organized & make it easy to find your stuff."><div style=' padding: 10px;'><input type="checkbox" checked /> RETRO TYPES</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="If you're into retro games, you'll want these types to stay organized.">
+				<center>
+					Includes support for wii, gba, 32x, n64, snes, 3ds, gameboy, genesis, arcade, ps, ps2, ps3, ps4, megadrive, nes, gamegear, wiiu, switch, atari5200, gbc, xbox, xbox360, xbone, gamecube, saturn, ds, atari2600, dreamcast, gbc, psp, sms, 3do, pinball, & neogeo.<br /><br />
+				</center>
+			</div>
+
+			<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;' class="helpNote" help="Apps are what actually launch your shortcuts.  Most shortcuts just use Windows."><div style=' padding: 10px;'><input type="checkbox" checked /> RETRO APPS</div></div>
+			<div style='font-weight: bold; font-family: Arial;' class="helpNote" help="These retro apps require special launch commands to open game shortcuts.">
+				<center>
+					Includes support for DeSmuME, Dolphin, ePSXe, FCEUX, Fusion, JNES, Kawaks, MAME, PCSX2, PPSSPP, Project64, Snes9x, VisualBoyAdvance, VPinball, & ZSNES.<br /><br />
+				</center>
+			</div>
+
+			<div class="mainButton disabledButton">Add Support for Selected Categories</div>
+			<div class="mainButton" onclick="window.location='asset://ui/manageLibrary.html';">Cancel</div>
+			<!-- <div class="mainButton disabledButton">Purge</div> -->
+
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

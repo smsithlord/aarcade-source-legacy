@@ -282,6 +282,7 @@ private:
 	std::string m_id;
 	std::string m_originalItemId;
 	libretro_raw* m_raw;
+	std::string m_userBase;
 	std::string m_corePath;
 	std::string m_assetsPath;
 	std::string m_systemPath;

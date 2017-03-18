@@ -684,7 +684,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 			g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", instanceId.c_str(), kv);
 
-			g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, mapId, instanceId, "", "", "");
+			g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, mapId, instanceId, "", "", "", "");
 			kv->deleteThis();
 			kv = null;
 		}
@@ -884,6 +884,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		//g_pAnarchyManager->GetWebManager()->DispatchJavaScriptMethod(pWebTab, "arcadeHud", "onActivateInputMode", params);
 	}
+	else if (method_name == WSLit("disconnect"))
+	{
+		g_pAnarchyManager->Disconnect();
+	}
 	else if (method_name == WSLit("autoInspect"))
 	{
 		// FIXME: THIS SHOULD JUST CALL A SUBROUTINE OF THE METAVERSE MANAGER!!
@@ -931,11 +935,82 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		}
 
 	}
+	else if (method_name == WSLit("viewObjectInfo"))
+	{
+		// JUST USES THE OBJECT THAT IS CURRENTLY UNDER THE PLAYER'S CURSOR FOR NOW.
+
+		C_PropShortcutEntity* pShortcut = null;
+		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
+		if (pEntity)
+			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+
+		if (!pShortcut)
+		{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			Vector forward;
+			pPlayer->EyeVectors(&forward);
+
+			trace_t tr;
+			UTIL_TraceLine(pPlayer->EyePosition(),
+				pPlayer->EyePosition() + forward * MAX_TRACE_LENGTH, MASK_NPCSOLID,
+				pPlayer, COLLISION_GROUP_NONE, &tr);
+
+			if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+			{
+				pEntity = tr.m_pEnt;
+				if (pEntity)
+				{
+					pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+					//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObjectEntity(null);
+					//g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(null);
+				}
+			}
+		}
+
+		if (pShortcut)
+		{
+			//g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			std::string url = std::string("asset://ui/objectInfo.html?id=") + pShortcut->GetObjectId();
+
+			C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudInstance->SetUrl(url);
+
+			//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+			//g_pAnarchyManager->GetInstanceManager()->RemoveEntity(pShortcut);
+			//g_pAnarchyManager->GetInstanceManager()->
+		}
+
+		/*
+		JSObject response;
+
+		// get the objectID of the object under the player's cursor
+		KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetMap(instance->mapId.c_str()));
+
+		JSObject mapObject;
+		AddSubKeys(pMapKV, mapObject);
+
+		KeyValues* stuffKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForMapFile(pMapKV->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+		if (stuffKV)
+		{
+			JSObject stuff;
+			AddSubKeys(stuffKV, stuff);
+			stuffKV->deleteThis();
+			response.SetProperty(WSLit("stuff"), stuff);
+		}
+
+		response.SetProperty(WSLit("map"), mapObject);
+
+		//// PLAYERS
+
+		return response;
+		*/
+	}
 	else if (method_name == WSLit("moveObject"))
 	{
 		// DO WORK
 
 		// MOVE
+		// FIXME: TODO: Make this a standard helper function to get the object under the player's cursor.
 		C_PropShortcutEntity* pShortcut = null;
 		C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
 		if (pEntity)
@@ -1032,6 +1107,30 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
 		//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 		g_pAnarchyManager->ShowEngineOptionsMenu();
+	}
+	else if (method_name == WSLit("adjustObjectOffset"))
+	{
+		unsigned int numArgs = args.size();
+		if (numArgs < 3)
+			return;
+
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectOffset((float)args[0].ToDouble(), (float)args[1].ToDouble(), (float)args[2].ToDouble());
+	}
+	else if (method_name == WSLit("adjustObjectRot"))
+	{
+		unsigned int numArgs = args.size();
+		if (numArgs < 3)
+			return;
+
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectRot((float)args[0].ToDouble(), (float)args[1].ToDouble(), (float)args[2].ToDouble());
+	}
+	else if (method_name == WSLit("adjustObjectScale"))
+	{
+		unsigned int numArgs = args.size();
+		if (numArgs < 1)
+			return;
+
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectScale((float)args[0].ToDouble());
 	}
 	else if (method_name == WSLit("deleteObject"))
 	{
@@ -1453,6 +1552,9 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 void AddSubKeys(KeyValues* kv, JSObject& object)
 {
+	if (!kv)
+		return;
+
 	for (KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 	{
 		if (sub->GetFirstSubKey())
@@ -1769,7 +1871,7 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		// build the search info w/ the key & value pairs given in args[1] and beyond
 		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
-
+		DevMsg("Cat is: %s\n", category.c_str());
 		std::string fieldName;
 		std::string fieldValue;
 		unsigned int numArgs = args.size();
@@ -1778,6 +1880,8 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			fieldName = WebStringToCharString(args[i].ToString());
 			fieldValue = WebStringToCharString(args[i + 1].ToString());
 			pSearchInfo->SetString(fieldName.c_str(), fieldValue.c_str());
+
+			DevMsg("Field name & value: %s %s\n", fieldName.c_str(), fieldValue.c_str());
 		}
 
 		// find the first entry that matches the search params
@@ -2265,6 +2369,141 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		else
 			return JSValue(0);
+	}
+	else if (method_name == WSLit("getTransformInfo"))
+	{
+		JSObject response;
+
+		if (!g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject())
+			response.SetProperty(WSLit("success"), JSValue(false));
+		else
+		{
+			response.SetProperty(WSLit("success"), JSValue(true));
+
+			/*
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity());
+			if (pShortcut)
+			{
+
+			}
+			*/
+
+			transform_t* pTransform = g_pAnarchyManager->GetInstanceManager()->GetTransform();
+
+			JSObject rotation;
+			rotation.SetProperty(WSLit("p"), JSValue(pTransform->rotP));
+			rotation.SetProperty(WSLit("y"), JSValue(pTransform->rotY));
+			rotation.SetProperty(WSLit("r"), JSValue(pTransform->rotR));
+
+			JSObject offset;
+			offset.SetProperty(WSLit("x"), JSValue(pTransform->offX));
+			offset.SetProperty(WSLit("y"), JSValue(pTransform->offY));
+			offset.SetProperty(WSLit("z"), JSValue(pTransform->offZ));
+
+			response.SetProperty(WSLit("rotation"), rotation);
+			response.SetProperty(WSLit("offset"), offset);
+			response.SetProperty(WSLit("scale"), JSValue(pTransform->scale));
+		}
+
+		return response;
+	}
+	else if (method_name == WSLit("getObjectInfo"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+		JSObject response;
+		response.SetProperty(WSLit("success"), JSValue(true));
+
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(id);
+		KeyValues* pObjectInfo = null;
+		KeyValues* pItemInfo = null;
+		KeyValues* pModelInfo = null;
+
+		g_pAnarchyManager->GetMetaverseManager()->GetObjectInfo(pObject, pObjectInfo, pItemInfo, pModelInfo);
+
+		/*
+		KeyValues* rawModelKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pObject->modelId));
+		if (rawModelKV)
+		{
+			JSObject rawModel;
+			AddSubKeys(rawModelKV, rawModel);
+			response.SetProperty(WSLit("rawItem"), rawModel);
+		}
+		*/
+
+		if (pObjectInfo)
+		{
+			JSObject object;
+			AddSubKeys(pObjectInfo, object);
+			response.SetProperty(WSLit("object"), object);
+
+			pObjectInfo->deleteThis();
+		}
+
+		if (pItemInfo)
+		{
+			JSObject item;
+			AddSubKeys(pItemInfo, item);
+			response.SetProperty(WSLit("item"), item);
+
+			pItemInfo->deleteThis();
+		}
+
+		if (pModelInfo)
+		{
+			/*
+			KeyValues* rawModelKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForModelFile(pModelInfo->GetString("file"));
+			if (rawModelKV)
+			{
+				JSObject rawModel;
+				AddSubKeys(rawModelKV, rawModel);
+				response.SetProperty(WSLit("rawItem"), rawModel);
+			}
+			*/
+
+			JSObject model;
+			AddSubKeys(pModelInfo, model);
+			response.SetProperty(WSLit("model"), model);
+
+			pModelInfo->deleteThis();
+		}
+
+		return response;
+	}
+	else if (method_name == WSLit("getWorldInfo"))
+	{
+		JSObject response;
+		response.SetProperty(WSLit("universe"), WSLit("Personal"));	// UNIVERSE (always PERSONAL for now, but in the future would tell you what server you are connected to.  ie. universe = server)
+		response.SetProperty(WSLit("mode"), WSLit("Singleplayer"));	// MODE (either Singleplayer or Multiplayer)
+
+		instance_t* instance = g_pAnarchyManager->GetInstanceManager()->GetInstance(g_pAnarchyManager->GetInstanceId());
+		JSObject instanceObject;
+		instanceObject.SetProperty(WSLit("id"), WSLit(instance->id.c_str()));
+		instanceObject.SetProperty(WSLit("mapId"), WSLit(instance->mapId.c_str()));
+		instanceObject.SetProperty(WSLit("title"), WSLit(instance->title.c_str()));
+		instanceObject.SetProperty(WSLit("file"), WSLit(instance->file.c_str()));
+		instanceObject.SetProperty(WSLit("workshopIds"), WSLit(instance->workshopIds.c_str()));
+		instanceObject.SetProperty(WSLit("mountIds"), WSLit(instance->mountIds.c_str()));
+		response.SetProperty(WSLit("instance"), instanceObject);
+
+		KeyValues* pMapKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetMap(instance->mapId.c_str()));
+
+		JSObject mapObject;
+		AddSubKeys(pMapKV, mapObject);
+		
+		KeyValues* stuffKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForMapFile(pMapKV->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+		if (stuffKV)
+		{
+			JSObject stuff;
+			AddSubKeys(stuffKV, stuff);
+			stuffKV->deleteThis();
+			response.SetProperty(WSLit("stuff"), stuff);
+		}
+
+		response.SetProperty(WSLit("map"), mapObject);
+
+		//// PLAYERS
+
+		return response;
 	}
 	else if (method_name == WSLit("detectAllMapScreenshots"))
 	{

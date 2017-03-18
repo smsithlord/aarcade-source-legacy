@@ -39,9 +39,11 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	m_pOriginalTexture = null;
 	m_pMaterial = null;
 
-	m_bOverlay = g_pAnarchyManager->GetInputManager()->GetOverlayMode();
+	//m_bOverlay = g_pAnarchyManager->GetInputManager()->GetOverlayMode();	// FIXME: OBSOLETE!  USE THE INPUT MANAGER'S GetInputCapture METHOD INSTEAD!
 
-	if (!m_bOverlay)
+	m_bInputCapture = g_pAnarchyManager->GetInputManager()->GetInputCapture();
+
+	if (m_bInputCapture)
 	{
 		SetKeyBoardInputEnabled(true);
 		SetMouseInputEnabled(true);
@@ -171,7 +173,8 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	{
 		m_bCursorHidden = true;
 
-		if (!m_bOverlay)
+		//if (!m_bOverlay)
+		if (m_bInputCapture)
 			ShowCursor(false);
 	}
 
@@ -227,7 +230,8 @@ void CInputSlate::OnTick()
 			if (!m_bCursorHidden)
 			{
 				m_bCursorHidden = true;
-				if( !m_bOverlay )
+				//if( !m_bOverlay )
+				if( m_bInputCapture )
 					ShowCursor(false);
 			}
 		}
@@ -240,10 +244,30 @@ void CInputSlate::OnTick()
 		if (m_bCursorHidden)
 		{
 			m_bCursorHidden = false;
-			if (!m_bOverlay)
+			//if (!m_bOverlay)
+			if (m_bInputCapture)
 				ShowCursor(true);
 		}
 	}
+
+	// update input mode
+	bool bInputCaptureMode = g_pAnarchyManager->GetInputManager()->GetInputCapture();
+	if (bInputCaptureMode != this->IsMouseInputEnabled())
+	{
+		if (this->IsMouseInputEnabled())
+		{
+			// deactivate out input
+			this->SetKeyBoardInputEnabled(false);
+			this->SetMouseInputEnabled(false);
+		}
+		else
+		{
+			// activate our input
+			this->SetKeyBoardInputEnabled(true);
+			this->SetMouseInputEnabled(true);
+		}
+	}
+
 	//else
 		//ivgui()->RemoveTickSignal(this->GetVPanel());
 }
@@ -356,7 +380,10 @@ void CInputSlate::SetFullscreenMode(bool bFullscreenMode)
 
 }
 
+/*
 // wtf does this function even exist for. fuck it and remove it asap.  i created it when adding overlay mode overwhere that fullscreen mode was at in the code.....
+// UPDATED BETTER COMMENT: This behavior is handled in the think method of this input slate now. lul.
+
 void CInputSlate::SetOverlayMode(bool bOverlayMode)
 {
 	if (g_pAnarchyManager->IsPaused())
@@ -380,6 +407,7 @@ void CInputSlate::SetOverlayMode(bool bOverlayMode)
 	}
 
 }
+*/
 
 void CInputSlate::OnKeyCodeReleased(KeyCode code)
 {
@@ -490,7 +518,8 @@ CInputSlate::~CInputSlate()
 	if (m_bCursorHidden)
 	{
 		m_bCursorHidden = false;
-		if (!m_bOverlay)
+		//if (!m_bOverlay)
+		if (m_bInputCapture)
 			ShowCursor(true);
 		DevMsg("showing cursor\n");
 	}
@@ -522,12 +551,12 @@ public:
 	{
 		InputSlate->SetFullscreenMode(bFullscreenMode);
 	}
-
+	/*
 	void SetOverlayMode(bool bOverlayMode)
 	{
 		InputSlate->SetOverlayMode(bOverlayMode);
 	}
-
+	*/
 	void Destroy()
 	{
 		if (InputSlate)

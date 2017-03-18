@@ -72,6 +72,8 @@ public:
 	virtual void PostRender();
 
 	bool HandleUiToggle();
+	bool HandleCycleToNextWeapon();
+	bool HandleCycleToPrevWeapon();
 	void Pause();
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
@@ -86,7 +88,12 @@ public:
 	void HudStateNotify();
 	void SetSlaveScreen(bool bVal);
 
+	void TaskRemember();
+	void ShowTaskMenu();
+	void HideTaskMenu();
+
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
+	void Disconnect();
 	void AnarchyStartup();
 	void OnWebManagerReady();
 	void OnLoadAllLocalAppsComplete();
@@ -148,11 +155,17 @@ public:
 	C_InstanceManager* GetInstanceManager() { return m_pInstanceManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	//ThreadedFileBrowseParams_t* GetFileBrowseParams() { return m_pFileParams; }
+	std::string GetLegacyFolder() { return m_legacyFolder; }
+	std::string GetWorkshopFolder() { return m_workshopFolder; }
+	std::string GetAArcadeUserFolder() { return m_aarcadeUserFolder; }
 
 	// mutators
 	void SetInitialized(bool bValue) { m_bInitialized = bValue; }
 	void SetState(aaState state) { m_state = state; }
 	void IncrementState();
+	void SetLegacyFolder(std::string val) { m_legacyFolder = val; }
+	void SetWorkshopFolder(std::string val) { m_workshopFolder = val; }
+	void SetAArcadeUserFolder(std::string val) { m_aarcadeUserFolder = val; }
 	
 private:
 	//ThreadedFileBrowseParams_t* m_pFileParams;
@@ -181,6 +194,10 @@ private:
 	C_MetaverseManager* m_pMetaverseManager;
 	C_InstanceManager* m_pInstanceManager;
 	C_BaseEntity* m_pSelectedEntity;
+
+	std::string m_aarcadeUserFolder;
+	std::string m_legacyFolder;
+	std::string m_workshopFolder;
 };
 
 extern C_AnarchyManager* g_pAnarchyManager;

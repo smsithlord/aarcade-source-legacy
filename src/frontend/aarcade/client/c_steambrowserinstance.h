@@ -91,7 +91,7 @@ private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceNeedsPaint, HTML_NeedsPaint_t, m_NeedsPaint);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserPopupHTMLWindow, HTML_NewWindow_t, m_NewWindow);
 	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserStatusText, HTML_StatusText_t, m_StatusText);
-	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserURLChanged, HTML_URLChanged_t, m_URLChanged);
 	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
 	std::string m_scraperId;

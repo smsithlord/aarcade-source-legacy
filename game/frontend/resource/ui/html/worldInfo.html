@@ -1,0 +1,109 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						World Info
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+<!--
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>-->
+			<!--
+				<div class="mainButton disabledButton">Libretro</div>
+				<div class="mainButton disabledButton">Steamworks Web Browser</div>
+				<div class="mainButton disabledButton">Awesomium Web Browser</div>
+			-->
+			<!-- <div class="mainButton disabledButton">Purge</div> -->
+
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+
+			var worldInfo = aaapi.system.getWorldInfo();
+			var mapInfo = worldInfo.stuff;
+			mapInfo.file = worldInfo.map.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+
+			//console.log(JSON.stringify(worldInfo));
+			//mapInfo.file = worldInfo.map.
+			//console.log(JSON.stringify(worldInfo.instance));
+			//console.log(JSON.stringify(worldInfo.map));
+			//console.log(JSON.stringify(worldInfo.stuff));
+
+			var hudContent = document.querySelector(".hudContent");
+			var workshopIds = "";
+			var mountIds = "";
+			var html = "";
+
+			// SERVER STUFF
+			html += "<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style=' padding: 10px;'>SERVER</div></div>";
+			html += "<div style='font-weight: bold; font-family: Arial;'><center>";
+			html += "Universe: " + worldInfo.universe + "<br />";
+			html += "Mode: " + worldInfo.mode + "<br />";
+			html += "<br />";
+			html += "</center></div>";
+
+			// INSTANCE STUFF
+			html += "<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style=' padding: 10px;'>INSTANCE</div></div>";
+			html += "<div style='font-weight: bold; font-family: Arial;'><center>";
+			html += "Title: " + worldInfo.instance.title + "<br />";
+			workshopIds = (worldInfo.instance.workshopIds !== "") ? worldInfo.instance.workshopIds : "None";
+			if( workshopIds !== "None" )
+				html += "Workshop: " + workshopIds + "<br />";
+			html += "<br />";
+			html += "</center></div>";
+
+			// MAP STUFF
+			html += "<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style=' padding: 10px;'>MAP</div></div>";
+			html += "<div style='font-weight: bold; font-family: Arial;'><center>";
+			html += "Title: " + worldInfo.map.title + "<br />";
+			//html += "File: " + mapInfo.file + "<br />";
+			workshopIds = (mapInfo.workshopIds !== "") ? mapInfo.workshopIds : "None";
+			if( workshopIds !== "None" )
+				html += "Workshop: " + workshopIds + "<br />";
+			mountIds = "None";
+			if( mapInfo.mountIds !== "" )
+				mountIds = (mapInfo.mountTitle !== "") ? mapInfo.mountTitle : "None";
+
+			if( mountIds !== "None" )
+				html += "Mount: " + mountIds + "<br />";
+			html += "<br />";
+			html += "</center></div>";
+
+			hudContent.innerHTML += html;
+
+			var button;
+
+			button = document.createElement("div");
+			button.className = "mainButton disabledButton";
+			button.innerHTML = "Pack into Backpack";
+			hudContent.appendChild(button);
+
+			button = document.createElement("div");
+			button.className = "mainButton";
+			button.innerHTML = "Close";
+			button.addEventListener("click", function()
+			{
+				aaapi.system.deactivateInputMode();
+			});
+			hudContent.appendChild(button);
+		</script>
+
+	</body>
+</html>

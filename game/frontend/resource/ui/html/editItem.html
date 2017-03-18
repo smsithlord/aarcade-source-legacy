@@ -197,7 +197,7 @@ function getParameterByName(name, url) {
 					{
 						var elem = e.target;
 						if( elem.value != item[elem.field] )
-							elem.value = item[elem.field];
+							elem.value = (!!item[elem.field]) ? item[elem.field] : "";
 					}, true);
 					fieldValue.appendChild(fieldValueInput);
 

@@ -25,18 +25,20 @@ public:
 	vgui::KeyCode StringToSteamKeyEnum(std::string text);
 
 	// accessors
+	bool GetInputCapture() { return m_bInputCapture; }
 	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
 	//ITexture* GetInputCanvasTexture() { return m_pInputCanvasTexture; }
 	bool GetInputMode() { return m_bInputMode; }
 	bool GetFullscreenMode() { return m_bFullscreenMode; }
-	bool GetOverlayMode() { return m_bOverlayMode; }
+	//bool GetOverlayMode() { return m_bOverlayMode; }
 	bool GetMainMenuMode() { return m_bMainMenuMode; }
 	bool GetForceInputMode() { return m_bForcedInputMode; }
 	bool GetWasForceInputMode() { return m_bWasForcedInputMode; }
 
+	
 	void SetFullscreenMode(bool value) { m_bFullscreenMode = value; }
-	void SetOverlayMode(bool value) { m_bOverlayMode = value; }
-	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false, C_EmbeddedInstance* pEmbeddedInstance = null, bool bOverlay = false);
+	//void SetOverlayMode(bool value) { m_bOverlayMode = value; }
+	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false, C_EmbeddedInstance* pEmbeddedInstance = null, bool bInputCapture = true);
 	void ForceInputMode();
 	void DeactivateInputMode(bool bForce = false);
 	void MouseMove(float x, float y);
@@ -50,6 +52,7 @@ public:
 	void MouseWheelUp();
 
 	// mutators
+	void SetInputCapture(bool value) { m_bInputCapture = value; }
 	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
 	//void SetInputListener(C_InputListener* pListener) { m_pInputListener = pListener; }
 	//void SetInputCanvasTexture(ITexture* pTexture) { m_pInputCanvasTexture = pTexture; }
@@ -60,8 +63,9 @@ private:
 	bool m_bWasForcedInputMode;
 	bool m_bForcedInputMode;
 	bool m_bInputMode;
+	bool m_bInputCapture;
 	bool m_bFullscreenMode;
-	bool m_bOverlayMode;
+	//bool m_bOverlayMode;
 	bool m_bMainMenuMode;
 	//float m_fMouseX;
 	//float m_fMouseY;

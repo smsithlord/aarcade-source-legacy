@@ -39,22 +39,27 @@
 		<script>
 			var hudContentElem = document.querySelector(".hudContent");
 			var response = aaapi.system.getLibretroOptions("libretro");
-			var ports = response.ports;
-
-			var numPorts = ports.length;
-			var i, buttonElem;
-			for( i = 0; i < numPorts; i++ )
+			var buttonElem;
+			var numPorts = 0;
+			if( !!response.ports )
 			{
-				buttonElem = document.createElement("div");
-				buttonElem.className = "mainButton helpNote";
-				buttonElem.portNum = i;
-				buttonElem.addEventListener("click", function(e)
+				var ports = response.ports;
+				numPorts = ports.length;
+
+				var i;
+				for( i = 0; i < numPorts; i++ )
 				{
-					window.location = "asset://ui/libretroInput.html?type=libretro&port=" + this.portNum;
-				}.bind(buttonElem), true);
-				buttonElem.setAttribute("help", "Setup your default input devices for ALL games & cores.");
-				buttonElem.innerHTML = "Input Devices Player " + (parseInt(i) + 1);
-				hudContentElem.appendChild(buttonElem);
+					buttonElem = document.createElement("div");
+					buttonElem.className = "mainButton helpNote";
+					buttonElem.portNum = i;
+					buttonElem.addEventListener("click", function(e)
+					{
+						window.location = "asset://ui/libretroInput.html?type=libretro&port=" + this.portNum;
+					}.bind(buttonElem), true);
+					buttonElem.setAttribute("help", "Setup your default input devices for ALL games & cores.");
+					buttonElem.innerHTML = "Input Devices Player " + (parseInt(i) + 1);
+					hudContentElem.appendChild(buttonElem);
+				}
 			}
 		</script>
 	</body>

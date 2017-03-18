@@ -178,7 +178,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 		{
 			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 			bIsLegacy = true;
-			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "+");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Gen 1 Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "+");
 			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", std::string(VarArgs("%u", m_details.size())), "+");
 			// mount legacy
 			//this->MountNextWorkshop();
@@ -243,7 +243,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 				{
 					if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
 					{
-						DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+						//DevMsg("Map ID here is: %s\n", kv->GetString("map"));
 						// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
 						// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
 
@@ -270,7 +270,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 						goodMapName = goodMapName.substr(0, goodMapName.find("."));
 
 						std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
-						g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
+						g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, VarArgs("%llu", details->m_nPublishedFileId), "", "");
 						//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
 					}
 				}
@@ -378,7 +378,7 @@ void C_WorkshopManager::MountAllWorkshops()
 	max = VarArgs("%u", legacyCount);
 	min = "0";
 	current = VarArgs("%u", legacyCount);
-	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
+	g_pAnarchyManager->GetWebManager()->GetHudWebTab()->AddHudLoadingMessage("progress", "", "Skipping Gen 1 Legacy Workshop Subscriptions", "mountlegacyworkshops", min, current, max);
 
 	g_pAnarchyManager->OnMountAllWorkshopsComplete();
 }

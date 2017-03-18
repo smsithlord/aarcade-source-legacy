@@ -54,14 +54,15 @@ namespace vgui
 		void OnKeyCodeReleased(KeyCode code);
 
 		void SetFullscreenMode(bool bFullscreenMode);
-		void SetOverlayMode(bool bOverlayMode);
+	//	void SetOverlayMode(bool bOverlayMode);
 
 		vgui::Panel* GetPanel();
 
 	private:
 		bool m_bMainMenu;
 		bool m_bFullscreen;
-		bool m_bOverlay;
+		bool m_bInputCapture;
+	//	bool m_bOverlay;
 		static long m_fPreviousTime;
 
 	protected:

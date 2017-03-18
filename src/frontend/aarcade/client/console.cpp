@@ -7,6 +7,7 @@
 
 #include "c_openglmanager.h"
 #include "filesystem.h"
+#include <algorithm>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -16,6 +17,53 @@ ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);
 ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);
 ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);
 ConVar kodi_info("kodi_info", "xbmc:xbmc@192.168.0.100:8080", FCVAR_ARCHIVE, "The username:password@ip:port of the 1st Kodi host.");
+
+bool IsFileEqual(const char* inFileA, std::string inFileB)
+{
+	std::string fileA = inFileA;
+	std::string fileB = inFileB;
+
+	std::transform(fileA.begin(), fileA.end(), fileA.begin(), ::tolower);
+	std::transform(fileB.begin(), fileB.end(), fileB.begin(), ::tolower);
+
+	std::replace(fileA.begin(), fileA.end(), '\\', '/');
+	std::replace(inFileB.begin(), inFileB.end(), '\\', '/');
+
+	return (fileA == fileB);
+}
+
+void DumpItem(const CCommand &args)
+{
+	KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(std::string(args[1])));
+	if (pItemKV)
+	{
+		DevMsg("Item %s:\n", args[1]);
+		for (KeyValues *sub = pItemKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		{
+			if (!sub->GetFirstSubKey())
+				DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
+			else
+			{
+				DevMsg("\t%s:\n", sub->GetName());
+				for (KeyValues *sub2 = sub->GetFirstSubKey(); sub2; sub2 = sub2->GetNextKey())
+				{
+					if (!sub2->GetFirstSubKey())
+						DevMsg("\t\t%s: %s\n", sub2->GetName(), sub2->GetString());
+					else
+					{
+						DevMsg("\t\t%s:\n", sub2->GetName());
+						for (KeyValues *sub3 = sub2->GetFirstSubKey(); sub3; sub3 = sub3->GetNextKey())
+						{
+							if (!sub3->GetFirstSubKey())
+								DevMsg("\t\t\t%s: %s\n", sub3->GetName(), sub3->GetString());
+						}
+					}
+				}
+			}
+		}
+	}
+}
+ConCommand dump_item("dump_item", DumpItem, "Usage: dump the item for the given item ID to the console");
 
 void TestFunction( const CCommand &args )
 {
@@ -31,12 +79,405 @@ void TestFunction( const CCommand &args )
 //	int x, y;
 //	vgui::input()->GetCursorPos(x, y);
 
+	// save out text versions of all the required stuff so that they can be added to the player's library when ever needed (setup or repair)
+	// SCRAPERS (just make backup copies of the scraper .js files)
+
+	/*
+	unsigned int i;
+	unsigned int max;
+	KeyValues* entry;
+	std::string fileName;
+	size_t found;
+	std::map<std::string, KeyValues*>::iterator it;
+	bool bIsDefault;
+
+	// MAPS
+	std::vector<std::string> defaultMapNames;
+	defaultMapNames.push_back("dm_lockdown.bsp");
+	defaultMapNames.push_back("hub_floors.bsp");
+	defaultMapNames.push_back("hub_highrise.bsp");
+	defaultMapNames.push_back("hub_walls.bsp");
+	defaultMapNames.push_back("learn_basic.bsp");
+	defaultMapNames.push_back("meta_hood.bsp");
+	defaultMapNames.push_back("oververse.bsp");
+	defaultMapNames.push_back("sm_acreage.bsp");
+	defaultMapNames.push_back("sm_apartment.bsp");
+	defaultMapNames.push_back("sm_apartmentsuite.bsp");
+	defaultMapNames.push_back("sm_expo.bsp");
+	defaultMapNames.push_back("sm_gallery.bsp");
+	defaultMapNames.push_back("sm_garage.bsp");
+	defaultMapNames.push_back("sm_orchard.bsp");
+	defaultMapNames.push_back("sm_primo.bsp");
+
+	std::vector<std::string>::iterator defaultMapsIt;
+	std::map<std::string, KeyValues*>& maps = g_pAnarchyManager->GetMetaverseManager()->GetAllMaps();
+	it = maps.begin();
+	while (it != maps.end())
+	{
+		entry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(it->second);
+		defaultMapsIt = std::find(defaultMapNames.begin(), defaultMapNames.end(), std::string(entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file")));
+		if (defaultMapsIt != defaultMapNames.end())
+		{
+			//DevMsg("Map file: %s\n", entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+			fileName = entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
+			found = fileName.find_last_of(".");
+			fileName = fileName.substr(0, found);
+
+			it->second->SaveToFile(g_pFullFileSystem, VarArgs("defaultLibrary/maps/%s.txt", fileName.c_str()), "DEFAULT_WRITE_PATH");
+		}
+
+		it++;
+	}
+
+	// CABINETS
+	std::vector<std::string> defaultCabinetNames;
+	defaultCabinetNames.push_back("models/cabinets/wood_cabinet_steam.mdl");
+	defaultCabinetNames.push_back("models/cabinets/wood_cabinet.mdl");
+	defaultCabinetNames.push_back("models/icons/wall_pad_w.mdl");
+	defaultCabinetNames.push_back("models/icons/wall_pad_t.mdl");
+	defaultCabinetNames.push_back("models/cabinets/wall_arcade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/two_player_arcade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/tripple_standup_racer.mdl");
+	defaultCabinetNames.push_back("models/cabinets/trading_card_table.mdl");
+	defaultCabinetNames.push_back("models/cabinets/trading_card_big_table.mdl");
+	defaultCabinetNames.push_back("models/cabinets/trading_card_big.mdl");
+	defaultCabinetNames.push_back("models/cabinets/trading_card.mdl");
+	defaultCabinetNames.push_back("models/cabinets/theater_facade.mdl");
+	defaultCabinetNames.push_back("models/frames/tall_rotator.mdl");
+	defaultCabinetNames.push_back("models/cabinets/tabletop_tv.mdl");
+	defaultCabinetNames.push_back("models/cabinets/tabletop_console_steam.mdl");
+	defaultCabinetNames.push_back("models/icons/table_pad_w.mdl");
+	defaultCabinetNames.push_back("models/icons/table_pad_t.mdl");
+	defaultCabinetNames.push_back("models/cabinets/swordfish.mdl");
+	defaultCabinetNames.push_back("models/cabinets/standup_car_racer.mdl");
+	defaultCabinetNames.push_back("models/banners/spinning_cap.mdl");
+	defaultCabinetNames.push_back("models/cabinets/sound_pillar.mdl");
+	defaultCabinetNames.push_back("models/cabinets/single_car_racer.mdl");
+	defaultCabinetNames.push_back("models/cabinets/racer_multiscreen.mdl");
+	defaultCabinetNames.push_back("models/cabinets/posterscreen.mdl");
+	defaultCabinetNames.push_back("models/cabinets/poster.mdl");
+	defaultCabinetNames.push_back("models/cabinets/pinball_standard.mdl");
+	defaultCabinetNames.push_back("models/frames/pic_wide_l.mdl");
+	defaultCabinetNames.push_back("models/frames/pic_tall_l.mdl");
+	defaultCabinetNames.push_back("models/cabinets/phaser_rifle_coop.mdl");
+	defaultCabinetNames.push_back("models/cabinets/phaser_gun_coop.mdl");
+	defaultCabinetNames.push_back("models/cabinets/pc_wallmount_small.mdl");
+	defaultCabinetNames.push_back("models/cabinets/pc_wallmount.mdl");
+	defaultCabinetNames.push_back("models/cabinets/pc_kiosk_standard.mdl");
+	defaultCabinetNames.push_back("models/cabinets/normal_laptop.mdl");
+	defaultCabinetNames.push_back("models/cabinets/movie_stand_standard.mdl");
+	defaultCabinetNames.push_back("models/cabinets/movie_display_wallmount.mdl");
+	defaultCabinetNames.push_back("models/cabinets/motoracer.mdl");
+	defaultCabinetNames.push_back("models/cabinets/lunar.mdl");
+	defaultCabinetNames.push_back("models/cabinets/imax.mdl");
+	defaultCabinetNames.push_back("models/cabinets/icade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/future_speaker.mdl");
+	defaultCabinetNames.push_back("models/cabinets/four_player_arcade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/extended_four_player_arcade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/enclosed_flight.mdl");
+	defaultCabinetNames.push_back("models/cabinets/double_phasergun_coop.mdl");
+	defaultCabinetNames.push_back("models/cabinets/double_car_racer.mdl");
+	defaultCabinetNames.push_back("models/cabinets/console_steam.mdl");
+	defaultCabinetNames.push_back("models/cabinets/console_kiosk_steam.mdl");
+	defaultCabinetNames.push_back("models/cabinets/coffee_cabinet.mdl");
+	defaultCabinetNames.push_back("models/Frames/ceiling_pic_wide_l.mdl");
+	defaultCabinetNames.push_back("models/frames/ceiling_pic_tall_l.mdl");
+	defaultCabinetNames.push_back("models/cabinets/cd_wall.mdl");
+	defaultCabinetNames.push_back("models/cabinets/cd_table.mdl");
+	defaultCabinetNames.push_back("models/cabinets/cd_player_headphones.mdl");
+	defaultCabinetNames.push_back("models/cabinets/cd_headphones_wall.mdl");
+	defaultCabinetNames.push_back("models/cabinets/camcorder.mdl");
+	defaultCabinetNames.push_back("models/cabinets/cabsolo.mdl");
+	defaultCabinetNames.push_back("models/cabinets/buttonmasher.mdl");
+	defaultCabinetNames.push_back("models/cabinets/brainiac.mdl");
+	defaultCabinetNames.push_back("models/cabinets/boxcade.mdl");
+	defaultCabinetNames.push_back("models/cabinets/big_movie_wallmount_no_banner.mdl");
+	defaultCabinetNames.push_back("models/cabinets/big_movie_wallmount.mdl");
+	defaultCabinetNames.push_back("models/banners/big_marquee.mdl");
+	max = defaultCabinetNames.size();
+
+	//std::vector<std::string>::iterator defaultCabinetsIt;
+	std::map<std::string, KeyValues*>& cabinets = g_pAnarchyManager->GetMetaverseManager()->GetAllModels();
+	it = cabinets.begin();
+	while (it != cabinets.end())
+	{
+		entry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(it->second);
+		if (entry->GetInt("dynamic") == 1)
+		{
+			//defaultCabinetsIt = std::find(defaultCabinetNames.begin(), defaultCabinetNames.end(), std::string(entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file")));
+			//if (defaultCabinetsIt != defaultCabinetNames.end())
+			bIsDefault = false;
+			for (i = 0; i < max; i++)
+			{
+				bIsDefault = IsFileEqual(entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), defaultCabinetNames[i]);
+				if (bIsDefault)
+					break;
+			}
+
+			if ( bIsDefault )
+			{
+				//DevMsg("Cabinet file: %s\n", entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+				fileName = entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
+				found = fileName.find_last_of(".");
+				fileName = fileName.substr(0, found);
+				found = fileName.find_last_of("/\\");
+				fileName = fileName.substr(found + 1);
+
+				it->second->SaveToFile(g_pFullFileSystem, VarArgs("defaultLibrary/cabinets/%s.txt", fileName.c_str()), "DEFAULT_WRITE_PATH");
+			}
+		}
+
+		it++;
+	}
+
+	// MODELS
+	std::vector<std::string> defaultModelNames;
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_n.mdl");
+	defaultModelNames.push_back("models/de_vegas/service_trolly.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_g.mdl");
+	defaultModelNames.push_back("models/de_vegas/sith_sphynx.mdl");
+	defaultModelNames.push_back("models/props/sithlord/floorprojector.mdl");
+	defaultModelNames.push_back("models/props/sithlord/table.mdl");
+	defaultModelNames.push_back("models/sithlord/giftbox.mdl");
+	defaultModelNames.push_back("models/props/sithlord/longbar.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_u.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_j.mdl");
+	defaultModelNames.push_back("models/de_halloween/tombstone.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_c.mdl");
+	defaultModelNames.push_back("models/de_vegas/cash_cart.mdl");
+	defaultModelNames.push_back("models/props/sithlord/walltubelight_rainbow.mdl");
+	defaultModelNames.push_back("models/de_halloween/jacklight.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_x.mdl");
+	defaultModelNames.push_back("models/sithlord/xmasbell.mdl");
+	defaultModelNames.push_back("models/props/sithlord/colorrectangle.mdl");
+	defaultModelNames.push_back("models/props/sithlord/lightstrobe.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_q.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_f.mdl");
+	defaultModelNames.push_back("models/de_vegas/card_table.mdl");
+	defaultModelNames.push_back("models/de_halloween/spooky_tree.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_o.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_t.mdl");
+	defaultModelNames.push_back("models/last_resort/villa_chair.mdl");
+	defaultModelNames.push_back("models/props/sithlord/lightsyrin.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_w.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_e.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_i.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_m.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_y.mdl");
+	defaultModelNames.push_back("models/props/stormy/floorsign_games.mdl");
+	defaultModelNames.push_back("models/last_resort/villa_couch.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_k.mdl");
+	defaultModelNames.push_back("models/sithlord/candycane.mdl");
+	defaultModelNames.push_back("models/cabinets/room_divider.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_a.mdl");
+	defaultModelNames.push_back("models/props/sithlord/walltubelight.mdl");
+	defaultModelNames.push_back("models/props/sithlord/wood_shelf.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_s.mdl");
+	defaultModelNames.push_back("models/cabinets/newton_toy.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_b.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_p.mdl");
+	defaultModelNames.push_back("models/props/sithlord/ceilingprojector.mdl");
+	defaultModelNames.push_back("models/props/sithlord/studiolight_floor_alwayson.mdl");
+	defaultModelNames.push_back("models/de_vegas/roulette_light.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_l.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_z.mdl");
+	defaultModelNames.push_back("models/sithlord/xmastree.mdl");
+	defaultModelNames.push_back("models/props/sithlord/colorcube.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_h.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_v.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_d.mdl");
+	defaultModelNames.push_back("models/props/stormy/neon_alphabet/flurolight_r.mdl");
+	defaultModelNames.push_back("models/props/sithlord/colorsquare.mdl");
+	max = defaultModelNames.size();
+
+	//std::vector<std::string>::iterator defaultModelsIt;
+	std::map<std::string, KeyValues*>& models = g_pAnarchyManager->GetMetaverseManager()->GetAllModels();
+	it = models.begin();
+	while (it != models.end())
+	{
+		entry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(it->second);
+		//defaultModelsIt = std::find(defaultModelNames.begin(), defaultModelNames.end(), std::string(entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file")));
+		//if (defaultModelsIt != defaultModelNames.end())
+		bIsDefault = false;
+		for (i = 0; i < max; i++)
+		{
+			bIsDefault = IsFileEqual(entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"), defaultModelNames[i]);
+			if (bIsDefault)
+				break;
+		}
+
+		if (bIsDefault)
+		{
+			//DevMsg("Model file: %s\n", entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file"));
+			fileName = entry->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
+			found = fileName.find_last_of(".");
+			fileName = fileName.substr(0, found);
+			found = fileName.find_last_of("/\\");
+			fileName = fileName.substr(found + 1);
+
+			it->second->SaveToFile(g_pFullFileSystem, VarArgs("defaultLibrary/models/%s.txt", fileName.c_str()), "DEFAULT_WRITE_PATH");
+		}
+
+		it++;
+	}
+
+	// TYPES
+	std::vector<std::string> defaultTypeNames;
+
+	// basic types
+	defaultTypeNames.push_back("websites");
+	defaultTypeNames.push_back("youtube");
+	defaultTypeNames.push_back("images");
+	defaultTypeNames.push_back("twitch");
+	defaultTypeNames.push_back("videos");
+	defaultTypeNames.push_back("cards");
+	defaultTypeNames.push_back("pc");
+	defaultTypeNames.push_back("movies");
+	defaultTypeNames.push_back("tv");
+	defaultTypeNames.push_back("comics");
+	defaultTypeNames.push_back("music");
+	defaultTypeNames.push_back("books");
+	defaultTypeNames.push_back("maps");
+	defaultTypeNames.push_back("other");	// probably not a real time.  this is probably empty type.
+
+	// retro types
+	defaultTypeNames.push_back("wii");
+	defaultTypeNames.push_back("gba");
+	defaultTypeNames.push_back("32x");
+	defaultTypeNames.push_back("n64");
+	defaultTypeNames.push_back("snes");
+	defaultTypeNames.push_back("ds");
+	defaultTypeNames.push_back("3ds");
+	defaultTypeNames.push_back("gameboy");
+	defaultTypeNames.push_back("genesis");
+	defaultTypeNames.push_back("gamecube");
+	defaultTypeNames.push_back("arcade");
+	defaultTypeNames.push_back("ps");
+	defaultTypeNames.push_back("ps2");
+	defaultTypeNames.push_back("ps3");
+	defaultTypeNames.push_back("ps4");
+	defaultTypeNames.push_back("megadrive");
+	defaultTypeNames.push_back("nes");
+	defaultTypeNames.push_back("gamegear");
+	defaultTypeNames.push_back("wiiu");
+	defaultTypeNames.push_back("switch");
+	defaultTypeNames.push_back("atari5200");
+	defaultTypeNames.push_back("gbc");
+	defaultTypeNames.push_back("psp");
+	defaultTypeNames.push_back("sms");
+	defaultTypeNames.push_back("3do");
+	defaultTypeNames.push_back("pinball");
+	defaultTypeNames.push_back("neogeo");
+
+	std::vector<std::string>::iterator defaultTypesIt;
+	std::map<std::string, KeyValues*>& types = g_pAnarchyManager->GetMetaverseManager()->GetAllTypes();
+	it = types.begin();
+	while (it != types.end())
+	{
+		entry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(it->second);
+		defaultTypesIt = std::find(defaultTypeNames.begin(), defaultTypeNames.end(), std::string(entry->GetString("title")));
+		if (defaultTypesIt != defaultTypeNames.end())
+		{
+			//DevMsg("Type title: %s\n", entry->GetString("title"));
+			fileName = entry->GetString("title");
+
+			it->second->SaveToFile(g_pFullFileSystem, VarArgs("defaultLibrary/types/%s.txt", fileName.c_str()), "DEFAULT_WRITE_PATH");
+		}
+
+		it++;
+	}
+
+	// APPS
+	std::vector<std::string> defaultAppNames;
+
+	// retro apps
+	//defaultAppNames.push_back("BAM");
+	defaultAppNames.push_back("DeSmuME");
+	defaultAppNames.push_back("Dolphin");
+	defaultAppNames.push_back("ePSXe");
+	defaultAppNames.push_back("FCEUX");
+	defaultAppNames.push_back("Fusion");
+	defaultAppNames.push_back("JNES");
+	defaultAppNames.push_back("Kawaks");
+	defaultAppNames.push_back("MAME");
+	//defaultAppNames.push_back("MESS");
+	defaultAppNames.push_back("PCSX2");
+	defaultAppNames.push_back("PPSSPP");
+	defaultAppNames.push_back("Project64");
+	defaultAppNames.push_back("Snes9x");
+	////defaultAppNames.push_back("SSF");	// not supported yet until helper apps are officially supported
+	defaultAppNames.push_back("VisualBoyAdvance");
+	defaultAppNames.push_back("VPinball");
+	//defaultAppNames.push_back("VPinbqall8");
+	defaultAppNames.push_back("ZSNES");	
+
+	std::vector<std::string>::iterator defaultAppsIt;
+	std::map<std::string, KeyValues*>& apps = g_pAnarchyManager->GetMetaverseManager()->GetAllApps();
+	it = apps.begin();
+	while (it != apps.end())
+	{
+		entry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(it->second);
+		defaultAppsIt = std::find(defaultAppNames.begin(), defaultAppNames.end(), std::string(entry->GetString("title")));
+		if (defaultAppsIt != defaultAppNames.end())
+		{
+			DevMsg("App title: %s\n", entry->GetString("title"));
+			fileName = entry->GetString("title");
+
+			it->second->SaveToFile(g_pFullFileSystem, VarArgs("defaultLibrary/apps/%s.txt", fileName.c_str()), "DEFAULT_WRITE_PATH");
+		}
+
+		it++;
+	}
+
+	*/
+
+	/*
+	// broken & not working.
+	CMatRenderContextPtr pRenderContext(materials);
+
+	int x, y, w, h;
+	pRenderContext->GetViewport(x, y, w, h);
+	//pRenderContext = materials->GetRenderContext();
+
+	//ITexture *pRtFullFrame = NULL;
+	//pRtFullFrame = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
+
+	Rect_t rect;
+	rect.x = x;
+	rect.y = y;
+	rect.width = w;
+	rect.height = h;
+	//TEXTURE_GROUP_RENDER_TARGET
+	ITexture* pTexture = g_pMaterialSystem->CreateProceduralTexture("TesterTexture", TEXTURE_GROUP_VGUI, w, h, IMAGE_FORMAT_BGR888, 1);
+
+	pRenderContext->CopyRenderTargetToTextureEx(pTexture, 0, &rect, &rect);
+	unsigned int width = pTexture->GetActualWidth();
+	DevMsg("Text dev is: %i\n", width);
+	*/
+
+	// Get pointer to FullFrameFB
+//	ITexture *pRtFullFrame = NULL;
+	//pRtFullFrame = materials->FindTexture("_rt_FullFrameFB", TEXTURE_GROUP_RENDER_TARGET);
+
+	//if (pRtFullFrame)
+	//{
+		//pRtFullFrame->Sa
+		//DevMsg("Saving FB to file...\n");
+		//pRtFullFrame->GetResourceData()
+		//pRtFullFrame->SaveToFile("materials/tester/test.vtf");
+		//pRtFullFrame->
+	//}
+		//pRtFullFrame->SaveToFile(VarArgs("materials/tester/test.vtf))
+
+	//ITexture* pTexture = 
+	//pRenderContext->CopyRenderTargetToTexture()
+
 	// NEW TEST
 
 	//webviewinput->Create();
 	//DevMsg("Planel created.\n");
 
-	g_pAnarchyManager->TestSQLite();
+	//g_pAnarchyManager->TestSQLite();
 
 	/*
 	DevMsg("Setting url to overlay test...\n");
@@ -205,40 +646,30 @@ ConCommand run_embedded_awesomium_browser("run_embedded_awesomium_browser", RunE
 
 void Continuous(const CCommand &args)
 {
-	C_BaseEntity* pEntity = g_pAnarchyManager->GetSelectedEntity();
-	if (pEntity)
-	{
-		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
-
-		std::vector<C_EmbeddedInstance*> embeddedInstances;
-		pShortcut->GetEmbeddedInstances(embeddedInstances);
-
-		C_EmbeddedInstance* pEmbeddedInstance;
-		C_EmbeddedInstance* testerInstance;
-		unsigned int i;
-		unsigned int size = embeddedInstances.size();
-		for (i = 0; i < size; i++)
-		{
-			pEmbeddedInstance = embeddedInstances[i];
-			if (pEmbeddedInstance->GetId() == "images")
-			{
-				testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
-				if (testerInstance && testerInstance->GetTexture())
-				{
-					g_pAnarchyManager->DeselectEntity("", false);
-					break; // only put the 1st embedded instance on continous play
-				}
-			}
-		}
-	}
+	g_pAnarchyManager->TaskRemember();
 }
-ConCommand continuous("continuous", Continuous, "Usage: sets the selected entity as continuous play.");
+ConCommand continuous("task_remember", Continuous, "Usage: sets the selected entity as continuous play.");
 
 void CloseAll(const CCommand &args)
 {
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->DeselectEntity();
+
 	g_pAnarchyManager->GetCanvasManager()->CloseAllInstances();
 }
-ConCommand closeall("closeall", CloseAll, "Usage: closes all open instaces (execpt for important game system ones)");
+ConCommand closeall("task_clear", CloseAll, "Usage: closes all open instaces (execpt for important game system ones)");
+
+void ShowTaskMenu(const CCommand &args)
+{
+	g_pAnarchyManager->ShowTaskMenu();
+}
+ConCommand showtaskmenu("+task_menu", ShowTaskMenu, "Usage: check which in-game tasks are open.");
+
+void HideTaskMenu(const CCommand &args)
+{
+	g_pAnarchyManager->HideTaskMenu();
+}
+ConCommand hidetaskmenu("-task_menu", HideTaskMenu, "Usage: hides the task menu.");
 
 /*
 void RememberWrapper(const CCommand &args)
@@ -281,21 +712,34 @@ ConCommand test_function2( "testfunc2", TestFunction2, "Usage: executes an arbit
 
 void AnarchyManager(const CCommand &args)
 {
-	DevMsg("Start the anarchy manager NOW!\n");
 	g_pAnarchyManager->AnarchyStartup();
 }
 
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
 
-void CreateHotlink(const CCommand &args)
+void BuildContextUp(const CCommand &args)
 {
 	// check if a propshortcut is under the player's crosshair
 	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (Q_strcmp(pPlayer->GetActiveWeapon()->GetName(), "weapon_physcannon"))
+	{
+		CBaseCombatWeapon *pWeapon = pPlayer->Weapon_OwnsThisType("weapon_physcannon");
+		if (pWeapon && pPlayer->GetActiveWeapon()->CanHolster())
+			engine->ClientCmd("phys_swap");
+		return;
+	}
+
+	//bool SwitchToNextBestWeapon(C_BaseCombatWeapon *pCurrent);
+
+	//virtual C_BaseCombatWeapon	*GetActiveWeapon(void) const;
+	//int					WeaponCount() const;
+	//C_BaseCombatWeapon	*GetWeapon(int i) const;
+
 	//if (!pPlayer)
-		//return;
+	//return;
 
 	//if (pPlayer->GetHealth() <= 0)
-		//return;
+	//return;
 
 	bool bAutoChooseLibrary = true;
 
@@ -309,7 +753,7 @@ void CreateHotlink(const CCommand &args)
 
 	// only allow prop shortcuts
 	C_PropShortcutEntity* pShortcut = (pEntity) ? dynamic_cast<C_PropShortcutEntity*>(pEntity) : null;
-	if (pShortcut && tr.fraction != 1.0 )
+	if (pShortcut && tr.fraction != 1.0)
 		bAutoChooseLibrary = false;	// TODO: If you want to highlight the object that the context menu applies to, now's the time.
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
@@ -339,7 +783,13 @@ void CreateHotlink(const CCommand &args)
 
 	return;
 }
-ConCommand createhotlink("createhotlink", CreateHotlink, "Open up the library.", FCVAR_NONE);
+ConCommand buildcontextup("-remote_control", BuildContextUp, "Open up the library, or shows the edit object menu.", FCVAR_NONE);
+
+void BuildContextDown(const CCommand &args)
+{
+	// do nothing
+}
+ConCommand buildcontextdown("+remote_control", BuildContextDown, "Open up the library, or shows the edit object menu.", FCVAR_NONE);
 
 void ActivateInputMode(const CCommand &args)
 {
@@ -355,6 +805,19 @@ void ActivateInputMode(const CCommand &args)
 	}
 	else
 	{
+		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (pSelectedEmbeddedInstance && pSelectedEmbeddedInstance->GetId() == "hud")
+		{
+			g_pAnarchyManager->GetInputManager()->SetInputCapture(true);
+
+			C_AwesomiumBrowserInstance* pHudInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(pSelectedEmbeddedInstance);
+			std::vector<std::string> params;
+			params.push_back("transform");
+			pHudInstance->DispatchJavaScriptMethod("cmdListener", "switchMode", params);
+		}
+			//pSelectedEmbeddedInstance->
+			//g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
+		/*
 		//g_pAnarchyManager->DeactivateObjectPlacementMode(false);
 
 		// undo changes AND cancel
@@ -367,15 +830,33 @@ void ActivateInputMode(const CCommand &args)
 		// "save" cha
 		//m_pInstanceManager->ApplyChanges(id, pShortcut);
 		DevMsg("CHANGES REVERTED\n");
+		*/
 	}
 }
-ConCommand activateinputmode("+hdview_input_toggle", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
+ConCommand activateinputmode("+input_mode", ActivateInputMode, "Turns ON input mode.", FCVAR_NONE);
 
 void DeactivateInputMode(const CCommand &args)
 {
-	g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+	if( !g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() )
+		g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+	else
+	{
+		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (pSelectedEmbeddedInstance && pSelectedEmbeddedInstance->GetId() == "hud")
+		{
+			g_pAnarchyManager->GetInputManager()->SetInputCapture(false);
+
+			C_AwesomiumBrowserInstance* pHudInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(pSelectedEmbeddedInstance);
+			std::vector<std::string> params;
+			params.push_back("browse");
+			pHudInstance->DispatchJavaScriptMethod("cmdListener", "switchMode", params);
+
+			if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode() && engine->IsInGame())
+				engine->ClientCmd("gamemenucommand ResumeGame");
+		}
+	}
 }
-ConCommand deactivateinputmode("-hdview_input_toggle", DeactivateInputMode, "Turns OFF input mode.", FCVAR_NONE);
+ConCommand deactivateinputmode("-input_mode", DeactivateInputMode, "Turns OFF input mode.", FCVAR_NONE);
 
 void AttemptSelectObject(const CCommand &args)
 {
@@ -384,7 +865,7 @@ void AttemptSelectObject(const CCommand &args)
 	if (broadcast_mode.GetBool())
 		g_pAnarchyManager->xCastSetLiveURL();
 }
-ConCommand attemptselectobject("focus", AttemptSelectObject, "Attempts to select the object under your crosshair.", FCVAR_NONE);
+ConCommand attemptselectobject("select", AttemptSelectObject, "Attempts to select the object under your crosshair.", FCVAR_NONE);
 
 void Launch( const CCommand &args )
 {

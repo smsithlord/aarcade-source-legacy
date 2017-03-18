@@ -20,7 +20,7 @@
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/items.html';" help="Go back to the previous menu.">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/libraryBrowser.html';" help="Go back to the previous menu.">
 							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
 						</div>
 					</div>
@@ -45,9 +45,28 @@
 		
 		<script>
  			var fileLocation = decodeURIComponent(getParameterByName("fileLocation"));
-
  			var item = aaapi.library.findLibraryItem("file", fileLocation);
  			var itemSlateElem = document.querySelector("#itemContainer");
+
+			function ExtractTwitchId(trailerURL)
+			{
+			    if( typeof trailerURL === "undefined" )
+			      return trailerURL;
+
+			    var twitchid;
+			    var test = trailerURL;
+			    var found = twitchid.indexOf("twitch.tv/");
+			    if( found >= 0 )
+			    {
+			      twitchid = test.substr(found + 10);
+
+			      found = twitchid.indexOf("/");
+			      if( found > 0 )
+			        twitchid = twitchid - twitchid.substring(0, found);
+			    }
+
+			    return twitchid;
+			}
 
  			if( item )
 	 			aaapi.system.spawnItem(item.info.id);
@@ -58,7 +77,7 @@
 	 			// item is created but NOT saved yet, time for last-minute changes!!
 				if( item )
 				{
-					var fields = ["title", "file", "type", "app"];
+					var fields = ["title", "file", "type", "app", "screen"];
 					var i;
 					var max = fields.length;
 					for( i = 0; i < max; i++ )
@@ -115,9 +134,17 @@
 										needsStandaloneType = false;
 									}
 								}
-
-								fileVal = (item.hasOwnProperty("file")) ? item["file"] : "";
-								if( type.title === "websites" )
+								else if( type.title === "movies" )
+								{
+									var regEx = /(.mkv|.avi|.mpg|.mp4|.mpeg|.vob)$/i;
+									var matches = regEx.exec(fileVal);
+									if( matches )
+									{
+										fieldValueOption.selected = true;
+										needsStandaloneType = false;
+									}
+								}
+								else if( type.title === "websites" )
 								{
 									var regEx = /((http|https):\/\/|(www\.|www\d\.))([^\-][a-zA-Z0-9\-]+)?(\.\w+)(\/\w+){0,}(\.\w+){0,}(\?\w+\=\w+){0,}(\&\w+\=\w+)?/i;
 									var matches = regEx.exec(fileVal);
@@ -127,12 +154,34 @@
 										needsStandaloneType = false;
 									}
 								}
+								else if( type.title === "twitch" )
+								{
+									if( fileVal.indexOf("twitch.tv/") >= 0 )
+									{
+										fieldValueOption.selected = true;
+										needsStandaloneType = false;
+
+										var twitchid = ExtractTwitchId(item.file);
+										if( !!twitchid )
+										{
+											var twitchPreviewUrl = "http://static-cdn.jtvnw.net/previews-ttv/live_user_" + twitchid + "-1280x720.jpg";
+											item.screen = twitchPreviewUrl;
+
+											var el = document.querySelectorAll("input");
+											for( var c = 0; c < el.length; c++ )
+											{
+												if( el[c].field === "screen" )
+													el[c].value = twitchPreviewUrl;
+											}
+										}
+									}
+								}
 
 								fieldValueSelect.appendChild(fieldValueOption);
 							}
 
 							// select Standalone if no val
-							if( needsStandaloneType )
+							if( needsStandaloneType && !!standaloneFieldValueOption )
 								standaloneFieldValueOption.selected = true;
 
 							fieldValueSelect.value = val;
@@ -273,8 +322,9 @@
 
 					if( !!titleInput && !!typeInput && !!fileInput )
 					{
+						var typeText = typeInput.options[typeInput.selectedIndex].text.toLowerCase();
 						// make sure we are not a YT video
-						if( typeInput.options[typeInput.selectedIndex].text.toLowerCase().indexOf("youtube") === -1 )
+						if( titleInput.value === "" && typeText.indexOf("youtube") === -1 )
 						{
 							// create a title
 							var regEx = /(?=[^\\/]*$).+$/i;
@@ -288,6 +338,12 @@
 
 								titleInput.value = titleVal;
 							}
+
+							// update the title if twitch
+							if( typeText.toLowerCase().indexOf("twitch") >= 0 )
+							{
+								titleInput.value = "Twitch Stream: " + titleInput.value;
+							}
 						}
 					}
 				}
@@ -296,6 +352,15 @@
 	 		var mainButtonElem = document.querySelector("#saveButton");
 	 		mainButtonElem.addEventListener("click", function()
 	 		{
+	 			// add the params in the form to the item
+	 			var elems = itemSlateElem.querySelectorAll("input, select");
+	 			var i;
+	 			for( i = 0; i < elems.length; i++)
+	 			{
+	 				console.log(elems[i].field);
+	 				item[elems[i].field] = elems[i].value;
+	 			}
+
 	 			// save it then spawn it
 	 			var params = [];
 
@@ -308,7 +373,7 @@
 					params.push(x);
 					params.push(item[x]);
 				}
-
+//console.log(JSON.stringify(params));
 				if( aaapi.library.saveItem(item.info.id, params) )
 					aaapi.system.spawnItem(item.info.id);
 			});

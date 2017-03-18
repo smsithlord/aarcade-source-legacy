@@ -1,0 +1,116 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#briefing::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#briefing::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#briefing::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#briefing::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell"></div>
+					<div class="hudContentHeaderCell">
+						REDUX BETA BRIEFING (APRIL 2017)
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<center>
+			<div id="briefing">
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Display Resolution</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Internal resolution is locked to 720p for now & will SCALE to what ever your AArcade resolution is.  You cannot change resolutions after you've loaded a map.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Steam Games</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					You can go to Options > Manage Library > Import Steam Games to get all of your games into your library.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Multiplayer</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Redux has no multiplayer mode yet.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Pause Mode</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Redux only has an improved "minimal" pause mode when you launch shortcuts. It cannot dump system resources & "hard pause" yet.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Source Engine Games</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Redux will automatically mount any compatible Source engine games that you have installed.  However, Redux is not able to launch other Source engine games yet.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Steam Workshop</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Your current workshop subscriptions ARE compatible with Redux. AArcade should be CLOSED when you subscribe to workshop items. Also, you can't publish new workshop items from Redux yet.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Open-With Apps & Libretro</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Apps cannot be configured yet, so you won't be able to setup your emulators to launch.  Libretro support is also limited until there is a way to configure apps.  Local video files DO currently work though.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>Import Library</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					You can go to Options > Manage Library > Import Legacy Content if you are an old-school AArcade user and want to use all your old stuff in Redux.<br /><br />
+				</div>
+
+				<div style='width: 100%; background-color: rgba(50, 50, 50, 0.5); font-weight: bold; font-family: Arial;'><div style='padding: 10px; letter-spacing: 0.2em; font-style: italic;'>VR Mode</div></div>
+				<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					Redux does not have official VR support yet.  It is unknown when official support will be added.<br /><br />
+				</div>
+			</div>
+			</center>
+
+			<br /><br />
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Thanks for using Anarchy Arcade! Enjoy!">OK</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			//var elem = document.querySelector("#worldInfoButton");
+			//console.log()
+		</script>
+	</body>
+</html>
