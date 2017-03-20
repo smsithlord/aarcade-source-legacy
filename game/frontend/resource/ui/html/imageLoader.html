@@ -16,58 +16,29 @@
 	<body>
 
 		<script>
-		// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
-Number.prototype.unsign = function(bytes) {
-    return this >= 0 ? this : Math.pow(256, bytes || 4) + this;
-};
+		// TODO: Make it so that MULTIPLE YouTubeIds are used when trying to find thumbnails, until one is found that actually works. (obsolete??)
 
-function FindCRC(data_in) {
-	var data = data_in.toLowerCase();
-	data = data.replace(/\//g,"\\");
+			// FLOWCHART
+			//	1: We (this page) are loaded when AArcade starts.
+			//	2: The imageLoader object is created w/ default sessionId "loading".
+			//	3: aaapi.system.simpleImageReady is called w/ dummy params to signal that we are ready.
+			//	4: AArcade calls loadImage when it has an item it wants a particular image loaded for.
+			//	5: If the sessionId of a loadImage call doesn't match our sessionId, reset first.
+			//	6: Always try cached versions of URLs first.
+			//	7: Do try to auto-generate thumbnail URLs for YouTube videos.
+			//	8: If an image fails to load, try alternative image slots (marquee, screen, etc.)
+			//	9: Respond w/ complete failure if no image can be loaded for the item.
 
-    var CRC = 0xffffffff;
-    data = data.toLowerCase();
-    for ( var j = 0; j < data.length; j++) {
-        var c = data.charCodeAt(j);
-        CRC ^= c << 24;
-        for ( var i = 0; i < 8; i++) {
-            if (CRC.unsign(8) & 0x80000000) {
-                CRC = (CRC << 1) ^ 0x04C11DB7;
-            } else {
-                CRC <<= 1;
-            }
-        }
-    }
-    if (CRC < 0)
-        CRC = CRC >>> 0;
-    var CRC_str = CRC.toString(16);
-    while (CRC_str.length < 8) {
-        CRC_str = '0' + CRC_str;
-    }
-
-    return CRC_str;
-}
-
-
-		// TODO: Make it so that MULTIPLE YouTubeIds are used when trying to find thumbnails, until one is found that actually works.
+			// IMAGE REQUESTS
+			//	1: imageElem is invisible while it gets resolved.
+			//	2: when an image is ready, it unhides itself and notifies AArcade to render it.
+			//	3: if we're already waiting for a previous image to be rendered, we wait our turn.
 
 			function ImageLoader()
 			{
-				this.sessionId = "loading";
-				//this.imageRenderElem;
-				
+				this.sessionId = "loading";				
 				this.waitingToRender = false;
 				this.imageRequests = [];
-
-/*
-				this.fields = ["marquee", "screen"];
-				this.usedFields = [];
-				
-				this.item;
-				this.channel = "";
-				this.itemId = "";
-				this.field = "";
-*/
 			}
 
 			ImageLoader.prototype.renderNextImage = function()
@@ -76,7 +47,7 @@ function FindCRC(data_in) {
 				// don't do anything if another image is already waiting to render
 				for( i = 0; i < this.imageRequests.length; i++ )
 				{
-					if( this.imageRequests[i].rendering )//|| this.imageRequests[i].removing )
+					if( this.imageRequests[i].rendering )
 						return;
 				}
 
@@ -124,6 +95,8 @@ function FindCRC(data_in) {
 					return;
 				}
 
+				//console.log("Loaded image " + imageRequest.goodSrc (this.imageElem.src.indexOf("asset://cache/") === 0)
+
 				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
 
 				var index = this.imageRequests.indexOf(imageRequest);
@@ -133,7 +106,7 @@ function FindCRC(data_in) {
 				if( this.imageRequests.length > 0 )
 					this.renderNextImage();
 			};
-
+/*
 			ImageLoader.prototype.isImageExtension = function(value)
 			{
 				if( value.indexOf("cdn.steamcommunity") > -1 )
@@ -153,93 +126,81 @@ function FindCRC(data_in) {
 
 				return false;
 			};
+*/
+			ImageLoader.prototype.resetSession = function(sessionId)
+			{
+				var max = this.imageRequests.length;
+				var i;
+				for( i = 0; i < max; i++ )
+					this.imageRequests[i].invalid = true;
+
+				//this.waitingToRender = false;
+				this.imageRequests = [];
+
+				var imgElems = document.body.querySelectorAll("img");
+				max = imgElems.length;
+				for( i = 0; i < max; i++ )
+					imgElems[i].parentNode.removeChild(imgElems[i]);
+
+				this.sessionId = sessionId;
+			};
 
 			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId)
 			{
+				// check if we should reset our session
 				if( sessionId !== this.sessionId )
-				{
-					var max = this.imageRequests.length;
-					var i;
-					for( i = 0; i < max; i++ )
-						this.imageRequests[i].invalid = true;
+					this.resetSession(sessionId);
 
-					this.waitingToRender = false;
-					this.imageRequests = [];
-
-					var imgElems = document.body.querySelectorAll("img");
-					max = imgElems.length;
-					for( i = 0; i < max; i++ )
-						imgElems[i].parentNode.removeChild(imgElems[i]);
-
-					this.sessionId = sessionId;
-				}
-
+				// build our request
 				var imageRequest = {
-					"sessionId": sessionId,	// obsolete cuz requests are invalidated now
-					"channel": channel,
+					"sessionId": sessionId,
+					"channel": channel,	// the preferred image channel
 					"itemId": itemId,
-					"fields": new Array("marquee", "screen", "preview", "file"),
-					"usedFields": new Array(),
-					"cacheExhausted": new Array(),
+					"fields":	// Unknown, Bad
+					{
+						"marquee_auto_cache": "Unknown",
+						"marquee_auto": "Unknown",
+						"marquee_cache": "Unknown",
+						"marquee": "Unknown",
+						"screen_auto_cache": "Unknown",
+						"screen_auto": "Unknown",
+						"screen_cache": "Unknown",
+						"screen": "Unknown",
+						"preview_auto_cache": "Unknown",
+						"preview_auto": "Unknown",
+						"preview_cache": "Unknown",
+						"preview": "Unknown",
+						"file_auto_cache": "Unknown",
+						"file_auto": "Unknown",
+						"file_cache": "Unknown",
+						"file": "Unknown"
+					},
+					"field": "",
 					"goodSrc": "",
 					"item": undefined,
-					"field": channel,
 					"imageElem": undefined,
-					"ready": false,
-					"rendering": false
+					"rendering": false	// true = waiting for AArcade to capture the 12x512 imageElem
 				};
-
-				// if we are looking for a screen, put the marquee last so it doesn't get re-used
-				if( imageRequest.field === "screen" )
-				{
-					var temp = imageRequest.fields.shift();
-					imageRequest.fields.push(temp);
-				}
 
 				this.imageRequests.push(imageRequest);
 
 				var item = aaapi.library.getLibraryItem(itemId);
 				if( !item )
 				{
-					console.log("Error: cannot load image for item " + itemId + " channel " + imageRequest.channel);
-
-					setTimeout(function()
-					{
-						var index = imageLoader.imageRequests.indexOf(this);
-						if( index >= 0 )
-							imageLoader.imageRequests.splice(index, 1);
-
-						aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, "", "", false);
-					}.bind(imageRequest), 100);
-					
+					this.onCompleteFailure(imageRequest);
 					return;
 				}
 				else
 					imageRequest.item = item;
 
-				var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
-
-				if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
+				var nextField = this.getNextField(imageRequest);
+				if( !!!nextField )
 				{
-					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
-						imageRequest.cacheExhausted.push(imageRequest.field);
-					else
-						imageRequest.usedFields.push(imageRequest.field);
-
-					var nextField = this.getNextField(imageRequest);
-					if( !!nextField )
-					{
-						imageRequest.field = nextField;
-					}
-					else
-					{
-						this.onCompleteFailure(imageRequest);
-						return;
-					}
+					this.onCompleteFailure(imageRequest);
+					return;
 				}
-
-				// do this again incase the field has changed.
-				YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+//console.log("Start with trying field " + nextField);
+				//imageRequest.field = nextField;
 
 				if( !!imageRequest.imageElem )
 					imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
@@ -250,83 +211,111 @@ function FindCRC(data_in) {
 				document.body.appendChild(imageRequest.imageElem);
 				imageRequest.imageElem.addEventListener("load", this.onImageLoad.bind(imageRequest), true);
 				imageRequest.imageElem.addEventListener("error", this.onImageError.bind(imageRequest), true);
-				//var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
-				if( !!YouTubeId )
-				{
-					var goodSrc = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
-					imageRequest.goodSrc = goodSrc;
-					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
-					{
-						goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
-						imageRequest.cacheExhausted.push(imageRequest.field);
-					}
 
-					imageRequest.imageElem.src = goodSrc;
-				}
-				else
-				{
-					var goodSrc = imageRequest.item[imageRequest.field];
-					imageRequest.goodSrc = goodSrc;
-
-					if( goodSrc.indexOf(":") === 1 )
-						goodSrc = "asset://local/" + goodSrc;
-
-					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
-					{
-						goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
-						imageRequest.cacheExhausted.push(imageRequest.field);
-					}
-
-					imageRequest.imageElem.src = goodSrc;
-				}
-				//imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
+				imageRequest.imageElem.goodSrc = this.getFieldValue(imageRequest, nextField);
+				imageRequest.imageElem.src = imageRequest.imageElem.goodSrc;
 			};
 
 			ImageLoader.prototype.getNextField = function(imageRequest)
 			{
-				var nextField;
-				if( !!!imageRequest.fields )
-					return nextField;
+				// use channel-specific field priority to increase variety
+				var fieldPriority;
+				if( imageRequest.channel === "marquee" )
+					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto_cache", "file_auto", "file_cache", "file", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen"];
+				else if( imageRequest.channel === "screen" )
+					fieldPriority = ["screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee"];
+				else	// should never happen
+					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file"];
 
-				var i, testerField;
-				for( i = 0; i < imageRequest.fields.length; i++ )
+				var fieldName, fieldValue;
+				for( var i = 0; i < fieldPriority.length; i++ )
 				{
-					//// ODD fields are cached fields.
-					var testerField = imageRequest.fields[i];
-					//if( i % 2 > 0 )
-					//	testerField = "cached" + testerField;
+					fieldName = fieldPriority[i];
+					fieldValue = this.getFieldValue(imageRequest, fieldName);
 
-					//if(imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" && imageRequest.item[imageRequest.fields[i]].indexOf("file:///") !== 0 && imageRequest.item[imageRequest.fields[i]].indexOf("\\") === -1)
-
-//					var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
-//					if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
-
-					//if( imageRequest.usedFields.indexOf(testerField) === -1 && imageRequest.item[testerField] != "" )
-					if( imageRequest.usedFields.indexOf(testerField) === -1 )
-					{
-						var NextYouTubeId = imageLoader.extractYouTubeId(imageRequest.item[testerField]);
-
-						var fieldVal = imageRequest.item[testerField];
-						//if( imageRequest.cacheExhausted.indexOf(testerField) === -1 )
-						//{
-						//	NextYouTubeId = undefined;
-						//	fieldVal = "asset://cache/" + FindCRC(imageRequest.item[testerField]) + ".jpg";
-						//	imageRequest.cacheExhausted.push(testerField);
-						//}
-
-						if( (!!!NextYouTubeId && (!imageLoader.isImageExtension(fieldVal)) || fieldVal == "") )
-						{
-							imageRequest.cacheExhausted.push(testerField);
-							imageRequest.usedFields.push(testerField);
-							continue;
-						}
-
-						nextField = testerField;
-						break;
-					}
+					if( !!fieldValue )
+						return fieldName;
+					else
+						imageRequest.fields[fieldName] = "Bad";
 				}
 
-				return nextField;
+				// else return undefined
+			};
+
+			ImageLoader.prototype.getFieldValue = function(imageRequest, fieldName)
+			{
+				fieldStatus = imageRequest.fields[fieldName];
+				if( fieldStatus === "Unknown" )
+				{
+					underscorePos = fieldName.indexOf("_");
+					baseFieldName = (underscorePos >= 0) ? fieldName.substring(0, underscorePos) : fieldName;
+					baseFieldValue = imageRequest.item[baseFieldName];
+					fieldVariation = (underscorePos >= 0) ? fieldName.substring(underscorePos+1) : "";
+
+					if( !!baseFieldValue && baseFieldValue !== "" )
+					{
+						// generate the variation we want of this field
+						if( fieldVariation === "auto_cache" )
+						{
+							// try to extract a YouTube ID
+							extractedId = arcadeHud.extractYouTubeId(baseFieldValue);
+							if( !!extractedId )
+							{
+								// generate the YouTube thumbnail image URL
+								fieldValue = arcadeHud.generateYouTubeImageURL(extractedId);
+
+								// generate the CRC to the cached version of this web image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "auto" )
+						{
+							// try to extract a YouTube ID
+							extractedId = arcadeHud.extractYouTubeId(baseFieldValue);
+							if( !!extractedId )
+							{
+								// generate the YouTube thumbnail image URL
+								fieldValue = arcadeHud.generateYouTubeImageURL(extractedId);
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "cache" )
+						{
+							// confirm this baseFieldValue probably is an image
+							if( arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								fieldValue = baseFieldValue;
+
+								if( fieldValue.indexOf(":") === 1 )
+									fieldValue = "asset://local/" + fieldValue;
+								
+								// generate the CRC to the cached version of this image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+						}
+						else if( fieldVariation === "" )
+						{
+							// confirm this baseFieldValue probably is an image
+							if( arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								fieldValue = baseFieldValue;
+								if( fieldValue.indexOf(":") === 1 )
+									fieldValue = "asset://local/" + fieldValue;
+								return fieldValue;
+							}
+						}
+					}
+
+					imageRequest.fields[fieldName] = "Bad";
+				}
 			};
 
 			ImageLoader.prototype.onImageLoad = function(e)
@@ -334,54 +323,23 @@ function FindCRC(data_in) {
 				if( !!this.invalid )
 					return;
 
-				//if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
+				// check for abnormal load fails
 				if( (this.imageElem.src.indexOf("img.youtube.com/") >= 0 || this.imageElem.src.indexOf("file:///") === 0) && this.imageElem.width == 120 && this.imageElem.height == 90 )
 				{
 					imageLoader.onImageError.call(this);//().bind(this);
 				}
 				else
 				{
+					var fieldName = imageLoader.getNextField(this);
+
+					var underscorePos = fieldName.indexOf("_");
+					var baseFieldName = (underscorePos >= 0) ? fieldName.substring(0, underscorePos) : fieldName;
+
 					this.ready = true;
+					this.goodSrc = this.imageElem.src;
+					this.field = baseFieldName;
 					imageLoader.renderNextImage();
 				}
-			};
-
-			ImageLoader.prototype.extractYouTubeId = function(trailerURL)
-			{
-			  if( typeof trailerURL === "undefined" )
-			    return trailerURL;
-
-			  var youtubeid;
-			  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
-			  {
-			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
-
-			    var found = youtubeid.indexOf("&");
-			    if(found == -1)
-			    	found = youtubeid.indexOf("?");
-
-			    if( found > -1 )
-			      youtubeid = youtubeid.substr(0, found);
-			  }
-			  else
-			  {
-			    var found = trailerURL.indexOf("youtu.be/");
-			    if( found != -1 )
-			    {
-			      youtubeid = trailerURL.substr(found+9);
-
-			      found = youtubeid.indexOf("&");
-			      if(found == -1)
-			    	found = youtubeid.indexOf("?");
-			    
-			      if( found != -1 )
-			      {
-			        youtubeid = youtubeid.substr(0, found);
-			      }
-			    }
-			  }
-
-			  return youtubeid;
 			};
 
 			ImageLoader.prototype.onCompleteFailure = function(imageRequest)
@@ -402,71 +360,27 @@ function FindCRC(data_in) {
 				if( !!this.invalid )
 					return;
 
-				var elem = this.imageElem;
 
-				var nextField = imageLoader.getNextField(this);
+				var imageRequest = this;
 
-				if( !!nextField )
+				var nextField = imageLoader.getNextField(imageRequest);
+				imageRequest.fields[nextField] = "Bad";
+
+				nextField = imageLoader.getNextField(imageRequest);
+				if( !!!nextField )
 				{
-					this.field = nextField;
-
-					if( !!this.imageElem )
-						this.imageElem.parentNode.removeChild(this.imageElem);
-
-					this.imageElem = document.createElement("img");
-					this.imageElem.style.display = "none";
-					document.body.appendChild(this.imageElem);
-					this.imageElem.addEventListener("load", imageLoader.onImageLoad.bind(this), true);
-					this.imageElem.addEventListener("error", imageLoader.onImageError.bind(this), true);
-
-					var YouTubeId = imageLoader.extractYouTubeId(this.item[this.field]);
-					if( !!YouTubeId )
-					{
-						var goodSrc = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
-						this.goodSrc = goodSrc;
-
-						if( this.cacheExhausted.indexOf(this.field) === -1 )
-						{
-							goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
-							this.cacheExhausted.push(this.field);
-						}
-						else
-							this.usedFields.push(this.field);
-
-						this.imageElem.src = goodSrc;
-					}
-					else
-					{
-						var goodSrc = this.item[this.field];
-						this.goodSrc = goodSrc;
-
-						if( goodSrc.indexOf(":") === 1 )
-							goodSrc = "asset://local/" + goodSrc;
-
-						if( this.cacheExhausted.indexOf(this.field) === -1 )
-						{
-							goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
-							this.cacheExhausted.push(this.field);
-						}
-						else
-							this.usedFields.push(this.field);
-
-						this.imageElem.src = goodSrc;
-					}
+					imageLoader.onCompleteFailure(imageRequest);
+					return;
 				}
-				else
-					imageLoader.onCompleteFailure(this);
+
+				imageRequest.imageElem.goodSrc = imageLoader.getFieldValue(imageRequest, nextField);
+				imageRequest.imageElem.src = imageRequest.imageElem.goodSrc;
 			};
 
 			var imageLoader = new ImageLoader();
 
 			// all empty args means initialize
-//			setTimeout(function()
-//			{
-				//aaapi.system.simpleImageReady(this.channel, this.itemId, "");
-				aaapi.system.simpleImageReady("ready", "", "", "", "", false);
-//			}, 100);
-
+			aaapi.system.simpleImageReady("ready", "", "", "", "", false);
 		</script>
 	</body>
 </html>

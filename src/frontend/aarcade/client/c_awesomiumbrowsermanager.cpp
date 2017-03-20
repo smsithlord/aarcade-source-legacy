@@ -344,6 +344,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("adjustObjectOffset"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectRot"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectScale"), false);
+	systemObject.SetCustomMethod(WSLit("taskClear"), false);
 
 
 	// LIBRARY

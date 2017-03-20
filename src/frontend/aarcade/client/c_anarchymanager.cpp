@@ -6,6 +6,7 @@
 #include <cctype>
 #include <algorithm>
 #include "c_browseslate.h"
+//#include <regex>
 #include "../../sqlite/include/sqlite/sqlite3.h"
 //#include "mathlib/mathlib.h"
 //#include <math.h>
@@ -796,6 +797,499 @@ void C_AnarchyManager::Unpause()
 	}
 }
 
+bool C_AnarchyManager::AlphabetSafe(std::string text, std::string in_alphabet)
+{
+	std::string alphabet = (in_alphabet != "") ? in_alphabet : " 1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`-=[]\\;',./~!@#$%^&*()_+{}|:<>?";
+	char textBuf[AA_MAX_STRING];
+	Q_strcpy(textBuf, text.c_str());
+
+	unsigned int i = 0;
+	char tester = textBuf[i];
+	while (tester)
+	{
+		if (alphabet.find(tester) == std::string::npos)
+			return false;
+
+		i++;
+		tester = textBuf[i];
+	}
+
+	return true;
+}
+
+bool C_AnarchyManager::PrefixSafe(std::string text)
+{
+	// check for web
+	if (text.find("http://") == 0 || text.find("https://") == 0 || text.find("steam://") == 0)
+		return true;
+
+	// check for integer-only value
+	if (!Q_strcmp(VarArgs("%llu", Q_atoui64(text.c_str())), text.c_str()))
+		return true;
+
+	// check for single driveletter synatx
+	std::string driveAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	if (driveAlphabet.find(text.at(0)) != std::string::npos && text.at(1) == ':' && (text.at(2) == '\\' || text.at(2) == '/'))
+		return true;
+
+	/*
+	std::regex re("[a-zA-Z]:[\\\\/].*");
+	std::smatch match;
+	if (std::regex_search(text, match, re) && match.size() > 1)
+		return true;
+	*/
+
+	// NOT web, NOT steam app ID, and INVALID driveletter syntax
+	return false;
+}
+
+bool C_AnarchyManager::DirectorySafe(std::string text)
+{
+	// directories do not begin with a blank space or a % symbol
+	if (text.at(0) == ' ' || text.at(0) == '%' )
+		return false;
+
+	// directories also need to start with a safe character (that is out of the scope of this method.  AlphabetSafe can always be called to test that.
+	//if (!this->AlphabetSafe(text.substr(0, 1)))
+	//	 return false;
+
+	// - The following sequences should not be allowed: /.., \..
+	if (text.find("/..") != std::string::npos || text.find("\\..") != std::string::npos)
+		return false;
+
+	// - The following folders should be blacklisted: driveletter:/windows, driveletter:\windows
+	if (text.length() > 7)
+	{
+		if (!Q_stricmp(text.substr(3, 7).c_str(), "windows"))
+			return false;
+	}
+
+	return true;
+}
+
+bool C_AnarchyManager::ExecutableSafe(std::string text)
+{
+	// RULES:
+	// 1. [text] must only consist of characters in the safe alphabet.
+	// 2. [text] should be required to start with: http://, https://, steam://, driveletter:/, driveletter:\, or JUST an integer (to indicate a Steam App ID)
+	// 3. The following sequences should not be allowed: /.., \..
+	// 4. The following folders should be blacklisted: driveletter:/windows, driveletter:\windows
+	// 5. Environment variable paths are not allowed: %APPDATA%, etc.
+	// 6. Directories cannot begin with a blank space.
+
+	return (this->PrefixSafe(text) && this->DirectorySafe(text));
+}
+
+launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
+{
+	/*
+	// these items need improvements on how they are launched (they didn't work):
+	Launching Item:
+	Executable: C:\Users\Owner\Desktop\launcher - Shortcut.lnk
+	Directory:
+	Master Commands:
+
+	ALSO roms with full file locations as their file instead of just the short filename.
+	*/
+	DevMsg("LAUNCH THE SHIT!\n");
+
+	// genereate the executable, executableDirectory, and masterCommands values.
+	// then give these to the actual launch method.
+
+	bool bUnknownError = false;
+
+	// user resolvable errors to catch
+	bool bItemGood = false;
+	bool bItemFileGood = false;
+	bool bItemPathAllowed = false;
+	bool bAppGood = false;
+	bool bAppExecutableGood = false;
+	bool bAppFilepathGood = false;
+	bool bAtLeastOneAppFilepathExists = false;
+	bool bReadyToActuallyLaunch = false;
+
+	// required fields for ArcadeCreateProcess
+	std::string executable;
+	std::string executableDirectory;
+	std::string masterCommands;
+
+	// other fields used to generate the required fields
+	bool bHasApp = false;
+	bool bHasAppFilepath = false;
+	KeyValues* item = null;	// the KV of the item being used.
+	KeyValues* itemActive = null;	// the active node of the item KV.
+	std::string file;
+	std::string composedFile;
+	KeyValues* app = null;
+	KeyValues* appActive = null;
+	std::string appExecutable;
+	std::string appFilepath;
+	std::string appCommands;
+
+	launchErrorType_t errorType = NONE;
+	/*
+	if (!bItemGood)
+	errorType = ITEM_NOT_FOUND;
+	else if (!bItemFileGood)
+	errorType = ITEM_FILE_NOT_FOUND;
+	else if (!bItemPathAllowed)
+	errorType = ITEM_FILE_PATH_RESTRICTED;
+	else if (!bAppGood)
+	errorType = APP_NOT_FOUND;
+	else if (!bAppExecutableGood)
+	errorType = APP_FILE_NOT_FOUND;
+	else if (!bAppFilepathGood)
+	errorType = APP_PATH_NOT_FOUND;
+	*/
+
+	// attempt to get the item
+	item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+	if (item)
+	{
+		// if there is an item, attempt to get the active node kv
+		itemActive = item->FindKey("current");
+		if (!itemActive)
+			itemActive = item->FindKey("local", true);
+
+		if (itemActive)
+		{
+			bItemGood = true;
+
+			// if there is an active node kv for the item, attempt to get file
+			file = itemActive->GetString("file");
+			if (file != "")
+			{
+				// does it have an app?
+				if (Q_strcmp(itemActive->GetString("app"), ""))
+				{
+					bHasApp = true;
+
+					app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
+					appActive = app->FindKey("current");
+					if (!appActive)
+						appActive = app->FindKey("local", true);
+
+					if (appActive)
+					{
+						bAppGood = true;
+
+						// if there is an app, attempt to get its executable
+						appExecutable = appActive->GetString("file");
+						if (appExecutable != "")
+						{
+							bAppExecutableGood = true;
+
+							// just grab the FIRST filepath for now.
+							// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+							// Note: Apps are not required to have a filepath specified.
+							std::string testFile;
+							std::string testPath;
+							KeyValues* filepaths = appActive->FindKey("filepaths", true);
+							for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+							{
+								// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+								// (because in that case the local user probably needs to specify a correct location for it.)
+								bHasAppFilepath = true;
+
+								testPath = sub->GetString("path");
+
+								// test if this path exists
+								// FIXME: always assume it exists for now
+								//if (true)
+								if (g_pFullFileSystem->FileExists(testPath.c_str()))
+								{
+									bAtLeastOneAppFilepathExists = true;
+
+									// test if the file exists inside of this filepath
+									testFile = testPath + file;
+
+									// FIXME: always assume the file exists in this path for now.
+									if (g_pFullFileSystem->FileExists(testFile.c_str()))
+									{
+										composedFile = testFile;
+										appFilepath = testPath;
+										bAppFilepathGood = true;
+										bItemFileGood = true;
+										break;
+									}
+								}
+							}
+
+							// resolve the composedFile now
+							if (!bAppFilepathGood)
+								composedFile = file;
+
+							// generate the commands
+							// try to apply a command format
+							appCommands = appActive->GetString("commandformat");
+							if (appCommands != "")
+							{
+								// if the app has a command syntax, replace item variables with their values.
+
+								// replace $FILE with active->GetString("file")
+								// replace $QUOTE with a double quote
+								// replace $SHORTFILE with active->GetString("file")'s filename only
+								// replace etc.
+
+								size_t found;
+
+								found = appCommands.find("$FILE");
+								if (found != std::string::npos)
+								{
+									if (this->AlphabetSafe(composedFile) && this->DirectorySafe(composedFile))
+									{
+										while (found != std::string::npos)
+										{
+											appCommands.replace(found, 5, composedFile);
+											found = appCommands.find("$FILE");
+										}
+									}
+									else
+										errorType = UNKNOWN_ERROR;
+								}
+
+								found = appCommands.find("$QUOTE");
+								while (found != std::string::npos)
+								{
+									appCommands.replace(found, 6, "\"");
+									found = appCommands.find("$QUOTE");
+								}
+							}
+							else
+							{
+								// otherwise, apply the default Windows command syntax for "open with"
+								appCommands = "\"" + composedFile + "\"";
+							}
+						}
+					}
+				}
+
+				if (!bAppExecutableGood)
+					composedFile = file;
+
+				if (!bAppFilepathGood)
+				{
+					// check if the file exists.
+					// (file could also be an HTTP or STEAM protocol address at this point.)
+
+					// are we a web address missing an http?
+					if (composedFile.find("www.") == 0)
+						composedFile = "http://" + composedFile;
+
+					// is it a steam appid?
+					if (!Q_strcmp(VarArgs("%llu", Q_atoui64(composedFile.c_str())), composedFile.c_str()))
+					{
+						composedFile = "steam://run/" + composedFile;
+						bItemFileGood = true;
+					}
+					else if (composedFile.find("http") == 0)
+						bItemFileGood = true;
+					else if (g_pFullFileSystem->FileExists(composedFile.c_str()))
+						bItemFileGood = true;
+					//else if (true)	// check if local file exists // FIXME: assume it always exists for now
+						//bItemFileGood = true;
+				}
+			}
+		}
+	}
+
+	// if the security scrubs of the item's variables referenced by the app's launch syntax failed, we ALREADY have an error.
+	if (errorType != NONE)
+		return errorType;
+
+	// all variables are resolved, now do some logic.
+	if (bItemGood)
+	{
+		// check for a good app first, because that determines if the item file can be resolved.
+		if (bHasApp)
+		{
+			if (bAppGood)
+			{
+				if (bAppExecutableGood)
+				{
+					if (!bHasAppFilepath || bAtLeastOneAppFilepathExists)
+					{
+						if (bItemFileGood)
+						{
+							// executable
+							executable = appExecutable;
+
+							// executableDirectory
+							std::string dir = appExecutable;
+							size_t found = dir.find_last_of("/\\");
+							if (found != std::string::npos)
+								executableDirectory = dir.substr(0, found + 1);
+
+							// masterCommands
+							std::string shortAppFile = appExecutable;
+							found = shortAppFile.find_last_of("/\\");
+							if (found != std::string::npos)
+								shortAppFile = shortAppFile.substr(found + 1);
+
+							masterCommands = "\"" + shortAppFile + "\" " + appCommands;
+							bReadyToActuallyLaunch = true;
+						}
+						else
+						{
+							DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+							errorType = ITEM_FILE_NOT_FOUND;
+							//return;
+						}
+					}
+					else
+					{
+						DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+						errorType = APP_PATH_NOT_FOUND;
+						//return;
+					}
+				}
+				else
+				{
+					DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+					errorType = APP_FILE_NOT_FOUND;
+					//return;
+				}
+			}
+			else
+			{
+				DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+				errorType = APP_NOT_FOUND;
+				//return;
+			}
+		}
+		else
+		{
+			if (bItemFileGood)
+			{
+				// doesn't use an app
+				executable = composedFile;
+				executableDirectory = "";
+				masterCommands = "";
+				bReadyToActuallyLaunch = true;
+			}
+			else
+			{
+				DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+				errorType = ITEM_FILE_NOT_FOUND;
+				//return;
+			}
+		}
+	}
+	else
+	{
+		DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
+		errorType = ITEM_NOT_FOUND;
+		//return;
+	}
+
+	// all regular user-correctable errors would have been detected by now...
+	if (errorType != NONE)
+		return errorType;
+
+	// perform security checks now that all variables are resolved
+	// NOTE: masterCommands is generated from locally defined launch commands in the user's APP
+	// NOTE: executableDirectory is generated locally from the user's APP.  It is the same as the front of the executable provided by the user's APP.
+	// NOTE: executable potentially comes from the ITEM
+	// NOTE: malicious items might try to break out of the trusted app command syntax, so strict formatting in AcradeCreateProcess is required.
+	// NOTE: Untrusted item values being referenced by trusted app command syntax should be scrubbed through the alphabet & checked for breakout payloads.
+	if (!this->ExecutableSafe(executable))
+		errorType = UNKNOWN_ERROR;
+
+	if (errorType == NONE && bReadyToActuallyLaunch)
+	{
+		if (g_pAnarchyManager->GetInputManager()->GetInputMode())
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		// deslect any entity
+		if (g_pAnarchyManager->GetSelectedEntity())
+			g_pAnarchyManager->DeselectEntity("none");
+
+		// clear the embedded instance (to stop YT videos from playing, for example)
+		/*
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		C_EmbeddedInstance* pOldEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		if (pOldEmbeddedInstance && pOldEmbeddedInstance != pHudBrowserInstance)
+		{
+		//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
+		//g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pHudBrowserInstance);
+		pOldEmbeddedInstance->Close();
+		}
+		else
+		*/
+
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
+
+		// pause AArcade
+		g_pAnarchyManager->Pause();
+
+		// Write this live URL out to the save file.
+		if (cvar->FindVar("broadcast_mode")->GetBool())
+		{
+			std::string XSPlitLiveFolder = "Z:\\scripts";
+			FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", XSPlitLiveFolder.c_str()), "w+", "");
+
+			if (hFile)
+			{
+				std::string xml = "";
+				xml += "<div class=\"response\">\n";
+				xml += "\t<activetitle class=\"activetitle\">";
+
+				std::string xmlBuf = itemActive->GetString("title");
+
+				size_t found = xmlBuf.find("&");
+				while (found != std::string::npos)
+				{
+					xmlBuf.replace(found, 1, "&amp;");
+					found = xmlBuf.find("&", found + 5);
+				}
+
+				found = xmlBuf.find("<");
+				while (found != std::string::npos)
+				{
+					xmlBuf.replace(found, 1, "&lt;");
+					found = xmlBuf.find("<", found + 4);
+				}
+
+				found = xmlBuf.find(">");
+				while (found != std::string::npos)
+				{
+					xmlBuf.replace(found, 1, "&gt;");
+					found = xmlBuf.find(">", found + 4);
+				}
+
+				xml += xmlBuf;
+
+				xml += "</activetitle>\n";
+
+				xml += "</div>";
+
+				g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
+				g_pFullFileSystem->Close(hFile);
+			}
+
+			// Also update a JS file
+			hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
+
+			if (hFile)
+			{
+				std::string code = "gAnarchyTV.OnAArcadeCommand(\"startPlaying\", \"";
+				code += itemActive->GetString("info/id");
+				code += "\");\n";
+				g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
+				g_pFullFileSystem->Close(hFile);
+			}
+		}
+
+		// launch the item
+		g_pAnarchyManager->ArcadeCreateProcess(executable, executableDirectory, masterCommands);
+	}
+	//else
+	//	DevMsg("ERROR: Could not launch item.\n");
+
+	return errorType;
+}
+
 void C_AnarchyManager::BeginImportSteamGames()
 {
 	if (!this->IsInitialized())
@@ -954,28 +1448,33 @@ void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string e
 
 	if (!bIsDirectlyExecutable && executableDirectory == "" && masterCommands == "")
 	{
-		// Check for Kodi files
-		std::vector<std::string> kodiFileExtensions;
-		kodiFileExtensions.push_back(".avi");
-		kodiFileExtensions.push_back(".mpg");
-		kodiFileExtensions.push_back(".mp4");
-		kodiFileExtensions.push_back(".mpeg");
-		kodiFileExtensions.push_back(".vob");
-		kodiFileExtensions.push_back(".mkv");
-
+		bool bUseKodi = cvar->FindVar("kodi")->GetBool();
 		bool bIsKodiFileExtension = false;
-		unsigned int length = executable.length();
-		unsigned int max = kodiFileExtensions.size();
-		for (unsigned int i = 0; i < max; i++)
+		if (bUseKodi)
 		{
-			if (executable.find(kodiFileExtensions[i]) == length - kodiFileExtensions[i].length())
+			// Check for Kodi files
+			std::vector<std::string> kodiFileExtensions;
+			kodiFileExtensions.push_back(".avi");
+			kodiFileExtensions.push_back(".mpg");
+			kodiFileExtensions.push_back(".mp4");
+			kodiFileExtensions.push_back(".mpeg");
+			kodiFileExtensions.push_back(".vob");
+			kodiFileExtensions.push_back(".mkv");
+
+			bIsKodiFileExtension = false;
+			unsigned int length = executable.length();
+			unsigned int max = kodiFileExtensions.size();
+			for (unsigned int i = 0; i < max; i++)
 			{
-				bIsKodiFileExtension = true;
-				break;
+				if (executable.find(kodiFileExtensions[i]) == length - kodiFileExtensions[i].length())
+				{
+					bIsKodiFileExtension = true;
+					break;
+				}
 			}
 		}
 
-		if (bIsKodiFileExtension)
+		if (bUseKodi && bIsKodiFileExtension)
 		{
 			DevMsg("Launch option A\n");
 			std::string bufLocationString = executable;
@@ -997,10 +1496,11 @@ void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string e
 		}
 		else
 		{
-			DevMsg("Launch option B\n");
+			DevMsg("Launch option B: %s\n", executable.c_str());
 			//g_pVGuiSystem->ShellExecuteA("open", executable.c_str());
 
 			// NOW DO THE ACTUAL LAUNCHING STUFF
+			// old-style bat launching
 			FileHandle_t launch_file = filesystem->Open("Arcade_Launcher.bat", "w", "EXECUTABLE_PATH");
 
 			if (!launch_file)
@@ -1172,6 +1672,34 @@ void C_AnarchyManager::ShowTaskMenu()
 void C_AnarchyManager::HideTaskMenu()
 {
 	m_pInputManager->DeactivateInputMode(true);
+}
+
+void C_AnarchyManager::ObsoleteLegacyCommandReceived()
+{
+	DevMsg("Obsolete LEGACY command detected! Attempting to correct your keybinds for REDUX...\n");
+
+	if (g_pFullFileSystem->FileExists("config/config.cfg", "DEFAULT_WRITE_PATH"))
+	{
+		// make a uniquely named config_redux.cfg to make sure we exec the right one
+		CUtlBuffer buf;
+		if (filesystem->ReadFile("config/config.cfg", "DEFAULT_WRITE_PATH", buf))
+		{
+			filesystem->WriteFile("config/config_redux.cfg", "DEFAULT_WRITE_PATH", buf);
+			engine->ClientCmd("exec config_redux\n");
+		}
+	}
+	else
+	{
+		engine->ClientCmd("exec config_default_redux\n");
+	}
+}
+
+void C_AnarchyManager::TaskClear()
+{
+	if (this->GetSelectedEntity())
+		this->DeselectEntity();
+
+	m_pCanvasManager->CloseAllInstances();
 }
 
 void C_AnarchyManager::TaskRemember()

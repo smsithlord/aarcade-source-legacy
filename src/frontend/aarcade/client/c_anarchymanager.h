@@ -39,6 +39,17 @@ enum aaState
 	AASTATE_RUN = 17
 };
 
+enum launchErrorType_t {
+	NONE = 0,
+	UNKNOWN_ERROR = 1,
+	ITEM_NOT_FOUND = 2,
+	ITEM_FILE_NOT_FOUND = 3,
+	ITEM_FILE_PATH_RESTRICTED = 4,
+	APP_NOT_FOUND = 5,
+	APP_FILE_NOT_FOUND = 6,
+	APP_PATH_NOT_FOUND = 7
+};
+
 class C_AnarchyManager : public CAutoGameSystemPerFrame
 {
 public:
@@ -78,6 +89,12 @@ public:
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
 
+	launchErrorType_t LaunchItem(std::string id);
+	bool AlphabetSafe(std::string text, std::string in_alphabet = "");
+	bool PrefixSafe(std::string text);
+	bool DirectorySafe(std::string text);
+	bool ExecutableSafe(std::string text);
+
 	void BeginImportSteamGames();
 
 	void ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands);
@@ -88,9 +105,11 @@ public:
 	void HudStateNotify();
 	void SetSlaveScreen(bool bVal);
 
+	void TaskClear();
 	void TaskRemember();
 	void ShowTaskMenu();
 	void HideTaskMenu();
+	void ObsoleteLegacyCommandReceived();
 
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void Disconnect();

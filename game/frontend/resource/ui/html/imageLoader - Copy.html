@@ -1,0 +1,472 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			img
+			{
+				width: 512px;
+				height: 512px;
+				position: fixed;
+				top: 0;
+				left: 0;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script>
+		// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+Number.prototype.unsign = function(bytes) {
+    return this >= 0 ? this : Math.pow(256, bytes || 4) + this;
+};
+
+function FindCRC(data_in) {
+	var data = data_in.toLowerCase();
+	data = data.replace(/\//g,"\\");
+
+    var CRC = 0xffffffff;
+    data = data.toLowerCase();
+    for ( var j = 0; j < data.length; j++) {
+        var c = data.charCodeAt(j);
+        CRC ^= c << 24;
+        for ( var i = 0; i < 8; i++) {
+            if (CRC.unsign(8) & 0x80000000) {
+                CRC = (CRC << 1) ^ 0x04C11DB7;
+            } else {
+                CRC <<= 1;
+            }
+        }
+    }
+    if (CRC < 0)
+        CRC = CRC >>> 0;
+    var CRC_str = CRC.toString(16);
+    while (CRC_str.length < 8) {
+        CRC_str = '0' + CRC_str;
+    }
+
+    return CRC_str;
+}
+console.log("Yup");
+
+		// TODO: Make it so that MULTIPLE YouTubeIds are used when trying to find thumbnails, until one is found that actually works.
+
+			function ImageLoader()
+			{
+				this.sessionId = "loading";
+				//this.imageRenderElem;
+				
+				this.waitingToRender = false;
+				this.imageRequests = [];
+
+/*
+				this.fields = ["marquee", "screen"];
+				this.usedFields = [];
+				
+				this.item;
+				this.channel = "";
+				this.itemId = "";
+				this.field = "";
+*/
+			}
+
+			ImageLoader.prototype.renderNextImage = function()
+			{
+				var i;
+				// don't do anything if another image is already waiting to render
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )//|| this.imageRequests[i].removing )
+						return;
+				}
+
+				var imageRequest;
+				// find the 1st image that is ready (there will be at least one)
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].ready )
+					{
+						imageRequest = this.imageRequests[i];
+						imageRequest.imageElem.style.display = "block";
+						imageRequest.rendering = true;
+						break;
+					}
+				}
+
+				if( !!imageRequest )
+				{
+					//imageRequest.imageElem.offsetHeight;	// not enough!!
+					setTimeout(function()
+					{
+						aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, this.field, this.goodSrc, (this.imageElem.src.indexOf("asset://cache/") === 0));
+					}.bind(imageRequest), 100);	// delay because the image doesn't appear instantly when it is done loading
+				}
+			};
+
+			ImageLoader.prototype.onImageRender = function()
+			{
+				var i;
+				var imageRequest;
+				// find the request that just got rendered
+				for( i = 0; i < this.imageRequests.length; i++ )
+				{
+					if( this.imageRequests[i].rendering )
+					{
+						imageRequest = this.imageRequests[i];
+						//imageRequest.removing = true;
+						break;
+					}
+				}
+
+				if( !!!imageRequest )
+				{
+					console.log("ERROR: Could not find the most recent image request!");
+					return;
+				}
+
+				imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+
+				var index = this.imageRequests.indexOf(imageRequest);
+				if( index >= 0 )
+					this.imageRequests.splice(index, 1);
+
+				if( this.imageRequests.length > 0 )
+					this.renderNextImage();
+			};
+
+			ImageLoader.prototype.isImageExtension = function(value)
+			{
+				if( value.indexOf("cdn.steamcommunity") > -1 )
+					return true;
+
+				var extensions = "::tbn::jpg::jpeg::tiff::gif::bmp::png::webp::";
+				var ext = value;
+				var found = ext.lastIndexOf(".");
+				if( found >= 0 )
+				{
+					ext = ext.substring(found+1);
+					ext = ext.toLowerCase();
+
+					if( extensions.indexOf("::" + ext + "::") >= 0 )
+						return true;
+				}
+
+				return false;
+			};
+
+			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId)
+			{
+				if( sessionId !== this.sessionId )
+				{
+					var max = this.imageRequests.length;
+					var i;
+					for( i = 0; i < max; i++ )
+						this.imageRequests[i].invalid = true;
+
+					this.waitingToRender = false;
+					this.imageRequests = [];
+
+					var imgElems = document.body.querySelectorAll("img");
+					max = imgElems.length;
+					for( i = 0; i < max; i++ )
+						imgElems[i].parentNode.removeChild(imgElems[i]);
+
+					this.sessionId = sessionId;
+				}
+
+				var imageRequest = {
+					"sessionId": sessionId,	// obsolete cuz requests are invalidated now
+					"channel": channel,
+					"itemId": itemId,
+					"fields": new Array("marquee", "screen", "preview", "file"),
+					"usedFields": new Array(),
+					"cacheExhausted": new Array(),
+					"goodSrc": "",
+					"item": undefined,
+					"field": channel,
+					"imageElem": undefined,
+					"ready": false,
+					"rendering": false
+				};
+
+				// if we are looking for a screen, put the marquee last so it doesn't get re-used
+				if( imageRequest.field === "screen" )
+				{
+					var temp = imageRequest.fields.shift();
+					imageRequest.fields.push(temp);
+				}
+
+				this.imageRequests.push(imageRequest);
+
+				var item = aaapi.library.getLibraryItem(itemId);
+				if( !item )
+				{
+					console.log("Error: cannot load image for item " + itemId + " channel " + imageRequest.channel);
+
+					setTimeout(function()
+					{
+						var index = imageLoader.imageRequests.indexOf(this);
+						if( index >= 0 )
+							imageLoader.imageRequests.splice(index, 1);
+
+						aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, "", "", false);
+					}.bind(imageRequest), 100);
+					
+					return;
+				}
+				else
+					imageRequest.item = item;
+
+				var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+
+				if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
+				{
+					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
+						imageRequest.cacheExhausted.push(imageRequest.field);
+					else
+						imageRequest.usedFields.push(imageRequest.field);
+
+					var nextField = this.getNextField(imageRequest);
+					if( !!nextField )
+					{
+						imageRequest.field = nextField;
+					}
+					else
+					{
+						this.onCompleteFailure(imageRequest);
+						return;
+					}
+				}
+
+				// do this again incase the field has changed.
+				YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+
+				if( !!imageRequest.imageElem )
+					imageRequest.imageElem.parentNode.removeChild(imageRequest.imageElem);
+
+				imageRequest.imageElem = document.createElement("img");
+				imageRequest.imageElem.style.display = "none";
+
+				document.body.appendChild(imageRequest.imageElem);
+				imageRequest.imageElem.addEventListener("load", this.onImageLoad.bind(imageRequest), true);
+				imageRequest.imageElem.addEventListener("error", this.onImageError.bind(imageRequest), true);
+				//var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+				if( !!YouTubeId )
+				{
+					var goodSrc = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
+					imageRequest.goodSrc = goodSrc;
+					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
+					{
+						goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
+						imageRequest.cacheExhausted.push(imageRequest.field);
+					}
+
+					imageRequest.imageElem.src = goodSrc;
+				}
+				else
+				{
+					var goodSrc = imageRequest.item[imageRequest.field];
+					imageRequest.goodSrc = goodSrc;
+
+					if( goodSrc.indexOf(":") === 1 )
+						goodSrc = "asset://local/" + goodSrc;
+
+					if( imageRequest.cacheExhausted.indexOf(imageRequest.field) === -1 )
+					{
+						goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
+						imageRequest.cacheExhausted.push(imageRequest.field);
+					}
+
+					imageRequest.imageElem.src = goodSrc;
+				}
+				//imageRequest.imageElem.src = imageRequest.item[imageRequest.field];
+			};
+
+			ImageLoader.prototype.getNextField = function(imageRequest)
+			{
+				var nextField;
+				if( !!!imageRequest.fields )
+					return nextField;
+
+				var i, testerField;
+				for( i = 0; i < imageRequest.fields.length; i++ )
+				{
+					//// ODD fields are cached fields.
+					var testerField = imageRequest.fields[i];
+					//if( i % 2 > 0 )
+					//	testerField = "cached" + testerField;
+
+					//if(imageRequest.usedFields.indexOf(imageRequest.fields[i]) < 0 && imageRequest.item[imageRequest.fields[i]] != "" && imageRequest.item[imageRequest.fields[i]].indexOf("file:///") !== 0 && imageRequest.item[imageRequest.fields[i]].indexOf("\\") === -1)
+
+//					var YouTubeId = imageLoader.extractYouTubeId(imageRequest.item[imageRequest.field]);
+//					if( imageRequest.item[imageRequest.field] == "" || (!!!YouTubeId && !imageLoader.isImageExtension(imageRequest.item[imageRequest.field])) )
+
+					//if( imageRequest.usedFields.indexOf(testerField) === -1 && imageRequest.item[testerField] != "" )
+					if( imageRequest.usedFields.indexOf(testerField) === -1 )
+					{
+						var NextYouTubeId = imageLoader.extractYouTubeId(imageRequest.item[testerField]);
+
+						var fieldVal = imageRequest.item[testerField];
+						//if( imageRequest.cacheExhausted.indexOf(testerField) === -1 )
+						//{
+						//	NextYouTubeId = undefined;
+						//	fieldVal = "asset://cache/" + FindCRC(imageRequest.item[testerField]) + ".jpg";
+						//	imageRequest.cacheExhausted.push(testerField);
+						//}
+
+						if( (!!!NextYouTubeId && (!imageLoader.isImageExtension(fieldVal)) || fieldVal == "") )
+						{
+							imageRequest.cacheExhausted.push(testerField);
+							imageRequest.usedFields.push(testerField);
+							continue;
+						}
+
+						nextField = testerField;
+						break;
+					}
+				}
+
+				return nextField;
+			};
+
+			ImageLoader.prototype.onImageLoad = function(e)
+			{
+				if( !!this.invalid )
+					return;
+
+				//if( this.imageElem.src.indexOf("img.youtube.com/") >= 0 && this.imageElem.width == 120 && this.imageElem.height == 90 )
+				if( (this.imageElem.src.indexOf("img.youtube.com/") >= 0 || this.imageElem.src.indexOf("file:///") === 0) && this.imageElem.width == 120 && this.imageElem.height == 90 )
+				{
+					imageLoader.onImageError.call(this);//().bind(this);
+				}
+				else
+				{
+					this.ready = true;
+					imageLoader.renderNextImage();
+				}
+			};
+
+			ImageLoader.prototype.extractYouTubeId = function(trailerURL)
+			{
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+
+			  var youtubeid;
+			  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+			  {
+			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+			    var found = youtubeid.indexOf("&");
+			    if(found == -1)
+			    	found = youtubeid.indexOf("?");
+
+			    if( found > -1 )
+			      youtubeid = youtubeid.substr(0, found);
+			  }
+			  else
+			  {
+			    var found = trailerURL.indexOf("youtu.be/");
+			    if( found != -1 )
+			    {
+			      youtubeid = trailerURL.substr(found+9);
+
+			      found = youtubeid.indexOf("&");
+			      if(found == -1)
+			    	found = youtubeid.indexOf("?");
+			    
+			      if( found != -1 )
+			      {
+			        youtubeid = youtubeid.substr(0, found);
+			      }
+			    }
+			  }
+
+			  return youtubeid;
+			};
+
+			ImageLoader.prototype.onCompleteFailure = function(imageRequest)
+			{
+				// empty field means failed to load image
+				setTimeout(function()
+				{
+					var index = imageLoader.imageRequests.indexOf(this);
+					if( index >= 0 )
+						imageLoader.imageRequests.splice(index, 1);
+
+					aaapi.system.simpleImageReady(this.sessionId, this.channel, this.itemId, "", "", false);
+				}.bind(imageRequest), 100);
+			};
+
+			ImageLoader.prototype.onImageError = function(e)
+			{
+				if( !!this.invalid )
+					return;
+
+				var elem = this.imageElem;
+
+				var nextField = imageLoader.getNextField(this);
+
+				if( !!nextField )
+				{
+					this.field = nextField;
+console.log(this.field);
+					if( !!this.imageElem )
+						this.imageElem.parentNode.removeChild(this.imageElem);
+
+					this.imageElem = document.createElement("img");
+					this.imageElem.style.display = "none";
+					document.body.appendChild(this.imageElem);
+					this.imageElem.addEventListener("load", imageLoader.onImageLoad.bind(this), true);
+					this.imageElem.addEventListener("error", imageLoader.onImageError.bind(this), true);
+
+					var YouTubeId = imageLoader.extractYouTubeId(this.item[this.field]);
+					if( !!YouTubeId )
+					{
+						var goodSrc = "http://img.youtube.com/vi/" + YouTubeId + "/0.jpg";
+						this.goodSrc = goodSrc;
+
+						if( this.cacheExhausted.indexOf(this.field) === -1 )
+						{
+							goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
+							this.cacheExhausted.push(this.field);
+						}
+						else
+							this.usedFields.push(this.field);
+
+						this.imageElem.src = goodSrc;
+					}
+					else
+					{
+						var goodSrc = this.item[this.field];
+						this.goodSrc = goodSrc;
+
+						if( goodSrc.indexOf(":") === 1 )
+							goodSrc = "asset://local/" + goodSrc;
+
+						if( this.cacheExhausted.indexOf(this.field) === -1 )
+						{
+							goodSrc = "asset://cache/" + FindCRC(goodSrc) + ".jpg";
+							this.cacheExhausted.push(this.field);
+						}
+						else
+							this.usedFields.push(this.field);
+
+						this.imageElem.src = goodSrc;
+					}
+				}
+				else
+					imageLoader.onCompleteFailure(this);
+			};
+
+			var imageLoader = new ImageLoader();
+
+			// all empty args means initialize
+//			setTimeout(function()
+//			{
+				//aaapi.system.simpleImageReady(this.channel, this.itemId, "");
+				aaapi.system.simpleImageReady("ready", "", "", "", "", false);
+//			}, 100);
+
+		</script>
+	</body>
+</html>

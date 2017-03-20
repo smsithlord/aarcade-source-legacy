@@ -1789,10 +1789,88 @@ ArcadeHud.prototype.getParameterByName = function(name, url)
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 };
 
+ArcadeHud.prototype.isImageExtension = function(url)
+{
+	var re = /(.bmp|.ico|.gif|.jpg|.jpeg|.jpe|.jp2|.pcx|.pic|.png|.pix|.raw|.tga|.tif|.vtf|.tbn)$/i;
+
+	if( url.match(re) || url.indexOf("cdn.steamcommunity") > -1 )
+		return true;
+	else
+		return false;
+};
+
+ArcadeHud.prototype.loadItemBestImage = function(imageElem, item)
+{
+	var dummy = {
+		"imageElem": imageElem,
+		"item": item,
+		"potentials":
+		{
+			"marquee": true,
+			"screen": true,
+			"preview": true,
+			"file": true
+		},
+		"re": /(.bmp|.ico|.gif|.jpg|.jpeg|.jpe|.jp2|.pcx|.pic|.png|.pix|.raw|.tga|.tif|.vtf|.tbn)$/i
+	};
+
+	function getNextPotential()
+	{
+		var i;
+		var keys = Object.keys(this.potentials);
+		var potential;
+		for( i = 0; i < keys.length; i++ )
+		{
+			potential = keys[i];//this.potentials[keys[i]];
+			//console.log(potential);
+
+			if( this.item[potential].match(this.re) )
+				return potential;
+			else
+				delete this.potentials[potential];
+		}
+	}
+
+	function tryPotential()
+	{
+		var potential = getNextPotential.call(this);
+		console.log("Potential is: " + potential);
+		if( !!potential )
+			this.imageElem.src = item[potential];
+			//tryPotential.call(this);		
+	}
+
+	imageElem.addEventListener("error", function()
+	{
+		// remove the failed potential
+		var potential = getNextPotential.call(this);
+		if( !!potential )
+			delete this.potentials[potential];
+
+		tryPotential.call(this);
+	}.bind(dummy));
+
+	imageElem.addEventListener("load", function()
+	{
+		this.imageElem.style.display = "block";
+	}.bind(dummy));
+
+	tryPotential.call(dummy);
+};
+
 ArcadeHud.prototype.loadItemMarqueeImage = function(imageElem, item)
 {
 	imageElem.src = item.marquee;
-	imageElem.style.display = "block";
+};
+
+ArcadeHud.prototype.loadItemScreenImage = function(imageElem, item)
+{
+	imageElem.src = item.screen;
+};
+
+ArcadeHud.prototype.loadItemFileImage = function(imageElem, item)
+{
+	imageElem.src = item.file;
 };
 
 ArcadeHud.prototype.viewStream = function()
@@ -1812,6 +1890,76 @@ ArcadeHud.prototype.encodeRFC5987ValueChars = function(str){
             // The following are not required for percent-encoding per RFC5987, 
             // so we can allow for a little better readability over the wire: |`^
             replace(/%(?:7C|60|5E)/g, unescape);
+};
+
+// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+ArcadeHud.prototype.generateCRC = function(data_in)
+{
+	var data = data_in.toLowerCase();
+	data = data.replace(/\//g,"\\");
+
+    var CRC = 0xffffffff;
+    data = data.toLowerCase();
+    for ( var j = 0; j < data.length; j++) {
+        var c = data.charCodeAt(j);
+        CRC ^= c << 24;
+        for ( var i = 0; i < 8; i++) {
+            if (CRC.unsign(8) & 0x80000000) {
+                CRC = (CRC << 1) ^ 0x04C11DB7;
+            } else {
+                CRC <<= 1;
+            }
+        }
+    }
+    if (CRC < 0)
+        CRC = CRC >>> 0;
+    var CRC_str = CRC.toString(16);
+    while (CRC_str.length < 8) {
+        CRC_str = '0' + CRC_str;
+    }
+
+    return CRC_str;
+};
+
+ArcadeHud.prototype.generateYouTubeImageURL = function(youtubeid)
+{
+	var url = "http://img.youtube.com/vi/" + youtubeid + "/0.jpg";
+	return url;
+};
+
+ArcadeHud.prototype.extractYouTubeId = function(url)
+{
+	var youtubeid;
+	if( url.indexOf("youtube") != -1 && url.indexOf("v=") != -1 )
+	{
+		youtubeid = url.substr(url.indexOf("v=")+2);
+
+		var found = youtubeid.indexOf("&");
+		if(found == -1)
+			found = youtubeid.indexOf("?");
+
+		if( found > -1 )
+			youtubeid = youtubeid.substr(0, found);
+	}
+	else
+	{
+		var found = url.indexOf("youtu.be/");
+		if( found != -1 )
+		{
+			youtubeid = url.substr(found+9);
+
+			found = youtubeid.indexOf("&");
+			if(found == -1)
+				found = youtubeid.indexOf("?");
+
+			if( found != -1 )
+			{
+				youtubeid = youtubeid.substr(0, found);
+			}
+		}
+	}
+
+	return youtubeid;
 };
 
 ArcadeHud.prototype.onTitleChanged = function(title)
@@ -1919,6 +2067,12 @@ ArcadeHud.prototype.addScraper = function(scraper)
 ArcadeHud.prototype.init = function()
 {
 	this.loadHeadScript("scrapers.js");
+};
+
+// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+Number.prototype.unsign = function(bytes)
+{
+	return this >= 0 ? this : Math.pow(256, bytes || 4) + this;
 };
 
 var arcadeHud = new ArcadeHud();

@@ -104,7 +104,7 @@ function ExtractTwitchId(trailerURL)
       var fieldValue = "";
       if( preview != "")
         fieldValue = preview;
-      else if( file.indexOf("http") === 0 )
+      else if( file.indexOf("http") === 0 || isImageEnding(file))
         fieldValue = file;
       else if( screen != "" )
         fieldValue = screen;

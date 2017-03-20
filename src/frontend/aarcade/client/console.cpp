@@ -16,6 +16,7 @@
 ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);
 ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);
 ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);
+ConVar kodi("kodi", "0", FCVAR_ARCHIVE, "Set to 1 to use Kodi playback of video files using the settings in kodi_info variable.");
 ConVar kodi_info("kodi_info", "xbmc:xbmc@192.168.0.100:8080", FCVAR_ARCHIVE, "The username:password@ip:port of the 1st Kodi host.");
 
 bool IsFileEqual(const char* inFileA, std::string inFileB)
@@ -31,6 +32,50 @@ bool IsFileEqual(const char* inFileA, std::string inFileB)
 
 	return (fileA == fileB);
 }
+
+// A LEGACY COMMAND BEING ISSUED MEANS THAT THE PLAYER SHOULD HAVE THEIR KEYBINDS CONFIG RESET FOR REDUX!!
+void legacyShowHelpVideo(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_show_help_video("showhelpvideo", legacyShowHelpVideo, "Usage: obsolete");
+
+void legacyRemember(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_remember("+remember", legacyRemember, "Usage: obsolete");
+
+void legacyFocus(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_focus("focus", legacyFocus, "Usage: obsolete");
+
+void legacyHdviewInputToggle(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_hdview_input_toggle("+hdview_input_toggle", legacyHdviewInputToggle, "Usage: obsolete");
+
+void legacyCreateHotlink(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_create_hotlink("createhotlink", legacyCreateHotlink, "Usage: obsolete");
+
+void legacyZoomToggle(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_zoom_toggle("zoomtoggle", legacyZoomToggle, "Usage: obsolete");
+
+void legacyRewards(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_rewards("rewards", legacyRewards, "Usage: obsolete");
+
+void legacyBrowser(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_browser("browser", legacyBrowser, "Usage: obsolete");
+
+void legacyDatabases(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_databases("databases", legacyDatabases, "Usage: obsolete");
+
+void legacyScreenCap(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_screen_cap("screencap", legacyScreenCap, "Usage: obsolete");
+
+void legacyFbShare(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_fb_share("fbshare", legacyFbShare, "Usage: obsolete");
+
+void legacyContinuous(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_continuous("continuous", legacyContinuous, "Usage: obsolete");
+
+void legacySmarcadeMotd(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_smarcade_motd("smarcade_motd", legacySmarcadeMotd, "Usage: obsolete");
+
+void legacyAaEscape(const CCommand &args){ g_pAnarchyManager->ObsoleteLegacyCommandReceived(); }
+ConCommand legacy_aa_escape("aa_escape", legacyAaEscape, "Usage: obsolete");
+// END OF LEGACY COMMANDS
 
 void DumpItem(const CCommand &args)
 {
@@ -574,7 +619,7 @@ void ImportSteamGames(const CCommand &args)
 	g_pAnarchyManager->BeginImportSteamGames();
 }
 ConCommand import_steam_games("import_steam_games", ImportSteamGames, "Usage: imports your steam games from your public profile");
-
+/*
 void WheelUp(const CCommand &args)
 {
 	g_pAnarchyManager->GetInputManager()->OnMouseWheeled(1);
@@ -586,7 +631,7 @@ void WheelDown(const CCommand &args)
 	g_pAnarchyManager->GetInputManager()->OnMouseWheeled(-1);
 }
 ConCommand wheel_down("wheeldown", WheelDown, "Usage: mouse wheel down");
-
+*/
 void RunEmbeddedLibretro(const CCommand &args)
 {
 	C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
@@ -644,20 +689,17 @@ void RunEmbeddedAwesomiumBrowser(const CCommand &args)
 }
 ConCommand run_embedded_awesomium_browser("run_embedded_awesomium_browser", RunEmbeddedAwesomiumBrowser, "Usage: runs embedded apps");
 
-void Continuous(const CCommand &args)
+void TaskRemember(const CCommand &args)
 {
 	g_pAnarchyManager->TaskRemember();
 }
-ConCommand continuous("task_remember", Continuous, "Usage: sets the selected entity as continuous play.");
+ConCommand task_remember("task_remember", TaskRemember, "Usage: sets the selected entity as continuous play.");
 
-void CloseAll(const CCommand &args)
+void TaskClear(const CCommand &args)
 {
-	if (g_pAnarchyManager->GetSelectedEntity())
-		g_pAnarchyManager->DeselectEntity();
-
-	g_pAnarchyManager->GetCanvasManager()->CloseAllInstances();
+	g_pAnarchyManager->TaskClear();
 }
-ConCommand closeall("task_clear", CloseAll, "Usage: closes all open instaces (execpt for important game system ones)");
+ConCommand task_clear("task_clear", TaskClear, "Usage: closes all open instaces (execpt for important game system ones)");
 
 void ShowTaskMenu(const CCommand &args)
 {
@@ -678,12 +720,13 @@ void RememberWrapper(const CCommand &args)
 }
 ConCommand rememberwrapper("-remember", RememberWrapper, "Usage: wrapper for the remember button to mean setcontinous now.");
 */
-
+/*
 void RunAArcade(const CCommand &args)
 {
 	g_pAnarchyManager->RunAArcade();
 }
 ConCommand run_aarcade("run_aarcade", RunAArcade, "Usage: runs AArcade");
+*/
 
 /*
 void TestFunction2( const CCommand &args )
@@ -714,11 +757,13 @@ void AnarchyManager(const CCommand &args)
 {
 	g_pAnarchyManager->AnarchyStartup();
 }
-
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
 
 void BuildContextUp(const CCommand &args)
 {
+	if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject())
+		return;
+
 	// check if a propshortcut is under the player's crosshair
 	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
 	if (Q_strcmp(pPlayer->GetActiveWeapon()->GetName(), "weapon_physcannon"))

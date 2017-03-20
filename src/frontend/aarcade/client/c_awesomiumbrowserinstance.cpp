@@ -56,6 +56,7 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
+		DevMsg("Unreferencing texture %s\n", m_pTexture->GetName());
 		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
 		m_pTexture->DecrementReferenceCount();	// FIXME: this is hte next statement to execute on an exit crash after checkin out a level...
 		m_pTexture->DeleteIfUnreferenced();

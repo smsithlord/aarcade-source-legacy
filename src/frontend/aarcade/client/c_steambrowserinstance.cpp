@@ -103,6 +103,7 @@ C_SteamBrowserInstance::~C_SteamBrowserInstance()
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
+		DevMsg("Unreferencing texture %s\n", m_pTexture->GetName());
 		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
 		//m_pTexture->SetTextureRegenerator(null);
 		m_pTexture->DecrementReferenceCount();
@@ -1072,10 +1073,10 @@ C_EmbeddedInstance* C_SteamBrowserInstance::GetParentSelectedEmbeddedInstance()
 void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	// don't send alt button for now (it can cause crashes sometimes?
-	if (code == KEY_LALT || code == KEY_RALT)
+	if (code == KEY_LALT || code == KEY_RALT || code == BUTTON_CODE_NONE || code == BUTTON_CODE_INVALID)
 		return;
 
-	// FIXME: Can crash at the following line, probably due to a Steamworks browser crash!!
+	// FIXME: Can crash at the following line, probably due to a Steamworks browser crash!! (from from the CODE_NONE and CODE_INVALID checks that didn't used to be included above...)
 	steamapicontext->SteamHTMLSurface()->KeyDown(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());
 
 	std::string s_output = this->GetOutput(code, bShiftState, bCtrlState, bAltState);
@@ -1093,7 +1094,7 @@ void C_SteamBrowserInstance::OnKeyCodePressed(vgui::KeyCode code, bool bShiftSta
 void C_SteamBrowserInstance::OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
 {
 	// don't send alt button for now (it can cause crashes sometimes?
-	if (code == KEY_LALT || code == KEY_RALT)
+	if (code == KEY_LALT || code == KEY_RALT || code == BUTTON_CODE_NONE || code == BUTTON_CODE_INVALID)
 		return;
 
 	steamapicontext->SteamHTMLSurface()->KeyUp(m_unHandle, KeyCode_VGUIToVirtualKey(code), (ISteamHTMLSurface::EHTMLKeyModifiers)GetKeyModifiersAlt());

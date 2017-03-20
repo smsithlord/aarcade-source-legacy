@@ -5,14 +5,37 @@
 	<body>
 		<div style="margin-left: auto; margin-right: auto; background-color: rgba(0, 0, 0, 0.9); font-size: 50px; font-weight: 900; font-family: Arial; top: 50%; position: fixed; width: 100%; text-shadow: 5px 5px 2px #000;">
 			<center>
-				<i style="color: #999;">PAUSED</i><br />
-				PRESS ESCAPE TO RESUME
+				<div id="content">
+					<i style="color: #999;">PAUSED</i><br />
+					PRESS ESCAPE TO RESUME
+				</div>
+				<div id="failed" style="display: none;">
+					AArcade couldn't launch that shortcut.
+					<div style="font-size: 22px;">
+						ERROR: <div id="failedReason" style="display: inline; color: #ff6666;"></div><br /><br />
+						<div class="mainButton helpNote" help="Try again if after you're able to fix the error." onclick="window.location='asset://ui/blank.html';" style="width: 150px;">OK</div>
+					</div>
+				</div>
 			</center>
 		</div>
 
 <!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		<script>
+
+		function launchFailed(errorType)
+		{
+			console.log("LAUNCH FAIIIILED!");
+			console.log(errorType);
+
+			var contentElem = document.querySelector("#content");
+			contentElem.style.display = "none";
+
+			var failedElem = document.querySelector("#failed");
+			failedReasonElem = document.querySelector("#failedReason");
+			failedReasonElem.innerHTML = errorType;
+			failedElem.style.display = "block";
+		}
 
 		var kodiListener = {
 			"play": function(kodiInfo, file)
@@ -38,7 +61,7 @@
 			}
 		};
 
-		console.log(kodiListener);
+		//console.log(kodiListener);
 
 
 		//PRESS ESCAPE TO RESUME

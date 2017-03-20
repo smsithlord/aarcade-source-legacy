@@ -37,6 +37,7 @@ C_LibretroInstance::~C_LibretroInstance()
 	{
 		m_pTexture->SetTextureRegenerator(null);
 
+		DevMsg("Unreferencing texture %s\n", m_pTexture->GetName());
 		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
 		m_pTexture->DecrementReferenceCount();
 		m_pTexture->DeleteIfUnreferenced();

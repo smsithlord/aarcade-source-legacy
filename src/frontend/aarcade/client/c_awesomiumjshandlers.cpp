@@ -227,350 +227,30 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 	else if (method_name == WSLit("launchItem"))
 	{
-		/*
-		// these items need improvements on how they are launched (they didn't work):
-		Launching Item: 
-			Executable: C:\Users\Owner\Desktop\launcher - Shortcut.lnk
-			Directory: 
-			Master Commands: 
-
-			ALSO roms with full file locations as their file instead of just the short filename.
-		*/
-		DevMsg("LAUNCH THE SHIT!\n");
-
-		// genereate the executable, executableDirectory, and masterCommands values.
-		// then give these to the actual launch method.
-
-		bool bUnknownError = false;
-
-		// user resolvable errors to catch
-		bool bItemGood = false;
-		bool bItemFileGood = false;
-		bool bAppGood = false;
-		bool bAppExecutableGood = false;
-		bool bAppFilepathGood = false;
-		bool bAtLeastOneAppFilepathExists = false;
-		bool bReadyToActuallyLaunch = false;
-
-		// required fields for ArcadeCreateProcess
-		std::string executable;
-		std::string executableDirectory;
-		std::string masterCommands;
-
-		// other fields used to generate the required fields
-		bool bHasApp = false;
-		bool bHasAppFilepath = false;
 		std::string id = WebStringToCharString(args[0].ToString());
-		KeyValues* item = null;	// the KV of the item being used.
-		KeyValues* itemActive = null;	// the active node of the item KV.
-		std::string file;
-		std::string composedFile;
-		KeyValues* app = null;
-		KeyValues* appActive = null;
-		std::string appExecutable;
-		std::string appFilepath;
-		std::string appCommands;
-		
-		// attempt to get the item
-		item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
-		if (item)
-		{
-			// if there is an item, attempt to get the active node kv
-			itemActive = item->FindKey("current");
-			if (!itemActive)
-				itemActive = item->FindKey("local", true);
+		launchErrorType_t error = g_pAnarchyManager->LaunchItem(id);
 
-			if (itemActive)
-			{
-				bItemGood = true;
+		std::string code = "launchFailed(\"";
 
-				// if there is an active node kv for the item, attempt to get file
-				file = itemActive->GetString("file");
-				if (file != "")
-				{
-					// does it have an app?
-					if (Q_strcmp(itemActive->GetString("app"), ""))
-					{
-						bHasApp = true;
+		if (error == UNKNOWN_ERROR)
+			code += "UNKNOWN_ERROR";
+		else if (error == ITEM_NOT_FOUND)
+			code += "ITEM_NOT_FOUND";
+		else if (error == ITEM_FILE_NOT_FOUND)
+			code += "ITEM_FILE_NOT_FOUND";
+		else if (error == ITEM_FILE_PATH_RESTRICTED)
+			code += "ITEM_FILE_PATH_RESTRICTED";
+		else if (error == APP_NOT_FOUND)
+			code += "APP_NOT_FOUND";
+		else if (error == APP_FILE_NOT_FOUND)
+			code += "APP_FILE_NOT_FOUND";
+		else if (error == APP_PATH_NOT_FOUND)
+			code += "APP_PATH_NOT_FOUND";
 
-						app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
-						appActive = app->FindKey("current");
-						if (!appActive)
-							appActive = app->FindKey("local", true);
+		code += "\");";
 
-						if (appActive)
-						{
-							bAppGood = true;
-
-							// if there is an app, attempt to get its executable
-							appExecutable = appActive->GetString("file");
-							if (appExecutable != "")
-							{
-								bAppExecutableGood = true;
-
-								// just grab the FIRST filepath for now.
-								// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
-								// Note: Apps are not required to have a filepath specified.
-								std::string testFile;
-								std::string testPath;
-								KeyValues* filepaths = appActive->FindKey("filepaths", true);
-								for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-								{
-									// true if even 1 filepath exists for the app, even if it is not found on the local PC.
-									// (because in that case the local user probably needs to specify a correct location for it.)
-									bHasAppFilepath = true;
-
-									testPath = sub->GetString("path");
-
-									// test if this path exists
-									// FIXME: always assume it exists for now
-									if (true)
-									{
-										bAtLeastOneAppFilepathExists = true;
-
-										// test if the file exists inside of this filepath
-										testFile = testPath + file;
-
-										// FIXME: always assume the file exists in this path for now.
-										if (true)
-										{
-											composedFile = testFile;
-											appFilepath = testPath;
-											bAppFilepathGood = true;
-											bItemFileGood = true;
-											break;
-										}
-									}
-								}
-
-								// resolve the composedFile now
-								if (!bAppFilepathGood)
-									composedFile = file;
-
-								// generate the commands
-								// try to apply a command format
-								appCommands = appActive->GetString("commandformat");
-								if (appCommands != "")
-								{
-									// if the app has a command syntax, replace item variables with their values.
-
-									// replace $FILE with active->GetString("file")
-									// replace $QUOTE with a double quote
-									// replace $SHORTFILE with active->GetString("file")'s filename only
-									// replace etc.
-
-									size_t found = appCommands.find("$FILE");
-									while (found != std::string::npos)
-									{
-										appCommands.replace(found, 5, composedFile);
-										found = appCommands.find("$FILE");
-									}
-
-									found = appCommands.find("$QUOTE");
-									while (found != std::string::npos)
-									{
-										appCommands.replace(found, 6, "\"");
-										found = appCommands.find("$QUOTE");
-									}
-								}
-								else
-								{
-									// otherwise, apply the default Windows command syntax for "open with"
-									appCommands = "\"" + composedFile + "\"";
-								}
-							}
-						}
-					}
-
-					if (!bAppExecutableGood)
-						composedFile = file;
-
-					if (!bAppFilepathGood)
-					{
-						// check if the file exists.
-						// (file could also be an HTTP or STEAM protocol address at this point.)
-
-						// are we a web address missing an http?
-						if (composedFile.find("www.") == 0)
-							composedFile = "http://" + composedFile;
-
-						// is it a steam appid?
-						if (!Q_strcmp(VarArgs("%llu", Q_atoui64(composedFile.c_str())), composedFile.c_str()))
-						{
-							composedFile = "steam://run/" + composedFile;
-							bItemFileGood = true;
-						}
-						else if (composedFile.find("http") == 0 )
-							bItemFileGood = true;
-						else if (true)	// check if local file exists // FIXME: assume it always exists for now
-							bItemFileGood = true;
-					}
-				}
-			}
-		}
-
-		// all variables are resolved, now do some logic.
-		if (bItemGood)
-		{
-			// check for a good app first, because that determines if the item file can be resolved.
-			if (bHasApp)
-			{
-				if (bAppGood)
-				{
-					if (bAppExecutableGood)
-					{
-						if (bItemFileGood)
-						{
-							// executable
-							executable = appExecutable;
-
-							// executableDirectory
-							std::string dir = appExecutable;
-							size_t found = dir.find_last_of("/\\");
-							if (found != std::string::npos)
-								executableDirectory = dir.substr(0, found + 1);
-
-							// masterCommands
-							std::string shortAppFile = appExecutable;
-							found = shortAppFile.find_last_of("/\\");
-							if (found != std::string::npos)
-								shortAppFile = shortAppFile.substr(found + 1);
-
-							masterCommands = "\"" + shortAppFile + "\" " + appCommands;
-							bReadyToActuallyLaunch = true;
-						}
-						else
-						{
-							DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
-							return;
-						}
-					}
-					else
-					{
-						DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
-						return;
-					}
-				}
-				else
-				{
-					DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
-					return;
-				}
-			}
-			else
-			{
-				if (bItemFileGood)
-				{
-					// doesn't use an app
-					executable = composedFile;
-					executableDirectory = "";
-					masterCommands = "";
-					bReadyToActuallyLaunch = true;
-				}
-				else
-				{
-					DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
-					return;
-				}
-			}
-		}
-		else
-		{
-			DevMsg("USER-RESOLVABLE-LAUNCH-ERROR: Show it, bra.\n");
-			return;
-		}
-
-		if (bReadyToActuallyLaunch)
-		{
-			if (g_pAnarchyManager->GetInputManager()->GetInputMode())
-				g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-
-			// deslect any entity
-			if (g_pAnarchyManager->GetSelectedEntity())
-				g_pAnarchyManager->DeselectEntity("none");
-
-			// clear the embedded instance (to stop YT videos from playing, for example)
-			/*
-			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-			C_EmbeddedInstance* pOldEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
-			if (pOldEmbeddedInstance && pOldEmbeddedInstance != pHudBrowserInstance)
-			{
-				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-				//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
-				//g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pHudBrowserInstance);
-				pOldEmbeddedInstance->Close();
-			}
-			else
-			*/
-			
-			g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
-
-			// pause AArcade
-			g_pAnarchyManager->Pause();
-
-			// Write this live URL out to the save file.
-			if (cvar->FindVar("broadcast_mode")->GetBool())
-			{
-				std::string XSPlitLiveFolder = "Z:\\scripts";
-				FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", XSPlitLiveFolder.c_str()), "w+", "");
-
-				if (hFile)
-				{
-					std::string xml = "";
-					xml += "<div class=\"response\">\n";
-					xml += "\t<activetitle class=\"activetitle\">";
-
-					std::string xmlBuf = itemActive->GetString("title");
-
-					size_t found = xmlBuf.find("&");
-					while (found != std::string::npos)
-					{
-						xmlBuf.replace(found, 1, "&amp;");
-						found = xmlBuf.find("&", found + 5);
-					}
-
-					found = xmlBuf.find("<");
-					while (found != std::string::npos)
-					{
-						xmlBuf.replace(found, 1, "&lt;");
-						found = xmlBuf.find("<", found + 4);
-					}
-
-					found = xmlBuf.find(">");
-					while (found != std::string::npos)
-					{
-						xmlBuf.replace(found, 1, "&gt;");
-						found = xmlBuf.find(">", found + 4);
-					}
-
-					xml += xmlBuf;
-
-					xml += "</activetitle>\n";
-
-					xml += "</div>";
-
-					g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
-					g_pFullFileSystem->Close(hFile);
-				}
-
-				// Also update a JS file
-				hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
-
-				if (hFile)
-				{
-					std::string code = "gAnarchyTV.OnAArcadeCommand(\"startPlaying\", \"";
-					code += itemActive->GetString("info/id");
-					code += "\");\n";
-					g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
-					g_pFullFileSystem->Close(hFile);
-				}
-			}
-
-			// launch the item
-			g_pAnarchyManager->ArcadeCreateProcess(executable, executableDirectory, masterCommands);
-		}
-		else
-			DevMsg("ERROR: Could not launch item.\n");
+		if (error != NONE)
+			caller->ExecuteJavascript(WSLit(code.c_str()), WSLit(""));
 	}
 	else if (method_name == WSLit("loadNextLocalAppCallback"))
 	{
@@ -1131,6 +811,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			return;
 
 		g_pAnarchyManager->GetInstanceManager()->AdjustObjectScale((float)args[0].ToDouble());
+	}
+	else if (method_name == WSLit("taskClear"))
+	{
+		g_pAnarchyManager->TaskClear();
 	}
 	else if (method_name == WSLit("deleteObject"))
 	{
