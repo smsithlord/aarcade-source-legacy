@@ -15,6 +15,9 @@ public:
 	bool LoadMountsFromKeyValues(std::string filename);
 //	void Update();
 
+	C_Mount* GetMount(std::string id);
+	void GetAllMounts(std::vector<C_Mount*>& responseVector);
+
 	// accessors
 	std::vector<std::string>* GetLibraryPaths() { return &m_libraryPaths; }
 	C_Mount* FindOwningMount(std::string file);

@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "netflix",
+	"api_version": 0.1,
 	"title": "Netflix",
 	"homepage": "http://www.netflix.com/",
 	"search": "http://www.netflix.com/search/$TERM",

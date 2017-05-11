@@ -1,8 +1,28 @@
 #include "cbase.h"
 #include "prop_shortcut_entity.h"
+//#include "../../game/client/glow_outline_effect.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+/*
+void AddGlowEffect(const CCommand &args)
+{
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+		pEntity->AddGlowEffect();
+}
+ConCommand addgloweffect("addgloweffect", AddGlowEffect, "Adds a glow around the entity.", FCVAR_HIDDEN);
+
+void RemoveGlowEffect(const CCommand &args)
+{
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+		pEntity->RemoveGlowEffect();
+}
+ConCommand removegloweffect("removegloweffect", RemoveGlowEffect, "Removes a glow around the entity.", FCVAR_HIDDEN);
+*/
+
+ConVar build_ghosts("build_ghosts", "1", FCVAR_ARCHIVE, "Set to 1 to make objects transparent while spawning them.");
 
 void AddGlowEffect(const CCommand &args)
 {
@@ -19,6 +39,90 @@ void RemoveGlowEffect(const CCommand &args)
 		pEntity->RemoveGlowEffect();
 }
 ConCommand removegloweffect("removegloweffect", RemoveGlowEffect, "Removes a glow around the entity.", FCVAR_HIDDEN);
+
+void AddHoverGlowEffect(const CCommand &args)
+{
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+		pEntity->AddGlowEffect();
+}
+ConCommand addhovergloweffect("addhovergloweffect", AddHoverGlowEffect, "Adds a hover glow around the entity.", FCVAR_HIDDEN);
+/*
+void NextShorcut(const CCommand &args)
+{
+	// arg 1 is a starting entity index
+	CBaseEntity* pStartingEntity = NULL;
+
+	if (args.ArgC() > 1)
+	{
+		pStartingEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	}
+
+	CBasePlayer* pPlayerBaseEntity = dynamic_cast<CBasePlayer*>(UTIL_GetCommandClient());
+
+	trace_t tr;
+	Vector forward;
+	pPlayerBaseEntity->EyeVectors(&forward);
+
+	UTIL_TraceLine(pPlayerBaseEntity->EyePosition(), pPlayerBaseEntity->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayerBaseEntity, COLLISION_GROUP_NONE, &tr);
+
+	// No hit? We're done.
+	if (tr.fraction == 1.0)
+		return;
+
+	CBaseEntity* pEntity = gEntList.FindEntityByClassnameWithin(pStartingEntity, "prop_hotlink", tr.endpos, 300);
+	if (pEntity)
+	{
+		edict_t *pClient = engine->PEntityOfEntIndex(UTIL_GetCommandClient()->entindex());
+		engine->ClientCommand(pClient, UTIL_VarArgs("select %i;\n", pEntity->entindex()));
+	}
+	//else {
+	//	pEntity = gEntList.FindEntityByClassnameWithin(NULL, "prop_shortcut", tr.endpos, 200);
+
+	//	if (pEntity)
+	//	{
+	//		edict_t *pClient = engine->PEntityOfEntIndex(UTIL_GetCommandClient()->entindex());
+	//		engine->ClientCommand(pClient, UTIL_VarArgs("select %i;\n", pEntity->entindex()));
+	//	}
+	//}
+}
+ConCommand nextshorcut("next_shortcut", NextShorcut, "Usegae: Selects the next nearest shortcut to the player in his/her line of sight.", FCVAR_HIDDEN);
+*/
+void RemoveHoverGlowEffect(const CCommand &args)
+{
+	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (pEntity)
+		pEntity->RemoveGlowEffect();
+}
+ConCommand removehovergloweffect("removehovergloweffect", RemoveHoverGlowEffect, "Removes a hover glow around the entity.", FCVAR_HIDDEN);
+
+void TeleportPlayer(const CCommand &args)
+{
+	//engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex()));
+
+	int TheEntity = Q_atoi(args.Arg(1));
+
+	edict_t *pEdict = INDEXENT(TheEntity);
+	if (pEdict && !pEdict->IsFree())
+	{
+		CBaseEntity* pEntity = GetContainingEntity(pEdict);
+		//CPropHotlinkEntity* pEntity = (CPropHotlinkEntity*)GetContainingEntity(pHotlinkEdict);
+		Vector origin = Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)));
+		QAngle angles = QAngle(Q_atof(args.Arg(5)), Q_atof(args.Arg(6)), Q_atof(args.Arg(7)));
+
+		//UTIL_SetOrigin(pEntity, origin, true);
+		//pEntity->SetAbsAngles(angles);
+
+		origin.z += 10.0;
+		pEntity->SetAbsOrigin(origin);
+		pEntity->SetAbsAngles(angles);
+
+		Vector vel = Vector(0, 0, 0);
+		pEntity->Teleport(&origin, &angles, &vel);
+	}
+}
+
+ConCommand teleport_player("teleport_player", TeleportPlayer, "For internal use only.");
 
 void SpawnShortcut(const CCommand &args)
 {
@@ -381,11 +485,15 @@ void SwitchModel(const CCommand &args)
 
 		if (args.ArgC() > 4 && Q_atoi(args[4]) == 1)
 		{
+			/*
 			pEntity->SetSolid(SOLID_NONE);
 			pEntity->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 			//SetRenderMode(kRenderTransTexture);
 			pEntity->SetRenderMode(kRenderTransColor);
 			pEntity->SetRenderColorA(160);
+			*/
+
+			engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pEntity->entindex()));	// lazy way to make transparent & stuff
 		}
 
 		pEntity->NetworkStateChanged();
@@ -663,11 +771,15 @@ void SetObjectIds(const CCommand &args)
 
 	if (args.ArgC() > 5 && Q_atoi(args[5]) == 1)
 	{
+		/*
 		pProp->SetSolid(SOLID_NONE);
 		pProp->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 		//SetRenderMode(kRenderTransTexture);
 		pProp->SetRenderMode(kRenderTransColor);
 		pProp->SetRenderColorA(160);
+		*/
+
+		engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pProp->entindex()));	// lazy way to make transparent & stuff
 	}
 		//engine->ServerCommand(UTIL_VarArgs("makeghost %i 0;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
 
@@ -681,8 +793,11 @@ void MakeGhost(const CCommand &args)
 	pShortcut->SetSolid(SOLID_NONE);
 	pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 	//SetRenderMode(kRenderTransTexture);
-	pShortcut->SetRenderMode(kRenderTransColor);
-	pShortcut->SetRenderColorA(160);
+	if (build_ghosts.GetBool())
+	{
+		pShortcut->SetRenderMode(kRenderTransColor);
+		pShortcut->SetRenderColorA(160);
+	}
 	pShortcut->NetworkStateChanged();
 }
 ConCommand makeghost("makeghost", MakeGhost, "Interal use only.", FCVAR_HIDDEN);

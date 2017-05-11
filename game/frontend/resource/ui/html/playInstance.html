@@ -2,9 +2,84 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			#instanceList
+			{
+				overflow-y: auto;
+				max-height: 500px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#instanceList::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#instanceList::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#instanceList::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#instanceList::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.instanceBar
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-bottom: 4px solid #000;
+				width: 100%;
+				text-shadow: 2px 2px 2px #000;
+			}
+
+			.instanceBar:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9) !important;
+			}
+
+			.instanceBarText
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.hotshot
+			{
+				display: inline-block;
+				padding: 4px;
+				background-color: rgba(0, 0, 0, 0.9);
+				border: 3px solid transparent;
+				border-color: transparent;
+			}
+
+			.hotshot:hover
+			{
+				border-color: white;
+				background-color: rgba(192, 35, 35, 0.8);
+			}
+		</style>
 	</head>
 	<body>		
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
@@ -13,21 +88,21 @@
 						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Instance
+						Map Instances
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
-							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
-						</div>
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
 					</div>
 				</div>
 			</div>
 
-			<div id="mapTitle"></div>
-
-			<select id="instanceSelect" style="width: 100%;"></select>
-
-			<div class="mainButton" onclick="play();">Play</div>
+			<center>
+			<div id="instanceList">
+				<!--<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
+					yadda yadda yadda<br /><br />
+				</div>-->
+			</div>
+			</center>
 		</div>
 
 
@@ -35,6 +110,7 @@
 <!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		<script>
+			var tga = new TGA();
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
 function getParameterByName(name, url) {
     if (!url) url = window.location.href;
@@ -48,40 +124,197 @@ function getParameterByName(name, url) {
 
 			var titleElem = document.body.querySelector("#mapTitle");
 			var mapId = getParameterByName("id");
+
+			var screenshots = aaapi.system.getAllMapScreenshots(mapId);
+			var screenshotsKeys = Object.keys(screenshots);
+			//console.log(JSON.stringify(screenshots));
+			//var map = aaapi.metaverse.getMap(mapId);
+
+			/*
+			var screenshots = [];
+			var screenshot;
+
+			// filter out any screenshots that don't belong to this map until the API is improved.
+			var allScreenshotKeys = Object.keys(allScreenshots);
+			for( var i = 0; i < allScreenshotKeys.length; i++ )
+			{
+				screenshot = allScreenshots[allScreenshotKeys[i]];
+				if( screenshot.map.id === mapId.toString() )	// FIXME: sm_apartmentsuite is not detected with this.
+				//if( screenshot.map.file === map.platforms["-KJvcne3IKMZQTaG7lPo"].file )
+					screenshots.push(screenshot);
+			}
+			// now screenshots has only the ones from map
+			*/
+
 			//var map = aaapi.metaverse.getMap(mapId);
 			//titleElem.innerText = map.title;
 
-			var instances = aaapi.system.getMapInstances(mapId);
-			var selectElem = document.body.querySelector("#instanceSelect");
+			function getInstanceScreenshots(instanceId)
+			{
+				var instanceScreenshots = [];
+				//for( j = 0; j < screenshots.length; j++ )
+				for( var j = 0; j < screenshotsKeys.length; j++ )
+				{
+					if( screenshots[screenshotsKeys[j]].instance.id === instanceId )
+						instanceScreenshots.push(screenshots[screenshotsKeys[j]]);
+				}
 
-			var instance;
-			var elem;
-			var i;
-			for( i = 0; i < instances.length; i++)
+				return instanceScreenshots;
+			}
+
+			function showScreenshots(instanceId)
+			{
+				var elem;
+				var elems = document.querySelectorAll(".screenshotList");
+				for( var l = 0; l < elems.length; l++ )
+				{
+					elem = elems[l];
+					if( elem.instanceId != instanceId )// || elem.style.display === "block" )
+						elem.style.display = "none";
+					else
+						elem.style.display = "block";
+				}
+
+				elems = document.querySelectorAll(".instanceBar");
+				for( l = 0; l < elems.length; l++ )
+				{
+					elem = elems[l];
+					if( elem.instanceId != instanceId )
+						elem.style.backgroundColor = "rgba(50, 50, 50, 0.5)";
+					else
+						elem.style.backgroundColor = "rgba(200, 70, 70, 0.8)";
+				}
+			}
+
+			function addDefaultSpawnPosition(instanceScreenshotListElem, instanceId)
+			{
+				// Add the "take new screenshot" button to the front of the list.
+				var screenshotElem = document.createElement("div");
+				screenshotElem.className = "hotshot helpNote";
+				//screenshotElem.style.cssText = "width: 41px; height: 135px; margin: auto;";
+				screenshotElem.style.cssText = "width: 240; height: 135px; margin: auto;";
+				screenshotElem.setAttribute("help", "Load this instance & spawn at the default location for this map.");
+				screenshotElem.instanceId = instanceId;
+				screenshotElem.addEventListener("click", function()
+				{
+					play(this.instanceId, "", "");
+				}.bind(screenshotElem));
+
+				var elem = document.createElement("img");
+				//elem.style.cssText = "width: 41; height: 135px;";
+				elem.style.cssText = "width: 240; height: 135px;";
+				elem.src = "loadInstance.png";
+
+				screenshotElem.appendChild(elem);
+				instanceScreenshotListElem.appendChild(screenshotElem);
+			}
+
+			var screenshot;
+			var instances = aaapi.system.getMapInstances(mapId);
+			var instanceListElem = document.querySelector("#instanceList");
+			var instance, instanceBar, instanceBarText, instanceScreenshotListElem, instanceScreenshots, k;
+			for( var i = 0; i < instances.length; i++)
 			{
 				instance = instances[i];
 
-				elem = document.createElement("option");
-				elem.value = instance.id;
-				elem.text = instance.title;
-				//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
+				instanceBar = document.createElement("div");
+				instanceBar.className = "instanceBar helpNote";
+				if( i === 0 )
+					instanceBar.style.backgroundColor = "rgba(200, 70, 70, 0.8)";
+				else
+					instanceBar.style.backgroundColor = "rgba(50, 50, 50, 0.5)";
 
-				selectElem.appendChild(elem);
+				instanceBar.setAttribute("help", "Choose a spawn location for this instance.");
+				instanceBar.instanceId = instance.id;
+				instanceBar.addEventListener("click", function()
+				{
+					showScreenshots(this.instanceId);
+				}.bind(instanceBar), true);
+
+				instanceBarText = document.createElement("div");
+				instanceBarText.className = "instanceBarText";
+				instanceBarText.innerHTML = instance.title;
+				instanceBar.appendChild(instanceBarText);
+				instanceListElem.appendChild(instanceBar);
+
+				instanceScreenshotListElem = document.createElement("div");
+				instanceScreenshotListElem.instanceId = instance.id;
+				instanceScreenshotListElem.className = "screenshotList";
+				if( i === 0)
+					instanceScreenshotListElem.style.cssText = "padding: 10px; display: block;";
+				else
+					instanceScreenshotListElem.style.cssText = "padding: 10px; display: none;";
+
+				// add any screenshots that belong to this instance
+				instanceScreenshots = getInstanceScreenshots(instance.id);
+
+				if( instanceScreenshots.length > 0 )
+					addDefaultSpawnPosition(instanceScreenshotListElem, instance.id);
+				
+				for( k = 0; k < instanceScreenshots.length; k++ )
+				{
+					screenshot = instanceScreenshots[k];
+					screenshotElem = document.createElement("div");
+					screenshotElem.className = "hotshot helpNote";
+
+					screenshotElem.screenshotId = screenshot.id;
+					screenshotElem.setAttribute("help", "Load this instance & spawn at this location.");
+					screenshotElem.instanceId = instance.id;
+					screenshotElem.screenshot = screenshot;
+					screenshotElem.addEventListener("click", function()
+					{
+						play(this.instanceId, this.screenshot.body.position, this.screenshot.body.rotation);
+					}.bind(screenshotElem));
+
+					screenshotElem.style.cssText = "width: 240px; height: 135px; margin: auto;";
+					tga.open( "shots/" + screenshot.id + ".tga", function()
+					{
+						var elem = tga.getCanvas();
+						elem.style.cssText = "width: 240px; height: 135px;";
+						this.appendChild(elem);
+					}.bind(screenshotElem));
+
+					instanceScreenshotListElem.appendChild(screenshotElem);
+				}
+
+				if( instanceScreenshots.length === 0 )
+				{
+					var screenshotElem = document.createElement("div");
+					screenshotElem.className = "hotshot helpNote";
+					screenshotElem.style.cssText = "width: 99%; height: 135px;";
+					screenshotElem.setAttribute("help", "Spawn at the default location for this map.");
+					screenshotElem.innerHTML = "<table style='height: 100%; width: 100%;'><tr><td align='center' style='font-size: 20px; font-family: Arial; font-weight: 900;'><font style='font-size: 80px;'>LOAD</font><br />(No F5 screenshots exist for this instance yet.)</td></tr></table>";
+					screenshotElem.instanceId = instance.id;
+					screenshotElem.addEventListener("click", function()
+					{
+						play(this.instanceId, "", "");
+					}.bind(screenshotElem));
+
+					instanceScreenshotListElem.appendChild(screenshotElem);
+				}
+
+				instanceListElem.appendChild(instanceScreenshotListElem);
 			}
 
-			elem = document.createElement("option");
-			elem.value = "";
-			elem.text = "<Create New Instance>";
-			//elem.text = instance.file.substring(instance.file.lastIndexOf("\\"));
-
-			selectElem.appendChild(elem);
-
-			//loadingManager.init();
-
-			function play()
+			instanceBar = document.createElement("div");
+			instanceBar.className = "instanceBar helpNote";
+			instanceBar.style.cssText = "border-bottom: 0;";
+			instanceBar.setAttribute("help", "Create a new, blank instance on this map.");
+			instanceBar.addEventListener("click", function()
 			{
-				aaapi.system.deactivateInputMode();
-				aaapi.system.loadMap(mapId, selectElem.options[selectElem.selectedIndex].value);
+				play("", "", "");
+			});
+
+			instanceBarText = document.createElement("div");
+			instanceBarText.className = "instanceBarText";
+			instanceBarText.innerHTML = "+ Create New Instance";
+			instanceBar.appendChild(instanceBarText);
+			instanceListElem.appendChild(instanceBar);
+
+			function play(instanceId, position, rotation)
+			{
+				//aaapi.system.deactivateInputMode();
+				aaapi.system.loadMap(mapId, instanceId, position, rotation);
 			}
 		</script>
 	</body>

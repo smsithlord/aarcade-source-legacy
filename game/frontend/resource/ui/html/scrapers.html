@@ -2,6 +2,38 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<style>
+			#scrapers
+			{
+				max-height: 550px;
+				overflow-y: auto;
+			}
+
+			#scrapers::-webkit-scrollbar, #hiddenTasks::-webkit-scrollbar, #windowsTasks::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#scrapers::-webkit-scrollbar-track, #hiddenTasks::-webkit-scrollbar-track, #windowsTasks::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#scrapers::-webkit-scrollbar-thumb, #hiddenTasks::-webkit-scrollbar-thumb, #windowsTasks::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#scrapers::-webkit-scrollbar-corner, #hiddenTasks::-webkit-scrollbar-corner, #windowsTasks::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+		</style>
 	</head>
 	<body>
 		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
@@ -21,6 +53,8 @@
 				</div>
 			</div>
 
+			<div id="scrapers"></div>
+
 			<!--
 			<div class="mainButton helpNote" onclick="aaapi.system.showEngineOptionsMenu();" help="Change resolution, texture quality, or other Source engine options.">Source Engine Options</div>
 			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
@@ -31,6 +65,7 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var scrapersElem = document.querySelector("#scrapers");
 			var hudContent = document.querySelector(".hudContent");
 			var button;
 			var scraper;
@@ -54,14 +89,16 @@
 					setTimeout(function()
 					{
 						arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
-						document.location = "asset://ui/blank.html";
+						document.location = "asset://ui/overlay.html";
 					}.bind(dummy), 10);
 
 				}.bind(button), true);
 
 				button.innerHTML = scraper.title;
-				hudContent.appendChild(button);
+				scrapersElem.appendChild(button);
 			}
+
+			hudContent.appendChild(scrapersElem);
 		</script>
 
 	</body>

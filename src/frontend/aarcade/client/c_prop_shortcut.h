@@ -26,6 +26,8 @@ public:
 
 	void Precache();
 
+	void ConfirmNotError();
+
 	void SetSlave(bool val) { m_bSlave = val; }
 	std::string GetItemId();
 	std::string GetObjectId();
@@ -37,6 +39,8 @@ public:
 	// accessors
 
 private:
+	bool m_bAlreadySetObjectEntity;
+	std::string m_oldModel;
 	bool m_bInitialized;
 	//KeyValues* pItem;
 	bool m_bSlave;

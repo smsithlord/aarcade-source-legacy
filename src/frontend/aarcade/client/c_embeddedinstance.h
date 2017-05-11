@@ -22,14 +22,16 @@ public:
 	virtual bool Select() { return false; }
 	virtual bool Deselect() { return false; }
 	virtual C_EmbeddedInstance* GetParentSelectedEmbeddedInstance() { return null; }
-	virtual std::string GetId();
 	virtual void Update() { DevMsg("ERROR: Base method called!\n"); };
 	virtual void Close() {};
 	virtual std::string GetURL() { return ""; }
+	virtual void CleanUpTexture() {};
 
 	std::string GetOutput(vgui::KeyCode code, bool bShift = false, bool bCtrl = false, bool bAlt = false, bool bWin = false, bool bAutorepeat = false);
 
 	// accessors
+	virtual std::string GetId();
+	virtual std::string GetTitle();
 	virtual int GetLastRenderedFrame() { return -1; }
 	virtual int GetLastVisibleFrame() { return -1; }
 	virtual ITexture* GetTexture() { return null; }
@@ -38,8 +40,9 @@ public:
 	virtual int GetOriginalEntIndex() { return -1; }
 	
 	// mutators
-	virtual void SetOriginalItemId(std::string itemId) {}
+	virtual void SetOriginalItemId(std::string itemId) {};
 	virtual void SetOriginalEntIndex(int index) {};
+	virtual void SetTitle(std::string title) {};	// FIXME: This shouldn't need to be pure-virtual because EVERYTHING that derrives from C_EmbededInstance uses this!
 	
 private:
 	static std::map<ButtonCode_t, const char*> s_buttonMap;

@@ -100,8 +100,13 @@ public:
 	KeyValues* GetNextLibraryApp();
 	KeyValues* GetLibraryApp(std::string id);
 
-	std::map<std::string, std::string>& DetectAllMapScreenshots();
-	std::map<std::string, std::string>& GetAllMapScreenshots() { return m_mapScreenshots; }
+	KeyValues* GetScreenshot(std::string id);
+	void AddScreenshot(KeyValues* pScreenshotKV);
+	KeyValues* FindMostRecentScreenshot(std::string mapId = "", instance_t* pInstance = null);
+
+	std::map<std::string, KeyValues*>& DetectAllMapScreenshots();
+	void GetAllMapScreenshots(std::vector<KeyValues*>& responseVector, std::string mapId = "");// { return m_mapScreenshots; }
+	//std::map<std::string, std::string>& GetAllMapScreenshots() { return m_mapScreenshots; }
 
 
 	KeyValues* FindMap(const char* mapFile);
@@ -162,7 +167,8 @@ private:
 	QAngle m_spawningAngles;
 	int m_iSpawningRotationAxis;
 	C_WebTab* m_pWebTab;
-	std::map<std::string, std::string> m_mapScreenshots;
+	std::map<std::string, KeyValues*> m_mapScreenshots;
+	//std::map<std::string, std::string> m_mapScreenshots;
 
 	std::string m_libraryBrowserContextCategory;
 	std::string m_libraryBrowserContextId;

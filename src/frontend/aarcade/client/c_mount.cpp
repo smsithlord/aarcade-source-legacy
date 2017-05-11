@@ -12,6 +12,7 @@
 C_Mount::C_Mount()
 {
 	DevMsg("Mount: Constructor\n");
+	m_bActive = false;
 }
 
 C_Mount::~C_Mount()
@@ -77,6 +78,8 @@ bool C_Mount::Activate()
 		//engine->ClientCmd(VarArgs("snd_buildcache \"%s\";", path.c_str()));
 		DevMsg("Mounted %s for %s\n", path.c_str(), m_id.c_str());
 	}
+
+	m_bActive = true;
 
 	return true;
 }

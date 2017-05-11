@@ -5,6 +5,8 @@
 //#include "aa_globals.h"
 #include "c_anarchymanager.h"
 
+#include "../../../game/client/cdll_client_int.h"
+
 #include "c_openglmanager.h"
 #include "filesystem.h"
 #include <algorithm>
@@ -13,11 +15,16 @@
 #include "tier0/memdbgon.h"
 
 //ConVar xbmc_enable( "xbmc_enable", "0", FCVAR_ARCHIVE );
-ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);
-ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);
-ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);
+//ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);	// obsolete
+//ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);	// obsolete
+ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);	// ALWAYS start off.
+ConVar broadcast_folder("broadcast_folder", "Z:\\scripts", FCVAR_ARCHIVE);	// but remember where to write to if the user turns it on
 ConVar kodi("kodi", "0", FCVAR_ARCHIVE, "Set to 1 to use Kodi playback of video files using the settings in kodi_info variable.");
-ConVar kodi_info("kodi_info", "xbmc:xbmc@192.168.0.100:8080", FCVAR_ARCHIVE, "The username:password@ip:port of the 1st Kodi host.");
+ConVar kodi_ip("kodi_ip", "192.168.0.100", FCVAR_ARCHIVE, "The ip of the Kodi host.");
+ConVar kodi_port("kodi_port", "8080", FCVAR_ARCHIVE, "The port of the Kodi host.");
+ConVar kodi_user("kodi_user", "", FCVAR_ARCHIVE, "The user of the Kodi host.");
+ConVar kodi_password("kodi_password", "", FCVAR_ARCHIVE, "The password of the Kodi host. (NOT HIDDEN, SENT OVER HTTP GET REQUESTS AS PART OF THE URL TO TALK TO KODI!)");
+ConVar workshop("workshop", "1", FCVAR_NONE);
 
 bool IsFileEqual(const char* inFileA, std::string inFileB)
 {
@@ -112,6 +119,14 @@ ConCommand dump_item("dump_item", DumpItem, "Usage: dump the item for the given 
 
 void TestFunction( const CCommand &args )
 {
+	//SetScreenOverlayMaterial(IMaterial *pMaterial) = 0;
+	//virtual IMaterial	*GetScreenOverlayMaterial() = 0;
+	
+	//gHLClient;
+	//ViewportClientSystem();
+	//render->Cline
+	//engine->WriteSaveGameScreenshotOfSize
+
 	// WORKING SEND/RECIEVE FILE CALLS
 	//#include "inetchannel.h"
 //	INetChannel* pINetChannel = static_cast<INetChannel*>(engine->GetNetChannelInfo());
@@ -713,6 +728,27 @@ void HideTaskMenu(const CCommand &args)
 }
 ConCommand hidetaskmenu("-task_menu", HideTaskMenu, "Usage: hides the task menu.");
 
+void ShowScreenshotMenu(const CCommand &args)
+{
+	g_pAnarchyManager->ShowScreenshotMenu();
+}
+ConCommand show_screenshot_menu("screenshot_menu", ShowScreenshotMenu, "Usage: ");
+
+void TakeScreenshot(const CCommand &args)
+{
+	g_pAnarchyManager->TakeScreenshot(true);
+	g_pAnarchyManager->ShowScreenshotMenu();
+}
+ConCommand take_screenshot("take_screenshot", TakeScreenshot, "Usage: ");
+
+/*
+void HideScreenshotMenu(const CCommand &args)
+{
+	g_pAnarchyManager->HideScreenshotMenu();
+}
+ConCommand hide_screenshot_menu("-screenshot_menu", HideScreenshotMenu, "Usage: ");
+*/
+
 /*
 void RememberWrapper(const CCommand &args)
 {
@@ -720,13 +756,12 @@ void RememberWrapper(const CCommand &args)
 }
 ConCommand rememberwrapper("-remember", RememberWrapper, "Usage: wrapper for the remember button to mean setcontinous now.");
 */
-/*
-void RunAArcade(const CCommand &args)
+
+void MainMenu(const CCommand &args)
 {
 	g_pAnarchyManager->RunAArcade();
 }
-ConCommand run_aarcade("run_aarcade", RunAArcade, "Usage: runs AArcade");
-*/
+ConCommand main_menu("main_menu", MainMenu, "Usage: runs AArcade");	// used from Main Menu
 
 /*
 void TestFunction2( const CCommand &args )
@@ -758,6 +793,18 @@ void AnarchyManager(const CCommand &args)
 	g_pAnarchyManager->AnarchyStartup();
 }
 ConCommand anarchymanager("anarchymanager", AnarchyManager, "Starts the Anarchy Manager.", FCVAR_HIDDEN);
+
+void StoppedHoldingPrimaryFire(const CCommand &args)
+{
+	g_pAnarchyManager->StopHoldingPrimaryFire();
+}
+ConCommand stoppedholdingprimaryfire("stoppedHoldingPrimaryFire", StoppedHoldingPrimaryFire, "", FCVAR_HIDDEN);
+
+void StartedHoldingPrimaryFire(const CCommand &args)
+{
+	g_pAnarchyManager->StartHoldingPrimaryFire();
+}
+ConCommand startedholdingprimaryfire("startedHoldingPrimaryFire", StartedHoldingPrimaryFire, "", FCVAR_HIDDEN);
 
 void BuildContextUp(const CCommand &args)
 {
@@ -903,15 +950,52 @@ void DeactivateInputMode(const CCommand &args)
 }
 ConCommand deactivateinputmode("-input_mode", DeactivateInputMode, "Turns OFF input mode.", FCVAR_NONE);
 
+void GenerateLegacyHash(const CCommand &args)
+{
+	std::string hash = g_pAnarchyManager->GenerateLegacyHash(args[1]);
+	DevMsg("Legacy hash of the given string is: %s\n", hash.c_str());
+}
+ConCommand generatelegacyhash("generate_legacy_hash", GenerateLegacyHash, "Generate legacy hash based on the given string.", FCVAR_NONE);
+
+void GenerateKey(const CCommand &args)
+{
+	std::string key = g_pAnarchyManager->GenerateUniqueId();
+	DevMsg("Generated new key is: %s\n", key.c_str());
+}
+ConCommand generatekey("generate_key", GenerateKey, "Generate a new key.", FCVAR_NONE);
+
+void RemoteHolstered(const CCommand &args)
+{
+	if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() || g_pAnarchyManager->GetInputManager()->GetInputMode())
+		g_pAnarchyManager->HandleUiToggle();
+}
+ConCommand remoteholstered("remote_holstered", RemoteHolstered, "Notifies the client that the remote was holstered.", FCVAR_NONE);
+
 void AttemptSelectObject(const CCommand &args)
 {
-	g_pAnarchyManager->AttemptSelectEntity();
-
-	if (broadcast_mode.GetBool())
-		g_pAnarchyManager->xCastSetLiveURL();
+	if (!g_pAnarchyManager->GetLastHoverGlowEntity())
+	{
+		if (args.ArgC() > 1)
+			g_pAnarchyManager->AttemptSelectEntity(C_BaseEntity::Instance(Q_atoi(args[1])));
+		else
+		{
+			if (g_pAnarchyManager->AttemptSelectEntity())
+			{
+				if (broadcast_mode.GetBool())
+					g_pAnarchyManager->xCastSetLiveURL();
+			}
+		}
+	}
 }
 ConCommand attemptselectobject("select", AttemptSelectObject, "Attempts to select the object under your crosshair.", FCVAR_NONE);
 
+/*
+void TestEko(const CCommand &args)
+{
+	g_pAnarchyManager->GetCanvasManager()->CleanupTextures();
+}
+ConCommand testEko("testeko", TestEko, "tester func", FCVAR_NONE);
+*/
 void Launch( const CCommand &args )
 {
 	g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();

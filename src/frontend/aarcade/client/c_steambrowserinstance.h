@@ -16,10 +16,38 @@ public:
 	~C_SteamBrowserInstance();
 
 	void SelfDestruct();
+	//void DoDefunctDestruct(bool& result);
 
-	void Init(std::string id = "", std::string url = "", const char* pchPostData = null, int entindex = -1);
-	CCallResult<C_SteamBrowserInstance, HTML_BrowserReady_t> m_CreateBrowserInstance;
-	void OnBrowserInstanceCreated(HTML_BrowserReady_t *pResult, bool bIOFailure);
+	void Init(std::string id = "", std::string url = "", std::string title = "", const char* pchPostData = null, int entindex = -1);
+
+	/*
+	CCallResult<C_SteamBrowserInstance, HTML_BrowserReady_t> m_BrowserReadyInitial;
+	void BrowserInstanceBrowserReadyInitial(HTML_BrowserReady_t *pResult, bool bIOFailure);
+	*/
+
+	void OnBrowserInstanceReady(unsigned int unHandle);
+	void OnBrowserInstanceWantsToClose();
+	void OnBrowserInstanceStartRequest(const char* pchURL, const char* pchTarget, const char* pchPostData, bool IsRedirect);
+	void OnBrowserInstanceFinishedRequest(const char* pchURL, const char* pchPageTitle);
+	void OnBrowserInstanceOpenLinkInTab(const char* pchURL);
+	void OnBrowserInstanceNeedsPaint(const char* pBGRA, unsigned int unWide, unsigned int unTall, unsigned int unUpdateX, unsigned int unUpdateY, unsigned int unUpdateWide, unsigned int unUpdateTall, unsigned int unScrollX, unsigned int unScrollY, float flPageScale, unsigned int unPageSerial);
+	void OnBrowserInstanceURLChanged(const char* pchURL, const char* pchPostData, bool bIsRedirect, const char* pchPageTitle, bool bNewNavigation);
+	void OnBrowserInstanceChangedTitle(const char* pchTitle);
+	void OnBrowserInstanceSearchResults(unsigned int unResults, unsigned int unCurrentMatch);
+	void OnBrowserInstanceCanGoBackAndForward(bool bCanGoBack, bool bCanGoForward);
+	void OnBrowserInstanceHorizontalScroll(unsigned int unScrollMax, unsigned int unScrollCurrent, float flPageScale, bool bVisible, unsigned int unPageSize);
+	void OnBrowserInstanceVerticalScroll(unsigned int unScrollMax, unsigned int unScrollCurrent, float flPageScale, bool bVisible, unsigned int unPageSize);
+	void OnBrowserInstanceLinkAtPosition(unsigned int x, unsigned int y, const char* pchURL, bool bInput, bool bLiveLink);
+	void OnBrowserInstanceJSAlert(const char* pchMessage);
+	void OnBrowserInstanceJSConfirm(const char* pchMessage);
+	void OnBrowserInstanceFileOpenDialog(const char* pchTitle, const char* pchInitialFile);
+	void OnBrowserInstanceNewWindow(const char* pchURL, unsigned int unX, unsigned int unY, unsigned int unWide, unsigned int unTall, unsigned int unNewWindow_BrowserHandle);
+	void OnBrowserInstanceSetCursor(unsigned int eMouseCursor);
+	void OnBrowserInstanceStatusText(const char* pchMsg);
+	void OnBrowserInstanceShowToolTip(const char* pchMsg);
+	void OnBrowserInstanceUpdateToolTip(const char* pchMsg);
+	void OnBrowserInstanceHideTollTip();
+
 
 	bool IsSelected();
 	bool HasFocus();
@@ -35,20 +63,20 @@ public:
 	std::string GetId() { return m_id; }
 	void Update();
 
-	void ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
-	void ResizeFrameFromRGB1555(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
-	void ResizeFrameFromXRGB8888(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth);
+	void CopyLastFrame(const void* data, unsigned int width, unsigned int height, unsigned int depth);
 	void CopyLastFrame(unsigned char* dest, unsigned int width, unsigned int height, size_t pitch, unsigned int depth);
 
 	void OnProxyBind(C_BaseEntity* pBaseEntity);
 	void Render();
 	void RegenerateTextureBits(ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect);
 
+	void CleanUpTexture();
+
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
 	bool OnStartRequest(const char *url, const char *target, const char *pchPostData, bool bIsRedirect);
 //	void OnFinishRequest(const char *url, const char *pageTitle, const CUtlMap < CUtlString, CUtlString > &headers);
-	void OnNeedsPaint(const void* data, unsigned int width, unsigned int height, unsigned int depth);
+	
 	//void BrowserInstanceNeedsPaint(HTML_NeedsPaint_t *pCallback);
 
 	//wchar_t GetTypedChar(vgui::KeyCode code);
@@ -61,7 +89,16 @@ public:
 
 	void InjectJavaScript(std::string code);
 
+	//bool IsDefunct() { return m_bDefunct; }
+	//bool IsDying() { return m_bDying; }
+
+	// STEAMWORKS ONLY
+	vgui::KeyCode KeyCode_VirtualKeyToVGUI(int key);
+	int KeyCode_VGUIToVirtualKey(vgui::KeyCode code);
+	int GetKeyModifiersAlt();
+
 	// accessors
+	std::string GetTitle() { return m_title; }
 	std::string GetURL() { return m_URL; }
 	ITexture* GetTexture() { return m_pTexture; }
 	int GetLastVisibleFrame() { return m_iLastVisibleFrame; }
@@ -76,6 +113,7 @@ public:
 	int GetOriginalEntIndex() { return m_iOriginalEntIndex; }
 
 	// mutators	
+	void SetTitle(std::string title) { m_title = title; }
 	void SetTexture(ITexture* pTexture) { m_pTexture = pTexture; }
 	void SetHandle(unsigned int unHandle) { m_unHandle = unHandle; }
 	void SetActiveScraper(std::string scraperId, std::string itemId, std::string field) {
@@ -86,14 +124,34 @@ public:
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 
 private:
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceStartRequest, HTML_StartRequest_t, m_StartRequest);
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
+	/*
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceBrowserReady, HTML_BrowserReady_t, m_BrowserReady);
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceNeedsPaint, HTML_NeedsPaint_t, m_NeedsPaint);
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserPopupHTMLWindow, HTML_NewWindow_t, m_NewWindow);
-	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserStatusText, HTML_StatusText_t, m_StatusText);
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserSetHTMLTitle, HTML_ChangedTitle_t, m_ChangeTitle);
-	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserURLChanged, HTML_URLChanged_t, m_URLChanged);
-	//STEAM_CALLBACK(C_SteamBrowserInstance, BrowserFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceStartRequest, HTML_StartRequest_t, m_StartRequest);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceCloseBrowser, HTML_CloseBrowser_t, m_CloseBrowser);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceURLChanged, HTML_URLChanged_t, m_URLChanged);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceFinishedRequest, HTML_FinishedRequest_t, m_FinishedRequest);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceOpenLinkInTab, HTML_OpenLinkInNewTab_t, m_OpenLinkInTab);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceChangedTitle, HTML_ChangedTitle_t, m_ChangedTitle);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceSearchResults, HTML_SearchResults_t, m_SearchResults);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceCanGoBackAndForward, HTML_CanGoBackAndForward_t, m_CanGoBackAndForward);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceHorizontalScroll, HTML_HorizontalScroll_t, m_HorizontalScroll);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceVerticalScroll, HTML_VerticalScroll_t, m_VerticalScroll);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceLinkAtPosition, HTML_LinkAtPosition_t, m_LinkAtPosition);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceJSAlert, HTML_JSAlert_t, m_JSAlert);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceJSConfirm, HTML_JSConfirm_t, m_JSConfirm);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceFileOpenDialog, HTML_FileOpenDialog_t, m_FileOpenDialog);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceNewWindow, HTML_NewWindow_t, m_NewWindow);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceSetCursor, HTML_SetCursor_t, m_SetCursor);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceStatusText, HTML_StatusText_t, m_StatusText);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceShowToolTip, HTML_ShowToolTip_t, m_ShowToolTip);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceUpdateToolTip, HTML_UpdateToolTip_t, m_UpdateToolTip);
+	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceHideToolTip, HTML_HideToolTip_t, m_HideToolTip);
+	*/
+
+	bool m_bSteamworksCopying;
+	//bool m_bDying;
+	//bool m_bDefunct;
 	std::string m_scraperId;
 	std::string m_scraperItemId;
 	std::string m_scraperField;
@@ -107,6 +165,7 @@ private:
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;
 	//HHTMLBrowser m_unBrowserHandle;
+	std::string m_title;
 	std::string m_id;
 	std::string m_originalItemId;
 	std::string m_initialURL;

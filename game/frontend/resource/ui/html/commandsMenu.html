@@ -1,0 +1,327 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#noTasksOpen
+			{
+				width: 100%;
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+			}
+
+			#hiddenTasks
+			{
+				display: none;
+			}
+
+			#tasks, #hiddenTasks, #windowsTasks
+			{
+				max-height: 186px;
+				overflow-y: auto;
+			}
+
+			#windowsTasks
+			{
+				max-height: 310px;
+			}
+
+			#tasks::-webkit-scrollbar, #hiddenTasks::-webkit-scrollbar, #windowsTasks::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#tasks::-webkit-scrollbar-track, #hiddenTasks::-webkit-scrollbar-track, #windowsTasks::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#tasks::-webkit-scrollbar-thumb, #hiddenTasks::-webkit-scrollbar-thumb, #windowsTasks::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#tasks::-webkit-scrollbar-corner, #hiddenTasks::-webkit-scrollbar-corner, #windowsTasks::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.taskCategory
+			{
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.9);
+				border-radius: 10px;
+				height: 40px;
+				padding-left: 10px;
+			}
+
+			.taskCategoryTitle
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+			}
+
+			.taskAllButton
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+				float: right;
+			}
+
+			.windowsButton
+			{
+
+				display: inline-block;
+				border: 2px solid transparent;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.taskButton
+			{
+				display: inline-block;
+				border: 2px solid black;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+				background-color: rgba(150, 150, 150, 0.5);
+			}
+
+			.displayed .taskButton.displayIcon
+			{
+				background-color: rgba(50, 200, 50, 0.8);
+			}
+
+			.taskButton:hover
+			{
+				background-color: rgba(150, 150, 150, 0.8);
+			}
+
+			.taskTitle
+			{
+				width: 79%;
+				height: 100%;
+				line-height: 40px;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+
+			.tab
+			{
+				border-radius: 0 0 10px 10px;
+				white-space: nowrap;
+				font-size: 18px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 5px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				margin-top: -2px;
+				/*
+				margin-left: 1px;
+				margin-right: 1px;
+				*/
+				color: #aaa;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.tab:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+
+			.tabOn
+			{
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			.tabOn:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+			}
+
+			.command
+			{
+				font-family: Arial;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				color: #aaa;
+				font-size: 25px;
+
+				border-radius: 10px;
+				white-space: nowrap;
+				text-align: center;
+				vertical-align: middle;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 10px;
+				margin: 4px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.command:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+		</style>
+	</head>
+	<body style="background-color: transparent;">
+		<div style="width: 41%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%); margin-left: auto; margin-right: auto; text-align: right;">
+		<div class="hudContent" style="width: 100%; text-align: left;">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+					</div>
+					<div class="hudContentHeaderCell">
+						Commands Menu
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="commands" style="padding: 4px; text-align: center;">
+				<!--
+				<div class="command">Fly Mode</div>
+				<div class="command">Reflections</div>
+				<div class="command">HDR</div>
+				<div class="command">All Guns</div>
+				<div class="command">Airboat</div>
+				<div class="command">Headcrab</div>
+				<div class="command">Developer</div>
+				-->
+			</div>
+
+		</div>
+		<div class="tab" onclick="aaapi.system.setTabMenuFile('screenshotMenu.html'); window.location='asset://ui/screenshotMenu.html';">
+			Screenshots
+		</div>
+		<div class="tab tabOn">
+			Commands
+		</div>
+		<div class="tab" style="margin-right: 50px;" onclick="aaapi.system.setTabMenuFile('taskMenu.html'); window.location='asset://ui/taskMenu.html';">
+			Tasks
+		</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var commands = [
+				{
+					"title": "Toggle Mute",
+					"command": "toggle volume 0 1",
+					"closeMenu": true,
+					"help": "Toggle the Source engine volume on/off."
+				},
+				{
+					"title": "Fly Mode",
+					"command": "noclip",
+					"closeMenu": true,
+					"help": "Fly through solid objects instead of walking."
+				},
+				{
+					"title": "Reflections",
+					"command": "toggle mat_fastspecular",
+					"closeMenu": true,
+					"help": "Toggles reflections.  This can fix over-bright props or hard-to-see screens."
+				},
+				{
+					"title": "HDR Level",
+					"command": "toggle mat_hdr_level 0 2",
+					"closeMenu": true,
+					"help": "HDR simulates your pupils adjusting to lighting conditions.  Turning it off can fix how some maps look."
+				},
+				{
+					"title": "All Guns",
+					"command": "impulse 101",
+					"closeMenu": true,
+					"help": "Also can be used to replenish your ammo."
+				},
+				{
+					"title": "Air Boat",
+					"command": "ch_createairboat",
+					"closeMenu": true,
+					"help": "Try not to spawn it stuck into the ground."
+				},
+				{
+					"title": "Headcrab",
+					"command": "npc_create npc_headcrab",
+					"closeMenu": true,
+					"help": "They are your buddies, but they don't move around so well."
+				},
+				{
+					"title": "Stop Sounds",
+					"command": "stopsound",
+					"closeMenu": true,
+					"help": "Stops all the sounds that are currently playing from the map."
+				},
+				{
+					"title": "Developer",
+					"command": "toggle developer",
+					"closeMenu": true,
+					"help": "Shows excessive debug information in the console & on-screen."
+				}
+			];
+
+			var commandsElem = document.querySelector("#commands");
+			var command, commandElem;
+			for( var i = 0; i < commands.length; i++ )
+			{
+				command = commands[i];
+				commandElem = document.createElement("div");
+				commandElem.command = command;
+				commandElem.className = "command helpNote";
+				commandElem.setAttribute("help", command.help);
+				commandElem.innerHTML = command.title;
+				commandElem.addEventListener("click", function(e)
+				{
+					if( this.command.closeMenu )
+						aaapi.system.consoleCommand(this.command.command, true);
+					else
+						aaapi.system.consoleCommand(this.command.command);
+				}.bind(commandElem), true);
+				commandsElem.appendChild(commandElem);
+			}
+		/*
+		 	bind F10 "toggle r_drawviewmodel"
+			Bucky: or if you want to have something like net_graph increment between 1 and 3 you can do "incrementvar 	net_graph 1 3 2
+			incrementvar convar min max delta
+			to skip net_graph 2, you can
+			 toggle net_graph 0 1 3
+		*/
+		</script>
+	</body>
+</html>

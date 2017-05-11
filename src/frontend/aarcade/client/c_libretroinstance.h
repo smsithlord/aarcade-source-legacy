@@ -203,7 +203,9 @@ public:
 
 	std::string GetId() { return m_id; }
 
-	void Init(std::string id = "");
+	void CleanUpTexture();
+
+	void Init(std::string id = "", std::string title = "");
 	bool CreateWorkerThread(std::string core);
 	void Update();
 	bool LoadCore(std::string coreFile = "");
@@ -268,17 +270,20 @@ public:
 	//std::mutex m_mutex;
 	std::string GetOriginalGame() { return m_originalGame; }
 	std::string GetOriginalItemId() { return m_originalItemId; }
+	std::string GetTitle() { return m_title; }
 
 	// mutators
 	bool SetGame(std::string file);
 	void SetOriginalGame(std::string file) { m_originalGame = file; }
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
+	void SetTitle(std::string title) { m_title = title; }
 
 private:
 	std::string m_originalGame;
 	int m_iLastVisibleFrame;
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;
+	std::string m_title;
 	std::string m_id;
 	std::string m_originalItemId;
 	libretro_raw* m_raw;

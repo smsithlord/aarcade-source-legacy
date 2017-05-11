@@ -69,7 +69,7 @@ void C_MountManager::Init()
 				if (buf.at(3) == '\\')
 					buf = buf.substr(0, 2) + buf.substr(3);
 
-				DevMsg("here it found: %s\n", buf.c_str());
+			//	DevMsg("here it found: %s\n", buf.c_str());
 				m_libraryPaths.push_back(VarArgs("%s\\SteamApps\\common\\", buf.c_str()));
 
 				if (g_pFullFileSystem->IsDirectory(VarArgs("%s\\SteamApps\\sourcemods", buf.c_str())))
@@ -125,6 +125,30 @@ bool C_MountManager::LoadMountsFromKeyValues(std::string filename)
 	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Source Engine Games", "mounts", "0", num, num);
 
 	return false;
+}
+
+void C_MountManager::GetAllMounts(std::vector<C_Mount*>& responseVector)
+{
+	std::map<std::string, C_Mount*>::iterator it = m_mounts.begin();
+	while (it != m_mounts.end())
+	{
+		responseVector.push_back(it->second);
+		it++;
+	}
+}
+
+C_Mount* C_MountManager::GetMount(std::string id)
+{
+	std::map<std::string, C_Mount*>::iterator it = m_mounts.begin();
+	while (it != m_mounts.end())
+	{
+		if (it->first == id)
+			return it->second;
+
+		it++;
+	}
+
+	return null;
 }
 
 // NOTE: THe file should be a FULL file path, not a relative one.

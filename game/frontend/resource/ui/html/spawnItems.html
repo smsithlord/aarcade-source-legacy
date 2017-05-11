@@ -18,9 +18,7 @@
 	</head>
 	<body>
 		<div class="hudHeaderContainer" style="visibility: hidden;">
-			<div class="hudHeaderNavigationContainer">
-				helloo world
-			</div>
+			<div class="hudHeaderNavigationContainer"></div>
 			<div class="hudHeaderContainerTable">
 				<div class="hudHeaderContainerRow">
 					<div class="hudHeaderContainerCell">
@@ -34,7 +32,7 @@
 					</div>
 					<div class="hudHeaderContainerCell">
 						<div class="hudHeaderButtonContainer">
-							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Hide the main menu." onclick="window.location='asset://ui/blank.html';">
+							<div class="hudHeaderButton hudHeaderButtonOn helpNote" help="Hide the main menu." onclick="window.location='asset://ui/overlay.html';">
 								&nbsp;<img src="asset://ui/menuicon.png" />&nbsp;
 							</div>
 						</div>
@@ -84,12 +82,15 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+		/*
 		document.body.querySelector("#spawnInstead").addEventListener("mousedown", function()
 		{
  			spawnAll();
 		}, true);
+		*/
 
 		var didSpawnAll = false;
+		/*
 		document.addEventListener("keydown", function(e)
 		{
 			if( didSpawnAll )
@@ -102,6 +103,7 @@ function getParameterByName(name, url) {
 				spawnAll();
 			}
 		}, true);
+		*/
 
 		//document.body.querySelector(".mainButton").innerHTML = getParameterByName("max");
 

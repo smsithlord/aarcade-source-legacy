@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "giantbomb",
+	"api_version": 0.1,
 	"title": "Giant Bomb",
 	"homepage": "http://www.giantbomb.com/",
 	"search": "http://www.giantbomb.com/search/?q=$TERM",

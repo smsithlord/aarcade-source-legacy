@@ -1,0 +1,194 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#mounts
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#mounts::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#mounts::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#mounts::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#mounts::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.mount
+			{
+				border: 6px solid rgba(100, 100, 100, 0.5);
+				border-radius: 6px;
+				width: 80%;
+				margin: 10px;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			.mount img
+			{
+				width: 292px;
+				height: 136px;
+				display: inline-block;
+				margin-right: 20px;
+			}
+
+			.mountInfo
+			{
+				font-family: Arial;
+				font-size: 18px;
+				font-weight: bold;
+				display: inline-block;
+				vertical-align: top;
+				height: 136px;
+				width: 100%;
+				overflow-y: auto;
+			}
+
+			.mountInfo::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.mountInfo::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			.mountInfo::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			.mountInfo::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/addons.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Mounted Games
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<center>
+			<div id="mounts">
+			</div>
+			</center>
+
+			<br /><br />
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/addons.html';" help="Go back to the previous menu.">OK</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var mountsElem = document.querySelector("#mounts");
+			var result = aaapi.system.getAllMounts();
+			var mounts = result.mounts;
+
+			var mount;
+			var mountElem;
+			var mountTR;
+			var mountTD;
+			var imageElem;
+			var mountImageSrc;
+			var html;
+			var mountInfoElem;
+			var activeVal;
+			var j;
+			for( var i = 0; i < mounts.length; i++ )
+			{
+				mount = mounts[i];
+
+				mountElem = document.createElement("table");
+				mountElem.className = "mount";
+
+				mountTR = document.createElement("tr");
+				mountTD = document.createElement("td");
+				mountTD.style.width = "1%";
+
+				if( parseInt(mount.id) == mount.id )
+					mountImageSrc = "http://cdn.steamstatic.com/steam/apps/" + mount.id + "/header.jpg";
+				else
+					mountImageSrc = "mounts/" + mount.id + ".jpg";
+
+				imageElem = document.createElement("img");
+				imageElem.src = mountImageSrc;
+				mountTD.appendChild(imageElem);
+				mountTR.appendChild(mountTD);
+
+				mountTD = document.createElement("td");
+				mountTD.style.width = "100%";
+
+				mountInfoElem = document.createElement("div");
+				mountInfoElem.className = "mountInfo";
+
+				activeVal = (mount.active) ? "true" : "false";
+
+				html = "Title: " + mount.title + "<br />";
+				html += "App ID: " + mount.id + "<br />";
+				html += "Base Folder: " + mount.base + "<br />";
+				html += "Active: " + activeVal + "<br />";
+
+				html += "Paths:<br />";
+				for( j = 0; j < mount.paths.length; j++ )
+					html += "&nbsp;&nbsp;&nbsp;&nbsp;" + mount.paths[j] + "<br />";
+
+				/*
+				html += "Mounted Paths:<br />";
+				for( j = 0; j < mount.mountedPaths.length; j++ )
+					html += "&nbsp;&nbsp;&nbsp;&nbsp;" + mount.mountedPaths[j] + "<br />";
+				*/
+
+				mountInfoElem.innerHTML = html;
+				mountTD.appendChild(mountInfoElem);
+				mountTR.appendChild(mountTD);
+
+				mountElem.appendChild(mountTR);
+				mountsElem.appendChild(mountElem);
+			}
+		</script>
+	</body>
+</html>

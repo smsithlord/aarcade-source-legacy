@@ -20,10 +20,11 @@ public:
 
 	void SelfDestruct();
 
-	void Init(std::string id = "", std::string url = "", bool alpha = false);
+	void Init(std::string id = "", std::string url = "", std::string title = "", bool alpha = false);
 
-	std::string GetId() { return m_id; }
 	void Update();
+
+	void CleanUpTexture();
 
 	void SetUrl(std::string url);
 	bool IsSelected();
@@ -76,6 +77,8 @@ public:
 	C_EmbeddedInstance* GetParentSelectedEmbeddedInstance();
 
 	// accessors
+	std::string GetId() { return m_id; }
+	std::string GetTitle() { return m_title; }
 	ITexture* GetTexture() { return m_pTexture; }
 	int GetLastVisibleFrame() { return m_iLastVisibleFrame; }
 	int GetLastRenderedFrame() { return m_iLastRenderedFrame; }
@@ -88,6 +91,7 @@ public:
 
 	// mutators	
 	//void SetState(int val) { m_iState = val; }
+	void SetTitle(std::string title) { m_title = title; }
 	void SetState(int state) { m_iState = state; }
 	void SetWebView(Awesomium::WebView* pWebView) { m_pWebView = pWebView; }
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
@@ -109,6 +113,7 @@ private:
 	ITexture* m_pTexture;
 	int m_iLastRenderedFrame;
 	HHTMLBrowser m_unBrowserHandle;
+	std::string m_title;
 	std::string m_id;
 	std::string m_originalItemId;
 	std::string m_initialURL;

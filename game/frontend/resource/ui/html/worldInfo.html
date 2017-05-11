@@ -2,6 +2,7 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
 	</head>
 	<body>
 		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
@@ -35,10 +36,16 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var tga = new TGA();
+			
+			//console.log(JSON.stringify(g_screenshots));
 
 			var worldInfo = aaapi.system.getWorldInfo();
-			var mapInfo = worldInfo.stuff;
-			mapInfo.file = worldInfo.map.platforms["-KJvcne3IKMZQTaG7lPo"].file;
+
+			var g_screenshots = aaapi.system.getAllMapScreenshots(worldInfo.map.info.id);
+
+			//var mapInfo = worldInfo.stuff;
+			//mapInfo.file = worldInfo.map.platforms["-KJvcne3IKMZQTaG7lPo"].file;
 
 			//console.log(JSON.stringify(worldInfo));
 			//mapInfo.file = worldInfo.map.
@@ -47,8 +54,39 @@
 			//console.log(JSON.stringify(worldInfo.stuff));
 
 			var hudContent = document.querySelector(".hudContent");
+
+				var screenshotKeys = Object.keys(g_screenshots);
+				var screenshots = [];
+				for( i = 0; i < screenshotKeys.length; i++ )
+				{
+					screenshot = g_screenshots[screenshotKeys[i]];
+					if( screenshot.instance.id === worldInfo.instance.id )
+						screenshots.push(screenshot);
+				}
+
+				if( screenshots.length > 0 )
+				{
+					var mapImage = document.createElement("div");
+					mapImage.id = "mapImage";
+					mapImage.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; display: none;";//"width: 240px; height: 135px; border: 2px solid red;";
+
+					//mapImage.src = "asset://shots/" + screenshots[0].id + ".jpg";
+					//mapImage.src = "asset://shots/aa_flynns_arcade0.tga";
+					//var tga = new TGA();
+					tga.open( "shots/" + screenshots[0].id + ".tga", function(){
+						var elem = tga.getCanvas();
+						elem.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; width: 100%;";
+					   var imgElem = document.querySelector("#mapImage");
+					   imgElem.appendChild(elem);
+					   imgElem.style.display = "block";
+					   //this.style.backgroundColor = "green";
+					});
+
+					hudContent.appendChild(mapImage);
+				}
+
 			var workshopIds = "";
-			var mountIds = "";
+			//var mountIds = "";
 			var html = "";
 
 			// SERVER STUFF
@@ -74,15 +112,30 @@
 			html += "<div style='font-weight: bold; font-family: Arial;'><center>";
 			html += "Title: " + worldInfo.map.title + "<br />";
 			//html += "File: " + mapInfo.file + "<br />";
-			workshopIds = (mapInfo.workshopIds !== "") ? mapInfo.workshopIds : "None";
+			workshopIds = (worldInfo.map.workshopIds !== "") ? worldInfo.map.workshopIds : "None";
+			//workshopIds = (mapInfo.workshopIds !== "") ? mapInfo.workshopIds : "None";
 			if( workshopIds !== "None" )
 				html += "Workshop: " + workshopIds + "<br />";
-			mountIds = "None";
-			if( mapInfo.mountIds !== "" )
-				mountIds = (mapInfo.mountTitle !== "") ? mapInfo.mountTitle : "None";
 
-			if( mountIds !== "None" )
-				html += "Mount: " + mountIds + "<br />";
+			// MOUNT STUFF
+			//mountIds = "None";
+			var mount = {
+				"id": worldInfo.map.mountIds,
+				"title": worldInfo.map.mountTitle
+			};
+
+			if( mount.id !== "" )
+			{
+				// add a mount image
+				var mountImageSrc;
+				if( parseInt(mount.id) == mount.id )
+					mountImageSrc = "http://cdn.steamstatic.com/steam/apps/" + mount.id + "/header.jpg";
+				else
+					mountImageSrc = "mounts/" + mount.id + ".jpg";
+
+				html += "From: " + mount.title + "<br /><img src=\"" + mountImageSrc + "\" style=\"max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto;\" />";
+			}
+
 			html += "<br />";
 			html += "</center></div>";
 

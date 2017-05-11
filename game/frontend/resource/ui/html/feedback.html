@@ -1,0 +1,34 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Redux Beta Feedback
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mainButton" onclick="aaapi.system.feedback('suggestions'); window.location='asset://ui/welcome.html';">Suggestions</div>
+			<div class="mainButton" onclick="aaapi.system.feedback('bugs'); window.location='asset://ui/welcome.html';">Bug Reports</div>
+			<div class="mainButton" onclick="aaapi.system.feedback('discussions'); window.location='asset://ui/welcome.html';">Discussions</div>
+			<div class="mainButton" onclick="aaapi.system.feedback('trello'); window.location='asset://ui/welcome.html';">Development Trello</div>
+
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

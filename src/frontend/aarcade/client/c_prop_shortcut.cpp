@@ -29,6 +29,7 @@ END_RECV_TABLE()
 C_PropShortcutEntity::C_PropShortcutEntity()
 {
 	m_bInitialized = false;
+	m_bAlreadySetObjectEntity = false;
 }
 
 C_PropShortcutEntity::~C_PropShortcutEntity()
@@ -55,7 +56,7 @@ void C_PropShortcutEntity::Initialize()
 		if (activeModel)
 			modelFile = activeModel->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID), "models\\cabinets\\two_player_arcade.mdl");	// uses default model if key value read fails
 		else
-			modelFile = "models\\cabinets\\two_player_arcade.mdl";
+			modelFile = "models\\icons\\missing.mdl";
 
 		SetModel(modelFile.c_str());
 		SetSolid(SOLID_NONE);
@@ -69,7 +70,7 @@ void C_PropShortcutEntity::Initialize()
 	{
 		// This is a regular object that already existed or somebody else spawned
 		//Precache();
-		SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+		SetModel("models\\icons\\missing.mdl");// VarArgs("%s", this->GetModelName()));
 		//SetSolid(SOLID_NONE);
 		SetSolid(SOLID_VPHYSICS);
 		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
@@ -88,7 +89,38 @@ void C_PropShortcutEntity::Initialize()
 		}
 	}
 
+	//this->ConfirmNotError();
+
 	m_bInitialized = true;
+}
+
+void C_PropShortcutEntity::ConfirmNotError()
+{
+	// Check if the model's material is an error
+	const model_t* TheModel = this->GetModel();
+	if (TheModel)
+	{
+		std::string modelName = modelinfo->GetModelName(TheModel);
+		if( m_oldModel != modelName)
+		{
+			m_oldModel = modelName;
+
+			IMaterial* pMaterial;
+			modelinfo->GetModelMaterials(TheModel, 1, &pMaterial);
+
+			bool bIsMultiplayer = false;
+			bool bIsMultiplayerHost = false;
+			if (!Q_stricmp(pMaterial->GetName(), "models/error/new light1") && (!bIsMultiplayer || bIsMultiplayerHost == -1))
+			{
+				DevMsg("WARNING: The following model failed to load. Reverting to placeholder: %s\n", modelName.c_str());
+
+				std::string modelId = g_pAnarchyManager->GetMetaverseManager()->ResolveLegacyModel("models/icons/missing.mdl");
+				//std::string modelId = g_pAnarchyManager->GetMetaverseManager()->GetMissingModelId();
+				if (modelId != "")
+					engine->ServerCmd(VarArgs("switchmodel \"%s\" \"models/icons/missing.mdl\" %i;\n", modelId.c_str(), this->entindex()));
+			}
+		}
+	}
 }
 
 void C_PropShortcutEntity::OnPreDataChanged(DataUpdateType_t updateType)
@@ -104,6 +136,14 @@ void C_PropShortcutEntity::OnDataChanged(DataUpdateType_t updateType)
 	else
 	{
 		// do nada
+	}
+
+	this->ConfirmNotError();
+
+	if (!m_bAlreadySetObjectEntity && Q_strcmp(m_objectId, ""))
+	{
+		g_pAnarchyManager->GetInstanceManager()->SetObjectEntity(std::string(m_objectId), this);
+		m_bAlreadySetObjectEntity = true;
 	}
 
 	BaseClass::OnDataChanged(updateType);

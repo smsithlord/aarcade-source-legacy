@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "thegamesdb",
+	"api_version": 0.1,
 	"title": "TheGamesDB",
 	"homepage": "http://www.thegamesdb.net/",
 	"search": "http://thegamesdb.net/search/?string=$TERM",

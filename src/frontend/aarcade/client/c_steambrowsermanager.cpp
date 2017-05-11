@@ -11,14 +11,20 @@
 C_SteamBrowserManager::C_SteamBrowserManager()
 {
 	DevMsg("SteamBrowserManager: Constructor\n");
+	m_pBrowserListener = new C_SteamBrowserListener();
 	m_bSoundEnabled = true;
 	m_pSelectedSteamBrowserInstance = null;
 	m_pFocusedSteamBrowserInstance = null;
-	//surface()->GetWebkitHTMLUserAgentString()
-	steamapicontext->SteamHTMLSurface()->Init();
-//	steamapicontext->SteamHTMLSurface()->
 
-	m_pInputListener = new C_InputListenerSteamBrowser();
+	// NOTE: NO STEAM ERROR MANIFESTS HERE.  Fails before devmsg can print.
+	if (!steamapicontext->SteamHTMLSurface())
+	{
+		DevMsg("CRITICAL ERROR: Failed to acquire the SteamHTMLSurface! Make sure Steam is running!\n");
+	}
+	else if (!steamapicontext->SteamHTMLSurface()->Init())
+		DevMsg("CRITICAL ERROR: Failed to initialize the Steamworks browser!\n");
+	else
+		m_pInputListener = new C_InputListenerSteamBrowser();
 }
 
 C_SteamBrowserManager::~C_SteamBrowserManager()
@@ -26,8 +32,17 @@ C_SteamBrowserManager::~C_SteamBrowserManager()
 	DevMsg("SteamBrowserManager: Destructor\n");
 	this->CloseAllInstances();
 
+	ISteamHTMLSurface* pHTMLSurface = steamapicontext->SteamHTMLSurface();
+	if (!pHTMLSurface)
+		DevMsg("ERROR: There was no SteamHTMLSurface to clean up!\n");
+	else if (!pHTMLSurface->Shutdown())
+		DevMsg("CRITICAL ERROR: Failed to shutdown the Steamworks browser!\n");
+
 	if (m_pInputListener)
 		delete m_pInputListener;
+	
+	if (m_pBrowserListener)
+		delete m_pBrowserListener;
 }
 
 void C_SteamBrowserManager::Update()
@@ -45,11 +60,20 @@ void C_SteamBrowserManager::Update()
 	//if (m_pSelectedSteamBrowserInstance)
 		//m_pSelectedSteamBrowserInstance->Update();
 
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(m_steamBrowserInstances[i]))
+			m_steamBrowserInstances[i]->Update();
+	}
+
+	/*
 	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
 	{
 		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(it->second))
 			it->second->Update();
 	}
+	*/
 
 
 	/*
@@ -64,37 +88,13 @@ void C_SteamBrowserManager::Update()
 
 void C_SteamBrowserManager::CloseAllInstances()
 {
-	// iterate over all web tabs and call their destructors
-	for (auto it = m_steamBrowserInstances.begin(); it != m_steamBrowserInstances.end(); ++it)
+	g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
+
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
 	{
-		C_SteamBrowserInstance* pSteamBrowserInstance = it->second;
-
-		if (pSteamBrowserInstance->GetId() == "hud" || pSteamBrowserInstance->GetId()== "images")
-		{
-			DevMsg("ERROR: Steam Browser instance detected that is NOT of type Awesomium Browser!!\n");
-			continue;
-		}
-
+		C_SteamBrowserInstance* pSteamBrowserInstance = m_steamBrowserInstances[i];
 		DevMsg("Removing 1 Steam instance...\n");
-
-		if (pSteamBrowserInstance == m_pSelectedSteamBrowserInstance)
-		{
-			this->SelectSteamBrowserInstance(null);
-			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-		}
-
-		//		if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pSteamBrowserInstance->GetTexture())
-		if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pSteamBrowserInstance)
-		{
-			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
-			//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
-			//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
-		}
-
-		//		auto foundSteamBrowserInstance = m_steamBrowserInstances.find(pSteamBrowserInstance->GetId());
-		//		if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
-		//			m_steamBrowserInstances.erase(foundSteamBrowserInstance);
-
 		pSteamBrowserInstance->SelfDestruct();
 	}
 
@@ -123,10 +123,27 @@ bool C_SteamBrowserManager::SelectSteamBrowserInstance(C_SteamBrowserInstance* p
 	return true;
 }
 
+bool C_SteamBrowserManager::IsAlreadyInInstances(C_SteamBrowserInstance* pSteamBrowserInstance)
+{
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_steamBrowserInstances[i] == pSteamBrowserInstance)
+			return true;
+	}
+
+	return false;
+}
+
 void C_SteamBrowserManager::AddFreshSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance)
 {
-	std::string id = pSteamBrowserInstance->GetId();
-	m_steamBrowserInstances[id] = pSteamBrowserInstance;
+	if (this->IsAlreadyInInstances(pSteamBrowserInstance))
+		DevMsg("Warning: Fresh Steam browser instance already exists in the list!\n");
+	else
+		m_steamBrowserInstances.push_back(pSteamBrowserInstance);
+
+	//std::string id = pSteamBrowserInstance->GetId();
+	//m_steamBrowserInstances[id] = pSteamBrowserInstance;
 }
 
 void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance)
@@ -152,13 +169,11 @@ void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance
 
 C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(unsigned int unHandle)
 {
-	auto foundSteamBrowserInstance = m_steamBrowserInstances.begin();
-	while (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
 	{
-		if (foundSteamBrowserInstance->second->GetHandle() == unHandle)
-			return foundSteamBrowserInstance->second;
-		else
-			foundSteamBrowserInstance++;
+		if (m_steamBrowserInstances[i]->GetHandle() == unHandle)// && !foundSteamBrowserInstance->second->IsDefunct())
+			return m_steamBrowserInstances[i];
 	}
 
 	return null;
@@ -166,25 +181,23 @@ C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(unsigned
 
 C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(std::string id)
 {
-	auto foundSteamBrowserInstance = m_steamBrowserInstances.find(id);
-	if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
 	{
-		return foundSteamBrowserInstance->second;
-			//return m_steamBrowserInstances[foundSteamBrowserInstance];
+		if (m_steamBrowserInstances[i]->GetId() == id)
+			return m_steamBrowserInstances[i];
 	}
-	else
-		return null;
+
+	return null;
 }
 
 C_SteamBrowserInstance* C_SteamBrowserManager::GetPendingSteamBrowserInstance()
 {
-	auto foundSteamBrowserInstance = m_steamBrowserInstances.begin();
-	while (foundSteamBrowserInstance != m_steamBrowserInstances.end())
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
 	{
-		if (foundSteamBrowserInstance->second->GetHandle() == 0)
-			return foundSteamBrowserInstance->second;
-		else
-			foundSteamBrowserInstance++;
+		if (m_steamBrowserInstances[i]->GetHandle() == 0)
+			return m_steamBrowserInstances[i];
 	}
 
 	return null;
@@ -195,7 +208,7 @@ void C_SteamBrowserManager::RunEmbeddedSteamBrowser()
 	C_SteamBrowserInstance* pSteamBrowserInstance = this->CreateSteamBrowserInstance();
 
 //	pSteamBrowserInstance->Init("", "https://www.netflix.com/watch/217258", null);
-	pSteamBrowserInstance->Init("", "http://www.youtube.com/", null);
+	pSteamBrowserInstance->Init("", "http://www.youtube.com/", "Manual Steamworks Browser Tab", null);
 
 //	pSteamBrowserInstance->Init("", "file:///C:/Users/Owner/Desktop/wowvr/index.html", null);
 	pSteamBrowserInstance->Focus();
@@ -209,36 +222,104 @@ void C_SteamBrowserManager::RunEmbeddedSteamBrowser()
 
 void C_SteamBrowserManager::DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance)
 {
+	/*
 	if (pInstance == m_pSelectedSteamBrowserInstance)
+	{
+		DevMsg("Was the selected Steamworks browser instance.\n");
 		this->SelectSteamBrowserInstance(null);
+	}
 
 	if (pInstance == m_pFocusedSteamBrowserInstance)
+	{
+		DevMsg("Was the focused Steamworks browser instance.\n");
 		this->FocusSteamBrowserInstance(null);
+	}
+
+	//if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
+	//	g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
 
 	//if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
 	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
 	{
+		DevMsg("Was the input manager embedded instance.\n");
 		g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
 
 		if (g_pAnarchyManager->GetInputManager()->GetInputMode())
+		{
+			DevMsg("Was in input mode.\n");
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		}
 		//g_pAnarchyManager->GetInputManager()->SetInputListener(null);
 		//g_pAnarchyManager->GetInputManager()->SetInputCanvasTexture(null);
 	}
+	*/
 
-	auto foundSteamBrowserInstance = m_steamBrowserInstances.find(pInstance->GetId());
-	if (foundSteamBrowserInstance != m_steamBrowserInstances.end())
-		m_steamBrowserInstances.erase(foundSteamBrowserInstance);
+	bool bWorked = false;
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_steamBrowserInstances[i]->GetId() == pInstance->GetId())
+		{
+			m_steamBrowserInstances.erase(m_steamBrowserInstances.begin() + i);
+			bWorked = true;
+		}
+	}
+
+	if (!bWorked)
+		DevMsg("WARNING: Failed to remove Steam Browser instance!\n");
 
 	pInstance->SelfDestruct();
 }
 
+// TODO: This function is kinda pointless now that m_steamBrowserInstances is a vector itself.  Could just return a pointer directly to it.
 void C_SteamBrowserManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
 {
-	auto it = m_steamBrowserInstances.begin();
-	while (it != m_steamBrowserInstances.end())
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
+		embeddedInstances.push_back(m_steamBrowserInstances[i]);
+}
+
+/*
+C_SteamBrowserInstance* C_SteamBrowserManager::FindDefunctInstance(unsigned int unHandle)
+{
+	std::map<std::string, C_SteamBrowserInstance*>::iterator foundDefuncSteamBrowserInstance = m_defunctSteamBrowserInstances.begin();
+	while (foundDefuncSteamBrowserInstance != m_defunctSteamBrowserInstances.end())
 	{
-		embeddedInstances.push_back(it->second);
-		it++;
+		if (foundDefuncSteamBrowserInstance->second->GetHandle() == unHandle)
+			return foundDefuncSteamBrowserInstance->second;
+		else
+			foundDefuncSteamBrowserInstance++;
+	}
+
+	return null;
+}
+
+void C_SteamBrowserManager::AddDefunctInstance(C_SteamBrowserInstance* pInstance)
+{
+	m_defunctSteamBrowserInstances[pInstance->GetId()] = pInstance;
+}
+
+bool C_SteamBrowserManager::DestroyDefunctInstance(C_SteamBrowserInstance* pInstance)
+{
+	DevMsg("Attempting to destroy defunct instance...\n");
+	std::string id = pInstance->GetId();
+
+	bool response;
+	pInstance->DoDefunctDestruct(response);
+
+	if (response)
+	{
+		DevMsg("Success!\n");
+		std::map<std::string, C_SteamBrowserInstance*>::iterator it = m_defunctSteamBrowserInstances.find(id);
+		if (it != m_defunctSteamBrowserInstances.end())
+			m_defunctSteamBrowserInstances.erase(it);
+
+		return true;
+	}
+	else
+	{
+		DevMsg("Failed!\n");
+		return false;
 	}
 }
+*/

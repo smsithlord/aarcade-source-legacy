@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "themoviedb",
+	"api_version": 0.1,
 	"title": "TheMovieDb",
 	"homepage": "http://www.themoviedb.org/",
 	"search": "http://www.themoviedb.org/search?query=$TERM",
@@ -12,6 +13,7 @@ arcadeHud.addScraper({
 		"description": 100,
 		"reference": 100,
 		"title": 100,
+		"file": 1,
 		"type": 80
 	},
 	"test": function(url, doc, callback)
@@ -113,6 +115,9 @@ arcadeHud.addScraper({
 
 		response.type = goodType;
 		response.title = goodTitle;
+		
+		var goodFile = goodTitle;
+		response.file = goodFile;
 
 		// preview
 		var yt = doc.querySelector(".original_content iframe");

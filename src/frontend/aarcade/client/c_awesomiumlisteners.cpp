@@ -161,9 +161,9 @@ void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 		std::string id = urlSpec.substr(18);
 		DevMsg("Sally: %s\n", urlSpec.c_str());
 
-		if (id == "hud" && g_pAnarchyManager->GetState() == AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT )// || bHudReady
-			g_pAnarchyManager->GetAwesomiumBrowserManager()->OnHudWebViewDocumentReady(caller, id);
-		else
+		//if (id == "hud" && g_pAnarchyManager->GetState() == AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT )// || bHudReady
+		//	g_pAnarchyManager->GetAwesomiumBrowserManager()->OnHudWebViewDocumentReady(caller, id);
+		//else
 			g_pAnarchyManager->GetAwesomiumBrowserManager()->OnCreateWebViewDocumentReady(caller, id);
 	}
 	else
@@ -218,7 +218,7 @@ void ViewListener::OnShowCreatedWebView(WebView *caller, WebView *new_view, cons
 
 void ViewListener::OnChangeTargetURL(WebView* caller, const WebURL &url)
 {
-	DevMsg("ViewListener: OnChangeTargetURL: %s\n", WebStringToCharString(url.spec()));
+	//DevMsg("ViewListener: OnChangeTargetURL: %s\n", WebStringToCharString(url.spec()));
 }
 
 

@@ -2,9 +2,174 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<style>
+			#noTasksOpen
+			{
+				width: 100%;
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+			}
+
+			#hiddenTasks
+			{
+				display: none;
+			}
+
+			#tasks, #hiddenTasks, #windowsTasks
+			{
+				max-height: 186px;
+				overflow-y: auto;
+			}
+
+			#windowsTasks
+			{
+				max-height: 310px;
+			}
+
+			#tasks::-webkit-scrollbar, #hiddenTasks::-webkit-scrollbar, #windowsTasks::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#tasks::-webkit-scrollbar-track, #hiddenTasks::-webkit-scrollbar-track, #windowsTasks::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#tasks::-webkit-scrollbar-thumb, #hiddenTasks::-webkit-scrollbar-thumb, #windowsTasks::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#tasks::-webkit-scrollbar-corner, #hiddenTasks::-webkit-scrollbar-corner, #windowsTasks::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.taskCategory
+			{
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.9);
+				border-radius: 10px;
+				height: 40px;
+				padding-left: 10px;
+			}
+
+			.taskCategoryTitle
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+			}
+
+			.taskAllButton
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+				float: right;
+			}
+
+			.windowsButton
+			{
+
+				display: inline-block;
+				border: 2px solid transparent;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.taskButton
+			{
+				display: inline-block;
+				border: 2px solid black;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+				background-color: rgba(150, 150, 150, 0.5);
+			}
+
+			.displayed .taskButton.displayIcon
+			{
+				background-color: rgba(50, 200, 50, 0.8);
+			}
+
+			.taskButton:hover
+			{
+				background-color: rgba(150, 150, 150, 0.8);
+			}
+
+			.taskTitle
+			{
+				width: 79%;
+				height: 100%;
+				line-height: 40px;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+
+			.tab
+			{
+				border-radius: 0 0 10px 10px;
+				white-space: nowrap;
+				font-size: 18px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 5px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				margin-top: -2px;
+				/*
+				margin-left: 1px;
+				margin-right: 1px;
+				*/
+				color: #aaa;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.tab:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+
+			.tabOn
+			{
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			.tabOn:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+			}
+		</style>
 	</head>
 	<body style="background-color: transparent;">
-		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+		<div style="width: 41%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%); margin-left: auto; margin-right: auto; text-align: right;">
+		<div class="hudContent" style="width: 100%; text-align: left;">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
@@ -17,19 +182,402 @@
 					</div>
 				</div>
 			</div>
+
+			<div class="taskCategory">
+				<div class="taskButton" style="vertical-align: middle;">
+					<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'tasks');" id="toggleTasksButton" />
+				</div>
+				<div class="taskCategoryTitle">
+					In-Game
+				</div>
+			</div>
+
+			<div id="tasks" style="display: none;">
+			</div>
+
+			<div class="taskCategory">
+				<div class="taskButton" style="vertical-align: middle;">
+					<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'windowsTasks');" id="toggleWindowsTasksButton" />
+				</div>
+				<div class="taskCategoryTitle">
+					Windows
+				</div>
+			</div>
+
+			<div id="windowsTasks" style="display: none;">
+			</div>
+
+			<div class="taskCategory">
+				<div class="taskButton" style="vertical-align: middle;">
+					<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'hiddenTasks');" id="toggleHiddenTasksButton" />
+				</div>
+				<div class="taskCategoryTitle">
+					Hidden
+				</div>
+			</div>
+
+			<div id="hiddenTasks" style="display: none;">
+			</div>
 <!--
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretro.html';" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens.">Libretro</div>
-			<div class="mainButton disabledButton">Steamworks Web Browser</div>
-			<div class="mainButton disabledButton">Awesomium Web Browser</div>-->
-			<!-- <div class="mainButton disabledButton">Purge</div> -->
+			<div id="closeAllButton" class="mainButton helpNote" onclick="toggleHiddenTasks(this);" help="Shows you the tasks that have been hidden from the list.">SHOW HIDDEN</div>
+-->
+<!--
+			<div id="closeAllButton" class="mainButton helpNote" onclick="aaapi.system.taskClear();" help="This does NOT affect Windows tasks.">CLOSE ALL</div>
+			<div id="noTasksOpen" style="display: none;">There aren't any in-game tasks open right now.</div/>
+			-->
 
-			<div class="mainButton helpNote" onclick="aaapi.system.taskClear(); aaapi.system.deactivateInputMode();" help="Only affects in-game tasks.">CLOSE ALL TASKS</div>
-
+		</div>
+		<div class="tab" onclick="aaapi.system.setTabMenuFile('screenshotMenu.html'); window.location='asset://ui/screenshotMenu.html';">
+			Screenshots
+		</div>
+		<div class="tab" onclick="aaapi.system.setTabMenuFile('commandsMenu.html'); window.location='asset://ui/commandsMenu.html';">
+			Commands
+		</div>
+		<div class="tab tabOn" style="margin-right: 50px;">
+			Tasks
+		</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
+		<script>
+			var response = aaapi.system.getAllTasks(true);	// param is supposed to update thumbnails, doesn't work yet. No thumbnails for tasks yet.
+			var tasks = response.tasks;
+			var windowsTasks = response.windowsTasks;
+			
+			var tasksContainer = document.querySelector("#tasks");
+			var toggleTasksButton = document.querySelector("#toggleTasksButton");
+
+			var windowsTasksContainer = document.querySelector("#windowsTasks");
+			var toggleWindowsTasksButton = document.querySelector("#toggleWindowsTasksButton");
+
+			var hiddenWindowsTasksContainer = document.querySelector("#hiddenTasks");
+			var toggleHiddenTasksButton = document.querySelector("#toggleHiddenTasksButton");
+
+			function toggleHiddenTasks(elem)
+			{
+				var hidden = (hiddenWindowsTasksContainer.style.display === "none");
+				if( !!elem )
+				{
+					if( hidden )
+						elem.innerHTML = "DON'T SHOW HIDDEN";
+					else
+						elem.innerHTML = "SHOW HIDDEN";
+				}
+
+				if( hidden )
+					hiddenWindowsTasksContainer.style.display = "block";
+				else
+					hiddenWindowsTasksContainer.style.display = "none";
+			}
+
+			function toggleCategory(elem, category)
+			{
+				var categoryElem = document.querySelector("#" + category);
+				var isHidden = (categoryElem.style.display === "none");
+
+				if( isHidden )
+				{
+					elem.src = "expand.png";
+					categoryElem.style.display = "block";
+					sessionStorage.setItem("taskMenu_" + category, "block");
+				}
+				else
+				{
+					elem.src = "collapse.png";
+					categoryElem.style.display = "none";
+					sessionStorage.setItem("taskMenu_" + category, "none");
+				}
+			}
+
+			// session storage to remember UI stuff
+			var menuSettings = 
+			{
+				"taskMenu_tasks": "block",
+				"taskMenu_windowsTasks": "block",
+				"taskMenu_hiddenTasks": "none"
+			};
+
+			var menuSettingVal;
+			var menuSettingsKeys = Object.keys(menuSettings);
+			for( var i = 0; i < menuSettingsKeys.length; i++ )
+			{
+				menuSettingVal = sessionStorage.getItem(menuSettingsKeys[i]);
+				if( !!menuSettingVal && menuSettingVal !== "" )
+					menuSettings[menuSettingsKeys[i]] = menuSettingVal;
+			}
+
+			if( menuSettings["taskMenu_tasks"] !== windowsTasksContainer.style.display )
+				toggleCategory(toggleTasksButton, "tasks");
+
+			if( menuSettings["taskMenu_windowsTasks"] !== windowsTasksContainer.style.display )
+				toggleCategory(toggleWindowsTasksButton, "windowsTasks");
+
+			if( menuSettings["taskMenu_hiddenTasks"] !== hiddenWindowsTasksContainer.style.display )
+				toggleCategory(toggleHiddenTasksButton, "hiddenTasks");
+
+
+			if( tasks.length === 0 )
+			{
+				document.querySelector("#closeAllButton").style.display = "none";
+				document.querySelector("#noTasksOpen").style.display = "block";
+			}
+
+			var task, taskContainer, taskElem, iconsContainer, iconButton, iconImage;
+			if( true )	// WINDOWS
+			{
+				// NON-HIDDEN WINDOWS
+				for( var i = 0; i < windowsTasks.length; i++ )
+				{
+					task = windowsTasks[i];
+
+					if( task.isHiddenTask )
+						continue;
+
+					taskContainer = document.createElement("div");
+					taskContainer.className = "taskContainer";
+					taskContainer.style.cssText = "height: 40px; font-family: Arial; font-size: 20px; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 10px; border: 1px solid black; background-color: rgba(50, 50, 100, 0.7);";
+
+					if( task.isDisplayTask )
+						taskContainer.className += " displayed";
+
+					taskElem = document.createElement("div");
+					taskElem.className = "taskTitle";
+					//taskElem.innerHTML = "<img src='windows.png?cahce=busted' style='vertical-align: middle;' /> " + task.title;
+					taskElem.innerHTML = task.title;
+
+					iconsContainer = document.createElement("div");
+					iconsContainer.style.cssText = "float: right;";
+
+					iconButton = document.createElement("div");
+					iconButton.className = "windowsButton helpNote";
+					iconButton.setAttribute("help", "This is a Windows task.  AArcade does NOT have control over it.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconImage = document.createElement("img");
+					iconImage.src = "windowsicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton helpNote";
+					iconButton.setAttribute("help", "Switch to this Windows task.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function(e)
+					{
+						aaapi.system.switchToTask(this.taskId);
+						var slate = document.createElement("div");
+						slate.style.cssText = "position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);"
+						document.body.appendChild(slate);
+
+						var elem = document.createElement("div");
+						elem.style.cssText = "font-family: Arial; font-weight: bold; font-size: 30px; position: absolute; text-align: center; width: 200px; position: absolute;";
+						elem.style.left = e.clientX - 100 + "px";
+						elem.style.top = e.clientY - 50 + "px";
+						elem.innerHTML = "Release TAB";
+						document.addEventListener("mousemove", function(e)
+						{
+							this.style.left = e.clientX - 100 + "px";
+							this.style.top = e.clientY - 50 + "px";
+						}.bind(elem), true);
+
+						document.body.appendChild(elem);
+					});
+					iconImage = document.createElement("img");
+					iconImage.src = "switchicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton displayIcon helpNote";
+					iconButton.setAttribute("help", "Hide this Windows task, so it doesn't appear on this menu any more.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						//aaapi.system.displayTask(this.taskId);
+						aaapi.system.hideTask(this.taskId);
+						location.reload();
+					});
+					iconImage = document.createElement("img");
+					//iconImage.className = "displayIcon";
+					iconImage.src = "minusicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					taskContainer.appendChild(iconsContainer);
+
+					taskContainer.appendChild(taskElem);
+					windowsTasksContainer.appendChild(taskContainer);
+				}
+
+				// HIDDEN WINDOWS
+				for( var i = 0; i < windowsTasks.length; i++ )
+				{
+					task = windowsTasks[i];
+
+					if( !task.isHiddenTask || task.isPresetHidden )
+						continue;
+
+					taskContainer = document.createElement("div");
+					taskContainer.className = "taskContainer";
+					taskContainer.style.cssText = "height: 40px; font-family: Arial; font-size: 20px; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 10px; border: 1px solid black; background-color: rgba(50, 50, 100, 0.7);";
+
+					if( task.isDisplayTask )
+						taskContainer.className += " displayed";
+
+					taskElem = document.createElement("div");
+					taskElem.className = "taskTitle";
+					//taskElem.innerHTML = "<img src='windows.png?cahce=busted' style='vertical-align: middle;' /> " + task.title;
+					taskElem.innerHTML = task.title;
+
+					iconsContainer = document.createElement("div");
+					iconsContainer.style.cssText = "float: right;";
+
+					iconButton = document.createElement("div");
+					iconButton.className = "windowsButton helpNote";
+					iconButton.setAttribute("help", "This is a Windows task.  AArcade does NOT have control over it.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconImage = document.createElement("img");
+					iconImage.src = "windowsicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton helpNote";
+					iconButton.setAttribute("help", "Switch to this Windows task.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function(e)
+					{
+						aaapi.system.switchToTask(this.taskId);
+						var slate = document.createElement("div");
+						slate.style.cssText = "position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);"
+						document.body.appendChild(slate);
+
+						var elem = document.createElement("div");
+						elem.style.cssText = "font-family: Arial; font-weight: bold; font-size: 30px; position: absolute; text-align: center; width: 200px; position: absolute;";
+						elem.style.left = e.clientX - 100 + "px";
+						elem.style.top = e.clientY - 50 + "px";
+						elem.innerHTML = "Release TAB";
+						document.addEventListener("mousemove", function(e)
+						{
+							this.style.left = e.clientX - 100 + "px";
+							this.style.top = e.clientY - 50 + "px";
+						}.bind(elem), true);
+
+						document.body.appendChild(elem);
+					});
+					iconImage = document.createElement("img");
+					iconImage.src = "switchicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton displayIcon helpNote";
+					iconButton.setAttribute("help", "Unhide this Windows task, so it appears in AArcade's Task Menu again.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						aaapi.system.unhideTask(this.taskId);
+						location.reload();
+					});
+					iconImage = document.createElement("img");
+					//iconImage.className = "displayIcon";
+					iconImage.src = "plusicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					taskContainer.appendChild(iconsContainer);
+
+					taskContainer.appendChild(taskElem);
+					hiddenWindowsTasksContainer.appendChild(taskContainer);
+				}
+			}
+
+			// AARCADE TASKS
+			for( var i = 0; i < tasks.length; i++ )
+			{
+				task = tasks[i];
+
+				if( task.isHiddenTask )
+					continue;
+
+				taskContainer = document.createElement("div");
+				taskContainer.className = "taskContainer";
+				taskContainer.style.cssText = "height: 40px; font-family: Arial; font-size: 20px; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 10px; border: 1px solid black; background-color: rgba(100, 50, 50, 0.7);";
+
+				if( task.isDisplayTask )
+					taskContainer.className += " displayed";
+
+				taskElem = document.createElement("div");
+				taskElem.className = "taskTitle";
+				taskElem.innerHTML = task.title;
+
+				iconsContainer = document.createElement("div");
+				iconsContainer.style.cssText = "float: right;";
+
+				iconButton = document.createElement("div");
+				iconButton.className = "taskButton helpNote";
+				iconButton.setAttribute("help", "Select this task's object.");
+				iconButton.style.cssText = "margin-right: 8px;";
+				iconButton.taskId = task.id;
+				iconButton.addEventListener("click", function()
+				{
+					aaapi.system.selectTaskObject(this.taskId);
+				});
+				iconImage = document.createElement("img");
+				iconImage.src = "objecticon.png";
+				iconButton.appendChild(iconImage);
+				iconsContainer.appendChild(iconButton);
+
+				iconButton = document.createElement("div");
+				iconButton.className = "taskButton displayIcon helpNote";
+				iconButton.setAttribute("help", "Show this task on all slave screens.");
+				iconButton.style.cssText = "margin-right: 8px;";
+				iconButton.taskId = task.id;
+				iconButton.addEventListener("click", function()
+				{
+					aaapi.system.displayTask(this.taskId);
+
+					var elems = document.querySelectorAll(".taskContainer");
+					for( var j = 0; j < elems.length; j++ )
+					{
+						if( elems[j].className.indexOf(" displayed") > 0 )
+							elems[j].className = "taskContainer";
+					}
+
+					this.parentNode.parentNode.className += " displayed";
+				});
+				iconImage = document.createElement("img");
+				//iconImage.className = "displayIcon";
+				iconImage.src = "eye.png";
+				iconButton.appendChild(iconImage);
+				iconsContainer.appendChild(iconButton);
+
+				iconButton = document.createElement("div");
+				iconButton.className = "taskButton helpNote";
+				iconButton.setAttribute("help", "Close this in-game task.");
+				iconButton.style.cssText = "margin-right: 8px;";
+				iconButton.taskId = task.id;
+				iconButton.addEventListener("click", function()
+				{
+					aaapi.system.closeTask(this.taskId);
+					location.reload();
+				});
+				iconImage = document.createElement("img");
+				iconImage.src = "close.png";
+				iconButton.appendChild(iconImage);
+				iconsContainer.appendChild(iconButton);
+
+				taskContainer.appendChild(iconsContainer);
+
+				taskContainer.appendChild(taskElem);
+				tasksContainer.appendChild(taskContainer);
+			}
+		</script>
 	</body>
 </html>

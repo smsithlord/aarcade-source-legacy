@@ -2,6 +2,11 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script>
+			var entityIndex = arcadeHud.getParameterByName("entity");
+			if( entityIndex === null )
+				entityIndex = -1;
+		</script>
 	</head>
 	<body style="background-color: transparent;">
 		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
@@ -37,17 +42,17 @@
 		//window.location='asset://ui/objectInfo.html';
 			function viewObjectInfo()
 			{
-				aaapi.system.viewObjectInfo();
+				aaapi.system.viewObjectInfo(entityIndex);
 			}
 
 			function moveObject()
 			{
-				aaapi.system.moveObject();
+				aaapi.system.moveObject(entityIndex);
 			}
 
 			function deleteObject()
 			{
-				aaapi.system.deleteObject();
+				aaapi.system.deleteObject(entityIndex);
 			}
 		</script>
 	</body>

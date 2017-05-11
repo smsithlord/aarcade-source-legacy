@@ -13,6 +13,7 @@
 #include "c_workshopmanager.h"
 #include "c_metaversemanager.h"
 #include "c_instancemanager.h"
+#include "c_windowmanager.h"
 #include <vector>
 #include "vgui/ISystem.h"
 #include "vgui_controls/Controls.h"
@@ -50,6 +51,12 @@ enum launchErrorType_t {
 	APP_PATH_NOT_FOUND = 7
 };
 
+struct nextLoadInfo_t {
+	std::string instanceId;
+	std::string position;
+	std::string rotation;
+};
+
 class C_AnarchyManager : public CAutoGameSystemPerFrame
 {
 public:
@@ -59,6 +66,7 @@ public:
 	virtual bool Init();
 	virtual void PostInit();
 	virtual void Shutdown();
+	bool IsShuttingDown() { return m_bIsShuttingDown; }
 
 	// Level init, shutdown
 	virtual void LevelInitPreEntity();
@@ -82,6 +90,13 @@ public:
 	// Called after rendering
 	virtual void PostRender();
 
+	//void CalculateDynamicMultiplyer();
+	void CheckPicMip();
+	int GetDynamicMultiplyer();
+	//void SetDynamicMultiplyer(int val) { m_iDynamicMultiplyer = val; }
+
+	void SpecialReady(C_AwesomiumBrowserInstance* pInstance);
+
 	bool HandleUiToggle();
 	bool HandleCycleToNextWeapon();
 	bool HandleCycleToPrevWeapon();
@@ -89,11 +104,20 @@ public:
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
 
+	C_SteamBrowserInstance* AutoInspect(KeyValues* pItemKV, std::string tabId = "", C_PropShortcutEntity* pShortcut = null);
+
 	launchErrorType_t LaunchItem(std::string id);
 	bool AlphabetSafe(std::string text, std::string in_alphabet = "");
 	bool PrefixSafe(std::string text);
 	bool DirectorySafe(std::string text);
 	bool ExecutableSafe(std::string text);
+
+	void AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV);	// TODO: Make the sibling to this weirdly named function a method of the anarchy manager too.
+
+	bool WeaponsEnabled();
+
+	uint64 GetTimeNumber();
+	std::string GetTimeString();
 
 	void BeginImportSteamGames();
 
@@ -105,11 +129,25 @@ public:
 	void HudStateNotify();
 	void SetSlaveScreen(bool bVal);
 
+	bool CompareLoadedFromKeyValuesFileId(const char* testId, const char* baseId);
+
+	void Feedback(std::string type);
+
 	void TaskClear();
 	void TaskRemember();
 	void ShowTaskMenu();
 	void HideTaskMenu();
 	void ObsoleteLegacyCommandReceived();
+
+	void StartHoldingPrimaryFire();
+	void StopHoldingPrimaryFire();
+
+	object_t* GetLastNearestObjectToPlayerLook() { return m_pLastNearestObjectToPlayerLook; }
+
+	void ShowScreenshotMenu();
+	void HideScreenshotMenu();
+	bool TakeScreenshot(bool bCreateBig = false, std::string id = "");
+	void TeleportToScreenshot(std::string id, bool bDeactivateInputMode = true);
 
 	// TRY TO KEEP THESE IN CHRONOLOGICAL ORDER, AT LEAST FOR THE STARTUP SEQUENCE!
 	void Disconnect();
@@ -120,12 +158,17 @@ public:
 	void OnMountAllWorkshopsComplete();
 	void OnDetectAllMapsComplete();
 
+	bool OnSteamBrowserCallback(unsigned int unHandle);
+
 	//void OnLoadingManagerReady();
-	bool AttemptSelectEntity();
+	bool AttemptSelectEntity(C_BaseEntity* pTargetEntity = null);
 	bool SelectEntity(C_BaseEntity* pEntity);
 	bool DeselectEntity(std::string nextUrl = "", bool bCloseInstance = true);
 	void AddGlowEffect(C_BaseEntity* pEntity);
 	void RemoveGlowEffect(C_BaseEntity* pEntity);
+
+	void AddHoverGlowEffect(C_BaseEntity* pEntity);
+	void RemoveLastHoverGlowEffect();
 
 	void ShowFileBrowseMenu(std::string browseId);// const char* keyFieldName, KeyValues* itemKV);
 	void OnBrowseFileSelected(std::string browseId, std::string response);
@@ -148,23 +191,27 @@ public:
 	void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters);
 	std::string C_AnarchyManager::encodeURIComponent(const std::string &s);
 
-	void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
+	//void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 
 	void xCastSetLiveURL();
 	void TestSQLite();
 	void TestSQLite2();
+
+	void SetNextLoadInfo(std::string instanceId = "", std::string position = "", std::string rotation = "");
 
 	// accessors
 	bool GetSuspendEmbedded() { return m_bSuspendEmbedded; }
 	bool IsInitialized() { return m_bInitialized; }
 	aaState GetState() { return m_state; }
 	std::string GetInstanceId() { return m_instanceId; }
-	std::string GetNextInstanceId() { return m_nextInstanceId; }
+	//std::string GetNextInstanceId() { return m_nextInstanceId; }
+	nextLoadInfo_t* GetNextLoadInfo() { return m_pNextLoadInfo; }
 	C_InputManager* GetInputManager() { return m_pInputManager; }
 	//C_WebManager* GetWebManager() { return m_pWebManager; }
 	//C_LoadingManager* GetLoadingManager() { return m_pLoadingManager; }
 	C_CanvasManager* GetCanvasManager() { return m_pCanvasManager; }
 	C_SteamBrowserManager* GetSteamBrowserManager() { return m_pSteamBrowserManager; }
+	C_WindowManager* GetWindowManager() { return m_pWindowManager; }
 	C_AwesomiumBrowserManager* GetAwesomiumBrowserManager() { return m_pAwesomiumBrowserManager; }
 	//C_AwesomiumBrowserManager* GetAwesomiumBrowserManager() { return m_pAwesomiumBrowserManager; }
 	C_LibretroManager* GetLibretroManager() { return m_pLibretroManager; }
@@ -177,18 +224,35 @@ public:
 	std::string GetLegacyFolder() { return m_legacyFolder; }
 	std::string GetWorkshopFolder() { return m_workshopFolder; }
 	std::string GetAArcadeUserFolder() { return m_aarcadeUserFolder; }
+	std::string GetOldEngineNoFocusSleep() { return m_oldEngineNoFocusSleep; }
+	C_BaseEntity* GetLastHoverGlowEntity() { return m_pHoverGlowEntity; }
+	std::string GetTabMenuFile() { return m_tabMenuFile; }
 
 	// mutators
+	void SetLastNearestObjectToPlayerLook(object_t* pObject) { m_pLastNearestObjectToPlayerLook = pObject; }
 	void SetInitialized(bool bValue) { m_bInitialized = bValue; }
 	void SetState(aaState state) { m_state = state; }
 	void IncrementState();
 	void SetLegacyFolder(std::string val) { m_legacyFolder = val; }
 	void SetWorkshopFolder(std::string val) { m_workshopFolder = val; }
 	void SetAArcadeUserFolder(std::string val) { m_aarcadeUserFolder = val; }
+	void SetOldEngineNoFocusSleep(std::string val) { m_oldEngineNoFocusSleep = val; }
+	void SetTabMenuFile(std::string url) { m_tabMenuFile = url; }
 	
 private:
+	ConVar* m_pWeaponsEnabledConVar;
+	std::string m_tabMenuFile;
+	int m_iLastDynamicMultiplyer;
+	ConVar* m_pPicMipConVar;
+	object_t* m_pLastNearestObjectToPlayerLook;
+	C_BaseEntity* m_pHoverGlowEntity;
+	bool m_bIsShuttingDown;
+	bool m_bIsHoldingPrimaryFire;
+	std::map<std::string, bool> m_specialInstances;
 	//ThreadedFileBrowseParams_t* m_pFileParams;
 	//ThreadedFolderBrowseParams_t* m_pFolderParams;
+
+	nextLoadInfo_t* m_pNextLoadInfo;
 
 	bool m_bSuspendEmbedded;
 	bool m_bInitialized;
@@ -196,7 +260,7 @@ private:
 	aaState m_state;
 	bool m_bPaused;
 	std::string m_instanceId;
-	std::string m_nextInstanceId;
+	//std::string m_nextInstanceId;
 	int m_iState;
 	double m_dLastGenerateIdTime;
 	std::string m_lastGeneratedChars;
@@ -206,6 +270,7 @@ private:
 	//C_LoadingManager* m_pLoadingManager;
 	C_LibretroManager* m_pLibretroManager;
 	C_SteamBrowserManager* m_pSteamBrowserManager;
+	C_WindowManager* m_pWindowManager;
 	C_AwesomiumBrowserManager* m_pAwesomiumBrowserManager;
 	C_InputManager* m_pInputManager;
 	C_MountManager* m_pMountManager;
@@ -217,6 +282,7 @@ private:
 	std::string m_aarcadeUserFolder;
 	std::string m_legacyFolder;
 	std::string m_workshopFolder;
+	std::string m_oldEngineNoFocusSleep;
 };
 
 extern C_AnarchyManager* g_pAnarchyManager;

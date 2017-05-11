@@ -152,6 +152,13 @@ C_MetaverseManager::~C_MetaverseManager()
 		m_types.erase(m_types.begin());
 	}
 
+	// screenshots
+	while (!m_mapScreenshots.empty())
+	{
+		m_mapScreenshots.begin()->second->deleteThis();
+		m_mapScreenshots.erase(m_mapScreenshots.begin());
+	}
+
 	sqlite3_close(m_db);
 	// TODO: error objects for sqlite must also be cleaned up
 }
@@ -442,6 +449,8 @@ void C_MetaverseManager::Update()
 //		UTIL_SetOrigin(m_pSpawningObjectEntity, tr.endpos);
 //		m_pSpawningObjectEntity->SetAbsAngles(angles);
 
+		// WORKING!! Rotate based on how much player has turned since last frame
+		/* disabled for now cuz of transform menu
 		if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
 		{
 			if (vgui::input()->IsKeyDown(KEY_E))
@@ -469,6 +478,7 @@ void C_MetaverseManager::Update()
 			angles.y += m_spawningAngles.y;
 			angles.z += m_spawningAngles.z;
 		}
+		*/
 
 		// add in the current transform
 		transform_t* pTransform = g_pAnarchyManager->GetInstanceManager()->GetTransform();
@@ -622,11 +632,19 @@ void C_MetaverseManager::SaveItem(KeyValues* pItem)
 	if (pTargetKey)
 		pItem->RemoveSubKey(pTargetKey);
 
-	KeyValues* active = pItem->FindKey("current");
+	KeyValues* active = this->GetActiveKeyValues(pItem);
+	/*
+	pItem->FindKey("current");
 	if (!active)
 		active = pItem->FindKey("local");
+		*/
+
+	// FIXME: ALWAYS SAVING TO ACTIVE, BUT WHEN OTHER KEY SLOTS GET USED, WILL HAVE TO SAVE TO USE LOGIC TO DETERMINE WHICH SUB-KEY WE'RE SAVING.
+	// NOTE: We're only using the item to get the ID and to update its modified time.
+	active->SetString("info/modified", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));	// save as string because KeyValue's have no uint64 data type.
 
 	// FIXME: SAVING TO .KEY FILES DISABLED FOR MYSQL MIGRATION!!
+	// And dodged a bullet there, because when KV's get saved & loaded from disk, they forget their types, and ID's that start with 0 get screwed.
 	sqlite3_stmt *stmt = NULL;
 	int rc = sqlite3_prepare(m_db, VarArgs("REPLACE INTO items VALUES(\"%s\", ?)", active->GetString("info/id")), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
@@ -987,7 +1005,7 @@ void C_MetaverseManager::UpdateScrapersJS()
 bool C_MetaverseManager::LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv)
 {
 	sqlite3_stmt *stmt = NULL;
-	DevMsg("loading from table name: %s _id %s\n", tableName, id);
+	//DevMsg("loading from table name: %s _id %s\n", tableName, id);
 	int rc = sqlite3_prepare(m_db, VarArgs("SELECT * from %s WHERE id = \"%s\"", tableName, id), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 		DevMsg("prepare failed: %s\n", sqlite3_errmsg(m_db));
@@ -1102,6 +1120,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, std::string f
 			else
 			{
 				pItem->SetString("local/info/id", g_pAnarchyManager->ExtractLegacyId(file, pItem).c_str());
+				pItem->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), workshopIds.c_str());
 
 				//pItem->SetString("local/title", pItem->GetString("title"));
 
@@ -1798,14 +1817,17 @@ unsigned int C_MetaverseManager::LoadAllLocalTypes(std::string filePath)
 		pType->ReadAsBinary(buf);
 
 		// TODO: Look up any alias here first!!
-		KeyValues* pActive = pType->FindKey("current");
+		KeyValues* pActive = this->GetActiveKeyValues(pType);/*pType->FindKey("current");
 		if (!pActive)
-			pActive = pType->FindKey("local");
+			pActive = pType->FindKey("local");*/
 
 		if (pActive)
 		{
 			std::string id = pActive->GetString("info/id");
 			m_types[id] = pType;
+			//for (KeyValues *sub = pActive->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			//	DevMsg("Test key: %s = %s\n", sub->GetName(), sub->GetString());
+			DevMsg("Loaded type %s from Redux library\n", pActive->GetString("title"));
 			count++;
 			//DevMsg("adding type: %s\n", id.c_str());
 		}
@@ -2964,7 +2986,7 @@ KeyValues* C_MetaverseManager::FindNextLibraryEntry(const char* queryId, const c
 	{
 		// continue the search
 		m_previousFindModelIterator++;
-		if (m_previousFindModelIterator != m_items.end())
+		if (m_previousFindModelIterator != m_models.end())
 			response = this->FindLibraryEntry(category, m_pPreviousModelSearchInfo, m_previousFindModelIterator);
 	}
 
@@ -2999,6 +3021,82 @@ KeyValues* C_MetaverseManager::FindNextLibraryItem()
 	return response;
 }
 
+KeyValues* C_MetaverseManager::GetScreenshot(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_mapScreenshots.find(id);
+	if (it != m_mapScreenshots.end())
+		return it->second;
+	else
+		return null;
+}
+
+void C_MetaverseManager::AddScreenshot(KeyValues* pScreenshotKV)
+{
+	std::string id = pScreenshotKV->GetString("id");
+	m_mapScreenshots[id] = pScreenshotKV;
+}
+
+KeyValues* C_MetaverseManager::FindMostRecentScreenshot(std::string mapId, instance_t* pInstance)
+{
+	std::string instanceId = (pInstance) ? pInstance->id : "";
+
+	KeyValues* pMapKV = null;
+	std::string mapFileName = "";
+	std::string goodMapId = "";
+	if (mapId != "")
+	{
+		goodMapId = mapId;
+		pMapKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(this->GetMap(goodMapId));
+		if (pMapKV)
+		{
+			goodMapId = pMapKV->GetString("info/id");
+			mapFileName = pMapKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+		}
+	}
+	else
+	{
+		mapFileName = std::string(g_pAnarchyManager->MapName()) + std::string(".bsp");
+		pMapKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(this->FindMap(mapFileName.c_str()));
+		if (pMapKV)
+			goodMapId = pMapKV->GetString("info/id");
+	}
+
+	if (goodMapId == "" || mapFileName == "" )
+		return null;
+
+	//std::string testId;
+	std::vector<KeyValues*> screenshots;
+	std::map<std::string, KeyValues*>::iterator it = m_mapScreenshots.begin();
+	while (it != m_mapScreenshots.end())
+	{
+		//testId = it->second->GetString("map/id");	// SOMEHOW COULD BE 1.#INF00 when printed as a string, even though it was fine in the KV text. Like for ID 545e1841
+		//testId = (instanceId == "") ? it->second->GetString("instance/mapId") : it->second->GetString("instance/id");
+		//DevMsg("IDs: %s vs %s\n", testId.c_str(), goodMapId.c_str());
+		//if ((instanceId == "" && testId == goodMapId) || (instanceId != "" && testId == instanceId))
+		if (!Q_strcmp(it->second->GetString("map/file"), mapFileName.c_str()))
+			screenshots.push_back(it->second);
+
+		it++;
+	}
+
+	// now screenshots holds all applicable screenshots.  find the most recent one.
+	KeyValues* pBestScreenshot = null;
+	uint64 bestValue = 0;
+	uint64 testValue;
+	unsigned int max = screenshots.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		testValue = Q_atoui64(screenshots[i]->GetString("created"));
+		if (testValue > bestValue)
+		{
+			bestValue = testValue;
+			pBestScreenshot = screenshots[i];
+		}
+	}
+
+	return pBestScreenshot;
+}
+
 KeyValues* C_MetaverseManager::GetLibraryApp(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_apps.find(id);
@@ -3008,38 +3106,59 @@ KeyValues* C_MetaverseManager::GetLibraryApp(std::string id)
 		return null;
 }
 
-std::map<std::string, std::string>& C_MetaverseManager::DetectAllMapScreenshots()
+std::map<std::string, KeyValues*>& C_MetaverseManager::DetectAllMapScreenshots()
 {
+	DevMsg("Detecting all map screenshots...\n");
 	size_t found;
 	std::string id;
-	std::map<std::string, std::string>::iterator it;
+	//std::map<std::string, std::string>::iterator it;
 
-	// GRAB A LIST OF THE LATEST SCREENSHOT FOR EACH FILE NAME BEFORE HAND, so screenshots can be bound to maps as they are added.
+	// get every shot that exists
+	KeyValues* pShotKV;
 	FileFindHandle_t pFileFindHandle;
-	const char *pScreenshotName = g_pFullFileSystem->FindFirstEx("screenshots\\*.jpg", "GAME", &pFileFindHandle);
-	while (pScreenshotName != NULL)
+	const char *pScreenshotInfoFile = g_pFullFileSystem->FindFirstEx("shots\\*.txt", "MOD", &pFileFindHandle);
+	while (pScreenshotInfoFile != NULL)
 	{
 		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
 		{
-			pScreenshotName = g_pFullFileSystem->FindNext(pFileFindHandle);
+			pScreenshotInfoFile = g_pFullFileSystem->FindNext(pFileFindHandle);
 			continue;
 		}
 
-		// doesn't matter if it already exists, overwrite it with this one
-		id = pScreenshotName;
+		id = pScreenshotInfoFile;
+		id = id.substr(0, id.find(".txt"));
 
-		found = id.find_last_of(".");
-		if (found != std::string::npos)
+		pShotKV = new KeyValues("screenshot");
+		if (pShotKV->LoadFromFile(g_pFullFileSystem, VarArgs("shots\\%s", pScreenshotInfoFile), "MOD"))
 		{
-			id = id.substr(0, found - 4);
-			m_mapScreenshots[id] = pScreenshotName;
+			// IMPORTANT NOTE: Key values loaded with LoadFromFile forget the data types for their fields and if a string is just numbers, it gets turned into a number instead of a string after loading.
+			// This matters if the number started with a 0, because leading zeros get removed for numbers.
+			// So to catch this, additional checks must be performed on ID's read from KeyValues files.
+			//DevMsg("Here the map ID for the screenshot is: %s or %i or %s and type %s\n", pShotKV->GetString("map/id"), pShotKV->GetInt("map/id"), pShotKV->GetRawString("map/id"), pShotKV->GetDataType("map/id"));
+			m_mapScreenshots[id] = pShotKV;
 		}
-
-		pScreenshotName = g_pFullFileSystem->FindNext(pFileFindHandle);
+		else
+			pShotKV->deleteThis();
+		
+		pScreenshotInfoFile = g_pFullFileSystem->FindNext(pFileFindHandle);
 	}
 	g_pFullFileSystem->FindClose(pFileFindHandle);
 
 	return m_mapScreenshots;
+}
+
+void C_MetaverseManager::GetAllMapScreenshots(std::vector<KeyValues*>& responseVector, std::string mapId)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_mapScreenshots.begin();
+	while (it != m_mapScreenshots.end())
+	{
+		//DevMsg("Screenshot check: %s vs %s vs %i\n", mapId.c_str(), it->second->GetString("map/id"), it->second->GetInt("map/id"));
+		//if (mapId == "" || mapId == it->second->GetString("map/id"))//; it->first)
+		if (mapId == "" || g_pAnarchyManager->CompareLoadedFromKeyValuesFileId(it->second->GetString("map/id"), mapId.c_str()) )
+			responseVector.push_back(it->second);
+
+		it++;
+	}
 }
 
 KeyValues* C_MetaverseManager::FindMap(const char* mapFile)
@@ -3152,6 +3271,9 @@ void C_MetaverseManager::DetectAllMaps()
 	else
 	{
 	*/
+
+		DevMsg("C_MetaverseManager::DetectAllMaps\n");
+
 		// Load all the .key files from the library/instances folder.
 		// then add their instances:
 
@@ -3228,6 +3350,8 @@ void C_MetaverseManager::DetectAllMaps()
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	bool bAlreadyExists;
+
+	DevMsg("Detect first map...\n");
 	KeyValues* map = this->DetectFirstMap(bAlreadyExists);
 	if (map)
 	{
@@ -3238,6 +3362,8 @@ void C_MetaverseManager::DetectAllMaps()
 	}
 	else
 		this->OnDetectAllMapsCompleted();
+
+	DevMsg("Initial logic for DetectAllMaps complete.\n");
 }
 
 void C_MetaverseManager::OnDetectAllMapsCompleted()
@@ -3342,6 +3468,25 @@ void C_MetaverseManager::GetObjectInfo(object_t* pObject, KeyValues* &pObjectInf
 
 		pItemInfo->SetString("id", pItemKV->GetString("info/id"));
 		pItemInfo->SetString("title", pItemKV->GetString("title"));
+
+		std::string workshopId = pItemKV->GetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID));
+		pItemInfo->SetString("workshopIds", workshopId.c_str());
+
+		// if there is a workshop ID, get more info.
+		SteamWorkshopDetails_t* pWorkshopDetails = g_pAnarchyManager->GetWorkshopManager()->GetWorkshopSubscription(Q_atoui64(workshopId.c_str()));
+		if (pWorkshopDetails)
+			pItemInfo->SetString("workshopTitle", pWorkshopDetails->title.c_str());
+		else
+			pItemInfo->SetString("workshopTitle", "");
+
+		/*
+		KeyValues* someInfoKV = pItemKV->FindKey(VarArgs("platforms/%s", AA_PLATFORM_ID));
+		if (someInfoKV)
+		{
+			for (KeyValues *sub = someInfoKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+				DevMsg("Test value: %s\n", sub->GetName());
+		}
+		*/
 		//pItemInfo->SetString("workshopIds", "TBD");
 	}
 
@@ -3354,9 +3499,28 @@ void C_MetaverseManager::GetObjectInfo(object_t* pObject, KeyValues* &pObjectInf
 		pModelInfo->SetString("title", pModelKV->GetString("title"));
 		
 		KeyValues* someInfoKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForModelFile(pModelKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
+		std::string workshopTitle = "";
 		for (KeyValues *sub = someInfoKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-			pModelInfo->SetString(VarArgs("%s", sub->GetName()), sub->GetString());
+			pModelInfo->SetString(sub->GetName(), workshopTitle.c_str());
+		std::string workshopId = someInfoKV->GetString("workshopIds");
+		SteamWorkshopDetails_t* pWorkshopDetails = g_pAnarchyManager->GetWorkshopManager()->GetWorkshopSubscription(Q_atoui64(workshopId.c_str()));
 		someInfoKV->deleteThis();
+		pModelInfo->SetString("workshopIds", workshopId.c_str());// VarArgs("%llu", pWorkshopDetails->publishedFileId));
+
+		if (pWorkshopDetails)
+			pModelInfo->SetString("workshopTitle", pWorkshopDetails->title.c_str());
+		else
+			pModelInfo->SetString("workshopTitle", "");
+		/*
+		std::string workshopId = pModelKV->GetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID));
+		pModelInfo->SetString("workshopIds", workshopId.c_str());
+
+		// if there is a workshop ID, get more info.
+		SteamWorkshopDetails_t* pWorkshopDetails = g_pAnarchyManager->GetWorkshopManager()->GetWorkshopSubscription(Q_atoui64(workshopId.c_str()));
+		if (pWorkshopDetails)
+			pModelInfo->SetString("workshopTitle", pWorkshopDetails->title.c_str());
+		else
+			pModelInfo->SetString("workshopTitle", "");*/
 
 		//pModelInfo->SetString("mountIds", "TBD");
 		
@@ -3414,6 +3578,7 @@ KeyValues* C_MetaverseManager::DetectRequiredWorkshopForMapFile(std::string mapF
 	
 	if (!bIsLegacyImportedGen1Workshop)
 	{
+		//DevMsg("Map: %s vs %s\n", mapBuf.c_str(), workshopDir.c_str());
 		// check for content from the workshop
 		if (mapBuf.find(workshopDir) == 0)
 		{
@@ -3544,7 +3709,7 @@ void C_MetaverseManager::FlagDynamicModels()
 			if (buf.find("models\\cabinets\\") == 0 || buf.find("models/cabinets/") == 0 || buf.find("models\\banners\\") == 0 || buf.find("models/banners/") == 0 || buf.find("models\\frames\\") == 0 || buf.find("models/frames/") == 0 || buf.find("models\\icons\\") == 0 || buf.find("models/icons/") == 0)
 			{
 				active->SetInt("dynamic", 1);
-				DevMsg("Flagged %s as dynamic model\n", buf.c_str());
+			//	DevMsg("Flagged %s as dynamic model\n", buf.c_str());
 			}
 		}
 

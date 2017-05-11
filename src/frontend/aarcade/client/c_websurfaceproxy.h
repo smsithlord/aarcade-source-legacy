@@ -37,6 +37,7 @@ public:
 	void PrepareRefreshItemTextures(std::string itemId, std::string channel);
 	void RefreshItemTextures(std::string itemId, std::string channel);
 
+	void UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance);
 	void UnreferenceTexture(ITexture* pTexture);
 
 	// mutators

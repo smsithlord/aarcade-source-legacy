@@ -4,6 +4,8 @@ class IInputSlate
 		virtual void		Create(vgui::VPANEL parent) = 0;
 		virtual void		Destroy( void ) = 0;
 		virtual vgui::Panel*		GetPanel() = 0;
+		virtual void Update() = 0;
+		virtual ITexture* GetCanvasTexture() { return null; }
 };
  
 extern IInputSlate* InputSlate;
@@ -15,6 +17,7 @@ extern IInputSlate* InputSlate;
 //#include "c_webViewManager.h"
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/Frame.h>
+#include "aarcade/client/C_EmbeddedInstance.h"
 //#include <vgui_controls/TextEntry.h>
 //#include <vgui_controls/Button.h>
 //#include <vgui_controls/ComboBox.h>
@@ -38,7 +41,11 @@ namespace vgui
 		//static ITexture* s_pOriginalTexture;
 	//	static IMaterial* s_pMaterial;
 
+		void HideInputCursor();
+		void ShowInputCursor();
+
 		void OnTick();
+		void Update();
 		void SelfDestruct();
 		//void PaintBackground();
 
@@ -58,18 +65,23 @@ namespace vgui
 
 		vgui::Panel* GetPanel();
 
+		ITexture* GetCanvasTexture();
+
 	private:
 		bool m_bMainMenu;
 		bool m_bFullscreen;
 		bool m_bInputCapture;
 	//	bool m_bOverlay;
-		static long m_fPreviousTime;
+	//	static long m_fPreviousTime;
 
 	protected:
 		void OnCommand(const char* pcCommand);
 		//virtual void PaintBackground();
 
 	private:
+		bool m_bReadyForUpdates;
+		IMaterialVar* m_pMaterialVar;
+		C_EmbeddedInstance* m_pCanvasInstance;
 		ITexture* m_pCanvasTexture;
 		bool m_bCursorAlphaZero;	// different than actually hiding the cursor
 		bool m_bCursorHidden;

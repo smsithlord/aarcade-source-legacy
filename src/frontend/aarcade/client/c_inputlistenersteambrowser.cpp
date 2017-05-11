@@ -24,7 +24,10 @@ void C_InputListenerSteamBrowser::OnMouseMove(float x, float y)
 
 //	g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnMouseMove(x, y);
 	//DevMsg("yyyOnMouseMove: %f %f\n", x, y);
-	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnMouseMove(x, y);
+
+	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance();
+	if (pBrowserInstance)
+		pBrowserInstance->OnMouseMove(x, y);
 }
 
 void C_InputListenerSteamBrowser::OnMousePressed(vgui::MouseCode code)
@@ -32,7 +35,9 @@ void C_InputListenerSteamBrowser::OnMousePressed(vgui::MouseCode code)
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnMousePressed(code);// OnMouseMove(x, y);
+	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance();
+	if (pBrowserInstance)
+		pBrowserInstance->OnMousePressed(code);// OnMouseMove(x, y);
 }
 
 void C_InputListenerSteamBrowser::OnMouseReleased(vgui::MouseCode code)
@@ -40,7 +45,9 @@ void C_InputListenerSteamBrowser::OnMouseReleased(vgui::MouseCode code)
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance()->OnMouseReleased(code);// OnMouseMove(x, y);
+	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->GetSelectedSteamBrowserInstance();
+	if (pBrowserInstance)
+		pBrowserInstance->OnMouseReleased(code);// OnMouseMove(x, y);
 }
 
 void C_InputListenerSteamBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
@@ -48,7 +55,9 @@ void C_InputListenerSteamBrowser::OnKeyCodePressed(vgui::KeyCode code, bool bShi
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
+	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance();
+	if (pBrowserInstance)
+		pBrowserInstance->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 }
 
 void C_InputListenerSteamBrowser::OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState)
@@ -56,5 +65,7 @@ void C_InputListenerSteamBrowser::OnKeyCodeReleased(vgui::KeyCode code, bool bSh
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance()->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
+	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->GetFocusedSteamBrowserInstance();
+	if (pBrowserInstance)
+		pBrowserInstance->OnKeyCodeReleased(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 }

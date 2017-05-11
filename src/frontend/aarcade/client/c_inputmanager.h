@@ -5,6 +5,7 @@
 #include "vgui/KeyCode.h"
 #include <map>
 
+//#include "c_inputslate.h"
 #include "c_inputlistener.h"
 #include "c_embeddedinstance.h"
 /*
@@ -22,15 +23,17 @@ public:
 	C_InputManager();
 	~C_InputManager();
 
+	void Update();
+
 	vgui::KeyCode StringToSteamKeyEnum(std::string text);
+
+	ITexture* GetInputSlateCanvasTexture();
 
 	// accessors
 	bool GetInputCapture() { return m_bInputCapture; }
 	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
-	//ITexture* GetInputCanvasTexture() { return m_pInputCanvasTexture; }
 	bool GetInputMode() { return m_bInputMode; }
 	bool GetFullscreenMode() { return m_bFullscreenMode; }
-	//bool GetOverlayMode() { return m_bOverlayMode; }
 	bool GetMainMenuMode() { return m_bMainMenuMode; }
 	bool GetForceInputMode() { return m_bForcedInputMode; }
 	bool GetWasForceInputMode() { return m_bWasForcedInputMode; }
@@ -41,6 +44,7 @@ public:
 	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false, C_EmbeddedInstance* pEmbeddedInstance = null, bool bInputCapture = true);
 	void ForceInputMode();
 	void DeactivateInputMode(bool bForce = false);
+	//void ShutdownInputMode();
 	void MouseMove(float x, float y);
 	void MousePress(vgui::MouseCode code);
 	void MouseRelease(vgui::MouseCode code);
@@ -54,8 +58,6 @@ public:
 	// mutators
 	void SetInputCapture(bool value) { m_bInputCapture = value; }
 	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
-	//void SetInputListener(C_InputListener* pListener) { m_pInputListener = pListener; }
-	//void SetInputCanvasTexture(ITexture* pTexture) { m_pInputCanvasTexture = pTexture; }
 	
 private:
 	std::map<std::string, vgui::KeyCode> m_sourceKeyEnumMap;
@@ -65,13 +67,7 @@ private:
 	bool m_bInputMode;
 	bool m_bInputCapture;
 	bool m_bFullscreenMode;
-	//bool m_bOverlayMode;
 	bool m_bMainMenuMode;
-	//float m_fMouseX;
-	//float m_fMouseY;
-	//C_InputListener* m_pInputListener;
-	//ITexture* m_pInputCanvasTexture;
-	//listener_t m_inputListenerType;
 };
 
 #endif

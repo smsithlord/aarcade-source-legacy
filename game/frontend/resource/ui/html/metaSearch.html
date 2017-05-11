@@ -62,7 +62,7 @@
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/blank.html';" help="Go back to the previous menu.">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/overlay.html';" help="Go back to the previous menu.">
 							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
 						</div>
 					</div>
@@ -70,7 +70,7 @@
 						Meta Search
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
 							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
 						</div>
 					</div>
@@ -192,7 +192,7 @@ function getParameterByName(name, url) {
 						{
 							//console.log("testing " + this.itemId + " " + this.field + " " + this.scraperId + " " + this.term);
 							arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
-							document.location = "asset://ui/blank.html";
+							document.location = "asset://ui/overlay.html";
 						}.bind(dummy), 10);
 					}
 				}.bind(button), true);

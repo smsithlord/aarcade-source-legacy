@@ -231,6 +231,21 @@ void C_InstanceManager::ApplyChanges(std::string id, C_PropShortcutEntity* pShor
 	g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
 }
 
+void C_InstanceManager::SetObjectEntity(std::string objectId, C_BaseEntity* pEntity)
+{
+	object_t* pObject = this->GetInstanceObject(objectId);
+	pObject->entityIndex = pEntity->entindex();
+}
+
+C_BaseEntity* C_InstanceManager::GetObjectEntity(std::string objectId)
+{
+	object_t* pObject = this->GetInstanceObject(objectId);
+	if (pObject->entityIndex != -1)
+		return C_BaseEntity::Instance(pObject->entityIndex);
+	else
+		return null;
+}
+
 void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 {
 	auto it = std::find(m_unspawnedObjects.begin(), m_unspawnedObjects.end(), object);
@@ -260,6 +275,49 @@ void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 	engine->ServerCmd(msg.c_str(), false);
 }
 
+object_t* C_InstanceManager::GetNearestObjectToPlayerLook(object_t* pStartingObject)
+{
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (!pPlayer)
+		return false;
+
+	if (pPlayer->GetHealth() <= 0)
+		return false;
+
+	// fire a trace line
+	trace_t tr;
+	Vector forward;
+	pPlayer->EyeVectors(&forward);
+	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+	Vector startPos = tr.endpos;
+
+	object_t* pNearObject = null;
+	object_t* pTestObject = null;
+	float fMinDist = 300;
+	float fTestDist;
+
+	float fStartingDist = 0.0f;
+	if (pStartingObject)
+		fStartingDist = pStartingObject->origin.DistTo(startPos);
+
+	std::map<std::string, object_t*>::iterator it = m_objects.begin();
+	while (it != m_objects.end())
+	{
+		pTestObject = it->second;
+		fTestDist = pTestObject->origin.DistTo(startPos);
+		if (fTestDist > fStartingDist && (fMinDist == -1 || fTestDist < fMinDist))
+		{
+			fMinDist = fTestDist;
+			pNearObject = pTestObject;
+		}
+
+		it++;
+	}
+
+	return pNearObject;
+}
+
 object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created, std::string creator, unsigned int removed, std::string remover, unsigned int modified, std::string modifier, bool isChild)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
@@ -280,6 +338,7 @@ object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId,
 	pObject->spawned = false;
 	pObject->scale = scale;
 	pObject->slave = slave;
+	pObject->entityIndex = -1;
 
 	m_objects[goodObjectId] = pObject;
 
@@ -786,7 +845,7 @@ void C_InstanceManager::Update()
 	}
 }
 
-void C_InstanceManager::LoadInstance(std::string instanceId)
+void C_InstanceManager::LoadInstance(std::string instanceId, std::string position, std::string rotation)
 {
 	DevMsg("Load the instance!!!\n");
 	instance_t* pInstance = this->GetInstance(instanceId);
@@ -854,6 +913,23 @@ void C_InstanceManager::LoadInstance(std::string instanceId)
 	//std::string instanceId = g_pAnarchyManager->GetInstanceId();
 	//if (instanceId != "")
 	//{
+
+	/*
+	// check for the most recent screenshot
+	KeyValues* pScreenshotKV = g_pAnarchyManager->GetMetaverseManager()->FindMostRecentScreenshot();
+	if (pScreenshotKV)
+	{
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), pScreenshotKV->GetString("body/position", "0 0 0"), pScreenshotKV->GetString("body/rotation", "0 0 0")), true);
+	}
+	*/
+
+	// check if we should teleport
+	if (position != "" && rotation != "")
+	{
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), position.c_str(), rotation.c_str()), true);
+	}
 
 	if (this->GetInstanceObjectCount() > 0)
 	{

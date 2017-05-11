@@ -341,7 +341,13 @@ C_EmbeddedInstance::~C_EmbeddedInstance()
 
 std::string C_EmbeddedInstance::GetId()
 {
-	DevMsg("ERROR: Base method called!\n");
+	DevMsg("ERROR: Base method GetId called!\n");
+	return "";
+}
+
+std::string C_EmbeddedInstance::GetTitle()
+{
+	DevMsg("ERROR: Base method GetTitle called!\n");
 	return "";
 }
 

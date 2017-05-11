@@ -3,6 +3,21 @@
 		<link rel="stylesheet" type="text/css" href="hud.css"></link>
 		<script src="hud.js"></script>
 		<script>
+
+			var mode = arcadeHud.getParameterByName("mode");
+			var isDoingStuff = false;
+			var g_allowTransformUpdate = true;
+			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+			var libraryBrowserContext;
+			var category;
+			var titleElem;
+			var entryContainerElem;
+			var searchCategory;
+			var response;
+			var method;
+			var transformInfo;
+			var wl_transformContainer;
+
 			var cmdListener = {
 				"displayMode": "browse",
 				"specialWheel": function(delta)
@@ -35,6 +50,24 @@
 		</script>
 
 		<style>
+			/*
+			#pageContent
+			{
+				display: none;
+				margin: 0;
+				padding: 0;
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+			}
+			*/
+
+			.hiddenElem
+			{
+				display: none;
+			}
+
 			.hudSideContainer
 			{
 				position: fixed;
@@ -240,7 +273,7 @@
 			}
 		</style>
 	</head>
-	<body style="background-color: transparent;">
+	<body style="background-color: transparent;" class="hiddenElem">
 		<style>
 			#entryContainer::-webkit-scrollbar
 			{
@@ -332,39 +365,229 @@ background: linear-gradient(to right,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', endColorstr='#e6fa3232',GradientType=1 ); /* IE6-9 */
 
 			}
+
+			.rotateArrow
+			{
+				font-weight: 900;
+				display: inline-block;
+				font-size: 24px;
+			}
 		</style>
-		<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;"></div>
-		<div id="titleRule"></div>
-		<div id="entryContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+
+		<!--<div id="pageContent">-->
+			<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;"></div>
+			<div id="titleRule"></div>
+			<div id="entryContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+
+			<div id="transformMenuContainer" style="display: none;">
+				<div id="transformMenu">
+					<table>
+						<tr><td style="width: 250px;">
+							<div id="wl_transform" class="wlContainer" style="height: 220px;">
+								<div class="wlEntry">
+									<div class="wlPlate wlPlateSelected" name="rotateTab" onclick="selectPlate(this);">
+										Rotate
+									</div><br />
+									<div class="wlPlate" name="offsetTab" onclick="selectPlate(this);">
+										Offset
+									</div><br />
+									<div class="wlPlate" name="scaleTab" onclick="selectPlate(this);">
+										Scale
+									</div><br />
+									<div class="wlPlate" name="scaleTab" onclick="resetTransform(this);">
+										Reset
+									</div><br />
+								</div>
+							</div>
+						</td><td valign="top">
+							<div class="optSliderPanel" id="rotationPanel">
+								<table>
+									<tr><td valign="middle" width="90">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, -90);">&#8630;</div><div class="optLabel" name="pitch_label" onclick="optResetvalue(this);">P</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, 90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="pitch" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="pitch_value" style="text-align: left; width: 100px;">0&deg;</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, -90);">&#8630;</div><div class="optLabel" name="yaw_label" onclick="optResetvalue(this);">Y</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, 90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="yaw" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="yaw_value" style="text-align: left; width: 100px;">0&deg;</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="rotateArrow" onclick="optResetvalue(this.nextSibling, 90);">&#8630;</div><div class="optLabel" name="roll_label" onclick="optResetvalue(this);">R</div><div class="rotateArrow" onclick="optResetvalue(this.previousSibling, -90);">&#8631;</div>
+									</td><td>
+										<input type="range" name="roll" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="roll_value" style="text-align: left; width: 100px;">0&deg;</div>
+									</td></tr>
+								</table>
+							</div>
+							<div class="optSliderPanel" id="offsetPanel" style="display: none;">
+								<table>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offX_label" onclick="optResetvalue(this);">X</div>
+									</td><td>
+										<input type="range" name="offX" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="offX_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offY_label" onclick="optResetvalue(this);">Y</div>
+									</td><td>
+										<input type="range" name="offY" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="offY_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+									<tr><td valign="middle">
+										<div class="optLabel" name="offZ_label" onclick="optResetvalue(this);">Z</div>
+									</td><td>
+										<input type="range" name="offZ" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="offZ_value" style="text-align: left; width: 100px;">0in</div>
+									</td></tr>
+								</table>
+							</div>
+							<div class="optSliderPanel" id="scalePanel" style="display: none;">
+								<table>
+									<tr><td valign="middle">
+										<div class="optLabel" name="scale_label" onclick="optResetvalue(this);">&lrtri;</div>
+									</td><td>
+										<input type="range" name="scale" oninput="optSliderOnInput(this);" min="0.1" max="10" step="0.01" value="1.0" style="width: 300px;" />
+									</td><td>
+										<div class="optValue" name="scale_value" style="text-align: left; width: 100px;">1.0</div>
+									</td></tr>
+								</table>
+							</div>
+						</td></tr>
+					</table>
+				</div>
+			</div>
+		<!--</div>-->
 
 		<script>
-			var libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
-			var mode = arcadeHud.getParameterByName("mode");
-			var category = libraryBrowserContext.category;
-			var titleElem = document.querySelector("#title");
-			titleElem.innerHTML = (category === "items") ? "CABINETS" : "PROPS";
-			if( mode === "move")
+			function parseNumber(num)
 			{
-				titleElem.innerHTML = (category === "items") ? "MOVE SHORTCUT" : "MOVE OBJECT";
-				if( category === "models" )
-					document.querySelector("#entryContainer").style.display = "none";
+				return Number(parseFloat(num).toFixed(2));
 			}
 
-			document.addEventListener("keypress", function(e)
+			function initialHelper(inputName, value, valuePostfix)
 			{
-				console.log(e);
-			});
+				var inputElem = document.querySelector("input[name=" + inputName + "]");
+				var valueElem = document.querySelector("div[name=" + inputName + "_value]");
 
-			/*
-			namePlateElem.style.opacity = "1.0";
-					namePlateElem.style.border = "2px solid rgb(255, 255, 255)";
-					namePlateElem.style.borderLeft = "20px solid rgb(255, 255, 255)";
-					namePlateElem.style.borderRight = "80px solid rgb(255, 255, 255)";
-			*/
+				inputElem.value = value;
+				valueElem.innerHTML = parseNumber(value) + valuePostfix;
+			}
 
-			var sourcePlatformId = "-KJvcne3IKMZQTaG7lPo";
+			function optResetvalue(thisElem, val)
+			{
+				var inputName = thisElem.getAttribute("name");
+				inputName = inputName.substring(0, inputName.length - 6);
+				var inputElem = document.querySelector("input[name=" + inputName + "]");
+				if( val === undefined )
+					inputElem.value = (inputName === "scale") ? 1 : 0;
+				else
+					inputElem.value = val;
+				inputElem.oninput();
+			}
 
-			var entryContainerElem = document.querySelector("#entryContainer");
+			function optSliderOnInput(thisElem)
+			{
+				var valueElem = document.querySelector("div[name=" + thisElem.name + "_value]");
+				var postfix = "";
+
+				if( thisElem.name === "pitch" || thisElem.name === "yaw" || thisElem.name === "roll" )
+				{
+					postfix = thisElem.value + "&deg;";
+
+					if( g_allowTransformUpdate )
+					{
+						var pitch = document.querySelector("input[name=pitch]");
+						var yaw = document.querySelector("input[name=yaw]");
+						var roll = document.querySelector("input[name=roll]");
+						aaapi.system.adjustObjectRot(parseFloat(pitch.value), parseFloat(yaw.value), parseFloat(roll.value));
+					}
+				}
+				else if( thisElem.name === "offX" || thisElem.name === "offY" || thisElem.name === "offZ" )
+				{
+					postfix = thisElem.value + "in";
+
+					if( g_allowTransformUpdate )
+					{
+						var offX = document.querySelector("input[name=offX]");
+						var offY = document.querySelector("input[name=offY]");
+						var offZ = document.querySelector("input[name=offZ]");
+						aaapi.system.adjustObjectOffset(parseFloat(offX.value), parseFloat(offY.value), parseFloat(offZ.value));
+					}
+				}
+				else if( thisElem.name === "scale" )
+				{
+					var goodScale = parseNumber(thisElem.value);
+					postfix = goodScale;
+
+					if( g_allowTransformUpdate )
+						aaapi.system.adjustObjectScale(parseFloat(goodScale));
+				}
+
+				valueElem.innerHTML = postfix;
+			}
+
+			function selectNone(container)
+			{
+				// deselect everything
+				var selected = container.querySelector(".wlPlateSelected");
+				if( selected )
+				{
+					selected.className = "wlPlate";
+					return selected;
+				}
+
+				return;
+			}
+
+			function resetTransform()
+			{
+				g_allowTransformUpdate = false;
+				var pitchLabel = document.querySelector("div[name=pitch_label]");
+				optResetvalue(pitchLabel);
+
+				var yawLabel = document.querySelector("div[name=yaw_label]");
+				optResetvalue(yawLabel);
+
+				g_allowTransformUpdate = true;
+				var rollLabel = document.querySelector("div[name=roll_label]");
+				optResetvalue(rollLabel);
+
+				g_allowTransformUpdate = false;
+				var offXLabel = document.querySelector("div[name=offX_label]");
+				optResetvalue(offXLabel);
+
+				var offYLabel = document.querySelector("div[name=offY_label]");
+				optResetvalue(offYLabel);
+
+				g_allowTransformUpdate = true;
+				var offZLabel = document.querySelector("div[name=offZ_label]");
+				optResetvalue(offZLabel);
+
+				var scaleLabel = document.querySelector("div[name=scale_label]");
+				optResetvalue(scaleLabel);
+			}
+
+			function selectPlate(thisElem)
+			{
+				selectNone(wl_transformContainer);
+				thisElem.className += " wlPlateSelected";
+				
+				var panelName = thisElem.getAttribute("name");
+
+				document.querySelector("#rotationPanel").style.display = (panelName === "rotateTab") ? "block" : "none";
+				document.querySelector("#offsetPanel").style.display = (panelName === "offsetTab") ? "block" : "none";
+				document.querySelector("#scalePanel").style.display = (panelName === "scaleTab") ? "block" : "none";
+			}
+
 			function selectNoneM(container)
 			{
 				// deselect everything
@@ -380,6 +603,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 			function selectNext()
 			{
+				console.log("Select next.");
 				var next;
 				var old = selectNoneM(entryContainerElem);
 				if( !!old )
@@ -402,6 +626,9 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					if( (old && next === old.parentNode.nextSibling) || !!!old )
 						updateScroll();
 
+					if( category === "objects" )
+						aaapi.system.objectHover(next.entry.id);
+
 					// load this entry in 1 second, after its animation is finished.
 					// (this allows you to skip past entries you don't want to load)
 					next.timerHandle = setTimeout(function()
@@ -409,8 +636,11 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 						//console.log("category is " + category + " and mode is " + mode);
 						if( category === "items" ) //mode === "spawn" && 
 							aaapi.system.cabinetSelected(this.entry.info.id);
-						else
+						else if( category !== "objects" )
 							aaapi.system.modelSelected(this.entry.info.id);
+						//else if( category === "objects" )
+							//aaapi.system.objectSelected(this.entry.id);
+						
 							//console.log("xxx tea bag disabled");
 					}.bind(next), 1000);
 				}
@@ -441,13 +671,18 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 					if( (old && prev === old.parentNode.previousSibling) || !!!old )
 						updateScroll();
 
+					if( category === "objects" )
+						aaapi.system.objectHover(prev.entry.id);
+
 					// load this entry in 1 second, after its animation is finished.
 					// (this allows you to skip past entries you don't want to load)
 					prev.timerHandle = setTimeout(function()
 					{
 						if( category === "items" ) //mode === "spawn" && 
 							aaapi.system.cabinetSelected(this.entry.info.id);
-						else
+						//else if( category === "objects" )
+							//aaapi.system.objectSelected(this.entry.id);
+						else if( category !== "objects" )
 							aaapi.system.modelSelected(this.entry.info.id);
 							//console.log("xxx tea bag disabled");
 					}.bind(prev), 1000);
@@ -479,9 +714,262 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				}
 			}
 
+			function randoSelect()
+			{
+				return;
+				// deselect everything
+				var selected = document.querySelector(".selectedNamePlate");
+				if( selected )
+					selected.className = "namePlate";
+
+				// select a rando one
+				var potentials = document.querySelectorAll(".namePlate");
+				//console.log(potentials.length);
+				var randoIndex = Math.floor(Math.random() * 10) + 0;
+				potentials[randoIndex].className += " selectedNamePlate";
+			}
+
+			function doStuff()
+			{
+				if( isDoingStuff )
+					return;
+
+				isDoingStuff = true;
+
+				var hiddenElems = document.querySelectorAll(".hiddenElem");
+				for( var i = 0; i < hiddenElems.length; i++ )
+					hiddenElems[i].classList.remove("hiddenElem");
+					//hiddenElems[i].style.display = "block";
+
+				libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
+				category = libraryBrowserContext.category;
+				titleElem = document.querySelector("#title");
+
+				if( mode === "select" )
+				{
+					titleElem.innerHTML = "NEARBY OBJECTS";
+					category = "objects";
+				}
+				else if( category === "items" )
+					titleElem.innerHTML = "CABINETS";
+				else// if( category === "models" )
+					titleElem.innerHTML = "PROPS";
+
+				if( mode === "move")
+				{
+					titleElem.innerHTML = (category === "items") ? "MOVE SHORTCUT" : "MOVE OBJECT";
+					if( category === "models" )
+						document.querySelector("#entryContainer").style.display = "none";
+				}
+
+				document.addEventListener("keypress", function(e)
+				{
+					console.log(e);
+				});
+
+				/*
+				namePlateElem.style.opacity = "1.0";
+						namePlateElem.style.border = "2px solid rgb(255, 255, 255)";
+						namePlateElem.style.borderLeft = "20px solid rgb(255, 255, 255)";
+						namePlateElem.style.borderRight = "80px solid rgb(255, 255, 255)";
+				*/
+
+		
+
+				entryContainerElem = document.querySelector("#entryContainer");
+
+				if( category !== "objects" )
+				{
+					if( libraryBrowserContext.category === "items" )
+					{
+						method = "find";
+						searchCategory = "models";
+						//console.log("HERE SEARCH AT IS: " + searchCategory);
+						response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", "", "dynamic", "1");
+					}
+					else if( mode !== "move" && libraryBrowserContext.filter === "" )
+					{
+						console.log("yar");
+						//searchCategory = libraryBrowserContext.category;
+						var searchText = libraryBrowserContext.search;
+						if( searchText != "" )
+						{
+							method = "find";
+							response = aaapi.library.findFirstLibraryEntry(category, "title", searchText);
+						}
+						else
+						{
+							method = "get";
+							response = aaapi.library.getFirstLibraryEntry(searchCategory);
+						}
+					}
+					else if( mode !== "move" )
+					{
+						//searchCategory = libraryBrowserContext.category;
+						var searchText = libraryBrowserContext.search;
+						var filterText = libraryBrowserContext.filter;
+						method = "find";
+						// FIXME: (maybe) This always assumes that the filter field of the item is "type".
+						response = aaapi.library.findFirstLibraryEntry(category, "title", searchText, "type", filterText);
+					}
+				}
+				else
+				{
+					// get the nearest models, because they are usually the ones that are unclick-able.
+					searchCategory = "models";
+					method = "get";
+					response = aaapi.system.getNearestObjectToPlayerLook(searchCategory);
+				}
+
+				if( mode !== "move" || category === "items" )
+				{
+					//console.log(JSON.stringify(response));
+					var queryId = response.queryId;
+					var entry = response.entry;
+					var entryElem;
+					var prettyName;
+
+					var entries = [];
+
+					var count = 0;
+					var max = 999;	// FIXME: arbitraty limit!!!!  Also, should get these async, not all at once.
+					while( response.success && count < max )
+					{
+						if( category !== "models" || !entry.dynamic)
+							entries.push(entry);
+
+						if( method === "get" )
+						{
+							if( category === "objects" )
+								response = aaapi.system.getNextNearestObjectToPlayerLook(queryId, searchCategory);
+							else
+								response = aaapi.library.getNextLibraryEntry(queryId, searchCategory);
+						}
+						else
+						{
+							// catetory = objects is *always* method = get, so we don't have to handle it here.
+							response = aaapi.library.findNextLibraryEntry(queryId, searchCategory);
+						}
+
+						entry = response.entry;
+						count++;
+						//entry = aaapi.library.findNextLibraryModel();
+					}
+//console.log(JSON.stringify(entries));
+					if( category === "items" )
+					{
+						entries.sort(function(a, b)
+						{
+							var lettersA = a.title.substring(a.title.lastIndexOf("\\") + 1).toLowerCase();
+							var lettersB = b.title.substring(b.title.lastIndexOf("\\") + 1).toLowerCase();
+
+							if( lettersA < lettersB )
+								return -1;
+							else if( lettersA > lettersB )
+								return 1;
+							else
+								return 0;
+						});
+					}
+					else if( category !== "objects" )
+					{
+						entries.sort(function(a, b)
+						{
+							/*
+							var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+							var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
+
+							if( letterA < letterB )
+								return -1;
+							else if( letterA > letterB )
+								return 1;
+							else
+								return 0;
+							*/
+
+							var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+							var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
+
+							if( lettersA < lettersB )
+								return -1;
+							else if( lettersA > lettersB )
+								return 1;
+							else
+								return 0;
+						});
+					}
+
+					var i;
+					var max = entries.length;
+					for( i = 0; i < max; i++ )
+					{
+						entry = entries[i];
+						//console.log(JSON.stringify(entry));
+						entryElem = document.createElement("div");
+						entryElem.entry = entry;
+
+						if( category === "objects" || category === "items")
+							prettyName = entry.title;
+						else
+						{
+							prettyName = entry.platforms[sourcePlatformId].file;
+							prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
+							prettyName = prettyName.substring(0, prettyName.length - 4);
+						}
+
+						prettyName = prettyName.replace(/_/g, " ");
+						prettyName = prettyName.toUpperCase();
+
+						namePlateElem = document.createElement("div");
+						namePlateElem.className = "namePlate";
+						namePlateElem.innerHTML = prettyName;
+
+						//if(entry.info.id === libraryBrowserContext.id)
+						//	namePlateElem.className += " selectedNamePlate";
+
+						entryElem.appendChild(namePlateElem);
+
+						entryContainerElem.appendChild(entryElem);
+
+						//console.log(JSON.stringify(entry));
+						//entry = aaapi.library.findNextLibraryModel();
+					}
+				}
+
+				transformInfo = aaapi.system.getTransformInfo();
+				if( transformInfo.success )
+				{
+					var offset = transformInfo.offset;
+					var rotation = transformInfo.rotation;
+					var scale = transformInfo.scale;
+
+					initialHelper("pitch", rotation.p, "&deg;");
+					initialHelper("yaw", rotation.y, "&deg;");
+					initialHelper("roll", rotation.r, "&deg;");
+
+					initialHelper("offX", offset.x, "in");
+					initialHelper("offY", offset.y, "in");
+					initialHelper("offZ", offset.z, "in");
+
+					initialHelper("scale", scale, "");
+				}
+
+				wl_transformContainer = document.querySelector("#wl_transform");
+			}
+
+
+			//if( mode === "select" )
+				//setTimeout(doStuff, 500);
+			//else
+			//if( mode !== "select" )
+				doStuff();
+
 			//entryContainerElem.addEventListener("mousewheel", function(e)
 			document.addEventListener("mousewheel", function(e)
 			{
+				//if( !isDoingStuff )
+				//	doStuff();
+
 				var direction = (e.wheelDelta > 0) ? -1 : 1;
 
 				if( cmdListener.displayMode === "browse" )
@@ -502,137 +990,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				return false;
 			}, false);
 
-			var searchCategory;
-			var response;
-			var method;
-			//console.log("yaaar: " + libraryBrowserContext.category);
-			if( libraryBrowserContext.category === "items" )
-			{
-				method = "find";
-				searchCategory = "models";
-				//console.log("HERE SEARCH AT IS: " + searchCategory);
-				response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", "", "dynamic", "1");
-			}
-			else if( mode !== "move" && libraryBrowserContext.filter === "" )
-			{
-				//searchCategory = libraryBrowserContext.category;
-				var searchText = libraryBrowserContext.search;
-				if( searchText != "" )
-				{
-					method = "find";
-					response = aaapi.library.findFirstLibraryEntry(category, "title", searchText);
-				}
-				else
-				{
-					method = "get";
-					response = aaapi.library.getFirstLibraryEntry(searchCategory);
-				}
-			}
-			else if( mode !== "move" )
-			{
-				//searchCategory = libraryBrowserContext.category;
-				var searchText = libraryBrowserContext.search;
-				var filterText = libraryBrowserContext.filter;
-				method = "find";
-				// FIXME: (maybe) This always assumes that the filter field of the item is "type".
-				response = aaapi.library.findFirstLibraryEntry(category, "title", searchText, "type", filterText);
-			}
-
-			if( mode !== "move" || category === "items" )
-			{
-				//console.log(JSON.stringify(response));
-				var queryId = response.queryId;
-				var entry = response.entry;
-				var entryElem;
-				var prettyName;
-
-				var entries = [];
-
-				var count = 0;
-				var max = 999;	// FIXME: arbitraty limit!!!!  Also, should get these async, not all at once.
-				while( response.success && count < max )
-				{
-					entries.push(entry);
-
-					if( method === "get" )
-						response = aaapi.library.getNextLibraryEntry(queryId, searchCategory);
-					else
-						response = aaapi.library.findNextLibraryEntry(queryId, searchCategory);
-
-					entry = response.entry;
-					count++;
-					//entry = aaapi.library.findNextLibraryModel();
-				}
-
-				entries.sort(function(a, b)
-				{
-					/*
-					var letterA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
-					var letterB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1)[0].toLowerCase();
-
-					if( letterA < letterB )
-						return -1;
-					else if( letterA > letterB )
-						return 1;
-					else
-						return 0;
-					*/
-
-					var lettersA = a.platforms[sourcePlatformId].file.substring(a.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
-					var lettersB = b.platforms[sourcePlatformId].file.substring(b.platforms[sourcePlatformId].file.lastIndexOf("\\") + 1).toLowerCase();
-
-					if( lettersA < lettersB )
-						return -1;
-					else if( lettersA > lettersB )
-						return 1;
-					else
-						return 0;
-				});
-
-				var i;
-				var max = entries.length;
-				for( i = 0; i < max; i++ )
-				{
-					entry = entries[i];
-					entryElem = document.createElement("div");
-					entryElem.entry = entry;
-
-					prettyName = entry.platforms[sourcePlatformId].file;
-					prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
-					prettyName = prettyName.substring(0, prettyName.length - 4);
-					prettyName = prettyName.replace(/_/g, " ");
-					prettyName = prettyName.toUpperCase();
-
-					namePlateElem = document.createElement("div");
-					namePlateElem.className = "namePlate";
-					namePlateElem.innerHTML = prettyName;
-
-					//if(entry.info.id === libraryBrowserContext.id)
-					//	namePlateElem.className += " selectedNamePlate";
-
-					entryElem.appendChild(namePlateElem);
-
-					entryContainerElem.appendChild(entryElem);
-
-					//console.log(JSON.stringify(entry));
-					//entry = aaapi.library.findNextLibraryModel();
-				}
-			}
-
-			function randoSelect()
-			{
-				return;
-				// deselect everything
-				var selected = document.querySelector(".selectedNamePlate");
-				if( selected )
-					selected.className = "namePlate";
-
-				// select a rando one
-				var potentials = document.querySelectorAll(".namePlate");
-				//console.log(potentials.length);
-				var randoIndex = Math.floor(Math.random() * 10) + 0;
-				potentials[randoIndex].className += " selectedNamePlate";
-			}
 /*
 			setInterval(function()
 			{
@@ -761,6 +1118,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 			.optLabel, .optValue
 			{
+				display: inline-block;
 				font-size: 40px;
 				font-weight: 900;
 				margin: 0;
@@ -768,7 +1126,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				border: 0;
 				color: #fff;
 				font-family: Arial;
-				width: 40px;
 
 				/*line-height: 74px;
 				font-family: Arial;
@@ -800,97 +1157,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				letter-spacing: 0.1em;
 			}
 		</style>
-
-		<script>
-
-		</script>
-
-		<div id="transformMenuContainer" style="display: none;">
-			<div id="transformMenu">
-				<table>
-					<tr><td style="width: 250px;">
-						<div id="wl_transform" class="wlContainer" style="height: 220px;">
-							<div class="wlEntry">
-								<div class="wlPlate wlPlateSelected" name="rotateTab" onclick="selectPlate(this);">
-									Rotate
-								</div><br />
-								<div class="wlPlate" name="offsetTab" onclick="selectPlate(this);">
-									Offset
-								</div><br />
-								<div class="wlPlate" name="scaleTab" onclick="selectPlate(this);">
-									Scale
-								</div><br />
-								<div class="wlPlate" name="scaleTab" onclick="resetTransform(this);">
-									Reset
-								</div><br />
-							</div>
-						</div>
-					</td><td valign="top">
-						<div class="optSliderPanel" id="rotationPanel">
-							<table>
-								<tr><td valign="middle">
-									<div class="optLabel" name="pitch_label" onclick="optResetvalue(this);">P</div>
-								</td><td>
-									<input type="range" name="pitch" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="pitch_value" style="text-align: left; width: 100px;">0&deg;</div>
-								</td></tr>
-								<tr><td valign="middle">
-									<div class="optLabel" name="yaw_label" onclick="optResetvalue(this);">Y</div>
-								</td><td>
-									<input type="range" name="yaw" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="yaw_value" style="text-align: left; width: 100px;">0&deg;</div>
-								</td></tr>
-								<tr><td valign="middle">
-									<div class="optLabel" name="roll_label" onclick="optResetvalue(this);">R</div>
-								</td><td>
-									<input type="range" name="roll" oninput="optSliderOnInput(this);" min="-179" max="180" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="roll_value" style="text-align: left; width: 100px;">0&deg;</div>
-								</td></tr>
-							</table>
-						</div>
-						<div class="optSliderPanel" id="offsetPanel" style="display: none;">
-							<table>
-								<tr><td valign="middle">
-									<div class="optLabel" name="offX_label" onclick="optResetvalue(this);">X</div>
-								</td><td>
-									<input type="range" name="offX" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="offX_value" style="text-align: left; width: 100px;">0in</div>
-								</td></tr>
-								<tr><td valign="middle">
-									<div class="optLabel" name="offY_label" onclick="optResetvalue(this);">Y</div>
-								</td><td>
-									<input type="range" name="offY" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="offY_value" style="text-align: left; width: 100px;">0in</div>
-								</td></tr>
-								<tr><td valign="middle">
-									<div class="optLabel" name="offZ_label" onclick="optResetvalue(this);">Z</div>
-								</td><td>
-									<input type="range" name="offZ" oninput="optSliderOnInput(this);" min="-200" max="200" step="1" value="0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="offZ_value" style="text-align: left; width: 100px;">0in</div>
-								</td></tr>
-							</table>
-						</div>
-						<div class="optSliderPanel" id="scalePanel" style="display: none;">
-							<table>
-								<tr><td valign="middle">
-									<div class="optLabel" name="scale_label" onclick="optResetvalue(this);">&lrtri;</div>
-								</td><td>
-									<input type="range" name="scale" oninput="optSliderOnInput(this);" min="0.1" max="10" step="0.01" value="1.0" style="width: 300px;" />
-								</td><td>
-									<div class="optValue" name="scale_value" style="text-align: left; width: 100px;">1.0</div>
-								</td></tr>
-							</table>
-						</div>
-					</td></tr>
-				</table>
-			</div>
-		</div>
 
 		<style>
 		input[type=range]
@@ -934,145 +1200,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 		}
 		</style>
-
-		<script>
-			function parseNumber(num)
-			{
-				return Number(parseFloat(num).toFixed(2));
-			}
-
-			function initialHelper(inputName, value, valuePostfix)
-			{
-				var inputElem = document.querySelector("input[name=" + inputName + "]");
-				var valueElem = document.querySelector("div[name=" + inputName + "_value]");
-
-				inputElem.value = value;
-				valueElem.innerHTML = parseNumber(value) + valuePostfix;
-			}
-
-			var transformInfo = aaapi.system.getTransformInfo();
-			if( transformInfo.success )
-			{
-				var offset = transformInfo.offset;
-				var rotation = transformInfo.rotation;
-				var scale = transformInfo.scale;
-
-				initialHelper("pitch", rotation.p, "&deg;");
-				initialHelper("yaw", rotation.y, "&deg;");
-				initialHelper("roll", rotation.r, "&deg;");
-
-				initialHelper("offX", offset.x, "in");
-				initialHelper("offY", offset.y, "in");
-				initialHelper("offZ", offset.z, "in");
-
-				initialHelper("scale", scale, "");
-			}
-
-			function optResetvalue(thisElem)
-			{
-				var inputName = thisElem.getAttribute("name");
-				inputName = inputName.substring(0, inputName.length - 6);
-				var inputElem = document.querySelector("input[name=" + inputName + "]");
-				inputElem.value = (inputName === "scale") ? 1 : 0;
-				inputElem.oninput();
-			}
-
-			var g_allowTransformUpdate = true;
-			function optSliderOnInput(thisElem)
-			{
-				var valueElem = document.querySelector("div[name=" + thisElem.name + "_value]");
-				var postfix = "";
-
-				if( thisElem.name === "pitch" || thisElem.name === "yaw" || thisElem.name === "roll" )
-				{
-					postfix = thisElem.value + "&deg;";
-
-					if( g_allowTransformUpdate )
-					{
-						var pitch = document.querySelector("input[name=pitch]");
-						var yaw = document.querySelector("input[name=yaw]");
-						var roll = document.querySelector("input[name=roll]");
-						aaapi.system.adjustObjectRot(parseFloat(pitch.value), parseFloat(yaw.value), parseFloat(roll.value));
-					}
-				}
-				else if( thisElem.name === "offX" || thisElem.name === "offY" || thisElem.name === "offZ" )
-				{
-					postfix = thisElem.value + "in";
-
-					if( g_allowTransformUpdate )
-					{
-						var offX = document.querySelector("input[name=offX]");
-						var offY = document.querySelector("input[name=offY]");
-						var offZ = document.querySelector("input[name=offZ]");
-						aaapi.system.adjustObjectOffset(parseFloat(offX.value), parseFloat(offY.value), parseFloat(offZ.value));
-					}
-				}
-				else if( thisElem.name === "scale" )
-				{
-					var goodScale = parseNumber(thisElem.value);
-					postfix = goodScale;
-
-					if( g_allowTransformUpdate )
-						aaapi.system.adjustObjectScale(parseFloat(goodScale));
-				}
-
-				valueElem.innerHTML = postfix;
-			}
-
-			function selectNone(container)
-			{
-				// deselect everything
-				var selected = container.querySelector(".wlPlateSelected");
-				if( selected )
-				{
-					selected.className = "wlPlate";
-					return selected;
-				}
-
-				return;
-			}
-
-			function resetTransform()
-			{
-				g_allowTransformUpdate = false;
-				var pitchLabel = document.querySelector("div[name=pitch_label]");
-				optResetvalue(pitchLabel);
-
-				var yawLabel = document.querySelector("div[name=yaw_label]");
-				optResetvalue(yawLabel);
-
-				g_allowTransformUpdate = true;
-				var rollLabel = document.querySelector("div[name=roll_label]");
-				optResetvalue(rollLabel);
-
-				g_allowTransformUpdate = false;
-				var offXLabel = document.querySelector("div[name=offX_label]");
-				optResetvalue(offXLabel);
-
-				var offYLabel = document.querySelector("div[name=offY_label]");
-				optResetvalue(offYLabel);
-
-				g_allowTransformUpdate = true;
-				var offZLabel = document.querySelector("div[name=offZ_label]");
-				optResetvalue(offZLabel);
-
-				var scaleLabel = document.querySelector("div[name=scale_label]");
-				optResetvalue(scaleLabel);
-			}
-
-			var wl_transformContainer = document.querySelector("#wl_transform");
-			function selectPlate(thisElem)
-			{
-				selectNone(wl_transformContainer);
-				thisElem.className += " wlPlateSelected";
-				
-				var panelName = thisElem.getAttribute("name");
-
-				document.querySelector("#rotationPanel").style.display = (panelName === "rotateTab") ? "block" : "none";
-				document.querySelector("#offsetPanel").style.display = (panelName === "offsetTab") ? "block" : "none";
-				document.querySelector("#scalePanel").style.display = (panelName === "scaleTab") ? "block" : "none";
-			}
-		</script>
 <!--
 		<link rel="stylesheet" type="text/css" href="rangeslider.css">
 		<script src="jquery-2.1.3.min.js"></script>

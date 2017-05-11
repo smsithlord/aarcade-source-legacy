@@ -7,6 +7,12 @@
 #include "c_embeddedinstance.h"
 #include "c_websurfaceproxy.h"
 
+struct DeferredCleanupTexture_t
+{
+	uint64 startTime;
+	ITexture* pTexture;
+};
+
 class C_CanvasManager
 {
 public:
@@ -16,6 +22,14 @@ public:
 	void Update();
 
 	CCanvasRegen* GetOrCreateRegen();
+
+	DeferredCleanupTexture_t* FindDeferredCleanupTexture(ITexture* pTexture);
+	DeferredCleanupTexture_t* FindDeferredCleanupTexture(std::string textureName);
+
+	void DoOrDeferTextureCleanup(ITexture* pTexture);
+	void TextureNotDeferred(ITexture* pTexture);
+	void CleanupTextures();
+	void CleanupTexture(ITexture* pTexture);
 
 	bool IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance);
 	unsigned int GetNumPriorityEmbeddedInstances() { return 2; }	// the selected instance, and the hud instance
@@ -36,18 +50,37 @@ public:
 	void LevelShutdownPreEntity();
 	void LevelShutdownPostEntity();
 	void CloseAllInstances();
+	void CloseInstance(std::string id);
+	void SwitchToInstance(std::string id);
+	void GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
+
+	void CaptureInstanceThumbnail(C_EmbeddedInstance* pEmbeddedInstance);
 
 	void RefreshItemTextures(std::string itemId, std::string channel);
 
 	void UnreferenceTexture(ITexture* pTexture);
+	void UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance);
+
+	C_EmbeddedInstance* GetFirstInstanceToDisplay();
 
 	// accessors
+	C_EmbeddedInstance* GetDisplayInstance() { return m_pDisplayInstance; }
 
 	// mutators
+	void SetDisplayInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pDisplayInstance = pEmbeddedInstance;  }
+	void SetDifferentDisplayInstance(C_EmbeddedInstance* pEmbeddedInstance);
 	void SetLastRenderedFrame(int frame) { m_iLastRenderedFrame = frame; }
 	void SetLastPriorityRenderedFrame(int frame) { m_iLastPriorityRenderedFrame = frame; }
 	
 private:
+	bool m_bUseDeferredTextureCleanUp;
+	std::vector<std::string> m_deadTextures;
+	//std::vector<std::map<std::string, DeferredCleanupTexture_t*>::iterator> m_deadTextures;
+	//std::vector<ITexture*> m_pendingTextureCleanup;
+	//std::map<std::string, DeferredCleanupTexture_t*> m_pendingTextureCleanup;
+	std::vector<DeferredCleanupTexture_t*> m_pendingTextureCleanup;
+	C_EmbeddedInstance* m_pDisplayInstance;
+
 //	CCanvasRegen* m_pRegen;
 	int m_iLastAllowedRenderedFrame;
 	int m_iLastAllowedPriorityRenderedFrame;
@@ -61,7 +94,7 @@ private:
 //	int m_iLastPriorityRenderedFrame = -1;
 	//m_pWebBrowser = null;
 	CCanvasRegen* m_pCanvasRegen;
-	C_EmbeddedInstance* m_pSelectedEmbeddedInstance;
+	//C_EmbeddedInstance* m_pSelectedEmbeddedInstance;
 	std::vector<CWebSurfaceProxy*> m_webSurfaceProxies;
 	std::map<IMaterial*, std::string> m_materialEmbeddedInstanceIds;
 };

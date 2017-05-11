@@ -17,8 +17,12 @@ public:
 //	void Update();
 
 	// accessors
+	bool GetActive() { return m_bActive; }
 	std::string GetId() { return m_id; }
 	std::string GetTitle() { return m_title; }
+	std::string GetBase() { return m_base; }
+	std::vector<std::string> GetPaths() { return m_paths; }
+	std::vector<std::string> GetMountedPaths() { return m_mountedPaths; }
 
 	// mutators
 	

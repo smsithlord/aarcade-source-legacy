@@ -1,0 +1,745 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			#addons
+			{
+				overflow-y: auto;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#addons::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#addons::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#addons::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#addons::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.addon
+			{
+				border: 2px solid rgba(20, 20, 20, 0.9);
+				padding: 6px;
+				border-radius: 10px;
+				background-color: rgba(40, 40, 40, 0.8);
+			}
+
+			.addonTitle
+			{
+				padding-left: 10px;
+				vertical-align: middle;
+				font-size: 25px;
+				font-family: Arial;
+				font-weight: bold;
+				letter-spacing: 0.1em;
+				display: inline-block;
+			}
+
+			.addonButton
+			{
+				display: inline-block;
+				border: 2px solid black;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+				background-color: rgba(150, 150, 150, 0.5);
+			}
+
+			.addonButton:hover
+			{
+				background-color: rgba(150, 150, 150, 0.8);
+			}
+
+			.addonPanel
+			{
+				margin-left: 20px;
+				margin-right: 20px;
+				margin-bottom: 4px;
+				border: 2px solid rgba(20, 20, 20, 0.9);
+				border-top: 0;
+				padding: 6px;
+				border-bottom-left-radius: 10px;
+				border-bottom-right-radius: 10px;
+				background-color: rgba(30, 30, 30, 0.8);
+			}
+
+			.addonImage
+			{
+				width: 200px;
+				height: 200px;
+				border: 5px solid rgba(40, 40, 40, 0.9);
+			}
+
+			.addonTabs
+			{
+			}
+
+			.addonTab
+			{
+				display: inline-block;
+				border: 3px solid rgba(100, 100, 100, 0.9);
+				border-radius: 12px;
+				border-bottom: 0;
+				border-bottom-left-radius: 0;
+				border-bottom-right-radius: 0;
+				padding: 6px;
+				padding-top: 2px;
+				padding-bottom: 2px;
+				font-size: 18px;
+				font-family: Arial;
+				font-weight: bold;
+				/*letter-spacing: 0.1em*/
+			}
+
+			.addonTab.displayed
+			{
+				background-color: rgba(80, 80, 80, 0.9);
+			}
+
+			.addonTab.hiddenTab
+			{
+				visibility: hidden;
+			}
+
+			.addonPanelContent
+			{
+				border: 3px solid rgba(100, 100, 100, 0.9);
+				border-radius: 10px;
+				height: 175px;
+				overflow-y: auto;
+			}
+
+			.addonPanelContent::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.addonPanelContent::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			.addonPanelContent::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			.addonPanelContent::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.originalContent
+			{
+				margin: 10px;
+				padding: 6px;
+				border: 3px solid black;
+				border-radius: 20px;
+				background-color: rgb(10, 10, 10);
+				font-family: Arial;
+				font-weight: bold;
+				font-size: 14px;
+				color: rgb(100, 200, 100);
+			}
+
+			.addonSection
+			{
+				display: inline-block;
+				margin: 15px;
+				margin-top: 0;
+				margin-bottom: 0;
+				vertical-align: top;
+			}
+
+			.addonSectionTitle
+			{
+				font-family: Arial;
+				/*font-weight: bold;*/
+				font-size: 14px;
+				color: #999;
+			}
+
+			.addonSectionValue
+			{
+				font-family: Arial;
+				/*font-weight: bold;*/
+				font-size: 14px;
+				color: white;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/workshop.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Subscribed Workshop
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<center>
+			<div id="addons">
+				<!--
+				<div class="addon">
+					<div class="addonButton" style="vertical-align: middle;">
+						<img src="expand.png" style="width: 20px;" />
+					</div>
+					<div class="addonTitle">
+						Furniture Pack by Flash POW
+					</div>
+				</div>
+				<div class="addonPanel">
+					<table style="width: 100%;">
+						<tr><td width="1%">
+							<img src="https://steamuserimages-a.akamaihd.net/ugc/714156897845444347/34C9A96DF50C1F275927C34A16C2E340E74B6508/" class="addonImage" />
+						</td><td valign="top" align="center">
+							<div class="addonTabs">
+								<div class="addonTab displayed">Info</div>
+								<div class="addonTab">Items (0)</div>
+								<div class="addonTab">Models (0)</div>
+								<div class="addonTab">Maps (0)</div>
+								<div class="addonTab">Instances (0)</div>
+								<div class="addonTab">Files (0)</div>
+								<div class="addonTab">Mounts (0)</div>
+								<div class="addonTab">Required (0)</div>
+							</div>
+							<div class="addonPanelContent">
+								<div class="originalContent">
+									The author of this workshop addon does <u>NOT</u> claim to be the artist that created the game assets themselves.
+								</div>
+								<div class="addonSection">
+									<table cellspacing="3">
+										<tr><td rowspan="4">
+											<img src="clock.png" />
+										</td><td align="right">
+											<div class="addonSectionTitle">Updated:</div>
+										</td><td>
+											<div class="addonSectionValue">3/3/2015</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Created:</div>
+										</td><td>
+											<div class="addonSectionValue">11/24/2014</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Subscribed:</div>
+										</td><td>
+											<div class="addonSectionValue">2/4/2017</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Consumed:</div>
+										</td><td>
+											<div class="addonSectionValue">2/4/2017</div>
+										</td></tr>
+									</table>
+								</div>
+								<div class="addonSection">
+									<table cellspacing="3">
+										<tr><td align="right">
+											<div class="addonSectionTitle">Author:</div>
+										</td><td>
+											<div class="addonSectionValue">Flash POW</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Types:</div>
+										</td><td>
+											<div class="addonSectionValue">Items, Props</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Categories:</div>
+										</td><td>
+											<div class="addonSectionValue">Other</div>
+										</td></tr>
+										<tr><td align="right">
+											<div class="addonSectionTitle">Keywords:</div>
+										</td><td>
+											<div class="addonSectionValue">Decorative</div>
+										</td></tr>
+									</table>
+								</div>
+								<div class="addonSection" style="text-align: left; vertical-align: top; padding: 3px;">
+									<div class="addonSectionTitle">Description:</div>
+									<div class="addonSectionValue" style="margin-left: 20px;">
+										Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda. Yadda yadda.
+									</div>
+								</div>
+							</div>
+						</td></tr>
+					</table>
+				</div>
+				-->
+			</div>
+			</center>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			//var elem = document.querySelector("#worldInfoButton");
+			//console.log()
+
+			var workshop = [
+				{
+					"name": "NODESTYLE",
+					"type": "Dropdown",
+					"tags": [
+						"smallwall",
+						"floor3x4",
+						"highrise_suite",
+						"highrise_studio",
+						"metahood_style_a",
+						"metahood_style_b",
+						"metahood_style_c",
+						"metalobby_welcome",
+						"metalobby_wall",
+						"metalobby_arcade"
+					]
+				},
+				{
+					"name": "TYPES",
+					"type": "Checkboxes",
+					"tags": [
+						"Items",
+						"Cabinets",
+						"Props",
+						"Maps",
+						"Saves"
+					]
+				},
+				{
+					"name": "CATEGORIES",
+					"type": "Checkboxes",
+					"tags": [
+						"Games",
+						"Movies",
+						"Music",
+						"TV",
+						"Websites",
+						"YouTube",
+						"Images",
+						"Arcade",
+						"Consoles",
+						"Other"
+					]
+				},
+				{
+					"name": "KEYWORDS",
+					"type": "Checkboxes",
+					"tags": [
+						"Free",
+						"Playable",
+						"Funny",
+						"Informative",
+						"Decorative",
+						"Scary",
+						"Happy",
+						"Holiday",
+						"Live"
+					]
+				},
+			];
+
+			var response = aaapi.system.getAllWorkshopSubscriptions();
+			var subscriptions = response.subscriptions;
+			subscriptions = subscriptions.sort(function(a, b)
+			{
+				var titleA = a.title.toLowerCase();
+				var titleB = b.title.toLowerCase();
+				if( titleA < titleB )
+					return -1;
+				else if( titleA > titleB )
+					return 1;
+				else
+					return 0;
+			});
+
+			var g_lastButtonElem;
+			function toggleAddonPanel(buttonElem, addonElem, subscription)
+			{
+				if( !!g_lastButtonElem )
+					g_lastButtonElem.src = "collapse.png";
+
+				buttonElem.src = "expand.png";
+				g_lastButtonElem = buttonElem;
+
+				var addonPanel = createAddonPanel(subscription);
+				addonElem.parentNode.insertBefore(addonPanel, addonElem.nextSibling);
+			}
+
+			var g_addonPanel;
+			function createAddonPanel(subscription)
+			{
+				if( g_addonPanel )
+					g_addonPanel.parentNode.removeChild(g_addonPanel);
+
+				g_addonPanel = document.createElement("div");
+				g_addonPanel.className = "addonPanel";
+				
+				// table & row
+				var table = document.createElement("table");
+				table.style.cssText = "width: 100%;";
+				var tr = document.createElement("tr");
+				
+				// td
+				var tdLeft = document.createElement("td");
+				tdLeft.style.cssText = "width: 1%;";
+				
+				// thumbnail image
+				var thumb = document.createElement("img");
+				thumb.className = "addonImage";
+				thumb.src = subscription.previewURL;
+
+				// td
+				var tdRight = document.createElement("td");
+				tdRight.setAttribute("valign", "top");
+				tdRight.setAttribute("align", "center");
+
+				// addon tabs
+				var addonTabs = document.createElement("div");
+				addonTabs.className = "addonTabs";
+
+				// tab
+				var tabInfo = document.createElement("div");
+				tabInfo.className = "addonTab displayed";
+				tabInfo.innerHTML = "Info";
+
+				var tabItems = document.createElement("div");
+				tabItems.className = "addonTab hiddenTab";
+				tabItems.innerHTML = "Items (0)";
+
+				var tabModels = document.createElement("div");
+				tabModels.className = "addonTab hiddenTab";
+				tabModels.innerHTML = "Models (0)";
+
+				var tabMaps = document.createElement("div");
+				tabMaps.className = "addonTab hiddenTab";
+				tabMaps.innerHTML = "Maps (0)";
+
+				var tabInstances = document.createElement("div");
+				tabInstances.className = "addonTab hiddenTab";
+				tabInstances.innerHTML = "Instances (0)";
+
+				var tabFiles = document.createElement("div");
+				tabFiles.className = "addonTab hiddenTab";
+				tabFiles.innerHTML = "Files (0)";
+
+				var tabMounts = document.createElement("div");
+				tabMounts.className = "addonTab hiddenTab";
+				tabMounts.innerHTML = "Mounts (0)";
+
+				var tabRequired = document.createElement("div");
+				tabRequired.className = "addonTab hiddenTab";
+				tabRequired.innerHTML = "Required (0)";
+
+				// compose
+				addonTabs.appendChild(tabInfo);
+				addonTabs.appendChild(tabItems);
+				addonTabs.appendChild(tabModels);
+				addonTabs.appendChild(tabMaps);
+				addonTabs.appendChild(tabInstances);
+				addonTabs.appendChild(tabFiles);
+				addonTabs.appendChild(tabMounts);
+				addonTabs.appendChild(tabRequired);
+
+				// panel content
+				var addonPanelContent = document.createElement("div");
+				addonPanelContent.className = "addonPanelContent";
+
+				var originalContent = document.createElement("div");
+				originalContent.className = "originalContent";
+
+				if( subscription.filename.indexOf("wscloud/") === 0 )
+					originalContent.innerHTML = "This is GEN1 legacy content. It *may* not work in Redux *yet*. Redux will be fixed soon.";
+				else
+				{
+					// FIXME: Need to check for dependencies!!
+					originalContent.innerHTML = "This workshop content should work fine right now in Redux.";
+				}
+
+				//originalContent.innerHTML = "The author of this workshop addon does <u>NOT</u> claim to be the artist that created the game assets themselves.";
+				addonPanelContent.appendChild(originalContent);
+
+				// info section
+				var sectionTime = document.createElement("div");
+				sectionTime.className = "addonSection";
+
+				var timeTable = document.createElement("table");
+				timeTable.setAttribute("cellspacing", "3");
+
+				var timeRow = document.createElement("tr");
+
+				var timeClockCell = document.createElement("td");
+				timeClockCell.setAttribute("rowspan", "4");
+
+				var timeClock = document.createElement("img");
+				timeClock.src = "clock.png";
+
+				timeClockCell.appendChild(timeClock);
+				timeRow.appendChild(timeClockCell);
+
+				var timeFields = ["updated", "created", "subscribed", "consumed"]
+				var timeFieldTitleCell, timeFieldTitle, timeFieldRow, timeFieldValueCell, timeFieldValue, time;
+				for( var i = 0; i < timeFields.length; i++ )
+				{
+					if( i === 0 )
+						timeFieldRow = timeRow;//timeTable.appendChild(timeRow);
+					else
+						timeFieldRow = document.createElement("tr");
+
+					timeFieldTitleCell = document.createElement("td");
+					timeFieldTitleCell.setAttribute("align", "right");
+
+					timeFieldTitle = document.createElement("div");
+					timeFieldTitle.className = "addonSectionTitle";
+					timeFieldTitle.style.cssText = "text-transform: capitalize;";
+					timeFieldTitle.innerHTML = timeFields[i];
+
+					timeFieldTitleCell.appendChild(timeFieldTitle);
+					timeFieldRow.appendChild(timeFieldTitleCell);
+
+					timeFieldValueCell = document.createElement("td");
+
+					timeFieldValue = document.createElement("div");
+					timeFieldValue.className = "addonSectionValue";
+
+					if( timeFields[i] === "consumed" )
+						timeFieldValue.innerHTML = "-";
+					else
+					{
+						time = new Date(parseInt(subscription[timeFields[i]]) * 1000);
+						timeFieldValue.innerHTML = (time.getMonth()+1) + "/" + (time.getDay()+1) + "/" + time.getFullYear();
+					}
+
+					timeFieldValueCell.appendChild(timeFieldValue);
+					timeFieldRow.appendChild(timeFieldValueCell);
+					timeTable.appendChild(timeFieldRow);
+				}
+				sectionTime.appendChild(timeTable);
+				addonPanelContent.appendChild(sectionTime);
+
+				// tags section
+				var sectionTags = document.createElement("div");
+				sectionTags.style.cssText = "width: 50%;";
+				sectionTags.className = "addonSection";
+
+				var tagsTable = document.createElement("table");
+				tagsTable.setAttribute("cellspacing", "3");
+
+				var tagRow = document.createElement("tr");
+				var tagTitleCell = document.createElement("td");
+				//var tagValueCell = document.createElement("td");
+
+				var tags = subscription.tags.split(",");
+				tagTitleCell.innerHTML = tags.length;
+
+				var filters = [];
+				for( var i = 0; i < workshop.length; i++ )
+				{
+					filter = {
+						"title": workshop[i].name,
+						"value": ""
+					};
+
+					// add any tags we have that match
+					for( var j = 0; j < tags.length; j++ )
+					{
+						var index = workshop[i].tags.indexOf(tags[j]);
+						if( index >= 0 )
+						{
+							if( filter.value !== "" )
+								filter.value += ", "
+
+							filter.value += tags[j];
+						}
+					}
+
+					if( filter.value != "" )
+						filters.push(filter);
+				}
+/*
+				// AUTHOR LINK
+				tagRow = document.createElement("tr");
+
+				tagTitleCell = document.createElement("td");
+				tagTitleCell.setAttribute("align", "right");
+				tagTitleCell.setAttribute("valign", "top");
+
+				tagTitle = document.createElement("div");
+				tagTitle.className = "addonSectionTitle";
+				//tagTitle.style.cssText = "text-trans form: capitalize;";
+				tagTitle.innerHTML = "AUTHOR";
+
+				tagTitleCell.appendChild(tagTitle);
+				tagRow.appendChild(tagTitleCell);
+
+				tagValueCell = document.createElement("td");
+
+				tagValue = document.createElement("div");
+				tagValue.className = "addonSectionValue";
+
+				//http://steamcommunity.com/profiles/" + subscription.owner
+				tagValue.innerHTML = "<a href='#'>View Steam Profile</a>";
+
+				tagValueCell.appendChild(tagValue);
+				tagRow.appendChild(tagValueCell);
+				tagsTable.appendChild(tagRow);
+*/
+				// REGULAR TAGS
+				for( var i = 0; i < filters.length; i++ )
+				{
+					tagRow = document.createElement("tr");
+
+					tagTitleCell = document.createElement("td");
+					tagTitleCell.setAttribute("align", "right");
+					tagTitleCell.setAttribute("valign", "top");
+
+					tagTitle = document.createElement("div");
+					tagTitle.className = "addonSectionTitle";
+					//tagTitle.style.cssText = "text-transform: capitalize;";
+					tagTitle.innerHTML = filters[i].title;
+
+					tagTitleCell.appendChild(tagTitle);
+					tagRow.appendChild(tagTitleCell);
+
+					tagValueCell = document.createElement("td");
+
+					tagValue = document.createElement("div");
+					tagValue.className = "addonSectionValue";
+
+					tagValue.innerHTML = filters[i].value;
+
+					tagValueCell.appendChild(tagValue);
+					tagRow.appendChild(tagValueCell);
+					tagsTable.appendChild(tagRow);
+				}
+
+				// DESCRIPTION
+				tagRow = document.createElement("tr");
+
+				tagTitleCell = document.createElement("td");
+				tagTitleCell.setAttribute("align", "right");
+				tagTitleCell.setAttribute("valign", "top");
+
+				tagTitle = document.createElement("div");
+				tagTitle.className = "addonSectionTitle";
+				//tagTitle.style.cssText = "text-transform: capitalize;";
+				tagTitle.innerHTML = "DESCRIPTION";
+
+				tagTitleCell.appendChild(tagTitle);
+				tagRow.appendChild(tagTitleCell);
+
+				tagValueCell = document.createElement("td");
+
+				tagValue = document.createElement("div");
+				tagValue.className = "addonSectionValue";
+
+				//http://steamcommunity.com/profiles/" + subscription.owner
+				tagValue.innerText = subscription.description;
+
+				tagValueCell.appendChild(tagValue);
+				tagRow.appendChild(tagValueCell);
+				tagsTable.appendChild(tagRow);
+
+				// compose tags
+				sectionTags.appendChild(tagsTable);
+				addonPanelContent.appendChild(sectionTags);
+
+				// compose
+				tdLeft.appendChild(thumb);
+				tr.appendChild(tdLeft);
+				tdRight.appendChild(addonTabs);
+				tdRight.appendChild(addonPanelContent);
+				tr.appendChild(tdRight);
+				table.appendChild(tr);
+				g_addonPanel.appendChild(table);
+				return g_addonPanel;
+			}
+
+			var addonsElem = document.querySelector("#addons");
+			var addonElem, subscription, addonButton, addonButtonImage, addonTitle;
+			for( var i = 0; i < subscriptions.length; i++)
+			{
+				subscription = subscriptions[i];
+
+				addonElem = document.createElement("div");
+				addonElem.className = "addon";
+				
+				addonButton = document.createElement("div");
+				addonButton.className = "addonButton";
+				addonButton.style.cssText = "vertical-align: middle;";
+
+				addonButtonImage = document.createElement("img");
+				addonButtonImage.src = "collapse.png";
+				addonButtonImage.style.cssText = "width: 20px;";
+				addonButtonImage.subscription = subscription;
+				addonButtonImage.addon = addonElem;
+				addonButtonImage.addEventListener("click", function(e)
+				{
+					var elem = e.target;
+					toggleAddonPanel(elem, elem.addon, elem.subscription);
+				}, true);
+
+				addonTitle = document.createElement("div");
+				addonTitle.className = "addonTitle";
+
+				//https://steamuserimages-a.akamaihd.net/ugc/SUBSCRIPTION.PREVIEW/34C9A96DF50C1F275927C34A16C2E340E74B6508/
+				addonTitle.innerHTML = subscription.title;// + " - " + subscription.owner;
+
+
+				//subscription.publishedFileId;
+
+				addonButton.appendChild(addonButtonImage);
+				addonElem.appendChild(addonButton);
+				addonElem.appendChild(addonTitle);
+
+				//addonElem.innerHTML += "Num KeyValue Tags: " + subscription.tags;
+
+				addonsElem.appendChild(addonElem);
+
+				//if( i === 7 )
+				//if( subscription.title === "Furniture Pack" )
+				if( false )
+				{
+					var addonPanel = createAddonPanel(subscription);
+					addonsElem.appendChild(addonPanel);
+				}
+			}
+		</script>
+	</body>
+</html>

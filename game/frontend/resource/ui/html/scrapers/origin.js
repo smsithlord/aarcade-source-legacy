@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "origin",
+	"api_version": 0.1,
 	"title": "Origin Store",
 	"homepage": "http://www.origin.com/",
 	"search": "http://www.origin.com/search?searchString=$TERM",

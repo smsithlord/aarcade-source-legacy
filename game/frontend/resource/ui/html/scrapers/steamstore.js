@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "steamstore",
+	"api_version": 0.1,
 	"title": "Steam Store",
 	"homepage": "http://store.steampowered.com/",
 	"search": "http://store.steampowered.com/search/?term=$TERM",
@@ -12,7 +13,8 @@ arcadeHud.addScraper({
 		"screen": 100,
 		"marquee": 100,
 		"preview": 100,
-		"file": 50
+		"file": 50,
+		"type": 100
 	},
 	"run": function(url, field, doc)
 	{
@@ -20,7 +22,16 @@ arcadeHud.addScraper({
 
 		// reference
 		var referenceElem = doc.querySelector("link[rel='canonical']");
-		response.reference = referenceElem.getAttribute("href");
+		var referenceURL = referenceElem.getAttribute("href");
+
+		var regex = new RegExp("(http|https):\/\/(?:www\.)?store\.steampowered\.com\/app\/[0-9]+\/");
+		var results = regex.exec(referenceURL);
+		referenceURL = results[0];
+
+		response.reference = referenceURL;
+
+		//http://store.steampowered.com/app/480490/Prey/?snr=1_4_4__100
+
 		/*
 		var referenceValue = url;
 		if( referenceValue.indexOf("https") === 0 )
@@ -37,7 +48,7 @@ arcadeHud.addScraper({
 		var titleElem = doc.querySelector("span[itemprop='name']");
 		response.title = titleElem.innerHTML;
 
-		var appId = response.reference.substring(0, response.reference.length-1);
+		var appId = referenceURL.substring(0, referenceURL.length-1);
 		appId = appId.substring(appId.lastIndexOf("/") + 1);
 
 		// screen
@@ -56,6 +67,9 @@ arcadeHud.addScraper({
 
 		// file
 		response.file = appId;
+
+		// type
+		response.type = "PC";
 
 		return response;
 	},

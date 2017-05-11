@@ -28,7 +28,7 @@
 						New Shortcut
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
 							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
 						</div>
 					</div>
@@ -47,6 +47,8 @@
  			var fileLocation = decodeURIComponent(getParameterByName("fileLocation"));
  			var item = aaapi.library.findLibraryItem("file", fileLocation);
  			var itemSlateElem = document.querySelector("#itemContainer");
+			
+			var isYouTubePlaylist = false;
 
 			function ExtractTwitchId(trailerURL)
 			{
@@ -55,7 +57,7 @@
 
 			    var twitchid;
 			    var test = trailerURL;
-			    var found = twitchid.indexOf("twitch.tv/");
+			    var found = test.indexOf("twitch.tv/");
 			    if( found >= 0 )
 			    {
 			      twitchid = test.substr(found + 10);
@@ -284,9 +286,9 @@
 
 						itemSlateElem.appendChild(fieldContainer);
 
-						// try to automate some more of this stuff
-						if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
-							fetchYouTubeInfo();
+						//// try to automate some more of this stuff
+						//if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
+						//	fetchYouTubeInfo();
 						/*
 						else if( isImageExtension(fileLocation) )
 						{
@@ -297,6 +299,14 @@
 							// auto-set to a movies format
 						}
 						*/
+					}
+
+					// try to automate some more of this stuff
+					var isAYouTube = false;
+					if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
+					{
+						isAYouTube = true;
+						fetchYouTubeInfo();
 					}
 
 					// give auto-title if type is not youtube
@@ -324,7 +334,8 @@
 					{
 						var typeText = typeInput.options[typeInput.selectedIndex].text.toLowerCase();
 						// make sure we are not a YT video
-						if( titleInput.value === "" && typeText.indexOf("youtube") === -1 )
+						//if( titleInput.value === "" && typeText.indexOf("youtube") === -1 )
+						if( !isAYouTube )
 						{
 							// create a title
 							var regEx = /(?=[^\\/]*$).+$/i;
@@ -380,6 +391,8 @@
 
 			function fetchYouTubeInfo()
 			{
+				isYouTubePlaylist =!!(getParameterByName("list", fileLocation));
+
 				// first auto-set the type to youtube
 				var elems = document.querySelectorAll("select");
 				var max = elems.length;
@@ -392,7 +405,7 @@
 						var j;
 						for( j = 0; j < altMax; j++ )
 						{
-							if( elems[i].options[j].text.toLowerCase().indexOf("youtube") >= 0 )
+							if( elems[i].options[j].text.toLowerCase().indexOf("videos") >= 0 )
 							{
 								elems[i].selectedIndex = j;
 								break;
@@ -412,29 +425,41 @@
 				{
 					if( request.readyState === 4 && request.status === 200 )
 					{
-						var response = JSON.parse(request.responseText);
-						var data = response.data;
-
-						var x;
-						for( x in data )
+						if( request.responseText === "")
+							console.log("ERROR: Unable to retrieve YouTube info about that video ID.");
+						else
 						{
-							var inputElems = document.querySelectorAll("input");
-							var max = inputElems.length;
-							var i;
-							for( i = 0; i < max; i ++ )
-							{
-								if( inputElems[i].field === x )
-									inputElems[i].value = data[x];
-							}
+							var response = JSON.parse(request.responseText);
+							var data = response.data;
 
-							item[x] = data[x];
+							var x;
+							for( x in data )
+							{
+								var inputElems = document.querySelectorAll("input");
+								var max = inputElems.length;
+								var i;
+								for( i = 0; i < max; i ++ )
+								{
+									if( inputElems[i].field === x )
+									{
+										if( x === "title" && isYouTubePlaylist )
+											inputElems[i].value = "Playlist: " + data[x];
+										else
+											inputElems[i].value = data[x];
+									}
+								}
+
+								item[x] = data[x];
+							}
 						}
 					}
+					/*
 					else if( request.status >= 500 )
 					{
 						console.log("request status >= 500");
 					}
-				}.bind(this);
+					*/
+				};
 
 				request.open("GET", requestURL, true);
 				request.send();

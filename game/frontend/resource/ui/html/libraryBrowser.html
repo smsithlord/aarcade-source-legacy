@@ -22,7 +22,7 @@
 						Library Browser: <div id="libBrowserType" style="display: inline-block; text-transform: capitalize;"></div>
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
 							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
 						</div>
 					</div>
@@ -65,7 +65,7 @@
 									<table style="width: 80%;"><tr>
 										<td>
 											<nobr>
-												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div> <div class="button" onclick="window.location='asset://ui/scrapers.html';" style="display: inline-block;">&nbsp;Scrapers&nbsp;</div>
+												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div> <div class="button" onclick="window.location='asset://ui/scrapers.html';" style="display: inline-block;">&nbsp;Scrapers&nbsp;</div> <div class="button" onclick="window.location='asset://ui/import.html';" style="display: inline-block;" id="importButton">&nbsp;Import&nbsp;</div>
 											</nobr>
 										</td>
 									</tr></table>
@@ -80,9 +80,6 @@
 										</td>
 										<td>
 											<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected entry.">Edit</div>
-										</td>
-										<td>
-											<div class="button disabledButton">Inspect</div>
 										</td>
 									</tr></table>
 								</td>
@@ -233,7 +230,9 @@
 
 				var libraryQueryId = response.queryId;
 
-				appendEntry(response.entry);
+				if( category !== "models" || !response.entry.dynamic )
+					appendEntry(response.entry);
+
 				libraryFetch(libraryQueryId, method, 99);
 			}
 
@@ -508,10 +507,14 @@
 					if( response.success )
 					{
 						var libraryEntry = response.entry;
-						if( this.count < this.amount && libraryEntry != 0 )
+
+						if( category !== "models" || !libraryEntry.dynamic )
 						{
-							appendEntry(libraryEntry);
-							this.count++;
+							if( this.count < this.amount && libraryEntry != 0 )
+							{
+								appendEntry(libraryEntry);
+								this.count++;
+							}
 						}
 					}
 					else
@@ -595,6 +598,12 @@
 			searchBox.querySelector("input").focus();
 			searchBox.querySelector("input").select();
 			//searchBox.querySelector("input").setSelectionRange(0, searchBox.value.length);
+/*
+			function onIsMapLoaded()
+			{
+				document.querySelector("#importButton").innerHTML = "Import Steam Games or Legacy Content";
+			}
+			*/
 		</script>
 	</body>
 </html>

@@ -3,6 +3,8 @@
 #include "aa_globals.h"
 #include "c_canvasmanager.h"
 #include "c_anarchymanager.h"
+#include "../../public/vtf/vtf.h"
+#include "../public/bitmap/tgawriter.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -16,6 +18,7 @@ C_CanvasManager::C_CanvasManager()
 	//m_iCanvasHeight = 720;
 	//m_iCanvasWidth = 1920;
 	//m_iCanvasHeight = 1080;
+	m_bUseDeferredTextureCleanUp = true;
 	m_iLastAllowedRenderedFrame = -1;
 	m_iLastAllowedPriorityRenderedFrame = -1;
 	m_iVisibleCanvasesLastFrame = -1;
@@ -26,7 +29,8 @@ C_CanvasManager::C_CanvasManager()
 	m_iLastPriorityRenderedFrame = -1;
 	//m_pWebBrowser = null;
 	m_pCanvasRegen = null;
-	m_pSelectedEmbeddedInstance = null;
+	m_pDisplayInstance = null;
+	//m_pSelectedEmbeddedInstance = null;
 
 	/*
 	m_iWebSurfaceWidth = 1280;
@@ -65,6 +69,9 @@ void C_CanvasManager::Update()
 
 	m_iVisiblePriorityCanvasesLastFrame = m_iVisiblePriorityCanvasesCurrentFrame;
 	m_iVisiblePriorityCanvasesCurrentFrame = 0;
+
+	if (!engine->IsInGame())	// If we are in-game, this is done during PostRender instead.
+		this->CleanupTextures();
 }
 
 CCanvasRegen* C_CanvasManager::GetOrCreateRegen()
@@ -78,6 +85,118 @@ CCanvasRegen* C_CanvasManager::GetOrCreateRegen()
 	return m_pCanvasRegen;
 }
 
+DeferredCleanupTexture_t* C_CanvasManager::FindDeferredCleanupTexture(ITexture* pTexture)
+{
+	unsigned int max = m_pendingTextureCleanup.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_pendingTextureCleanup[i]->pTexture == pTexture)
+			return m_pendingTextureCleanup[i];
+	}
+
+	return null;
+
+	/*
+	auto it = m_pendingTextureCleanup.find(std::string(pTexture->GetName()));
+	if (it != m_pendingTextureCleanup.end())
+		return it->second;
+	
+	return null;
+	*/
+}
+/*
+DeferredCleanupTexture_t* C_CanvasManager::FindDeferredCleanupTexture(std::string textureName)
+{
+	auto it = m_pendingTextureCleanup.find(textureName);
+	if (it != m_pendingTextureCleanup.end())
+		return it->second;
+
+	return null;
+}
+*/
+
+void C_CanvasManager::DoOrDeferTextureCleanup(ITexture* pTexture)
+{
+	if (m_bUseDeferredTextureCleanUp)
+	{
+		DeferredCleanupTexture_t* pDeferredCleanupTexture = this->FindDeferredCleanupTexture(pTexture);
+		if (pDeferredCleanupTexture)
+		{
+			DevMsg("WARNING: Texture attempted to add itself twice to the deferred texture cleanup list: %s\n", pTexture->GetName());
+
+			if (pDeferredCleanupTexture->pTexture != pTexture)
+				DevMsg("CRITICAL ERROR: The previous texture for this texture name does not match this pointer!\n");
+
+			// update the death time
+			pDeferredCleanupTexture->startTime = g_pAnarchyManager->GetTimeNumber();
+		}
+		else
+		{
+			pDeferredCleanupTexture = new DeferredCleanupTexture_t();
+			pDeferredCleanupTexture->pTexture = pTexture;
+			pDeferredCleanupTexture->startTime = g_pAnarchyManager->GetTimeNumber();
+			m_pendingTextureCleanup.push_back(pDeferredCleanupTexture);
+			//m_pendingTextureCleanup[std::string(pTexture->GetName())] = pDeferredCleanupTexture;
+		}
+	}
+	else
+		this->CleanupTexture(pTexture);
+}
+
+void C_CanvasManager::TextureNotDeferred(ITexture* pTexture)
+{
+	unsigned int max = m_pendingTextureCleanup.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_pendingTextureCleanup[i]->pTexture == pTexture)
+		{
+			m_pendingTextureCleanup.erase(m_pendingTextureCleanup.begin() + i);
+			break;
+		}
+	}
+	//auto it = m_pendingTextureCleanup.find(std::string(pTexture->GetName()));
+	//if (it != m_pendingTextureCleanup.end())
+	//	m_pendingTextureCleanup.erase(it);
+}
+
+void C_CanvasManager::CleanupTexture(ITexture* pTexture)
+{
+	DevMsg("Cleaning up texture:\n");
+	DevMsg("\tTexturePionter: %i\n", pTexture);
+	DevMsg("\tIsErrorTexture: %i\n", pTexture->IsError());	
+
+	std::string texName = pTexture->GetName();
+	DevMsg("\tName: %s\n", texName);
+
+	pTexture->DecrementReferenceCount();
+	pTexture->DeleteIfUnreferenced();
+}
+
+void C_CanvasManager::CleanupTextures()
+{
+	if (!m_bUseDeferredTextureCleanUp)
+		return;
+
+	uint64 delay = 3;
+	uint64 difference;
+	uint64 currentTime = g_pAnarchyManager->GetTimeNumber();
+	DeferredCleanupTexture_t* pDeferredCleanupTexture;
+	ITexture* pTexture;
+
+	unsigned int max = m_pendingTextureCleanup.size();
+	for (unsigned int i = max; i > 0; i--)
+	{
+		pDeferredCleanupTexture = m_pendingTextureCleanup[i-1];
+		difference = currentTime - pDeferredCleanupTexture->startTime;
+		if (difference > delay)
+		{
+			pTexture = pDeferredCleanupTexture->pTexture;
+			this->CleanupTexture(pTexture);
+			m_pendingTextureCleanup.erase(m_pendingTextureCleanup.begin() + (i - 1));
+		}
+	}
+}
+
 bool C_CanvasManager::IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
 {
 	if (pEmbeddedInstance->GetId() == "images")
@@ -88,7 +207,7 @@ bool C_CanvasManager::IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedIn
 		return true;
 
 	///*
-	if( pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() && pEmbeddedInstance->GetId() != "hud" &&  (g_pAnarchyManager->GetSelectedEntity() || g_pAnarchyManager->GetInputManager()->GetFullscreenMode()))
+	if (pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() && pEmbeddedInstance->GetId() != "hud" && (g_pAnarchyManager->GetSelectedEntity() || g_pAnarchyManager->GetInputManager()->GetFullscreenMode()))
 		return true;
 	//*/
 	
@@ -419,6 +538,121 @@ void C_CanvasManager::CloseAllInstances()
 	DevMsg("Librertro instances closed.\n");
 }
 
+void C_CanvasManager::CloseInstance(std::string id)
+{
+	C_EmbeddedInstance* pEmbeddedInstance = null;
+
+	auto foundInstance = m_materialEmbeddedInstanceIds.begin();
+	while (foundInstance != m_materialEmbeddedInstanceIds.end())
+	{
+		pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance(id);
+		if (pEmbeddedInstance)
+		{
+			g_pAnarchyManager->GetAwesomiumBrowserManager()->DestroyAwesomiumBrowserInstance(dynamic_cast<C_AwesomiumBrowserInstance*>(pEmbeddedInstance));
+			return;
+		}
+
+		pEmbeddedInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(id);
+		if (pEmbeddedInstance)
+		{
+			g_pAnarchyManager->GetLibretroManager()->DestroyLibretroInstance(dynamic_cast<C_LibretroInstance*>(pEmbeddedInstance));
+			return;
+		}
+
+		pEmbeddedInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(id);
+		if (pEmbeddedInstance)
+		{
+			g_pAnarchyManager->GetSteamBrowserManager()->DestroySteamBrowserInstance(dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance));
+			return;
+		}
+
+		pEmbeddedInstance = g_pAnarchyManager->GetWindowManager()->FindWindowInstance(id);
+		if (pEmbeddedInstance)
+		{
+			g_pAnarchyManager->GetWindowManager()->CloseWindowsWindow(id);	// FIXME: should use an overload that accepts the instance pointer directly
+			g_pAnarchyManager->GetWindowManager()->DestroyWindowInstance(dynamic_cast<C_WindowInstance*>(pEmbeddedInstance));
+			return;
+		}
+
+		foundInstance++;
+	}
+
+	DevMsg("Warning: Could not find instance w/ ID %s to close!\n", id.c_str());
+}
+
+void C_CanvasManager::SwitchToInstance(std::string id)
+{
+	C_EmbeddedInstance* pEmbeddedInstance = null;
+
+	auto foundInstance = m_materialEmbeddedInstanceIds.begin();
+	while (foundInstance != m_materialEmbeddedInstanceIds.end())
+	{
+		pEmbeddedInstance = g_pAnarchyManager->GetWindowManager()->FindWindowInstance(id);
+		if (pEmbeddedInstance)
+		{
+			g_pAnarchyManager->GetWindowManager()->SwitchToWindowInstance(id);	// FIXME: should use an overload that accepts the instance pointer directly
+			return;
+		}
+
+		foundInstance++;
+	}
+
+	DevMsg("Warning: Could not find instance w/ ID %s to switch to!\n", id.c_str());
+}
+
+void C_CanvasManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
+{
+	//g_pAnarchyManager->GetAwesomiumBrowserManager()->GetAllInstances(embeddedInstances);
+	g_pAnarchyManager->GetSteamBrowserManager()->GetAllInstances(embeddedInstances);
+	//g_pAnarchyManager->GetLibretroManager()->GetAllInstances(embeddedInstances);
+}
+
+void C_CanvasManager::CaptureInstanceThumbnail(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	ITexture* pTexture = pEmbeddedInstance->GetTexture();
+	if (pTexture)
+	{
+		// aarcade_user/cache/tasks
+
+		// TODO: Save a TGA or some sort of image out!
+
+		/*
+		g_pFullFileSystem->CreateDirHierarchy("cache/tasks", "DEFAULT_WRITE_PATH");
+
+		std::string filename = g_pAnarchyManager->GetAArcadeUserFolder();
+		filename += "\\cache\\tasks\\";
+		filename += pEmbeddedInstance->GetId();
+		filename += ".tga";
+		*/
+
+		//DevMsg("Saving task thumbnail %s\n", filename.c_str());
+
+		/*
+		// Write TGA format to buffer
+		int textureWidth = pTexture->GetActualWidth();
+		int textureHeight = pTexture->GetActualHeight();
+		int textureDpeth = pTexture->GetActualDepth();
+
+		int iMaxTGASize = 1024 + (textureWidth * textureHeight * 4);
+		void *pTGA = malloc(iMaxTGASize);
+
+		CUtlBuffer buffer;
+		buffer.SetExternalBuffer(pTGA, iMaxTGASize, 0);
+		*/
+
+		//pTexture->SaveToFile(filename.c_str());
+
+		
+		//pTexture->ImageData
+
+		//size_t byteSize;
+		//void* result = pTexture->GetResourceData(0, &byteSize);
+		//DevMsg("Done: %i\n", (result != null));
+		//bool bWriteResult = TGAWriter::WriteToBuffer(, buffer, nSrcWidth, nSrcHeight, IMAGE_FORMAT_RGB888, IMAGE_FORMAT_RGB888);
+		//pTexture->SaveToFile(filename.c_str());
+	}
+}
+
 void C_CanvasManager::LevelShutdownPreEntity()
 {
 	// all instances other than HUD and IMAGES should be removed at this time (until cross-map background item play gets re-enabled.)
@@ -468,6 +702,58 @@ void C_CanvasManager::UnreferenceTexture(ITexture* pTexture)
 	{
 		m_webSurfaceProxies[i]->UnreferenceTexture(pTexture);
 	}
+}
+
+void C_CanvasManager::UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	this->GetOrCreateRegen()->NotifyInstanceAboutToDie(pEmbeddedInstance);
+
+	// tell ALL proxies that this INSTANCE is on its way out and should NOT be referenced anywhere
+	unsigned int max = m_webSurfaceProxies.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_webSurfaceProxies[i]->UnreferenceEmbeddedInstance(pEmbeddedInstance);
+	}
+}
+
+void C_CanvasManager::SetDifferentDisplayInstance(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	m_pDisplayInstance = null;
+
+	// get all the tasks
+	std::vector<C_EmbeddedInstance*> embeddedInstances;
+	this->GetAllInstances(embeddedInstances);
+
+	// cycle through them all and find the 1st non-hud non-images one
+	std::string testId;
+	for (unsigned int i = 0; i < embeddedInstances.size(); i++)
+	{
+		testId = embeddedInstances[i]->GetId();
+		if (testId == "hud" || testId == "images" || embeddedInstances[i] == pEmbeddedInstance)
+			continue;
+
+		m_pDisplayInstance = embeddedInstances[i];
+	}
+}
+
+C_EmbeddedInstance* C_CanvasManager::GetFirstInstanceToDisplay()
+{
+	// get all the tasks
+	std::vector<C_EmbeddedInstance*> embeddedInstances;
+	this->GetAllInstances(embeddedInstances);
+
+	// cycle through them all and find the 1st non-hud non-images one
+	std::string testId;
+	for (unsigned int i = 0; i < embeddedInstances.size(); i++)
+	{
+		testId = embeddedInstances[i]->GetId();
+		if (testId == "hud" || testId == "images")
+			continue;
+
+		return embeddedInstances[i];
+	}
+
+	return null;
 }
 
 void C_CanvasManager::RefreshItemTextures(std::string itemId, std::string channel)

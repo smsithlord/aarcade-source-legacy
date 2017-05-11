@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "googleimages",
+	"api_version": 0.1,
 	"title": "Google Images",
 	"homepage": "http://www.google.com/imghp",
 	"search": "http://www.google.com/search?tbm=isch&q=$TERM",

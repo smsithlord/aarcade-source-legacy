@@ -218,7 +218,12 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 	}
 	else if (datatype == RESOURCE_BINARY)
 	{
-		FileHandle_t fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), "rb", UISearchPath.c_str());
+		FileHandle_t fileHandle;
+
+		if (shortPath.find("shots/") == 0)
+			fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), "rb", "MOD");
+		else
+			fileHandle = filesystem->Open(VarArgs("%s%s", localBase.c_str(), shortPath.c_str()), "rb", UISearchPath.c_str());
 
 		if (fileHandle)
 		{
@@ -260,7 +265,7 @@ void ScreenshotDataSource::OnRequest(int request_id, const ResourceRequest& requ
 	std::string requestUrl = WebStringToCharString(request.url().spec());	// the entire Url
 
 	size_t found = requestPath.find_first_of("#?");
-	std::string shortPath = "screenshots\\" + requestPath.substr(0, found);
+	std::string shortPath = "shots\\" + requestPath.substr(0, found);
 
 	enum datatype_t {
 		RESOURCE_UNKNOWN = 0,
@@ -546,9 +551,9 @@ void CacheDataSource::OnRequest(int request_id, const ResourceRequest& request, 
 
 	if (supportedType)
 	{
-		std::string localFile = "imagecache/";
+		std::string localFile = "cache/urls/";
 		localFile += requestPath.c_str();
-		//std::string localFile = "imagecache/";
+		//std::string localFile = "cache/urls/";
 		//localFile += g_pAnarchyManager->GenerateLegacyHash(requestPath.c_str());
 		//localFile += ".jpg";
 

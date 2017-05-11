@@ -1,5 +1,6 @@
 arcadeHud.addScraper({
 	"id": "youtube",
+	"api_version": 0.1,
 	"title": "YouTube",
 	"homepage": "http://www.youtube.com/",
 	"search": "http://www.youtube.com/results?search_query=$TERM",
@@ -20,7 +21,8 @@ arcadeHud.addScraper({
 		var response = {};
 
 		var videoId = doc.querySelector("meta[itemprop='videoId']").getAttribute("content");
-		var goodUri = "http://www.youtube.com/watch?v=" + videoId;
+		//var goodUri = "http://www.youtube.com/watch?v=" + videoId;
+		var goodUri = doc.querySelector("link[itemprop='url']").getAttribute("href");
 
 		// reference
 		response.reference = goodUri;
@@ -47,7 +49,7 @@ arcadeHud.addScraper({
 		response.description = descriptionElem.getAttribute("content");
 
 		// type
-		response.type = "youtube";
+		response.type = "videos";
 
 		return response;
 	},

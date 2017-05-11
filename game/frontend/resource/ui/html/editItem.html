@@ -19,7 +19,7 @@
 						Edit Item
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
 							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
 						</div>
 					</div>
@@ -584,7 +584,7 @@ function getParameterByName(name, url) {
 						term = term.substring(0, dateCull);
 
 					arcadeHud.metaSearch(id, this.field, selectedOption, term);
-					document.location = "asset://ui/blank.html";
+					document.location = "asset://ui/overlay.html";
 					/*
 					console.log(selectedOption);
 					arcadeHud.metaScrape(selectedOption, function(scrapedData)

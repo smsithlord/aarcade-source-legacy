@@ -3,8 +3,57 @@
 
 #include "steam/steam_api.h"
 #include <map>
+#include <vector>
 
 class C_WorkshopQuery;
+
+struct SteamWorkshopKeyValueTag_t
+{
+	std::string key;
+	std::string value;
+};
+
+struct SteamWorkshopDetails_t
+{
+	PublishedFileId_t publishedFileId;
+	EWorkshopFileType type;
+	std::string title;
+	std::string description;
+	uint64 owner;
+	uint32 created;
+	uint32 updated;
+	uint32 subscribed;
+	ERemoteStoragePublishedFileVisibility visibility;
+	bool banned;
+	//bool accepted;
+	bool tagsTruncated;
+	std::string tags;
+	UGCHandle_t file;
+	UGCHandle_t preview;
+	std::string filename;
+	int32 fileSize;
+	int32 previewSize;
+	std::string url;
+	uint32 votesUp;
+	uint32 votesDown;
+	float score;
+	uint32 numChildren;
+	std::string previewURL;
+	uint32 numSubscriptions;
+	uint32 numFavorites;
+	//uint32 numAdditionalPreviews;
+	std::vector<std::string> additionalPreviewURLs;
+	std::vector<SteamWorkshopKeyValueTag_t*> keyValueTags;
+	//uint32 numFollowers;
+	//uint32 numUniqueSubscriptions;
+	//uint32 numUniqueFavorites;
+	//uint32 numUniqueFollowers;
+	//uint32 numUniqueWebsiteViews;
+	//uint32 reportScore;
+	//uint32 numSecondsPlayed;
+	//uint32 numPlaytimeSessions;
+	//uint32 numComments;
+};
 
 class C_WorkshopManager
 {
@@ -15,11 +64,13 @@ public:
 	void Init();
 	void OnQueryComplete(C_WorkshopQuery* pQuery);
 
-	void MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamUGCDetails_t* pDetails = null);
+	void MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamWorkshopDetails_t* pDetails = null);
 	void OnMountWorkshopFail();
 	void OnMountWorkshopSucceed();
 
-	void AddWorkshopDetails(SteamUGCDetails_t* pDetails);
+	void GetAllWorkshopSubscriptions(std::vector<SteamWorkshopDetails_t*>& details);
+	SteamWorkshopDetails_t* GetWorkshopSubscription(PublishedFileId_t id);
+	void AddWorkshopDetails(SteamWorkshopDetails_t* pDetails);
 
 	//void MountAllWorkshops();
 	void MountFirstWorkshop();
@@ -27,15 +78,16 @@ public:
 	void MountWorkshopClose();
 
 	unsigned int GetNumDetails();
-	SteamUGCDetails_t* GetDetails(unsigned int index);
+	SteamWorkshopDetails_t* GetDetails(unsigned int index);
 
 	// accessors
 
 	// mutators
 	
 private:
-	std::map<PublishedFileId_t, SteamUGCDetails_t*> m_details;
-	std::map<PublishedFileId_t, SteamUGCDetails_t*>::iterator m_previousMountWorkshopIterator;
+	bool m_bWorkshopEnabled;
+	std::map<PublishedFileId_t, SteamWorkshopDetails_t*> m_details;
+	std::map<PublishedFileId_t, SteamWorkshopDetails_t*>::iterator m_previousMountWorkshopIterator;
 	bool m_bMountWorkshopIsLegacy;
 	//unsigned int m_uMountWorkshopNumLegacyItems;
 	unsigned int m_uMountWorkshopuNumItems;
@@ -48,7 +100,7 @@ class C_WorkshopQuery
 {
 public:
 	C_WorkshopQuery();
-	~C_WorkshopQuery(){};
+	~C_WorkshopQuery();
 
 	void Init(SteamAPICall_t hAPICall);
 	CCallResult<C_WorkshopQuery, SteamUGCQueryCompleted_t> callback;

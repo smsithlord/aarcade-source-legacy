@@ -491,6 +491,8 @@ std::string C_LibretroManager::RetroDeviceToString(unsigned int number)
 
 void C_LibretroManager::CloseAllInstances()
 {
+	g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
+
 	unsigned int count = 0;
 	// iterate over all web tabs and call their destructors
 	for (auto it = m_libretroInstances.begin(); it != m_libretroInstances.end(); ++it)
@@ -569,6 +571,10 @@ void C_LibretroManager::DestroyLibretroInstance(C_LibretroInstance* pInstance)
 		this->SelectLibretroInstance(null);
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
+
+	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
+		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(pInstance);
+	//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
 
 	//if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
 	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
@@ -660,7 +666,7 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
 void C_LibretroManager::RunEmbeddedLibretro(std::string core, std::string file)
 {
 	C_LibretroInstance* pLibretroInstance = this->CreateLibretroInstance();
-	pLibretroInstance->Init();
+	pLibretroInstance->Init("", "Manual Libretro Instance");
 	pLibretroInstance->SetOriginalGame(file);
 //	pLibretroInstance->SetOriginalItemId(itemId);
 	if (!pLibretroInstance->LoadCore(core))	// FIXME: elegantly revert back to autoInspect if loading the core failed!

@@ -1,0 +1,39 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
+							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+						</div>
+					</div>
+					<div class="hudContentHeaderCell">
+						Addons
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/workshop.html';" help="Explore the Steam workshop or manage your current subscriptions.">Workshop</div>
+			<div class="mainButton disabledButton helpNote" onclick="window.location='asset://ui/backpack.html';" help="See something you like? Stuff it into your backpack and keep it for ever.">Backpacks</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/mounts.html';" help="Manage which of your games' assets get mounted when you launch AArcade.">Mounted Games</div>
+			<div class="mainButton disabledButton helpNote" onclick="window.location='asset://ui/customMounts.html';" help="Have your own folder or VPK's you want mounted?  These are custom mounts.">Mounted Custom</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/embeddedApps.html';" help="Configure the embedded apps that run on the in-game screens.">Embedded Apps</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/import.html';" help="Import all of your Steam games, maps & models in your folders, or your legacy content.">Import Games & Content</div>
+<!--
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>
+		-->
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+	</body>
+</html>

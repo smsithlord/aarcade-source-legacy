@@ -40,13 +40,16 @@ function ArcadeHud()
 			},
 			"run": function(url, field, doc)
 			{
+				//console.log("run it.");
 				var rawGames = doc;
 				var numRawGames = rawGames.length;
 				var steamItems = [];
 				var i, steamItem;
 				for( i = 0; i < numRawGames; i++ )
 				{
-					steamItems.push(rawGames[i].name_escaped);
+					//console.log(rawGames[i].name_escaped);
+					//steamItems.push(rawGames[i].name_escaped);
+					steamItems.push(rawGames[i].name + "");
 					steamItems.push(rawGames[i].appid + "");
 				}
 
@@ -58,6 +61,8 @@ function ArcadeHud()
 				var validForScrape = false;
 				var redirect = false;
 				
+				//console.log("test it.");
+
 				if( Array.isArray(doc) )
 					validForScrape = true;
 
@@ -115,7 +120,7 @@ function ArcadeHud()
 
 	this.onDOMReady().then(function()
 	{
-		console.log("body ready");
+		console.log("DOM ready on " + document.location.href);
 		this.DOMParser = new DOMParser();
 
 		/*
@@ -348,7 +353,11 @@ function ArcadeHud()
 		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
 		document.body.appendChild(this.helpElem);
 
-		aaapi.system.requestActivateInputMode();	// gets called needlessly when an object is de-selected, but fuck it.
+		if( document.location.href !== "asset://ui/imageLoader.html" && document.location.href !== "asset://ui/startup.html" )
+		{
+			console.log("Requesting activate input mode from " + document.location.href);
+			aaapi.system.requestActivateInputMode();	// gets called needlessly when an object is de-selected, but fuck it.
+		}
 
 		/*
 		this.metaScrapeElem = document.createElement("div");
@@ -529,6 +538,10 @@ function ArcadeHud()
 
 		// dispatch messages we may have gotten before the DOM was ready
 		this.dispatchHudLoadingMessages();
+
+
+		if( document.location.href === "asset://ui/imageLoader.html" || document.location.href === "asset://ui/hud.html" )
+			aaapi.system.specialReady();
 	}.bind(this));
 }
 
@@ -547,7 +560,16 @@ ArcadeHud.prototype.play = function()
 
 ArcadeHud.prototype.edit = function()
 {
-	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	/*
+	var goodId;
+	if( !!itemId && itemId != "" )
+		goodId = itemId;
+	else
+	{
+		*/
+		var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	//}
+
 	if( item )
 		window.location='asset://ui/editItem.html?id=' + encodeURIComponent(item.info.id);
 };
@@ -594,6 +616,7 @@ ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 
 ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url, isSelectedObject, embeddedInstanceType)
 {
+	console.log("onActivateInputMode received.");
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
 	isMapLoaded = parseInt(isMapLoaded);
@@ -608,6 +631,14 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	var i;
 	for( i = 0; i < num; i++ )
 		elems[i].style.display = (isMapLoaded) ? "block" : "none";
+
+	if( this.oldIsMapLoaded !== isMapLoaded )
+	{
+		this.oldIsMapLoaded = isMapLoaded;
+		if(typeof window.onIsMapLoaded === "function")
+			window.onIsMapLoaded(isMapLoaded);
+	}
+
 
 //this.addressTabElem
 //console.log("Is object selected: " + isObjectSelected);
@@ -1414,9 +1445,26 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 				console.log("Import rejected!");
 		}
 		else
-		{
+		{	
 			console.log("Scraped data is: ");
 			console.log(JSON.stringify(scrapedData));
+
+			if( this.activeScraperItemId !== "" )
+			{
+				// Figure in field weights...
+				// Need to get the existing item to do that...
+				var item = aaapi.library.getLibraryItem(this.activeScraperItemId);
+
+				if( item )
+				{
+					for( x in this.activeScraper.fields )
+					{
+						if( !!scrapedData[x] && this.activeScraper.fields[x] < 50 && item[x] !== "" )
+							delete scrapedData[x];
+					}
+				}
+			}
+
 			var usedFields = [];
 			var args = [];
 			var x, field;
@@ -1554,6 +1602,9 @@ ArcadeHud.prototype.metaScrape = function(scraperId, field, callback)
 						delete results[shitList[i]];
 				}
 
+				// strip out things that the scraper isn't sure about if we have better values
+				//if( !!results.title && )
+
 				// eliminate duplicates intellegently
 				if( !!results.file && results.file !== "" )
 				{
@@ -1677,7 +1728,6 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 		console.log(typeof scraper.test);
 		if(typeof scraper.test === "function")
 		{
-			console.log("yarrrrrrr");
 			//scraper.test();
 			var id = "meta" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
 			//var id = "test";
@@ -1723,6 +1773,9 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 			var delay = scraper.testDelay;
 			if( !!!delay )
 				delay = 0;
+
+			//if( scraperId === "importSteamGames" )
+			//	delay = 1000;
 
 			var dummy2 = {"id": id, "scraper": scraper};
 			setTimeout(function()
@@ -1791,7 +1844,7 @@ ArcadeHud.prototype.getParameterByName = function(name, url)
 
 ArcadeHud.prototype.isImageExtension = function(url)
 {
-	var re = /(.bmp|.ico|.gif|.jpg|.jpeg|.jpe|.jp2|.pcx|.pic|.png|.pix|.raw|.tga|.tif|.vtf|.tbn)$/i;
+	var re = /(.bmp|.ico|.gif|.jpg|.jpeg|.jpe|.jp2|.pcx|.pic|.png|.pix|.raw|.tga|.tif|.vtf|.tbn|.webp)$/i;
 
 	if( url.match(re) || url.indexOf("cdn.steamcommunity") > -1 )
 		return true;
@@ -1980,7 +2033,7 @@ ArcadeHud.prototype.onDOMGot = function(url, response)
 		console.log(partialSource);
 	}
 */
-	
+	//console.log("onDOMGot");
 	var index = response.indexOf("AAAPICALL");
 	var callId = response.substring(0, index);
 	if( !!this.metaScrapeHandles[callId] )

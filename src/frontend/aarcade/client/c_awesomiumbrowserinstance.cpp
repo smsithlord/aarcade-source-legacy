@@ -52,16 +52,7 @@ C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
 	if (m_id == "hud")
 		DevMsg("Hud destroyed!\n");
 
-	if (m_pTexture && m_id != "images" )
-	{
-		m_pTexture->SetTextureRegenerator(null);
-
-		DevMsg("Unreferencing texture %s\n", m_pTexture->GetName());
-		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
-		m_pTexture->DecrementReferenceCount();	// FIXME: this is hte next statement to execute on an exit crash after checkin out a level...
-		m_pTexture->DeleteIfUnreferenced();
-		m_pTexture = null;
-	}
+	this->CleanUpTexture();
 }
 
 void C_AwesomiumBrowserInstance::SelfDestruct()
@@ -80,10 +71,10 @@ void C_AwesomiumBrowserInstance::SelfDestruct()
 	delete this;
 }
 
-void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, bool alpha)
+void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, std::string title, bool alpha)
 {
-	DevMsg("heeeeeeere: %s\n", id.c_str());
 	m_id = id;
+	m_title = title;
 	m_initialURL = url;
 	m_bAlpha = alpha;
 
@@ -104,13 +95,34 @@ void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, bool alph
 
 	if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
 	{
+		int multiplyer = g_pAnarchyManager->GetDynamicMultiplyer();
 		if (m_bAlpha)
-			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGRA8888, 1);
+			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth * multiplyer, iHeight * multiplyer, IMAGE_FORMAT_BGRA8888, 1);
 		else
-			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+			m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth * multiplyer, iHeight * multiplyer, IMAGE_FORMAT_BGR888, 1);
 	}
 	else
+	{
 		m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+		g_pAnarchyManager->GetCanvasManager()->TextureNotDeferred(m_pTexture);
+	}
+
+	// DETERMINE IF WE ARE ON A WEIRD VIDEO CARD
+	//ConVar* pStrangeVideoConVar = cvar->FindVar("strange_video");
+	//DevMsg("Video Debug Dump: %i vs %i, %i vs %i\n", m_pTexture->GetActualWidth(), iWidth, m_pTexture->GetActualHeight(), iHeight);
+
+	// TODO: check if this is still needed in redux!!
+
+	// figure out the dynamic multiplyer
+	/*
+	int multiplyer = g_pAnarchyManager->GetDynamicMultiplyer();
+
+	if (!m_pTexture || m_pTexture->IsError() || m_pTexture->GetActualWidth() * multiplyer != iWidth || m_pTexture->GetActualHeight() * multiplyer != iHeight)
+	{
+		Msg("CRITICAL ERROR: Your video card supports a limited amount of texture resolutions and is not yet supported by REDUX mode.  Please notify me (SM Sith Lord, the AArcade dev) of the issue on the Steam discussion so I know people still get this issue.\n");
+		Msg("You will most likely crash now, sorry. :S\n");
+	}
+	*/
 
 	// get the regen and assign it
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
@@ -261,6 +273,7 @@ void C_AwesomiumBrowserInstance::OnMouseWheeled(int delta)
 
 	if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() && m_id == "hud" )
 	{
+		/*
 		if (vgui::input()->IsKeyDown(KEY_LSHIFT) || vgui::input()->IsKeyDown(KEY_RSHIFT))
 		{
 			// scale instead of sending mouse wheel to the web view
@@ -285,6 +298,7 @@ void C_AwesomiumBrowserInstance::OnMouseWheeled(int delta)
 			this->DispatchJavaScriptMethod("cmdListener", "setRotationAxis", params);
 		}
 		else
+		*/
 			m_pWebView->InjectMouseWheel(20 * delta, 0);	// just wheel like normal
 	}
 	else
@@ -301,9 +315,11 @@ void C_AwesomiumBrowserInstance::OnKeyPressed(vgui::KeyCode code, bool bShiftSta
 	//	return;
 
 	// Forward input to the selected embedded instance if we are the HUD
-	if (m_id == "hud" && !this->HasFocus())
+	C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+	if (m_id == "hud" && !this->HasFocus() && pEmbeddedInstance != this )
 	{
-		g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance()->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
+		pEmbeddedInstance->Focus();
+		pEmbeddedInstance->GetInputListener()->OnKeyCodePressed(code, bShiftState, bCtrlState, bAltState, bWinState, bAutorepeatState);
 		return;
 	}
 
@@ -484,6 +500,18 @@ void C_AwesomiumBrowserInstance::Update()
 
 	//if (m_info->state == 1)
 		this->OnProxyBind(null);
+}
+
+void C_AwesomiumBrowserInstance::CleanUpTexture()
+{
+	if (m_pTexture)
+	{
+		m_pTexture->SetTextureRegenerator(null);
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceEmbeddedInstance(this);
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
+		g_pAnarchyManager->GetCanvasManager()->DoOrDeferTextureCleanup(m_pTexture);
+		m_pTexture = null;
+	}
 }
 
 void C_AwesomiumBrowserInstance::ResizeFrameFromRGB565(const void* pSrc, void* pDst, unsigned int sourceWidth, unsigned int sourceHeight, size_t sourcePitch, unsigned int sourceDepth, unsigned int destWidth, unsigned int destHeight, size_t destPitch, unsigned int destDepth)
@@ -835,6 +863,7 @@ void C_AwesomiumBrowserInstance::Render()
 //	DevMsg("Start dl ... ");
 	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
 	m_pTexture->Download();
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(null);
 	//DevMsg("done\n");
 
 	m_iLastRenderedFrame = gpGlobals->framecount;
@@ -969,7 +998,10 @@ void C_AwesomiumBrowserInstance::SaveImageToCache(std::string fieldVal)
 	std::string filename = engine->GetGameDirectory();
 	filename = filename.substr(0, filename.length() - 9);
 	//DevMsg("Tester filename here is: %s\n", filename.c_str());
-	filename += "/aarcade_user/imagecache/";
+	filename += "/aarcade_user/cache/urls/";
+
+	g_pFullFileSystem->CreateDirHierarchy("cache/urls", "DEFAULT_WRITE_PATH");
+
 	//filename += g_pAnarchyManager->GenerateCRC32Hash(fieldVal.c_str());
 	filename += g_pAnarchyManager->GenerateLegacyHash(fieldVal.c_str());
 	filename += ".jpg";

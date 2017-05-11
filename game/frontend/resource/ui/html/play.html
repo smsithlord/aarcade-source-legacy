@@ -2,6 +2,7 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
 	</head>
 	<body>
 		<div class="hudContent" style="width: 80%; height: 70%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
@@ -13,55 +14,84 @@
 						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Play
+						Maps
 					</div>
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/blank.html';" help="Close this menu, but leave the HUD open.">
+						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
 							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div style="height: 90%;">
-				<div id="mapsContainer"></div>
+			<div style="background-color: rgba(50, 50, 50, 0.8); border-radius: 10px; padding: 2px;">
+				<input id="filterBox" placeholder="Search..." style="font-size: 20px; font-family: Arial; background-color: rgba(0, 0, 0, 0.4); font-style: italic; color: #fff; font-weight: bold; border: 2px solid #000; padding: 4px; border-radius: 10px; width: 100%;" oninput="johnnyFive(this);" />
+			</div>
+
+			<div style="height: 88%;">
+				<div id="mapsContainer" onscroll="deadSea(this);"></div>
 			</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var tga = new TGA();
 			var mapsContainer = document.querySelector("#mapsContainer");
 
-			var screenshots = aaapi.system.detectAllMapScreenshots();
+			var g_screenshots = aaapi.system.getAllMapScreenshots();
 			var mapz = aaapi.system.getAllMaps();
+
+			// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
+			var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp"];
 
 			var maps = new Array();
 			for( var y in mapz )
-				maps.push(mapz[y]);
+			{
+				if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+					maps.push(mapz[y]);
+			}
 
 			maps.sort(function(a, b)
+			{
+				if( b.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 && a.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 )
+					return 1;
+				else if( a.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 && b.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 )
+					return -1;
+				else
 				{
-					if( a.platforms[arcadeHud.platformId].file < b.platforms[arcadeHud.platformId].file)
+					if( a.platforms[arcadeHud.platformId].file.toLowerCase() < b.platforms[arcadeHud.platformId].file.toLowerCase() )
 						return -1;
-					else if( a.platforms[arcadeHud.platformId].file > b.platforms[arcadeHud.platformId].file )
+					else if( a.platforms[arcadeHud.platformId].file.toLowerCase() > b.platforms[arcadeHud.platformId].file.toLowerCase() )
 						return 1;
 					else
 						return 0;
-				});
+				}
+			});
+
+			function compareIds(testId, baseId)
+			{
+				var intTestId = Number(testId);
+				var intBaseId = Number(baseId);
+				
+				if( testId === baseId || (!isNaN(intTestId) && !isNaN(intBaseId) && intTestId === intBaseId) )
+					return true;
+				else
+					return false;
+			}
 
 			var count = 0;
 			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
-			//for( x in maps )
-			var x;
+			var screenshotKeys = Object.keys(g_screenshots);
+			var x, i, screenshots, screenshot;
 			for( x = 0; x < maps.length; x++)
 			{
-				//x = maps[i].info.id;
 				mapName = maps[x].platforms[arcadeHud.platformId].file;
 				mapName = mapName.substring(0, mapName.length-4);
 
 				mapContainer = document.createElement("div");
 				mapContainer.className = "mapThumbContainer";
+				mapContainer.style.cssText = "width: 240px; height: 162px;";
 				mapContainer.map = maps[x];
 				mapContainer.addEventListener("click", function(e)
 				{
@@ -70,11 +100,30 @@
 					//aaapi.system.loadMap(this.map.info.id);
 				}.bind(mapContainer), true);
 
-				mapImage = document.createElement("img");
-				if( false && !!screenshots[mapName] )
-					mapImage.src = "asset://screenshots/" + screenshots[mapName];
+				mapImage = document.createElement("div");
+				mapImage.style.cssText = "width: 240px; height: 135px;";
+
+				screenshots = [];
+				for( i = 0; i < screenshotKeys.length; i++ )
+				{
+					screenshot = g_screenshots[screenshotKeys[i]];
+					//if( screenshot.map.file === mapName + ".bsp" )
+					//if( screenshot.map.id === maps[x].info.id )
+					if( compareIds(screenshot.map.id, maps[x].info.id) )
+						screenshots.push(screenshot);
+				}
+
+				if( screenshots.length > 0 )
+				{
+					mapImage.screenshot = screenshots[0];
+				}
 				else
-					mapImage.src = "asset://ui/map.jpg";
+				{
+					var img = document.createElement("img");
+					img.style.cssText = "width: 240px; height: 135px;";
+					img.src = "asset://ui/map.jpg";
+					mapImage.appendChild(img);
+				}
 
 				mapContainer.appendChild(mapImage);
 
@@ -86,6 +135,56 @@
 
 				mapsContainer.appendChild(mapContainer);
 				count++;
+			}
+
+			// cause the initially visible cards to load their thumbnails
+			deadSea(mapsContainer);
+
+			//var scrollElemHeight;
+			function deadSea(scrollElem)
+			{
+				var containerTop = scrollElem.offsetTop;
+				var containerBottom = containerTop + scrollElem.offsetHeight;
+
+				var elems = document.querySelectorAll(".mapThumbContainer");
+				var elem, elemTop, elemBottom, mapImage, screenshot;
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elem = elems[i];
+					elemTop = (elem.offsetTop - scrollElem.scrollTop);
+					elemBottom = (elem.offsetTop - scrollElem.scrollTop) + elem.offsetHeight;
+
+					mapImage = elem.querySelector("div");
+					if( elemTop <= containerBottom && elemBottom >= containerTop && !!!mapImage.firstChild && !!mapImage.screenshot && elem.style.display !== "none" )
+					{
+						screenshot = mapImage.screenshot;
+						tga.open( "shots/" + screenshot.id + ".tga", function(){
+							var elem = tga.getCanvas();
+							elem.style.width = "240px";
+							elem.style.height = "135px";
+							this.appendChild(elem);
+						}.bind(mapImage));
+					}
+				}
+			}
+
+			function johnnyFive(inputElem)
+			{
+				var searchVal = inputElem.value.toLowerCase();
+				var elems = document.querySelectorAll(".mapThumbContainer");
+				var elem;
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elem = elems[i];
+					if( elem.map.title.toLowerCase().indexOf(searchVal) >= 0 )
+						elem.style.display = "inline-block";
+					else
+						elem.style.display = "none";
+				}
+
+
+				// cause the initially visible search result cards to load their thumbnails
+				deadSea(mapsContainer);
 			}
 		</script>
 	</body>

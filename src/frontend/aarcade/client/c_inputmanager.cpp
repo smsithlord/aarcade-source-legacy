@@ -174,6 +174,11 @@ void C_InputManager::SetInputListener(void* pInputListener, listener_t type)
 }
 */
 
+void C_InputManager::Update()
+{
+	InputSlate->Update();
+}
+
 vgui::KeyCode C_InputManager::StringToSteamKeyEnum(std::string text)
 {
 	auto it = m_sourceKeyEnumMap.find(text);
@@ -181,6 +186,11 @@ vgui::KeyCode C_InputManager::StringToSteamKeyEnum(std::string text)
 		return it->second;
 
 	return KEY_NONE;
+}
+
+ITexture* C_InputManager::GetInputSlateCanvasTexture()
+{
+	return InputSlate->GetCanvasTexture();
 }
 
 void C_InputManager::ForceInputMode()
@@ -281,7 +291,36 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_TOOLS));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_INGAMESCREENS));
 	//InputSlate->Create(enginevgui->GetPanel(PANEL_CLIENTDLL));
+
+	DevMsg("Activated input mode.\n");
 }
+/*
+void C_InputManager::ShutdownInputMode()
+{
+	if (!m_bInputMode)
+		return;
+
+	C_PropShortcutEntity* pSelectedEntity = dynamic_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity());
+	if (m_pEmbeddedInstance && !pSelectedEntity)
+	{
+		m_pEmbeddedInstance->Deselect();
+		m_pEmbeddedInstance->Blur();
+	}
+
+	// THE DEFAULT VALUES OF STUFF (mostly from the constructor)
+	m_bInputMode = false;
+	m_bForcedInputMode = false;
+	m_bWasForcedInputMode = false;
+	m_bFullscreenMode = false;
+	//m_bOverlayMode = false;
+	m_bInputCapture = true;
+	m_bMainMenuMode = false;
+	//m_pEmbeddedInstance = null;
+	//ShowCursor(false);
+
+	InputSlate->Destroy();
+}
+*/
 
 void C_InputManager::DeactivateInputMode(bool bForce)
 {
@@ -294,6 +333,8 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 		return;
 	}
 	
+	g_pAnarchyManager->RemoveLastHoverGlowEffect();
+
 	if (!m_bInputMode)
 		return;
 
@@ -309,7 +350,12 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 
 //	/*
 	if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
-		g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
+	{
+		//g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/default.html");
+
+		if (!engine->IsInGame())
+			DevMsg("Warning: Did the main menu just get hidden and now the default one is showing?\n");
+	}
 //		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 
 	if (m_bFullscreenMode && m_bInputCapture)	// TODO: Add more checks here, like if the selected entity's web tab is also the selected entity.
@@ -355,6 +401,7 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 	m_bMainMenuMode = false;
 	//m_pEmbeddedInstance = null;
 	//ShowCursor(false);
+
 	InputSlate->Destroy();
 
 	// automatically destroy instances that have "scrape" in the front of their ID

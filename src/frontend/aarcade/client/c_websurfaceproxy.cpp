@@ -339,20 +339,16 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			if (!m_pEmbeddedInstance)
 			{
 				// check if we should create a web tab
-				if (m_iOriginalAutoCreate == 1 && m_iState == 0 )
+				if (m_iOriginalAutoCreate == 1 )	//&& m_iState == 0 )	// redundant
 				{
 					// create a web tab
 					//m_pEmbeddedInstance = g_pAnarchyManager->GetWebManager()->CreateWebTab(m_originalUrl, m_originalId);
 				//	m_pEmbeddedInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->CreateAwesomiumBrowserInstance(m_originalId, m_originalUrl, false);
 
 					// try to get the object ID
-					// TODO: actually try to get the object id. using pC_BaseEntity
 					C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
-
-					//pSteamBrowserInstance->Init(m_originalId, m_originalUrl);
-
 					C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pC_BaseEntity);
-					pSteamBrowserInstance->Init(m_originalId, m_originalUrl, null, (pShortcut) ? pShortcut->entindex() : -1);
+					pSteamBrowserInstance->Init(m_originalId, m_originalUrl, "Auto Steamworks Browser", null, (pShortcut) ? pShortcut->entindex() : -1);
 
 					m_pEmbeddedInstance = pSteamBrowserInstance;
 					m_pCurrentEmbeddedInstance = m_pEmbeddedInstance;
@@ -419,11 +415,18 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 						std::string tabTitle;
 
 						if (itemId != "")
-							testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);
+							testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + itemId);	// WARNING: If instances are never removed, this returns even dead instances!!
 
 						tabTitle = (g_pAnarchyManager->GetSelectedEntity()) ? "auto" + static_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity())->GetItemId() : "";
 
 						C_EmbeddedInstance* selectedInstance = (g_pAnarchyManager->GetSelectedEntity()) ? g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(tabTitle) : null;
+
+						C_EmbeddedInstance* displayInstance = g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance();
+						if (!displayInstance)
+						{
+							// if there's not a display instance, just grab the 1st instance found
+							displayInstance = g_pAnarchyManager->GetCanvasManager()->GetFirstInstanceToDisplay();
+						}
 
 						// FIXME: This should be a required method of all embedded instances!!
 					//	bool bInstanceTextureReady = true;
@@ -431,12 +434,17 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					//	if (pLibretroInstance)
 						//	bInstanceTextureReady = (pLibretroInstance->GetInfo()->state == 5);
 
-							if (g_pAnarchyManager->GetSelectedEntity() && !testerInstance && selectedInstance && (pShortcut->GetSlave() || itemId == ""))//g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+							//if (g_pAnarchyManager->GetSelectedEntity() && !testerInstance && selectedInstance && (pShortcut->GetSlave() || itemId == ""))//g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+						if (!testerInstance && (selectedInstance || displayInstance) && (pShortcut->GetSlave() || itemId == ""))
 						{
 							//	DevMsg("Swapped slave in!\n");
-							testerInstance = selectedInstance;
+							testerInstance = (selectedInstance) ? selectedInstance : displayInstance;
 
-							if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetInputManager()->GetInputMode() || m_originalSimpleImageChannel != "screen"))
+							//if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetInputManager()->GetInputMode() || m_originalSimpleImageChannel != "screen"))
+							//if (true && m_pMaterialDetailBlendFactorVar)
+
+							// FIXME: Improve this to make sure THIS instance is the input instance before thinking we need to draw the UI.
+							if (m_pMaterialDetailBlendFactorVar && (!g_pAnarchyManager->GetInputManager()->GetInputMode() || !g_pAnarchyManager->GetSelectedEntity() || m_originalSimpleImageChannel != "screen"))
 								m_pMaterialDetailBlendFactorVar->SetFloatValue(0);
 							else if (m_pMaterialDetailBlendFactorVar)
 								m_pMaterialDetailBlendFactorVar->SetFloatValue(1);
@@ -444,7 +452,9 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 
 						if (m_pMaterialTextureVar && testerInstance && testerInstance->GetTexture())
 						{
-							m_pMaterialTextureVar->SetTextureValue(testerInstance->GetTexture());
+							ITexture* pTesterTexture = testerInstance->GetTexture();
+							//DevMsg("tester name: %s\n", pTesterTexture->GetName());
+							m_pMaterialTextureVar->SetTextureValue(pTesterTexture);
 
 							// instead, try to use same logic as ShouldRender
 							//if (g_pAnarchyManager->GetCanvasManager()->ShouldRender(testerInstance, true))	// not enough to fix the issue.
@@ -497,6 +507,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 		}
 	}
 
+	///* show selected texture on broken cabinets
 	if (!m_pEmbeddedInstance)
 	{
 		//C_WebTab* pSelectedWebTab = g_pAnarchyManager->GetWebManager()->GetSelectedWebTab();
@@ -506,12 +517,15 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 			m_pMaterialTextureVar->SetTextureValue(pSelectedTexture);
 		}
 	}
+	//*/
 	
 	// even if we didn't find a new web tab this bind, continue acting as if the old one is still active.
+	/*
 	if (m_pCurrentEmbeddedInstance && m_pCurrentEmbeddedInstance != m_pEmbeddedInstance)
 	{
 		m_pCurrentEmbeddedInstance->OnProxyBind(pC_BaseEntity);
 	}
+	*/
 }
 
 void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::string channel)
@@ -542,10 +556,22 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 
 void CWebSurfaceProxy::UnreferenceTexture(ITexture* pTexture)
 {
-	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture())
-	{
-		if( m_pMaterialTextureVar->GetTextureValue() == pTexture )
+	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture() && m_pMaterialTextureVar->GetTextureValue() == pTexture )
 			m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+}
+
+void CWebSurfaceProxy::UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
+{
+	if (m_pCurrentEmbeddedInstance == pEmbeddedInstance)
+	{
+		DevMsg("Unreferencing embedded instance from material proxy: m_pCurrentEmbeddedInstance\n");
+		m_pCurrentEmbeddedInstance = null;
+	}
+
+	if (m_pEmbeddedInstance == pEmbeddedInstance)
+	{
+		DevMsg("Unreferencing embedded instance from material proxy: m_pEmbeddedInstance\n");
+		m_pEmbeddedInstance = null;
 	}
 }
 

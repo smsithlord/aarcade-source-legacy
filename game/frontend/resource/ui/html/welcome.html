@@ -2,7 +2,7 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
-
+<!--
 		<link rel="stylesheet" type="text/css" href="rangeslider.css">
 		<script src="jquery-2.1.3.min.js"></script>
 		<script src="rangeslider.min.js"></script>
@@ -19,6 +19,7 @@
 		    // e.g. $('input[type="range"]') elements.
 		    // Usefull if you changed some attributes e.g. `min` or `max` etc.
 		    $('input[type="range"]').rangeslider('update', true);
+		-->
 		</script>
 
 		
@@ -43,9 +44,11 @@
 			</div>
 
 			<div class="mainButton helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map.">Play</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library.">Library</div>
+			<div class="mainButton helpNote aaOnlyIfMapLoaded" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library.">Library</div>
 			<div class="mainButton disabledButton">Multiplayer</div>
 			<div class="mainButton helpNote" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine.">Options</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/addons.html';" help="Manage your workshop & other addons, or import Steam games, maps & models, or legacy content.">Addons</div>
+			<div class="mainButton helpNote" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade.">Feedback</div>
 			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
 		</div>
 

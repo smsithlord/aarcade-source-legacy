@@ -1,0 +1,78 @@
+<html>
+	<head>
+		<title>Unsupported Preview</title>
+		<script>
+		// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+		function getParameterByName(name, url)
+		{
+			if (!url)
+				url = window.location.href;
+
+			name = name.replace(/[\[\]]/g, "\\$&");
+
+			var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+
+			if (!results)
+				return null;
+			if (!results[2])
+				return '';
+
+			return decodeURIComponent(results[2].replace(/\+/g, " "));
+		}
+		</script>
+
+		<style>
+			.alertContainer
+			{
+				position: absolute;
+				top: 50%;
+				-webkit-transform: translate(0, -50%);
+				left: 0;
+				right: 0;
+			}
+
+			.alertTitle
+			{
+				width: 100%;
+				text-shadow: 2px 2px 2px #000;
+				font-size: 60px;
+				font-family: Arial;
+				font-weight: 900;
+			}
+
+			.alertDesc
+			{
+				width: 70%;
+				border: 2px solid #444;
+				border-radius: 20px;
+				background-color: rgba(0, 0, 0, 0.5);
+				padding: 20px;
+				font-family: Arial;
+				font-weight: bold;
+				font-size: 25px;
+			}
+		</style>
+	</head>
+<body style="color: #fff; background-image: url('blankpaper.jpg');">
+	<br /><br /><br /><br />
+	<div class="alertContainer">
+		<center>
+			<div class="alertTitle">
+				Unsupported Preview
+			</div><br />
+			<br />
+			<div class="alertDesc">
+				AArcade can't display that kind of preview file on the in-game screens.<br />
+				<div id="alertParam"></div>
+			</div>
+		</center>
+	</div>
+
+	<script>
+		var alertParam = getParameterByName("preview");
+		var alertParamElem = document.querySelector("#alertParam");
+		alertParamElem.innerHTML = "<br />" + alertParam;
+	</script>
+</body>
+</html>

@@ -58,23 +58,29 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	prefs.enable_smooth_scrolling = true;
 	prefs.user_stylesheet = WSLit("{}");// body{ background - color: #000000; }");
 
-	m_pWebSession = m_pWebCore->CreateWebSession(WSLit(VarArgs("%s\\cache", engine->GetGameDirectory())), prefs);
+	std::string cachePath = engine->GetGameDirectory();// VarArgs("%s\\cache", engine->GetGameDirectory());
+	cachePath = cachePath.substr(0, cachePath.find_last_of("/\\") + 1);
+	cachePath += "aarcade_user\\cache";
+
+	g_pFullFileSystem->CreateDirHierarchy("cache", "DEFAULT_WRITE_PATH");
+
+	m_pWebSession = m_pWebCore->CreateWebSession(WSLit(cachePath.c_str()), prefs);
 
 	NewWindowDataSource* pNewWindowDataSource = new NewWindowDataSource();
 	m_pWebSession->AddDataSource(WSLit("newwindow"), pNewWindowDataSource);
 
 	// also add the aarcade_user folder
-	DevMsg("wtf: %s\n", g_pAnarchyManager->GetAArcadeUserFolder().c_str());
+//	DevMsg("wtf: %s\n", g_pAnarchyManager->GetAArcadeUserFolder().c_str());
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", g_pAnarchyManager->GetAArcadeUserFolder().c_str()), "UI");
 
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
 
 	UiDataSource* pUiDataSource = new UiDataSource();
 	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
-	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\screenshots", engine->GetGameDirectory()), "SCREENSHOTS");
+	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\shots", engine->GetGameDirectory()), "SHOTS");
 
 	ScreenshotDataSource* pScreenshotDataSource = new ScreenshotDataSource();
-	m_pWebSession->AddDataSource(WSLit("screenshots"), pScreenshotDataSource);
+	m_pWebSession->AddDataSource(WSLit("shots"), pScreenshotDataSource);
 
 	LocalDataSource* pLocalDataSource = new LocalDataSource();
 	m_pWebSession->AddDataSource(WSLit("local"), pLocalDataSource);
@@ -164,7 +170,7 @@ void C_AwesomiumBrowserManager::RunEmbeddedAwesomiumBrowser()
 	DevMsg("Run embedded awesomium test!\n");
 
 //	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", false);
-	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://www.youtube.com/", false);
+	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = this->CreateAwesomiumBrowserInstance("", "http://www.youtube.com/", "", false);
 	pAwesomiumBrowserInstance->Select();
 	//pAwesomiumBrowserInstance->Focus();
 	// tell the input manager that the steam browser instance is active
@@ -186,6 +192,10 @@ void C_AwesomiumBrowserManager::DestroyAwesomiumBrowserInstance(C_AwesomiumBrows
 		this->SelectAwesomiumBrowserInstance(null);
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
+
+	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
+		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(pInstance);
+	//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
 
 //	if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
 	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
@@ -210,12 +220,13 @@ void C_AwesomiumBrowserManager::OnMasterWebViewDocumentReady()
 	//g_pAnarchyManager->GetWebManager()->OnBrowserInitialized();
 }
 
-C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::CreateAwesomiumBrowserInstance(std::string id, std::string initialURL, bool alpha)
+C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::CreateAwesomiumBrowserInstance(std::string id, std::string initialURL, std::string title, bool alpha)
 {
 	std::string goodId = (id != "") ? id : g_pAnarchyManager->GenerateUniqueId();
+	std::string goodTitle = (title != "") ? title : "Untitled Awesomium Web Tab";
 
 	C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = new C_AwesomiumBrowserInstance();
-	pAwesomiumBrowserInstance->Init(goodId, initialURL, alpha);
+	pAwesomiumBrowserInstance->Init(goodId, initialURL, goodTitle, alpha);
 
 	m_awesomiumBrowserInstances[goodId] = pAwesomiumBrowserInstance;
 
@@ -253,6 +264,7 @@ C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInsta
 
 void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std::string id)
 {
+	DevMsg("Adding Awesomium web view listeners...\n");
 	unsigned int width = (id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
 	unsigned int height = (id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 
@@ -271,7 +283,6 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 
 	if (id == "hud" || id == "images")
 	{
-		DevMsg("need to add JS API here!\n");
 		pWebView->set_js_method_handler(m_pJSHandler);
 		this->CreateAaApi(pWebView);
 	}
@@ -279,9 +290,14 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 
 void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 {
+	DevMsg("Adding AAAPI...\n");
+
 	JSValue result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi"));
 	if (!result.IsObject())
+	{
+		DevMsg("Failed to create AAAPI.\n");
 		return;
+	}
 
 	JSObject& aaapiObject = result.ToObject();
 
@@ -331,6 +347,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
+	systemObject.SetCustomMethod(WSLit("objectHover"), false);
+	systemObject.SetCustomMethod(WSLit("objectSelected"), false);
 	systemObject.SetCustomMethod(WSLit("moveObject"), false);
 	systemObject.SetCustomMethod(WSLit("deleteObject"), false);
 	systemObject.SetCustomMethod(WSLit("beginImportSteamGames"), false);
@@ -345,6 +363,24 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("adjustObjectRot"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectScale"), false);
 	systemObject.SetCustomMethod(WSLit("taskClear"), false);
+	systemObject.SetCustomMethod(WSLit("closeTask"), false);
+	systemObject.SetCustomMethod(WSLit("hideTask"), false);
+	systemObject.SetCustomMethod(WSLit("unhideTask"), false);
+	systemObject.SetCustomMethod(WSLit("switchToTask"), false);
+	systemObject.SetCustomMethod(WSLit("setTabMenuFile"), false);
+	systemObject.SetCustomMethod(WSLit("displayTask"), false);
+	systemObject.SetCustomMethod(WSLit("takeScreenshot"), false);
+	systemObject.SetCustomMethod(WSLit("teleportScreenshot"), false);
+	systemObject.SetCustomMethod(WSLit("feedback"), false);
+	systemObject.SetCustomMethod(WSLit("consoleCommand"), false);
+	systemObject.SetCustomMethod(WSLit("specialReady"), false);
+	systemObject.SetCustomMethod(WSLit("selectTaskObject"), false);
+	systemObject.SetCustomMethod(WSLit("getConVarValue"), true);
+	systemObject.SetCustomMethod(WSLit("getAllMounts"), true);
+	systemObject.SetCustomMethod(WSLit("getAllTasks"), true);
+	systemObject.SetCustomMethod(WSLit("getAllWorkshopSubscriptions"), true);
+	systemObject.SetCustomMethod(WSLit("getNearestObjectToPlayerLook"), true);
+	systemObject.SetCustomMethod(WSLit("getNextNearestObjectToPlayerLook"), true);
 
 
 	// LIBRARY
@@ -479,18 +515,28 @@ void C_AwesomiumBrowserManager::OnCreateWebViewDocumentReady(WebView* pWebView, 
 		if (pTexture && pTexture->GetImageFormat() == IMAGE_FORMAT_BGRA8888)
 			pWebView->SetTransparent(true);
 
-		std::string uri = (id == "images") ? "asset://ui/imageLoader.html" : pBrowserInstance->GetInitialURL();
+		std::string initialURI = pBrowserInstance->GetInitialURL();
+		std::string uri;
+		if (id == "images")
+			uri = initialURI;	// this should never happen, so comment it out to avoid confusion
+			//uri = "asset://ui/imageLoader.html";
+		else if (id == "hud")
+			uri = initialURI;
+			//uri = (initialURI == "") ? "asset://ui/default.html" : initialURI;	// this should never happen, so comment it out to avoid confusion
+		else
+			uri = initialURI;
 
-		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
 		DevMsg("Loading initial URL: %s\n", uri.c_str());
-
+		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
+		/*
 		if (id == "hud" )	// is this too early??
 			g_pAnarchyManager->IncrementState();
 		else if (id == "images" && AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT)
 			g_pAnarchyManager->IncrementState();
+		*/
 	}
 }
-
+/*
 void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std::string id)
 {
 	DevMsg("AwesomiumBrowserManager: OnHudWebViewDocumentReady: %s\n", id.c_str());
@@ -513,19 +559,19 @@ void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std
 //		g_pAnarchyManager->IncrementState();
 
 		std::string initialURL = pBrowserInstance->GetInitialURL();
-		std::string uri = (initialURL == "") ? "asset://ui/blank.html" : initialURL;
+		std::string uri = (initialURL == "") ? "asset://ui/default.html" : initialURL;
 
 		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
 
 //		if (id == "hud")	// FIXME: Should wait until the hud loads its 1st page before moving on.
-			g_pAnarchyManager->IncrementState();
+			//g_pAnarchyManager->IncrementState();
 	}
 
 
 
 
 
-
+	*/
 	/*
 
 
@@ -554,12 +600,14 @@ void C_AwesomiumBrowserManager::OnHudWebViewDocumentReady(WebView* pWebView, std
 			g_pAnarchyManager->IncrementState();
 	}
 	*/
-}
+//}
 
 
 
 void C_AwesomiumBrowserManager::CloseAllInstances(bool bDeleteHudAndImages)
 {
+	g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
+
 	std::vector<std::map<std::string, C_AwesomiumBrowserInstance*>::iterator> doomedIts;
 
 	// iterate over all web tabs and call their destructors
@@ -590,6 +638,8 @@ void C_AwesomiumBrowserManager::CloseAllInstances(bool bDeleteHudAndImages)
 			//		auto foundAwesomiumBrowserInstance = m_awesomiumBrowserInstances.find(pInstance->GetId());
 			//		if (foundAwesomiumBrowserInstance != m_awesomiumBrowserInstances.end())
 			//			m_awesomiumBrowserInstances.erase(foundAwesomiumBrowserInstance);
+
+			DevMsg("Preparing to close instance w/ ID: %s\n", pInstance->GetId().c_str());
 
 			pInstance->SelfDestruct();
 

@@ -10,6 +10,7 @@
 #include "../../sqlite/include/sqlite/sqlite3.h"
 //#include "mathlib/mathlib.h"
 //#include <math.h>
+#include <time.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -20,6 +21,16 @@ extern C_AnarchyManager* g_pAnarchyManager(&g_AnarchyManager);
 C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager")
 {
 	DevMsg("AnarchyManager: Constructor\n");
+
+	m_tabMenuFile = "taskMenu.html";
+	m_bIsShuttingDown = false;
+	m_bIsHoldingPrimaryFire = false;
+	m_pHoverGlowEntity = null;
+	m_pLastNearestObjectToPlayerLook = null;
+
+	m_iLastDynamicMultiplyer = -1;
+	m_pPicMipConVar = null;
+	m_pWeaponsEnabledConVar = null;
 
 	// FIXME: ONLY WORKS FOR ME
 	//m_legacyFolder = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
@@ -35,12 +46,18 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
 	m_pSteamBrowserManager = null;
+	m_pWindowManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
 	m_pMountManager = null;
 	m_pInstanceManager = null;
 	m_dLastGenerateIdTime = 0;
 	m_lastGeneratedChars = "000000000000";
+
+	m_pNextLoadInfo = new nextLoadInfo_t();
+	m_pNextLoadInfo->instanceId = "";
+	m_pNextLoadInfo->position = "";
+	m_pNextLoadInfo->rotation = "";
 }
 
 C_AnarchyManager::~C_AnarchyManager()
@@ -52,6 +69,20 @@ bool C_AnarchyManager::Init()
 {
 	DevMsg("AnarchyManager: Init\n");
 
+	KeyValues* legacyLog = new KeyValues("legacy");
+	if (legacyLog->LoadFromFile(g_pFullFileSystem, "legacy_log.key", "MOD"))
+	{
+		m_legacyFolder = legacyLog->GetString("path");
+
+		size_t found = m_legacyFolder.find("\\\\");
+		while (found != std::string::npos)
+		{
+			m_legacyFolder.replace(found, 2, "\\");
+			found = m_legacyFolder.find("\\\\");
+		}
+	}
+	legacyLog->deleteThis();
+
 	std::string workshopDir = engine->GetGameDirectory();	// just use the game directory to find workshop content normally.
 	if (workshopDir == "d:\\projects\\aarcade-source\\game\\frontend")
 		workshopDir = m_legacyFolder;
@@ -62,11 +93,6 @@ bool C_AnarchyManager::Init()
 	workshopDir = workshopDir.substr(0, workshopDir.find_last_of("\\"));
 	workshopDir += "\\workshop\\content\\266430\\";
 	m_workshopFolder = workshopDir;
-
-	KeyValues* legacyLog = new KeyValues("legacy");
-	if (legacyLog->LoadFromFile(g_pFullFileSystem, "legacy_log.key", "MOD"))
-		m_legacyFolder = legacyLog->GetString("path");
-	legacyLog->deleteThis();
 
 	std::string aarcadeUserFolder = engine->GetGameDirectory();
 	size_t found = aarcadeUserFolder.find_last_of("/\\");
@@ -152,7 +178,7 @@ void C_AnarchyManager::PostInit()
 void C_AnarchyManager::Shutdown()
 {
 	DevMsg("AnarchyManager: Shutdown\n");
-
+	m_bIsShuttingDown = true;
 	/*
 	if (m_pWebManager)
 	{
@@ -163,6 +189,9 @@ void C_AnarchyManager::Shutdown()
 
 //	delete m_pLoadingManager;
 	//m_pLoadingManager = null;
+
+	if (m_pInputManager)
+		m_pInputManager->DeactivateInputMode(true);
 
 	if (m_pLibretroManager)
 	{
@@ -208,7 +237,7 @@ void C_AnarchyManager::Shutdown()
 
 	if (m_pInputManager)
 	{
-		m_pInputManager->DeactivateInputMode(true);
+		//m_pInputManager->DeactivateInputMode(true);
 		delete m_pInputManager;
 		m_pInputManager = null;
 	}
@@ -221,10 +250,12 @@ void C_AnarchyManager::Shutdown()
 void C_AnarchyManager::LevelInitPreEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPreEntity\n");
-	m_instanceId = m_nextInstanceId;
+	m_instanceId = m_pNextLoadInfo->instanceId;// m_nextInstanceId;
 
 	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
 	pImagesBrowserInstance->ResetImagesSession();
+
+	this->SetTabMenuFile("taskMenu.html");
 
 	DevMsg("Finished resetting image session.\n");
 }
@@ -233,8 +264,14 @@ void C_AnarchyManager::LevelInitPostEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPostEntity\n");
 
-	if (m_instanceId != "")
-		g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_instanceId);
+	//if (m_instanceId != "")
+		//g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_instanceId);
+	if (m_pNextLoadInfo->instanceId != "")
+		g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_pNextLoadInfo->instanceId, m_pNextLoadInfo->position, m_pNextLoadInfo->rotation);
+	else
+		DevMsg("Map loaded with no instance chosen yet.  FIXME: Display a menu to choose an instance.\n");
+
+	g_pAnarchyManager->SetNextLoadInfo();
 
 	m_bSuspendEmbedded = false;
 
@@ -311,10 +348,17 @@ bool C_AnarchyManager::IsPerFrame()
 void C_AnarchyManager::PreRender()
 {
 	//DevMsg("AnarchyManager: PreRender\n");
+	if(m_state == AASTATE_RUN)
+		this->CheckPicMip();
 }
 
 void C_AnarchyManager::IncrementState()
 {
+	DevMsg("Increment tate called.\n");
+
+	if (m_bIncrementState)
+		DevMsg("CRITICAL ERROR: State attempted to increment while it was still waiting for the previous increment!\n");
+
 	m_bIncrementState = true;
 }
 
@@ -327,83 +371,67 @@ void C_AnarchyManager::Update(float frametime)
 		switch (m_state)
 		{
 			case AASTATE_NONE:
+				DevMsg("Incrementing to state AASTATE_INPUTMANAGER\n");
 				m_state = AASTATE_INPUTMANAGER;
 				break;
 
 			case AASTATE_INPUTMANAGER:
+				DevMsg("Incrementing to state AASTATE_CANVASMANAGER\n");
 				m_state = AASTATE_CANVASMANAGER;
 				break;
 
 			case AASTATE_CANVASMANAGER:
+				DevMsg("Incrementing to state AASTATE_LIBRETROMANAGER\n");
 				m_state = AASTATE_LIBRETROMANAGER;
-				//m_state = AASTATE_STEAMBROWSERMANAGER;
 				break;
 
 			case AASTATE_LIBRETROMANAGER:
-			{
-				// TEST: AUTO-CREATE AN INSTANCE, LOAD THE FFMPEG CORE, AND PLAY A MOVIE
-				/*
-				C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();//>GetSelectedLibretroInstance();// 
-				pLibretroInstance->Init();
-
-				// load a core
-				pLibretroInstance->LoadCore();
-
-				// load a file
-				pLibretroInstance->LoadGame();
-
-				// tell the input manager that the libretro instance is active
-				C_InputListenerLibretro* pListener = m_pLibretroManager->GetInputListener();
-				m_pInputManager->SetInputCanvasTexture(pLibretroInstance->GetTexture());
-				m_pInputManager->ActivateInputMode(true, true, (C_InputListener*)pListener);
-				*/
-
+				DevMsg("Incrementing to state AASTATE_STEAMBROWSERMANAGER\n");
 				m_state = AASTATE_STEAMBROWSERMANAGER;
 				break;
-			}
 
 			case AASTATE_STEAMBROWSERMANAGER:
-			{
-				// TEST: AUTO-CREATE AN INSTANCE, LOAD A WEBSITE
-				/*
-				C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
-				pSteamBrowserInstance->Init("", "http://smarcade.net/dlcv2/view_youtube.php?id=CmRih_VtVAs&autoplay=1", null);//https://www.youtube.com/html5
-				*/
-
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGER\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGER;
-				//m_state = AASTATE_RUN;
 				break;
-			}
 
 			case AASTATE_AWESOMIUMBROWSERMANAGER:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERWAIT\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERWAIT;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERWAIT:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERHUD\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUD;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERHUD:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERIMAGES\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGES;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT;
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT:
+				DevMsg("Incrementing to state AASTATE_RUN\n");
 				m_state = AASTATE_RUN;
 				break;
 		}
@@ -413,7 +441,7 @@ void C_AnarchyManager::Update(float frametime)
 	{
 		case AASTATE_RUN:
 			if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything.
-				return;
+				return;	// TODO: Nothing else but texture proxy & callback-induced code needs to worry about paused mode now.
 
 			//DevMsg("Float: %f\n", frametime);	// deltatime
 			//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
@@ -435,6 +463,11 @@ void C_AnarchyManager::Update(float frametime)
 
 			if (m_pMetaverseManager)
 				m_pMetaverseManager->Update();
+
+			if (m_pInputManager)
+				m_pInputManager->Update();
+
+			//g_pAnarchyManager->CheckPicMip();
 			/*
 			if (m_pWebManager)
 				m_pWebManager->Update();
@@ -469,48 +502,59 @@ void C_AnarchyManager::Update(float frametime)
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERWAIT:
-			if (m_pCanvasManager)
-				m_pCanvasManager->Update();
-
+			m_pCanvasManager->Update();
 			m_pAwesomiumBrowserManager->Update();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUD:
-			//m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/startup.html", true);	// defaults to asset://ui/blank.html
-			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/blank.html", true);
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("hud", "asset://ui/hud.html", "AArcade HUD", true);
 			g_pAnarchyManager->IncrementState();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT:
-			if (m_pCanvasManager)
-				m_pCanvasManager->Update();
-
+			m_pCanvasManager->Update();
 			m_pAwesomiumBrowserManager->Update();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
 			DevMsg("Finished initing HUD.\n");
+
+			m_pInstanceManager = new C_InstanceManager();
+			m_pMetaverseManager = new C_MetaverseManager();
+			m_pMetaverseManager->Init();
+			m_pInputManager = new C_InputManager();
+
+			// insta-startup the Window Manager for now, because it's just a placeholder until actual in-game deskto rendering can be done.
+			m_pWindowManager = new C_WindowManager();
+			m_pWindowManager->Init();
+
 			g_pAnarchyManager->IncrementState();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
-			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("images", "asset://ui/imageLoader.html", true);	// defaults to asset://ui/blank.html	// does this need to be created here????
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("images", "asset://ui/imageLoader.html", "AArcade Image Renderer", true);	// defaults to asset://ui/blank.html	// does this need to be created here????
 			g_pAnarchyManager->IncrementState();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT:
-			if (m_pCanvasManager)
-				m_pCanvasManager->Update();
+			//if (m_pCanvasManager)
+			m_pCanvasManager->Update();
 
 			m_pAwesomiumBrowserManager->Update();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT:
 			DevMsg("Finished initing IMAGES.\n");
+			/*
 			m_pInstanceManager = new C_InstanceManager();
 			m_pMetaverseManager = new C_MetaverseManager();
 			m_pMetaverseManager->Init();
 			m_pInputManager = new C_InputManager();
+
+			// insta-startup the Window Manager for now, because it's just a placeholder until actual in-game deskto rendering can be done.
+			m_pWindowManager = new C_WindowManager();
+			m_pWindowManager->Init();
+			*/
 
 			// auto-load aarcade stuff
 			g_pAnarchyManager->RunAArcade();
@@ -584,6 +628,89 @@ void C_AnarchyManager::Update(float frametime)
 	}
 }
 
+void C_AnarchyManager::CheckPicMip()
+{
+	int multiplyer = this->GetDynamicMultiplyer();
+	if (m_iLastDynamicMultiplyer != multiplyer)
+	{
+		if (m_iLastDynamicMultiplyer != -1)
+		{
+			// this is NOT the first time the mip quality has been detected.
+			DevMsg("Mip has changed!\n");	// DOES NOT WORK
+		}
+
+		m_iLastDynamicMultiplyer = multiplyer;
+	}
+}
+
+int C_AnarchyManager::GetDynamicMultiplyer()
+{
+	if (!m_pPicMipConVar)
+		m_pPicMipConVar = cvar->FindVar("mat_picmip");
+
+	int multiplyer = 1;
+	int mip = m_pPicMipConVar->GetInt();
+	if (mip == 2)
+		multiplyer = 4;
+	else if (mip == 1)
+		multiplyer = 2;
+
+	return multiplyer;
+
+	/*
+	if (m_iDynamicMultiplyer == -1)
+		this->CalculateDynamicMultiplyer();
+	
+	return m_iDynamicMultiplyer;
+	*/
+}
+
+//void C_AnarchyManager::CalculateDynamicMultiplyer()
+//{
+	/*
+	if (!m_pPicMipConVar)
+		m_pPicMipConVar = cvar->FindVar("mat_picmip");
+
+	int multiplyer = 1;
+	int mip = m_pPicMipConVar->GetInt();
+	if (mip == 2)
+		multiplyer = 4;
+	else if (mip == 1)
+		multiplyer = 2;
+
+	m_iDynamicMultiplyer = multiplyer;
+	*/
+//}
+
+void C_AnarchyManager::SpecialReady(C_AwesomiumBrowserInstance* pInstance)
+{
+	std::string id = pInstance->GetId();
+	/*
+	auto it = m_specialInstances.find(id);
+	if (it != m_specialInstances.end())
+		it->second = true;
+
+	// check if ALL specials are ready
+	bool bAllReady = true;
+
+	it = m_specialInstances.begin();
+	while (it != m_specialInstances.end())
+	{
+		if (!it->second)
+		{
+			bAllReady = false;
+			break;
+		}
+
+		it++;
+	}
+	*/
+	if (id == "hud" && AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT)	// is this too early??
+		g_pAnarchyManager->IncrementState();
+	else if (id == "images" && AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT)
+		g_pAnarchyManager->IncrementState();
+}
+
 #include "vgui/IInput.h"
 #include "ienginevgui.h"
 bool C_AnarchyManager::HandleUiToggle()
@@ -597,6 +724,16 @@ bool C_AnarchyManager::HandleUiToggle()
 	if (myHWnd != foregroundWindow)
 		return true;
 
+	if (m_bPaused)
+	{
+		this->Unpause();
+
+		if (!engine->IsInGame())
+			engine->ClientCmd("main_menu\n");
+
+		return true;
+	}
+
 	// handle escape if in pause mode (ignore it)
 	if (!engine->IsInGame())
 	{
@@ -605,13 +742,19 @@ bool C_AnarchyManager::HandleUiToggle()
 		if (m_pSteamBrowserManager)
 		{
 			C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->GetSelectedSteamBrowserInstance();
-			//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
-			if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+			if (pInstance && pInstance->GetId().find("scrape") == 0)	// web tabs starting with scrape in their ID get auto-deleted when input mode closes.
+				m_pInputManager->DeactivateInputMode(true);
+			else
 			{
-				m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
-				m_pInputManager->SetEmbeddedInstance(null);
-				return true;
+				//if (m_pInputManager->GetMainMenuMode() && m_pInputManager->GetInputMode() && m_pInputManager->GetFullscreenMode() && pInstance && pInstance->GetTexture() && pInstance->GetTexture() == m_pInputManager->GetInputCanvasTexture())
+				if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance)
+				{
+					m_pSteamBrowserManager->DestroySteamBrowserInstance(pInstance);
+					m_pInputManager->SetEmbeddedInstance(null);
+					return true;
+				}
 			}
+			return true;
 		}
 
 		if (m_pLibretroManager && !vgui::input()->IsKeyDown(KEY_XBUTTON_START))
@@ -651,12 +794,6 @@ bool C_AnarchyManager::HandleUiToggle()
 		}
 
 		return false;
-	}
-
-	if (m_bPaused)
-	{
-		this->Unpause();
-		return true;
 	}
 
 	// update this code block when joypad input gets restricted to the selected input slate instance!!
@@ -721,10 +858,14 @@ bool C_AnarchyManager::HandleUiToggle()
 
 			//DevMsg("DISPLAY MAIN MENU\n");
 			if (m_pSelectedEntity)
+			{
+				DevMsg("Deselecting entity.\n");
 				this->DeselectEntity("asset://ui/welcome.html");
+			}
 			else
 				pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 
+			DevMsg("Trying to activate input mode.\n");
 			m_pInputManager->ActivateInputMode(true, true);
 			return false;
 		}
@@ -740,6 +881,11 @@ bool C_AnarchyManager::HandleCycleToNextWeapon()
 		g_pAnarchyManager->GetInputManager()->OnMouseWheeled(1);
 		return true;
 	}
+	else if (m_bIsHoldingPrimaryFire)
+	{
+		g_pAnarchyManager->GetInputManager()->OnMouseWheeled(1);
+		return true;
+	}
 
 	return false;
 }
@@ -747,6 +893,11 @@ bool C_AnarchyManager::HandleCycleToNextWeapon()
 bool C_AnarchyManager::HandleCycleToPrevWeapon()
 {
 	if (this->GetMetaverseManager()->GetSpawningObject())
+	{
+		g_pAnarchyManager->GetInputManager()->OnMouseWheeled(-1);
+		return true;
+	}
+	else if (this->m_bIsHoldingPrimaryFire)
 	{
 		g_pAnarchyManager->GetInputManager()->OnMouseWheeled(-1);
 		return true;
@@ -764,8 +915,7 @@ void C_AnarchyManager::Unpause()
 {
 	m_bPaused = false;
 
-	m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/blank.html");
-//	m_pWebManager->GetHudWebTab()->SetUrl("asset://ui/blank.html");
+	m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/default.html");
 	m_pInputManager->DeactivateInputMode(true);
 
 	if (cvar->FindVar("broadcast_mode")->GetBool())
@@ -867,6 +1017,31 @@ bool C_AnarchyManager::DirectorySafe(std::string text)
 	return true;
 }
 
+void C_AnarchyManager::AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV)
+{
+	if (!kv)
+		return;
+
+	for (KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		if (sub->GetFirstSubKey())
+		{
+			KeyValues* key = targetKV->FindKey(sub->GetName(), true);
+			AddSubKeysToKeys(sub, targetKV);
+		}
+		else
+			targetKV->SetString(sub->GetName(), sub->GetString());
+	}
+}
+
+bool C_AnarchyManager::WeaponsEnabled()
+{
+	if (!m_pWeaponsEnabledConVar)
+		return false;
+	else
+		return m_pWeaponsEnabledConVar->GetBool();
+}
+
 bool C_AnarchyManager::ExecutableSafe(std::string text)
 {
 	// RULES:
@@ -878,6 +1053,57 @@ bool C_AnarchyManager::ExecutableSafe(std::string text)
 	// 6. Directories cannot begin with a blank space.
 
 	return (this->PrefixSafe(text) && this->DirectorySafe(text));
+}
+
+uint64 C_AnarchyManager::GetTimeNumber()
+{
+	time_t currentrawtime = time(NULL);
+	tm* timeinfo = localtime(&currentrawtime);
+	return Q_atoui64(VarArgs("%llu", currentrawtime));
+
+	/* whats this for?
+	uint64 bigtime = currentrawtime;
+	int lowerHalf = (int)((bigtime << 32) >> 32);
+	int upperHalf = (int)((bigtime >> 32) << 32);
+
+	time_t constructedTime = lowerHalf | (upperHalf << 32);
+
+	tm* constructedtimeinfo = localtime(&constructedTime);
+	DevMsg("Constructed time is: %s\n", asctime(constructedtimeinfo));
+	DevMsg("As a uint64 it is: %llu\n", constructedTime);
+	asctime(timeinfo)
+	*/
+}
+
+std::string C_AnarchyManager::GetTimeString()
+{
+	time_t currentrawtime = time(NULL);
+	tm* timeinfo = localtime(&currentrawtime);
+	std::string timeString = VarArgs("%s", asctime(timeinfo));
+	return timeString;
+}
+
+C_SteamBrowserInstance* C_AnarchyManager::AutoInspect(KeyValues* pItemKV, std::string tabId, C_PropShortcutEntity* pShortcut)
+{
+	std::string itemId = pItemKV->GetString("info/id");
+	std::string gooodTabTitle = (tabId == "") ? "auto" + itemId : tabId;
+
+	std::string uri = "file://";
+	uri += engine->GetGameDirectory();
+	uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
+
+	// FIXME: Need to allow HTTP redirection (302).
+	//DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.
+
+	int entIndex = (pShortcut) ? pShortcut->entindex() : -1;
+
+	C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
+	pSteamBrowserInstance->Init(gooodTabTitle, uri, "Newly selected item...", null, entIndex);
+	pSteamBrowserInstance->SetOriginalItemId(itemId);	// FIXME: do we need to do this for original entindex too???
+	//pSteamBrowserInstance->SetOriginalEntIndex(pShortcut->entindex());	// probably NOT needed??
+
+	return pSteamBrowserInstance;
+	//pEmbeddedInstance = pSteamBrowserInstance;
 }
 
 launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
@@ -1309,16 +1535,19 @@ void C_AnarchyManager::BeginImportSteamGames()
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	if (g_pAnarchyManager->GetSelectedEntity())
-		g_pAnarchyManager->DeselectEntity("asset://ui/blank.html");
+		g_pAnarchyManager->DeselectEntity("asset://ui/overlay.html");
 	else
-		pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+		pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
 
 	CSteamID sid = steamapicontext->SteamUser()->GetSteamID();
 	std::string profileUrl = "http://www.steamcommunity.com/profiles/" + std::string(VarArgs("%llu", sid.ConvertToUint64())) + "/games/?tab=all";
 
 	C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
 	pSteamBrowserInstance->SetActiveScraper("importSteamGames", "", "");
-	pSteamBrowserInstance->Init("", profileUrl, null);
+
+	std::string id = "scrape" + std::string(g_pAnarchyManager->GenerateUniqueId());
+
+	pSteamBrowserInstance->Init(id, profileUrl, "Steam Game Importer", null);
 	pSteamBrowserInstance->Focus();
 	pSteamBrowserInstance->Select();
 	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
@@ -1486,13 +1715,29 @@ void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string e
 				found = bufLocationString.find("\\");
 			}
 
-			std::string kodiInfo = cvar->FindVar("kodi_info")->GetString();
+			std::string kodiIP = cvar->FindVar("kodi_ip")->GetString();
+			std::string kodiPort = cvar->FindVar("kodi_port")->GetString();
+			std::string kodiUser = cvar->FindVar("kodi_user")->GetString();
+			std::string kodiPassword = cvar->FindVar("kodi_password")->GetString();
 
-			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-			std::vector<std::string> params;
-			params.push_back(kodiInfo);
-			params.push_back(executable);
-			pHudBrowserInstance->DispatchJavaScriptMethod("kodiListener", "play", params);
+			if (kodiIP == "")
+				DevMsg("ERROR: You need to go into options and set your Kodi IP first.\n");
+			else if (kodiPort == "")
+				DevMsg("ERROR: You need to go into options and set your Kodi PORT first.\n");
+			else if (kodiUser == "")
+				DevMsg("ERROR: You need to go into options and set your Kodi USER first.\n");
+			else if (kodiPassword == "")
+				DevMsg("ERROR: You need to go into options and set your Kodi PASSWORD first.\n");
+			else
+			{
+				std::string kodiGetRequest = kodiUser + std::string(":") + kodiPassword + std::string("@") + kodiIP + std::string(":") + kodiPort;
+				DevMsg("Thing is: %s\n", kodiGetRequest.c_str());
+				C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+				std::vector<std::string> params;
+				params.push_back(kodiGetRequest);
+				params.push_back(executable);
+				pHudBrowserInstance->DispatchJavaScriptMethod("kodiListener", "play", params);
+			}
 		}
 		else
 		{
@@ -1584,6 +1829,7 @@ void C_AnarchyManager::RunAArcade()
 
 void C_AnarchyManager::HudStateNotify()
 {
+	DevMsg("HudStateNotify\n");
 	std::vector<std::string> params;
 
 	// isFullscreen
@@ -1664,13 +1910,182 @@ void C_AnarchyManager::ShowTaskMenu()
 	//if (!enginevgui->IsGameUIVisible())
 	//{
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-		pHudBrowserInstance->SetUrl("asset://ui/taskMenu.html");
+		pHudBrowserInstance->SetUrl(VarArgs("asset://ui/%s", this->GetTabMenuFile().c_str()));//taskMenu.html");
 		m_pInputManager->ActivateInputMode(true, true);
 	//}
 }
 
+void C_AnarchyManager::TeleportToScreenshot(std::string id, bool bDeactivateInputMode)
+{
+	KeyValues* pScreenshotKV = g_pAnarchyManager->GetMetaverseManager()->GetScreenshot(id);
+	if (pScreenshotKV)
+	{
+		if (bDeactivateInputMode)
+			this->GetInputManager()->DeactivateInputMode(true);
+
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), pScreenshotKV->GetString("body/position", "0 0 0"), pScreenshotKV->GetString("body/rotation", "0 0 0")), true);
+	}
+}
+
+bool C_AnarchyManager::TakeScreenshot(bool bCreateBig, std::string id)
+{
+	//int thumbWidth = 512;
+	//int thumbHeight = 512;
+	int thumbWidth = 240;
+	int thumbHeight = 135;
+	int bigWidth = 1920;
+	int bigHeight = 1080;
+
+	std::string mapShotsFolder = "shots";
+	g_pFullFileSystem->CreateDirHierarchy(mapShotsFolder.c_str(), "DEFAULT_WRITE_PATH");
+
+	std::string mapName = g_pAnarchyManager->MapName();
+	if (mapName != "")
+	{
+		std::string goodId = id;
+		std::string mapShotFile;
+		std::string mapShotBigFile;
+		std::string mapShotInfoFile;
+		std::string relativeMapShotFile;
+		std::string relativeMapShotBigFile;
+		std::string relativeMapShotInfoFile;
+
+		if (goodId == "")
+		{
+			// find a filename for this new screenshot
+			unsigned int screenshotNumber = 0;
+
+			goodId = mapName + std::string(VarArgs("%i", screenshotNumber));
+
+			mapShotFile = goodId + ".tga";
+			mapShotBigFile = goodId + "_big.tga";
+			mapShotInfoFile = goodId + ".txt";
+
+			relativeMapShotFile = mapShotsFolder + "\\" + mapShotFile;
+			relativeMapShotBigFile = mapShotsFolder + "\\" + mapShotBigFile;
+			relativeMapShotInfoFile = mapShotsFolder + "\\" + mapShotInfoFile;
+
+			while (g_pFullFileSystem->FileExists(relativeMapShotFile.c_str(), "DEFAULT_WRITE_PATH") || g_pFullFileSystem->FileExists(relativeMapShotBigFile.c_str(), "DEFAULT_WRITE_PATH") || g_pFullFileSystem->FileExists(relativeMapShotInfoFile.c_str(), "DEFAULT_WRITE_PATH"))
+			{
+				screenshotNumber++;
+
+				goodId = mapName + std::string(VarArgs("%i", screenshotNumber));
+
+				mapShotFile = goodId + ".tga";
+				relativeMapShotFile = mapShotsFolder + "\\" + mapShotFile;
+
+				mapShotBigFile = goodId + "_big.tga";
+				relativeMapShotBigFile = mapShotsFolder + "\\" + mapShotBigFile;
+
+				mapShotInfoFile = goodId + ".txt";
+				relativeMapShotInfoFile = mapShotsFolder + "\\" + mapShotInfoFile;
+			}
+		}
+		else
+		{
+			mapShotFile = goodId + ".tga";
+			mapShotBigFile = goodId + "_big.tga";
+			mapShotInfoFile = goodId + ".txt";
+
+			relativeMapShotFile = mapShotsFolder + "\\" + mapShotFile;
+			relativeMapShotBigFile = mapShotsFolder + "\\" + mapShotBigFile;
+			relativeMapShotInfoFile = mapShotsFolder + "\\" + mapShotInfoFile;
+
+			// if files already exist for this screenshot id, remote them
+			if (g_pFullFileSystem->FileExists(relativeMapShotFile.c_str(), "DEFAULT_WRITE_PATH"))
+				g_pFullFileSystem->RemoveFile(relativeMapShotFile.c_str(), "DEFAULT_WRITE_PATH");
+
+			if (g_pFullFileSystem->FileExists(relativeMapShotBigFile.c_str(), "DEFAULT_WRITE_PATH"))
+				g_pFullFileSystem->RemoveFile(relativeMapShotBigFile.c_str(), "DEFAULT_WRITE_PATH");
+
+			if (g_pFullFileSystem->FileExists(relativeMapShotInfoFile.c_str(), "DEFAULT_WRITE_PATH"))
+				g_pFullFileSystem->RemoveFile(relativeMapShotInfoFile.c_str(), "DEFAULT_WRITE_PATH");
+		}
+
+		// create the info file
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+
+		bool bNeedsAdd = false;
+		KeyValues* pInfoKV = this->GetMetaverseManager()->GetScreenshot(goodId);
+		if (!pInfoKV)
+		{
+			pInfoKV = new KeyValues("screenshot");
+			bNeedsAdd = true;
+		}
+
+		uint64 timeNumber = g_pAnarchyManager->GetTimeNumber();
+		pInfoKV->SetString("created", VarArgs("%llu", timeNumber));
+		pInfoKV->SetString("id", goodId.c_str());
+
+		// FIXME: This helper function should be generalized because it is also used in awesomiumjshandlers.cpp in the "getWorldInfo" handler
+		instance_t* instance = g_pAnarchyManager->GetInstanceManager()->GetInstance(g_pAnarchyManager->GetInstanceId());
+		pInfoKV->SetString("instance/id", instance->id.c_str());
+		pInfoKV->SetString("instance/mapId", instance->mapId.c_str());
+		pInfoKV->SetString("instance/title", instance->title.c_str());
+		pInfoKV->SetString("instance/file", instance->file.c_str());
+		pInfoKV->SetString("instance/workshopIds", instance->workshopIds.c_str());
+		pInfoKV->SetString("instance/mountIds", instance->mountIds.c_str());
+
+		KeyValues* pMapKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetMap(instance->mapId));
+		KeyValues* dummyKV = pInfoKV->FindKey("map", true);
+		this->AddSubKeysToKeys(pMapKV, dummyKV);
+
+		Vector origin = C_BasePlayer::GetLocalPlayer()->EyePosition();
+		QAngle angles = C_BasePlayer::GetLocalPlayer()->EyeAngles();
+
+		char buf[AA_MAX_STRING];
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", origin.x, origin.y, origin.z);
+		pInfoKV->SetString("camera/position", buf);
+
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z);
+		pInfoKV->SetString("camera/rotation", buf);
+
+		Vector bodyOrigin = pPlayer->GetAbsOrigin();
+		QAngle bodyAngles = pPlayer->GetAbsAngles();
+
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", bodyOrigin.x, bodyOrigin.y, bodyOrigin.z);
+		pInfoKV->SetString("body/position", buf);
+
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", bodyAngles.x, bodyAngles.y, bodyAngles.z);
+		pInfoKV->SetString("body/rotation", buf);
+
+		if (pInfoKV->SaveToFile(g_pFullFileSystem, relativeMapShotInfoFile.c_str(), "DEFAULT_WRITE_PATH"))
+		{
+			clientdll->WriteSaveGameScreenshotOfSize(relativeMapShotFile.c_str(), thumbWidth, thumbHeight, false, false);
+			if (bCreateBig)
+				clientdll->WriteSaveGameScreenshotOfSize(relativeMapShotBigFile.c_str(), bigWidth, bigHeight, false, false);
+
+			if (bNeedsAdd)
+				this->GetMetaverseManager()->AddScreenshot(pInfoKV);
+
+			Msg("Shot saved.\n");
+			return true;
+		}
+		//pInfoKV->deleteThis();	// don't delete us cuz we are already auto-loaded by the metaverse manager now!
+	}
+
+	return false;
+}
+
+void C_AnarchyManager::HideScreenshotMenu()
+{
+	m_pInputManager->DeactivateInputMode(true);
+}
+
+void C_AnarchyManager::ShowScreenshotMenu()
+{
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->TaskRemember();
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->SetUrl("asset://ui/screenshotMenu.html");
+	m_pInputManager->ActivateInputMode(true, true);
+}
+
 void C_AnarchyManager::HideTaskMenu()
 {
+	m_pWindowManager->DoPendingSwitch();	// in case the user clicked on SwitchToWindowInstance while looking at the task manager, we must wait until he releases the menu button.
 	m_pInputManager->DeactivateInputMode(true);
 }
 
@@ -1692,6 +2107,87 @@ void C_AnarchyManager::ObsoleteLegacyCommandReceived()
 	{
 		engine->ClientCmd("exec config_default_redux\n");
 	}
+}
+
+void C_AnarchyManager::StartHoldingPrimaryFire()
+{
+	if (m_bIsHoldingPrimaryFire)
+		return;
+
+	m_bIsHoldingPrimaryFire = true;
+
+	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	//pHudInstance->SetUrl("asset://ui/primaryMenu.html");
+	pHudInstance->SetUrl("asset://ui/buildMode.html?mode=select");
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, false);
+}
+
+void C_AnarchyManager::StopHoldingPrimaryFire()
+{
+	if (!m_bIsHoldingPrimaryFire)
+		return;
+	
+	m_bIsHoldingPrimaryFire = false;
+
+	C_BaseEntity* pGlowEntity = m_pHoverGlowEntity;
+	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+	if (pGlowEntity)
+	{
+		//if (m_pSelectedEntity)	// NOTE: Nothing should be selected at this point, because a fullscreen HUD menu is what initiates this method.
+//			g_pAnarchyManager->DeselectEntity();
+
+		//g_pAnarchyManager->AttemptSelectEntity(pGlowEntity);	// Instead of selecting the entity, we're making the build mode context appear instead.
+		//if (m_pSelectedEntity == pGlowEntity)
+		//{
+			/* have the player look at the entity, if possible.
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			Vector lookPos = pGlowEntity->GetAbsOrigin();
+			pPlayer->Eye
+			//lookPos.
+			*/
+		//}
+
+		//if (g_pAnarchyManager->GetSelectedEntity())
+			//g_pAnarchyManager->DeselectEntity("asset://ui/buildModeContext.html");
+		//else
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+		pHudBrowserInstance->SetUrl(VarArgs("asset://ui/buildModeContext.html?entity=%i", pGlowEntity->entindex()));
+
+		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
+	}
+}
+
+// IMPORTANT NOTE: Key values loaded with LoadFromFile forget the data types for their fields and if a string is just numbers, it gets turned into a number instead of a string after loading.
+// This matters if the number started with a 0, because leading zeros get removed for numbers.
+// So to catch this, additional checks must be performed on ID's read from KeyValues files.
+bool C_AnarchyManager::CompareLoadedFromKeyValuesFileId(const char* testId, const char* baseId)
+{
+	int intBaseId = Q_atoi(baseId);
+	if (!Q_stricmp(testId, baseId) || (intBaseId != 0 && Q_atoi(testId) == intBaseId))//(Q_strcmp(VarArgs("%i", intBaseId), baseId) && intBaseId == intBaseId == Q_atoi(testId)))
+		return true;
+	else
+		return false;
+}
+
+void C_AnarchyManager::Feedback(std::string type)
+{
+	std::string discussionsUrl = "http://steamcommunity.com/app/266430/discussions/5/";
+	std::string suggestionsUrl = "http://steamcommunity.com/app/266430/discussions/6/";
+	std::string bugsUrl = "http://steamcommunity.com/app/266430/discussions/4/";
+	std::string trelloUrl = "https://trello.com/b/PLcyQaio";
+
+	std::string goodUrl = "";
+	if (type == "discussions")
+		goodUrl = discussionsUrl;
+	else if (type == "suggestions")
+		goodUrl = suggestionsUrl;
+	else if (type == "bugs")
+		goodUrl = bugsUrl;
+	else if (type == "trello")
+		goodUrl = trelloUrl;
+
+	if (goodUrl != "")
+		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage(goodUrl.c_str());
 }
 
 void C_AnarchyManager::TaskClear()
@@ -1754,7 +2250,11 @@ void C_AnarchyManager::SetSlaveScreen(bool bVal)
 
 void C_AnarchyManager::PostRender()
 {
+//	SteamAPI_RunCallbacks();
 	//DevMsg("AnarchyManager: PostRender\n");
+
+	if (engine->IsInGame() && m_pCanvasManager)
+		m_pCanvasManager->CleanupTextures();
 }
 
 // Over 15x faster than: (int)floor(value)
@@ -2176,6 +2676,13 @@ void C_AnarchyManager::AnarchyStartup()
 {
 	DevMsg("AnarchyManager: AnarchyStartup\n");
 	m_bIncrementState = true;
+
+	m_pWeaponsEnabledConVar = cvar->FindVar("r_drawviewmodel");
+
+	ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
+	m_oldEngineNoFocusSleep = pConVar->GetString();
+	pConVar->SetValue(0);
+
 	//m_state = AASTATE_INPUTMANAGER;
 	/*
 	m_pInstanceManager = new C_InstanceManager();
@@ -2257,6 +2764,23 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 
 			pFilename = g_pFullFileSystem->FindNext(findHandle);
 		}
+
+		std::string customFolder;
+		pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%scustom\\*", m_legacyFolder.c_str()), "", &findHandle);
+		while (pFilename != NULL)
+		{
+			if (Q_strcmp(pFilename, ".") && Q_strcmp(pFilename, "..") && g_pFullFileSystem->FindIsDirectory(findHandle))
+			{
+				customFolder = m_legacyFolder + std::string("custom\\") + std::string(pFilename);
+				DevMsg("Adding %s to the search paths.\n", customFolder.c_str());
+				//g_pFullFileSystem->AddSearchPath(customFolder.c_str(), "MOD", PATH_ADD_TO_TAIL);
+				g_pFullFileSystem->AddSearchPath(customFolder.c_str(), "GAME", PATH_ADD_TO_TAIL);
+			}
+
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+		}
+
+
 	}
 	/*
 	KeyValues* pLegacyLogKV = new KeyValues("legacy");
@@ -2325,9 +2849,23 @@ void C_AnarchyManager::OnLoadAllLocalAppsComplete()
 	//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "0", "+", "mountNextWorkshopCallback");
 }
 
-bool C_AnarchyManager::AttemptSelectEntity()
+bool C_AnarchyManager::OnSteamBrowserCallback(unsigned int unHandle)
 {
-	if (!g_pAnarchyManager->IsInitialized())
+	/*
+	C_SteamBrowserInstance* pInstance = m_pSteamBrowserManager->FindDefunctInstance(unHandle);
+	if (pInstance)
+	{
+		g_pAnarchyManager->GetSteamBrowserManager()->DestroyDefunctInstance(pInstance);
+		return false;
+	}
+	*/
+
+	return true;
+}
+
+bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
+{
+	if (!g_pAnarchyManager->IsInitialized() )
 		return false;
 
 	C_PropShortcutEntity* pShortcut = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
@@ -2344,29 +2882,34 @@ bool C_AnarchyManager::AttemptSelectEntity()
 	}
 	else
 	{
-		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
-		if (!pPlayer)
-			return false;
+		C_BaseEntity* pEntity = null;
+		if (!pTargetEntity)
+		{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			if (!pPlayer)
+				return false;
 
-		if (pPlayer->GetHealth() <= 0)
-			return false;
+			if (pPlayer->GetHealth() <= 0)
+				return false;
 
-		// fire a trace line
-		trace_t tr;
-		Vector forward;
-		pPlayer->EyeVectors(&forward);
-		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+			// fire a trace line
+			trace_t tr;
+			Vector forward;
+			pPlayer->EyeVectors(&forward);
+			UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
 
-		C_BaseEntity *pEntity = tr.m_pEnt;
+			if( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
+				pEntity = tr.m_pEnt;
+		}
+		else
+			pEntity = pTargetEntity;
 
 		// only allow prop shortcuts
 		if (pEntity)
 			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
 
-		if (pShortcut && tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+		if (pShortcut)
 		{
-			pEntity = tr.m_pEnt;
-
 			if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
 			{
 				//m_pInputManager->SetFullscreenMode(true);
@@ -2628,7 +3171,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 								if (bFileIsGood)
 								{
 									C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
-									pLibretroInstance->Init(tabTitle);
+									pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")));
 									DevMsg("Setting game to: %s\n", file.c_str());
 									pLibretroInstance->SetOriginalGame(file);
 									pLibretroInstance->SetOriginalItemId(itemId);
@@ -2644,12 +3187,13 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 						{
 							std::string uri = "file://";
 							uri += engine->GetGameDirectory();
-							uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+							uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(active->GetString("title")) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
 
-							DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
+							// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
+							//DevMsg("Test URI is: %s\n", uri.c_str());
 
 							C_SteamBrowserInstance* pSteamBrowserInstance = m_pSteamBrowserManager->CreateSteamBrowserInstance();
-							pSteamBrowserInstance->Init(tabTitle, uri, null, pShortcut->entindex());
+							pSteamBrowserInstance->Init(tabTitle, uri, "Newly selected item...", null, pShortcut->entindex());
 							pSteamBrowserInstance->SetOriginalItemId(itemId);	// FIXME: do we need to do this for original entindex too???
 							//pSteamBrowserInstance->SetOriginalEntIndex(pShortcut->entindex());	// probably NOT needed??
 
@@ -2713,7 +3257,9 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 		//break;
 	}
 
-	g_pAnarchyManager->HudStateNotify();	// because input is not always request when an object is selected?
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
+	//g_pAnarchyManager->HudStateNotify();	// because input is not always request when an object is selected?
 	return true;
 	//*/
 }
@@ -2725,37 +3271,41 @@ bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 	//C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
 	if (pEmbeddedInstance && pEmbeddedInstance != pHudBrowserInstance)
 	{	
-		pEmbeddedInstance->Deselect();
-		//pEmbeddedInstance->Blur();
-		m_pInputManager->SetEmbeddedInstance(null);
-		//m_pWebManager->DeselectWebTab(pWebTab);
-
-		/*
-		if (nextUrl != "none")
-		{
-			if (nextUrl != "")
-				pHudBrowserInstance->SetUrl(nextUrl);
-			else
-				pHudBrowserInstance->SetUrl("asset://ui/blank.html");
-		}
-		*/
+		//pEmbeddedInstance->Deselect();
+		//m_pInputManager->SetEmbeddedInstance(null);
 
 		// ALWAYS close the selected web tab when de-selecting entities. (this has to be accounted for or changed when the continous play button gets re-enabled!)
 		if (bCloseInstance && pEmbeddedInstance != pHudBrowserInstance)
 			pEmbeddedInstance->Close();	// FIXME: (maybe) This might cause blank.html to be loaded into the HUD layer because the entity that initiated all this is still set as m_pSelectedEntity at this point...
 	}
 
-	if (nextUrl != "none")
+	if (nextUrl != "" && nextUrl != "none" )
 	{
 		if (nextUrl != "")
 			pHudBrowserInstance->SetUrl(nextUrl);
 		else
-			pHudBrowserInstance->SetUrl("asset://ui/blank.html");
+			pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
 	}
 
 	RemoveGlowEffect(m_pSelectedEntity);
 	m_pSelectedEntity = null;
 	return true;
+}
+
+void C_AnarchyManager::AddHoverGlowEffect(C_BaseEntity* pEntity)
+{
+	g_pAnarchyManager->RemoveLastHoverGlowEffect();
+	m_pHoverGlowEntity = pEntity;
+	engine->ServerCmd(VarArgs("addhovergloweffect %i", pEntity->entindex()), false);
+}
+
+void C_AnarchyManager::RemoveLastHoverGlowEffect()
+{
+	if (m_pHoverGlowEntity)
+	{
+		engine->ServerCmd(VarArgs("removehovergloweffect %i", m_pHoverGlowEntity->entindex()), false);
+		m_pHoverGlowEntity = null;
+	}
 }
 
 void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
@@ -2786,6 +3336,7 @@ void C_AnarchyManager::OnBrowseFileSelected(std::string browseId, std::string re
 
 void C_AnarchyManager::OnWorkshopManagerReady()
 {
+	DevMsg("C_AnarchyManager::OnWorkshopManagerReady\n");
 //	DevMsg("DISABLED FOR TESTING!\n");
 //	return;
 	///*
@@ -2921,8 +3472,8 @@ void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 
 	m_pMetaverseManager->SetSpawningObject(null);
 
-	C_AwesomiumBrowserInstance* pHudInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-	pHudInstance->SetUrl("asset://ui/blank.html");
+	//C_AwesomiumBrowserInstance* pHudInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	//pHudInstance->SetUrl("asset://ui/default.html");
 
 	m_pInputManager->DeactivateInputMode(true);
 }
@@ -3113,6 +3664,9 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	//DevMsg("DISABLED FOR TESTING!\n");
 	//return;
 	///*
+
+	DevMsg("Starting Libretro...\n");
+
 	m_pLibretroManager = new C_LibretroManager();
 
 	if (m_iState < 1)
@@ -3132,8 +3686,13 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 			g_pAnarchyManager->GetMetaverseManager()->ImportSteamGames(kv);
 		}
 
+		DevMsg("Reinitializing sound system (so sounds work in addon maps)...\n");
+
 		// restart the sound system so that mounted paths can play sounds
 		engine->ClientCmd("snd_restart");
+		
+		ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
+		pConVar->SetValue(m_oldEngineNoFocusSleep.c_str());
 
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
 		//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
@@ -3188,7 +3747,9 @@ void C_AnarchyManager::xCastSetLiveURL()
 	//	return;
 
 	//DevMsg("Do anarchybot stuff\n");
-	std::string XSPlitLiveFolder = "Z:\\scripts";
+	std::string XSPlitLiveFolder = cvar->FindVar("broadcast_folder")->GetString();//"Z:\\scripts";
+	if (XSPlitLiveFolder == "")
+		return;
 
 	std::string xml = "";
 	xml += "<div class=\"response\">\n";
@@ -3453,6 +4014,13 @@ void C_AnarchyManager::TestSQLite2()
 	DevMsg("Closing MyDb.db ...\n");
 	sqlite3_close(db);
 	DevMsg("Closed MyDb.db\n");
+}
+
+void C_AnarchyManager::SetNextLoadInfo(std::string instanceId, std::string position, std::string rotation)
+{
+	m_pNextLoadInfo->instanceId = instanceId;
+	m_pNextLoadInfo->position = position;
+	m_pNextLoadInfo->rotation = rotation;
 }
 
 void C_AnarchyManager::TestSQLite()

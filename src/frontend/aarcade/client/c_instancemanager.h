@@ -24,6 +24,8 @@ struct object_t
 	bool child;
 	float scale;
 	bool slave;
+	int entityIndex;
+	//C_BaseEntity* entity;
 };
 
 struct instance_t
@@ -58,7 +60,7 @@ public:
 
 	void Update();
 
-	void LoadInstance(std::string instanceId);
+	void LoadInstance(std::string instanceId, std::string position = "", std::string rotation = "");
 	void LoadLegacyInstance(std::string instanceId, KeyValues* instanceKV);
 
 	void ApplyChanges(std::string id, C_PropShortcutEntity* pShortcut);
@@ -70,13 +72,19 @@ public:
 	void AdjustObjectRot(float p, float y, float r);
 	void AdjustObjectScale(float scale);
 
+	void SetObjectEntity(std::string objectId, C_BaseEntity* pEntity);
+	C_BaseEntity* GetObjectEntity(std::string objectId);
+
+	object_t* GetNearestObjectToPlayerLook(object_t* pStartingObject = null);
+
 	void SpawnObject(object_t* object, bool bShouldGhost = false);
 	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string creator = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false);
 	object_t* GetInstanceObject(std::string objectId);
 	unsigned int GetInstanceObjectCount();
 	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity);
 	bool SpawnNearestObject();
-	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
+	//void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
+	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)maxDist; }
 
 	void AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string style);
 	instance_t* GetInstance(std::string id);

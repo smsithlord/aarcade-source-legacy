@@ -22,7 +22,7 @@ public:
 	void Update();
 	void CloseAllInstances(bool bDeleteHudAndImages = false);
 
-	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", bool alpha = false);
+	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", std::string title = "", bool alpha = false);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(std::string id);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(Awesomium::WebView* pWebView);
 	//C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(IMaterial* pMaterial);
@@ -39,7 +39,7 @@ public:
 	// regular
 	void PrepareWebView(Awesomium::WebView* pWebView, std::string id);
 	void OnCreateWebViewDocumentReady(Awesomium::WebView* pWebView, std::string id);
-	void OnHudWebViewDocumentReady(Awesomium::WebView* pWebView, std::string id);
+	//void OnHudWebViewDocumentReady(Awesomium::WebView* pWebView, std::string id);
 
 	/*
 	C_SteamBrowserInstance* CreateSteamBrowserInstance();

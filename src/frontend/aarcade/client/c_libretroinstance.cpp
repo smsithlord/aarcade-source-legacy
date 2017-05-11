@@ -32,17 +32,7 @@ C_LibretroInstance::C_LibretroInstance()
 C_LibretroInstance::~C_LibretroInstance()
 {
 	DevMsg("LibretroInstance: Destructor\n");
-
-	if (m_pTexture)
-	{
-		m_pTexture->SetTextureRegenerator(null);
-
-		DevMsg("Unreferencing texture %s\n", m_pTexture->GetName());
-		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
-		m_pTexture->DecrementReferenceCount();
-		m_pTexture->DeleteIfUnreferenced();
-		m_pTexture = null;
-	}
+	this->CleanUpTexture();
 }
 
 void C_LibretroInstance::SelfDestruct()
@@ -62,8 +52,22 @@ void C_LibretroInstance::SelfDestruct()
 	delete this;
 }
 
-void C_LibretroInstance::Init(std::string id)
+void C_LibretroInstance::CleanUpTexture()
 {
+	if (m_pTexture)
+	{
+		m_pTexture->SetTextureRegenerator(null);
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceEmbeddedInstance(this);
+		g_pAnarchyManager->GetCanvasManager()->UnreferenceTexture(m_pTexture);
+		g_pAnarchyManager->GetCanvasManager()->DoOrDeferTextureCleanup(m_pTexture);
+		m_pTexture = null;
+	}
+}
+
+void C_LibretroInstance::Init(std::string id, std::string title)
+{
+	std::string goodTitle = (title != "") ? title : "Untitled Libretro Tab";
+	m_title = goodTitle;
 	m_id = id;
 	if (m_id == "")
 		m_id = g_pAnarchyManager->GenerateUniqueId();
@@ -81,10 +85,14 @@ void C_LibretroInstance::Init(std::string id)
 
 	//if (!m_pTexture)
 
+	int multiplyer = g_pAnarchyManager->GetDynamicMultiplyer();
 	if (!g_pMaterialSystem->IsTextureLoaded(textureName.c_str()))
-		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth, iHeight, IMAGE_FORMAT_BGR888, 1);
+		m_pTexture = g_pMaterialSystem->CreateProceduralTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, iWidth * multiplyer, iHeight * multiplyer, IMAGE_FORMAT_BGR888, 1);
 	else
+	{
 		m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+		g_pAnarchyManager->GetCanvasManager()->TextureNotDeferred(m_pTexture);
+	}
 
 	// get the regen and assign it
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
@@ -2823,6 +2831,7 @@ void C_LibretroInstance::Render()
 	//DevMsg("WebTab: Render: %s on %i\n", m_id.c_str(), gpGlobals->framecount);
 	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(this);
 	m_pTexture->Download();
+	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->SetEmbeddedInstance(null);
 
 	m_iLastRenderedFrame = gpGlobals->framecount;
 

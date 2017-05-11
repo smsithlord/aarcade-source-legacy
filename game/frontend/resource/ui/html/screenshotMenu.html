@@ -1,0 +1,163 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+	</head>
+	<body style="background-color: transparent;">
+		<div style="width: 41%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%); margin-left: auto; margin-right: auto; text-align: right;">
+		<div class="hudContent" style="width: 100%; text-align: left;">
+			<div class="hudContentHeader">
+				<div class="hudContentHeaderRow">
+					<div class="hudContentHeaderCell">
+					</div>
+					<div class="hudContentHeaderCell">
+						Screenshot Menu
+					</div>
+					<div class="hudContentHeaderCell">
+						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="screenshotList" style="padding: 10px;">
+			</div>
+
+		</div>
+		<div class="tab tabOn">
+			Screenshots
+		</div>
+		<div class="tab" onclick="aaapi.system.setTabMenuFile('commandsMenu.html'); window.location='asset://ui/commandsMenu.html';">
+			Commands
+		</div>
+		<div class="tab" style="margin-right: 50px;" onclick="aaapi.system.setTabMenuFile('taskMenu.html'); window.location='asset://ui/taskMenu.html';">
+			Tasks
+		</div>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<style>
+			.hotshot
+			{
+				display: inline-block;
+				padding: 4px;
+				background-color: rgba(0, 0, 0, 0.9);
+				border: 3px solid transparent;
+				border-color: transparent;
+			}
+
+			.hotshot:hover
+			{
+				border-color: white;
+				background-color: rgba(192, 35, 35, 0.8);
+			}
+
+			.tab
+			{
+				border-radius: 0 0 10px 10px;
+				white-space: nowrap;
+				font-size: 18px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 5px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				margin-top: -2px;
+				/*
+				margin-left: 1px;
+				margin-right: 1px;
+				*/
+				color: #aaa;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.tab:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+
+			.tabOn
+			{
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			.tabOn:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+			}
+		</style>
+
+		<script>
+			var tga = new TGA();
+
+			var worldInfo = aaapi.system.getWorldInfo();
+			var screenshots = aaapi.system.getAllMapScreenshots(worldInfo.map.info.id);
+			var screenshotListElem = document.querySelector("#screenshotList");
+
+			var goodScreenshots = [];
+			var screenshot;
+			var screenshotKeys = Object.keys(screenshots);
+			for( var i = 0; i < screenshotKeys.length; i++ )
+			{
+				screenshot = screenshots[screenshotKeys[i]];
+
+				if( screenshot.instance.id == worldInfo.instance.id )
+					goodScreenshots.push(screenshot);
+			}
+
+			// Add the "take new screenshot" button to the front of the list.
+			var screenshotElem = document.createElement("div");
+			screenshotElem.className = "hotshot helpNote";
+			screenshotElem.style.cssText = "width: 240px; height: 135px; margin: auto;";
+			screenshotElem.setAttribute("help", "Capture a new screenshot from your current position.");
+			screenshotElem.addEventListener("click", function()
+			{
+				aaapi.system.takeScreenshot();
+				window.location='asset://ui/screenshotMenu.html';
+			}.bind(screenshotElem));
+
+			var elem = document.createElement("img");
+			elem.style.cssText = "width: 240px; height: 135px;";
+			elem.src = "takeshot.png";
+
+			screenshotElem.appendChild(elem);
+			screenshotListElem.appendChild(screenshotElem);
+
+			for( var i = 0; i < goodScreenshots.length; i++ )
+			{
+				screenshot = goodScreenshots[i];
+				screenshotElem = document.createElement("div");
+				screenshotElem.className = "hotshot helpNote";
+
+				screenshotElem.screenshotId = screenshot.id;
+				screenshotElem.setAttribute("help", "Teleport to this location.");
+				screenshotElem.addEventListener("click", function()
+				{
+					aaapi.system.teleportScreenshot(this.screenshotId, true);
+				}.bind(screenshotElem));
+
+				screenshotElem.style.cssText = "width: 240px; height: 135px; margin: auto;";
+				tga.open( "shots/" + screenshot.id + ".tga", function()
+				{
+					var elem = tga.getCanvas();
+					elem.style.cssText = "width: 240px; height: 135px;";
+					this.appendChild(elem);
+				}.bind(screenshotElem));
+
+				screenshotListElem.appendChild(screenshotElem);
+			}
+			
+		</script>
+
+	</body>
+</html>

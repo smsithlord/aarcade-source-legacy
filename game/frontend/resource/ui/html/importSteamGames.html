@@ -8,12 +8,12 @@
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/manageLibrary.html';" help="Go back to the previous menu.">
+						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/import.html';" help="Go back to the previous menu.">
 							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
 						</div>
 					</div>
 					<div class="hudContentHeaderCell">
-						Import Steam Games
+						Import All My Steam Games
 					</div>
 					<div class="hudContentHeaderCell">
 						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
@@ -22,9 +22,11 @@
 			</div>
 
 			<div style="font-family: Arial; font-size: 18px; font-weight: bold; padding: 10px;">Anarchy Arcade can automatically add all of your Steam games from your public Steam Community profile to your AArcade library.<br /><br />
-			Note that your profile <b>must</b> be public (or you must be logged in) for your Steam games list to be accessible for AArcade to scan.<br /><br /></div>
+			Note that your profile <b>must</b> be public (or you must be logged in) for your Steam games list to be accessible for AArcade to scan.<br /><br />
+			<font style="color: #ffff00;">Your Steam profile will be loaded in a web tab.  Click the blue <b>META SCRAPE</b> button on the left-hand side when it appears.</font><br /><br />
+			</div>
 			<div class="mainButton helpNote" style="width: 350px;" onclick="aaapi.system.beginImportSteamGames();" help="Continue to your Steam games list.">Continue</div>
-			<div class="mainButton helpNote" style="width: 350px;" onclick="window.location='asset://ui/manageLibrary.html';" help="Go back.">Cancel</div>
+			<div class="mainButton helpNote" style="width: 350px;" onclick="window.location='asset://ui/import.html';" help="Go back.">Cancel</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
