@@ -74,7 +74,9 @@ void C_WorkshopManager::Init()
 void C_WorkshopManager::OnQueryComplete(C_WorkshopQuery* pQuery)
 {
 	DevMsg("C_WorkshopManager::OnQueryComplete\n");
-	delete pQuery;
+
+	if (pQuery)
+		delete pQuery;
 
 	g_pAnarchyManager->OnWorkshopManagerReady();
 }
@@ -86,7 +88,7 @@ C_WorkshopQuery::C_WorkshopQuery()
 
 C_WorkshopQuery::~C_WorkshopQuery()
 {
-	DevMsg("C_WorkshopManager:: Destructor\n");
+	DevMsg("C_WorkshopQuery::Destructor\n");
 }
 
 void C_WorkshopQuery::Init(SteamAPICall_t hAPICall)
@@ -97,7 +99,7 @@ void C_WorkshopQuery::Init(SteamAPICall_t hAPICall)
 
 void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFailure)
 {
-	DevMsg("WorkshopManager: OnUGCQueried\n");
+	DevMsg("C_WorkshopQuery::OnUGCQueried\n");
 	if (pResult->m_eResult == k_EResultOK)
 	{
 		DevMsg("Batch Size: %u Total Found: %u\n", pResult->m_unNumResultsReturned, pResult->m_unTotalMatchingResults);
@@ -274,6 +276,7 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 
 void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, unsigned int& uNumItems, unsigned int& uNumModels, SteamWorkshopDetails_t* pDetails)
 {
+	DevMsg("Mounting workshop addon w/ ID: %llu\n", id);
 	SteamWorkshopDetails_t* details = null;
 	if (pDetails)
 		details = pDetails;
@@ -362,63 +365,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 			// FIXME: Actually check that this IS a legacy workshop item!! (generation < 3)
 			std::string id = VarArgs("%llu", details->publishedFileId);
 
-			// detect any .set files
-			std::string file;
-			KeyValues* kv = new KeyValues("instance");
-			FileFindHandle_t findHandle;
-			VarArgs("Tester folder: %s\\maps\\*.set", installFolder);
-			const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\maps\\*.set", installFolder), &findHandle);
-			while (pFilename != NULL)
-			{
-				if (g_pFullFileSystem->FindIsDirectory(findHandle))
-				{
-					pFilename = g_pFullFileSystem->FindNext(findHandle);
-					continue;
-				}
-
-				file = std::string(installFolder) + "\\maps\\" + std::string(pFilename);
-
-				// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
-				if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
-				{
-					if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
-					{
-						//DevMsg("Map ID here is: %s\n", kv->GetString("map"));
-						// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
-						// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
-
-						std::string title = kv->GetString("title");
-						if (title == "")
-						{
-							// attempt to load a .txt file from the legacy workshop addon that has the title
-							FileFindHandle_t infoFindHandle;
-							const char *pInfoFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\resource\\workshop\\*.txt", installFolder), &infoFindHandle);
-							if (pInfoFilename)
-							{
-								KeyValues* infoKv = new KeyValues("info");
-								if (infoKv->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\resource\\workshop\\%s", installFolder, pInfoFilename)))
-									title = infoKv->GetString("title");
-								infoKv->deleteThis();
-							}
-							g_pFullFileSystem->FindClose(infoFindHandle);
-						}
-
-						if (title == "")
-							title = "Unnamed";
-
-						std::string goodMapName = pFilename;
-						goodMapName = goodMapName.substr(0, goodMapName.find("."));
-
-						std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
-						g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, VarArgs("%llu", details->publishedFileId), "", "");
-						//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
-					}
-				}
-
-				pFilename = g_pFullFileSystem->FindNext(findHandle);
-			}
-			g_pFullFileSystem->FindClose(findHandle);
-			kv->Clear();
+			g_pAnarchyManager->ScanForLegacySaveRecursive(fullPath, "", id, "", "");
 
 			// now start loading the items from it
 			g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, fullPath, id, "");
@@ -426,6 +373,7 @@ void C_WorkshopManager::MountWorkshop(PublishedFileId_t id, bool& bIsLegacy, uns
 		}
 	}
 
+	DevMsg("Done mounting workshop addon.\n");
 	this->MountNextWorkshop();
 	return;
 }

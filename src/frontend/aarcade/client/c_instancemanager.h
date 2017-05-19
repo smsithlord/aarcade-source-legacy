@@ -86,7 +86,7 @@ public:
 	//void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)maxDist; }
 
-	void AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string style);
+	void AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file = "", std::string workshopIds = "", std::string mountIds = "", std::string backpackId = "", std::string style = "");
 	instance_t* GetInstance(std::string id);
 	instance_t* FindInstance(std::string mapId);
 	void FindAllInstances(std::string mapId, std::vector<instance_t*> &instances);

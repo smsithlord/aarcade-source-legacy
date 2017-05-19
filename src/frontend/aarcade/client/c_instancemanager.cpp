@@ -228,7 +228,7 @@ void C_InstanceManager::ApplyChanges(std::string id, C_PropShortcutEntity* pShor
 
 	// now save out to the SQL
 	//g_pAnarchyManager->GetMetaverseManager()->SaveItem()
-	g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+	g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
 }
 
 void C_InstanceManager::SetObjectEntity(std::string objectId, C_BaseEntity* pEntity)
@@ -260,7 +260,7 @@ void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(goodModelId);
 	if (!model)
 	{
-		DevMsg("WARNING: Model not found in library with given ID! Using default cabinet instead.\n");
+		DevMsg("WARNING: Model not found in library with given ID! Using default cabinet instead. %s\n", goodModelId.c_str());
 		goodModelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
 		model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(goodModelId);
 	}
@@ -380,7 +380,7 @@ void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity)
 			pObjectsKV->RemoveSubKey(pEntryKV);
 
 			// save out the instance KV
-			g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
 		}
 	}
 
@@ -450,7 +450,7 @@ bool C_InstanceManager::SpawnNearestObject()
 	return false;
 }
 
-void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string style)
+void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string backpackId, std::string style)
 {
 	auto it = m_instances.find(instanceId);
 	if (it != m_instances.end())
@@ -946,9 +946,8 @@ void C_InstanceManager::LoadInstance(std::string instanceId, std::string positio
 
 void C_InstanceManager::LoadLegacyInstance(std::string instanceId, KeyValues* instanceKV)
 {
-	DevMsg("Load the LEGACYinstance!!!\n");
-
 	instance_t* pInstance = this->GetInstance(instanceId);
+	DevMsg("Load the LEGACYinstance!!! %s\n", pInstance->file.c_str());
 	
 	bool spawnedOne = false;
 	KeyValues* item;
@@ -995,18 +994,10 @@ void C_InstanceManager::LoadLegacyInstance(std::string instanceId, KeyValues* in
 					pSearchInfo->SetString("file", sub->GetString("itemfile"));
 
 					KeyValues* foundActive = null;
-					KeyValues* foundItem = g_pAnarchyManager->GetMetaverseManager()->FindLibraryItem(pSearchInfo);
+					KeyValues* foundItem = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->FindLibraryItem(pSearchInfo));
 					if (foundItem)
-					{
-						foundActive = foundItem->FindKey("current");
-						if (!foundActive)
-							foundActive = foundItem->FindKey("local");
-
-						if (foundActive)
-							itemId = foundActive->GetString("info/id");
-					}
-
-					if (!foundActive)
+						itemId = foundActive->GetString("info/id");
+					else
 					{
 						DevMsg("Instance failed to resolve item with itemfile: %s\n", sub->GetString("itemfile"));
 						itemId = g_pAnarchyManager->GenerateLegacyHash(sub->GetString("itemfile"));

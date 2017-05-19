@@ -379,6 +379,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getAllMounts"), true);
 	systemObject.SetCustomMethod(WSLit("getAllTasks"), true);
 	systemObject.SetCustomMethod(WSLit("getAllWorkshopSubscriptions"), true);
+	systemObject.SetCustomMethod(WSLit("getAllBackpacks"), true);
+	systemObject.SetCustomMethod(WSLit("getBackpack"), true);
 	systemObject.SetCustomMethod(WSLit("getNearestObjectToPlayerLook"), true);
 	systemObject.SetCustomMethod(WSLit("getNextNearestObjectToPlayerLook"), true);
 

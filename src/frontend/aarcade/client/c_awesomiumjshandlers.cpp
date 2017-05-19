@@ -396,9 +396,9 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			//info->SetString("created", "0");	// store unsigned ints as strings, then %llu them
 			info->SetString("creator", "local");
 
-			g_pAnarchyManager->GetMetaverseManager()->SaveSQL("instances", instanceId.c_str(), kv);
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", instanceId.c_str(), kv);
 
-			g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, mapId, instanceId, "", "", "", "");
+			g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, mapId, instanceId);
 			kv->deleteThis();
 			kv = null;
 		}
@@ -2406,6 +2406,68 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			pModelInfo->deleteThis();
 		}
 
+		return response;
+	}
+	else if (method_name == WSLit("getBackpack"))
+	{
+		JSObject response;
+		JSObject responseBackpack;
+		std::string backpackId = WebStringToCharString(args[0].ToString());
+
+		C_Backpack* pBackpack = g_pAnarchyManager->GetBackpackManager()->GetBackpack(backpackId);
+		if (pBackpack)
+		{
+			responseBackpack.SetProperty(WSLit("id"), WSLit(pBackpack->GetId().c_str()));
+			responseBackpack.SetProperty(WSLit("title"), WSLit(pBackpack->GetTitle().c_str()));
+			responseBackpack.SetProperty(WSLit("folder"), WSLit(pBackpack->GetBackpackFolder().c_str()));
+
+			// vpks
+			JSArray vpks;
+			std::vector<std::string> allVPKs;
+			pBackpack->GetAllVPKs(allVPKs);
+			unsigned int max = allVPKs.size();
+			for (unsigned int i = 0; i < max; i++)
+				vpks.Push(WSLit(allVPKs[i].c_str()));
+			responseBackpack.SetProperty(WSLit("vpks"), vpks);
+
+			// files
+			JSArray files;
+			std::vector<std::string> allFiles;
+			pBackpack->GetAllFiles(allFiles);
+			max = allFiles.size();
+			for (unsigned int i = 0; i < max; i++)
+				files.Push(WSLit(allFiles[i].c_str()));
+			responseBackpack.SetProperty(WSLit("files"), files);
+
+			response.SetProperty(WSLit("success"), JSValue(true));
+			response.SetProperty(WSLit("backpack"), responseBackpack);
+		}
+		else
+		{
+			response.SetProperty(WSLit("success"), JSValue(false));
+		}
+
+		return response;
+	}
+	else if (method_name == WSLit("getAllBackpacks"))
+	{
+		JSObject response;
+		JSArray backpacks;
+
+		std::vector<C_Backpack*> allBackpacks;
+		g_pAnarchyManager->GetBackpackManager()->GetAllBackpacks(allBackpacks);
+
+		unsigned int max = allBackpacks.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			JSObject backpack;
+			backpack.SetProperty(WSLit("id"), WSLit(allBackpacks[i]->GetId().c_str()));
+			backpack.SetProperty(WSLit("title"), WSLit(allBackpacks[i]->GetTitle().c_str()));
+			backpacks.Push(backpack);
+		}
+
+		response.SetProperty(WSLit("success"), JSValue(true));
+		response.SetProperty(WSLit("backpacks"), backpacks);
 		return response;
 	}
 	else if (method_name == WSLit("getAllWorkshopSubscriptions"))

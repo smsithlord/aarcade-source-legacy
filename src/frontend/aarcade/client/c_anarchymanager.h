@@ -12,6 +12,7 @@
 #include "c_mountmanager.h"
 #include "c_workshopmanager.h"
 #include "c_metaversemanager.h"
+#include "c_backpackmanager.h"
 #include "c_instancemanager.h"
 #include "c_windowmanager.h"
 #include <vector>
@@ -174,7 +175,7 @@ public:
 	void OnBrowseFileSelected(std::string browseId, std::string response);
 	//void ReleaseFileBrowseParams();
 
-	void ScanForLegacySaveRecursive(std::string path);
+	void ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId);
 
 	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut, const char* mode = "spawn");
 	void DeactivateObjectPlacementMode(bool confirm);
@@ -193,6 +194,8 @@ public:
 
 	//void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 
+	void WriteBroadcastGame(std::string gameTitle);
+	//void xCastSetGameName();
 	void xCastSetLiveURL();
 	void TestSQLite();
 	void TestSQLite2();
@@ -218,6 +221,7 @@ public:
 	C_MountManager* GetMountManager() { return m_pMountManager; }
 	C_WorkshopManager* GetWorkshopManager() { return m_pWorkshopManager; }
 	C_MetaverseManager* GetMetaverseManager() { return m_pMetaverseManager; }
+	C_BackpackManager* GetBackpackManager() { return m_pBackpackManager; }
 	C_InstanceManager* GetInstanceManager() { return m_pInstanceManager; }
 	C_BaseEntity* GetSelectedEntity() { return m_pSelectedEntity; }
 	//ThreadedFileBrowseParams_t* GetFileBrowseParams() { return m_pFileParams; }
@@ -239,6 +243,9 @@ public:
 	void SetOldEngineNoFocusSleep(std::string val) { m_oldEngineNoFocusSleep = val; }
 	void SetTabMenuFile(std::string url) { m_tabMenuFile = url; }
 	
+protected:
+	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId);
+
 private:
 	ConVar* m_pWeaponsEnabledConVar;
 	std::string m_tabMenuFile;
@@ -276,6 +283,7 @@ private:
 	C_MountManager* m_pMountManager;
 	C_WorkshopManager* m_pWorkshopManager;
 	C_MetaverseManager* m_pMetaverseManager;
+	C_BackpackManager* m_pBackpackManager;
 	C_InstanceManager* m_pInstanceManager;
 	C_BaseEntity* m_pSelectedEntity;
 

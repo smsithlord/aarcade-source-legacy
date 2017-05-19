@@ -18,6 +18,8 @@
 //ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);	// obsolete
 //ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);	// obsolete
 ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);	// ALWAYS start off.
+ConVar broadcast_game("broadcast_game", "Anarchy Arcade", FCVAR_NONE);	// ALWAYS start on Anarchy Arcade.
+ConVar broadcast_auto_game("broadcast_auto_game", "1", FCVAR_ARCHIVE);
 ConVar broadcast_folder("broadcast_folder", "Z:\\scripts", FCVAR_ARCHIVE);	// but remember where to write to if the user turns it on
 ConVar kodi("kodi", "0", FCVAR_ARCHIVE, "Set to 1 to use Kodi playback of video files using the settings in kodi_info variable.");
 ConVar kodi_ip("kodi_ip", "192.168.0.100", FCVAR_ARCHIVE, "The ip of the Kodi host.");
@@ -957,6 +959,12 @@ void GenerateLegacyHash(const CCommand &args)
 }
 ConCommand generatelegacyhash("generate_legacy_hash", GenerateLegacyHash, "Generate legacy hash based on the given string.", FCVAR_NONE);
 
+void DetectBackpacks(const CCommand &args)
+{
+	//g_pAnarchyManager->GetBackpackManager()->DetectAllBackpacks();
+}
+ConCommand detectbackpacks("detect_backpacks", DetectBackpacks, "Scan the aarcade_user/custom folder for backpacks.", FCVAR_NONE);
+
 void GenerateKey(const CCommand &args)
 {
 	std::string key = g_pAnarchyManager->GenerateUniqueId();
@@ -970,6 +978,15 @@ void RemoteHolstered(const CCommand &args)
 		g_pAnarchyManager->HandleUiToggle();
 }
 ConCommand remoteholstered("remote_holstered", RemoteHolstered, "Notifies the client that the remote was holstered.", FCVAR_NONE);
+
+void SetBroadcastGame(const CCommand &args)
+{
+	std::string title = std::string(args[1]);
+	g_pAnarchyManager->WriteBroadcastGame(title);
+	//g_pAnarchyManager->xCastSetGameName();
+	//g_pAnarchyManager->xCastSetLiveURL();
+}
+ConCommand setbroadcastgame("set_broadcast_game", SetBroadcastGame, "Sets the current broadcast game name.", FCVAR_NONE);
 
 void AttemptSelectObject(const CCommand &args)
 {

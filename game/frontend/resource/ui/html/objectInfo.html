@@ -50,7 +50,7 @@
 			var objectInfo = info.object;
 			var itemInfo = info.item;
 			var modelInfo = info.model;
-			console.log(JSON.stringify(modelInfo));
+			//console.log(JSON.stringify(info));
 			//console.log(JSON.stringify(tester.model));
 
 			// OBJECT STUFF
@@ -101,6 +101,9 @@
 			///*
 			if( mountIds !== "None" )
 				html += "Mount: " + mountIds + "<br />";
+
+			if( modelInfo.backpackIds !== "" )
+				html += "Backpack: " + modelInfo.backpackIds + "<br />";
 			//*/
 			// MOUNT STUFF
 			//mountIds = "None";

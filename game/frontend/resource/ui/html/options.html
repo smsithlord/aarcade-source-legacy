@@ -303,7 +303,7 @@
 					"setValue": function(val)
 					{
 						this.value = val;
-						aaapi.system.consoleCommand("kodi_ip " + this.value);
+						aaapi.system.consoleCommand("kodi_ip \"" + this.value + "\"");
 					}
 				},
 				"kodi_port":
@@ -322,7 +322,7 @@
 					"setValue": function(val)
 					{
 						this.value = val;
-						aaapi.system.consoleCommand("kodi_port " + this.value);
+						aaapi.system.consoleCommand("kodi_port \"" + this.value + "\"");
 					}
 				},
 				"kodi_user":
@@ -341,7 +341,7 @@
 					"setValue": function(val)
 					{
 						this.value = val;
-						aaapi.system.consoleCommand("kodi_user " + this.value);
+						aaapi.system.consoleCommand("kodi_user \"" + this.value + "\"");
 					}
 				},
 				"kodi_password":
@@ -360,7 +360,7 @@
 					"setValue": function(val)
 					{
 						this.value = val;
-						aaapi.system.consoleCommand("kodi_password " + this.value);
+						aaapi.system.consoleCommand("kodi_password \"" + this.value + "\"");
 					}
 				},
 				"broadcast":
@@ -382,6 +382,44 @@
 						aaapi.system.consoleCommand("broadcast_mode " + this.value);
 					}
 				},
+				"broadcast_game":
+				{
+					"category": "Broadcast Mode (optional)",
+					"title": "Game Name",
+					"type": "text",
+					"help": "This is to control the name of the game you are set as broadcasting.",
+					"valueTitles": {"placeholder": ""},
+					"value": null,
+					"getValue": function()
+					{
+						var val = aaapi.system.getConVarValue("broadcast_game");
+						this.value = val;
+					},
+					"setValue": function(val)
+					{
+						this.value = val;
+						aaapi.system.consoleCommand("set_broadcast_game \"" + this.value + "\"");
+					}
+				},
+				"broadcast_auto_game":
+				{
+					"category": "Broadcast Mode (optional)",
+					"title": "Automatically Set Game Name",
+					"type": "toggle",
+					"help": "This will cause AArcade to automatically set your game to the title of any item you launch, and then set it back to AArcade upon returning to AArcade & unpausing it after.",
+					"valueTitles": {"0": "Disabled", "1": "Enabled"},
+					"value": null,
+					"getValue": function()
+					{
+						var val = aaapi.system.getConVarValue("broadcast_auto_game");
+						this.value = val;
+					},
+					"setValue": function(val)
+					{
+						this.value = val;
+						aaapi.system.consoleCommand("broadcast_auto_game " + this.value);
+					}
+				},
 				"broadcast_folder":
 				{
 					"category": "Broadcast Mode (optional)",
@@ -398,7 +436,7 @@
 					"setValue": function(val)
 					{
 						this.value = val;
-						aaapi.system.consoleCommand("broadcast_folder " + this.value);
+						aaapi.system.consoleCommand("broadcast_folder \"" + this.value + "\"");
 					}
 				}
 			};

@@ -46,6 +46,8 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	//m_pLoadingManager = null;
 	m_pLibretroManager = null;
 	m_pSteamBrowserManager = null;
+	m_pMetaverseManager = null;
+	m_pBackpackManager = null;
 	m_pWindowManager = null;
 	m_pInputManager = null;
 	m_pSelectedEntity = null;
@@ -464,6 +466,9 @@ void C_AnarchyManager::Update(float frametime)
 			if (m_pMetaverseManager)
 				m_pMetaverseManager->Update();
 
+			if (m_pBackpackManager)
+				m_pBackpackManager->Update();
+
 			if (m_pInputManager)
 				m_pInputManager->Update();
 
@@ -522,6 +527,7 @@ void C_AnarchyManager::Update(float frametime)
 			m_pInstanceManager = new C_InstanceManager();
 			m_pMetaverseManager = new C_MetaverseManager();
 			m_pMetaverseManager->Init();
+			m_pBackpackManager = new C_BackpackManager();
 			m_pInputManager = new C_InputManager();
 
 			// insta-startup the Window Manager for now, because it's just a placeholder until actual in-game deskto rendering can be done.
@@ -545,86 +551,12 @@ void C_AnarchyManager::Update(float frametime)
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT:
 			DevMsg("Finished initing IMAGES.\n");
-			/*
-			m_pInstanceManager = new C_InstanceManager();
-			m_pMetaverseManager = new C_MetaverseManager();
-			m_pMetaverseManager->Init();
-			m_pInputManager = new C_InputManager();
-
-			// insta-startup the Window Manager for now, because it's just a placeholder until actual in-game deskto rendering can be done.
-			m_pWindowManager = new C_WindowManager();
-			m_pWindowManager->Init();
-			*/
 
 			// auto-load aarcade stuff
 			g_pAnarchyManager->RunAArcade();
 
-			/*
-			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-			//pAwesomiumBrowserInstance->SetUrl("asset://ui/startup.html");
-			
-
-			// Now start loading stuff in...
-			//C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
-			//C_EmbeddedInstance* pEmbeddedInstance = m_p
-			m_pAwesomiumBrowserManager->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
-			m_pInputManager->ActivateInputMode(true, true, pHudBrowserInstance);
-			//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
-
-			unsigned int uCount;
-			std::string num;
-
-			// And continue starting up
-			uCount = m_pMetaverseManager->LoadAllLocalTypes();
-			num = VarArgs("%u", uCount);
-			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
-
-			//= m_pMetaverseManager->LoadAllLocalTypes();
-			//std::string num = VarArgs("%u", uItemCount);
-			//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
-
-			uCount = m_pMetaverseManager->LoadAllLocalModels();
-			num = VarArgs("%u", uCount);
-			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
-
-			//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
-
-			// load ALL local apps
-			KeyValues* app = m_pMetaverseManager->LoadFirstLocalApp("MOD");
-			if (app)
-				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
-			else
-				this->OnLoadAllLocalAppsComplete();
-			*/
-
 			this->IncrementState();
 			break;
-
-		//case AASTATE_WEBMANAGER:
-			/*
-			// create a libretro instance
-			C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();//>GetSelectedLibretroInstance();// 
-			pLibretroInstance->Init();
-
-			// load a core
-			pLibretroInstance->LoadCore();
-
-			// load a file
-			pLibretroInstance->LoadGame();
-
-			// tell the input manager that the libretro instance is active
-			C_InputListenerLibretro* pListener = m_pLibretroManager->GetInputListener();
-			m_pInputManager->SetInputCanvasTexture(pLibretroInstance->GetTexture());
-			m_pInputManager->ActivateInputMode(true, true, (C_InputListener*)pListener);
-
-			steamapicontext->SteamHTMLSurface()->Init();
-			SteamAPICall_t hAPICall = steamapicontext->SteamHTMLSurface()->CreateBrowser("", "");
-			C_SteamworksBrowser* pSteamworksBrowser = new C_SteamworksBrowser();
-			pSteamworksBrowser->Init(hAPICall);
-
-			this->SetState(AASTATE_RUN);
-			*/
-		//	break;
 	}
 }
 
@@ -921,28 +853,20 @@ void C_AnarchyManager::Unpause()
 	if (cvar->FindVar("broadcast_mode")->GetBool())
 	{
 		// Write this live URL out to the save file.
-		std::string XSPlitLiveFolder = "Z:\\scripts";
-		FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", XSPlitLiveFolder.c_str()), "w+", "");
-
-		if (hFile)
+		std::string XSPlitLiveFolder = cvar->FindVar("broadcast_folder")->GetString();
+		if (XSPlitLiveFolder != "")
 		{
-			std::string xml = "";
-			xml += "<div class=\"response\">\n";
-			xml += "\t<activetitle class=\"activetitle\">Anarchy Arcade</activetitle>\n";
-			xml += "</div>";
+			if (cvar->FindVar("broadcast_auto_game")->GetBool())
+				this->WriteBroadcastGame("Anarchy Arcade");
 
-			g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
-			g_pFullFileSystem->Close(hFile);
-		}
-
-		// Also update a JS file
-		hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
-
-		if (hFile)
-		{
-			std::string code = "gAnarchyTV.OnAArcadeCommand(\"finishPlaying\");\n";
-			g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
-			g_pFullFileSystem->Close(hFile);
+			// Also update a JS file to force the page to re-load
+			FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
+			if (hFile)
+			{
+				std::string code = "gAnarchyTV.OnAArcadeCommand(\"finishPlaying\");\n";
+				g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
+				g_pFullFileSystem->Close(hFile);
+			}
 		}
 	}
 }
@@ -1104,6 +1028,53 @@ C_SteamBrowserInstance* C_AnarchyManager::AutoInspect(KeyValues* pItemKV, std::s
 
 	return pSteamBrowserInstance;
 	//pEmbeddedInstance = pSteamBrowserInstance;
+}
+
+void C_AnarchyManager::WriteBroadcastGame(std::string gameTitle)
+{
+	cvar->FindVar("broadcast_game")->SetValue(gameTitle.c_str());
+
+	std::string broadcastFolder = cvar->FindVar("broadcast_folder")->GetString();
+	FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", broadcastFolder.c_str()), "w+", "");
+	if (hFile)
+	{
+		std::string xml = "";
+		xml += "<div class=\"response\">\n";
+		xml += "\t<activetitle class=\"activetitle\">";
+
+		std::string xmlBuf = gameTitle;
+
+		// Make it XML safe
+		size_t found = xmlBuf.find("&");
+		while (found != std::string::npos)
+		{
+			xmlBuf.replace(found, 1, "&amp;");
+			found = xmlBuf.find("&", found + 5);
+		}
+
+		found = xmlBuf.find("<");
+		while (found != std::string::npos)
+		{
+			xmlBuf.replace(found, 1, "&lt;");
+			found = xmlBuf.find("<", found + 4);
+		}
+
+		found = xmlBuf.find(">");
+		while (found != std::string::npos)
+		{
+			xmlBuf.replace(found, 1, "&gt;");
+			found = xmlBuf.find(">", found + 4);
+		}
+
+		xml += xmlBuf;
+
+		xml += "</activetitle>\n";
+
+		xml += "</div>";
+
+		g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
+		g_pFullFileSystem->Close(hFile);
+	}
 }
 
 launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
@@ -1452,58 +1423,23 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 		// Write this live URL out to the save file.
 		if (cvar->FindVar("broadcast_mode")->GetBool())
 		{
-			std::string XSPlitLiveFolder = "Z:\\scripts";
-			FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\game.txt", XSPlitLiveFolder.c_str()), "w+", "");
-
-			if (hFile)
+			// Write this live URL out to the save file.
+			std::string XSPlitLiveFolder = cvar->FindVar("broadcast_folder")->GetString();
+			if (XSPlitLiveFolder != "")
 			{
-				std::string xml = "";
-				xml += "<div class=\"response\">\n";
-				xml += "\t<activetitle class=\"activetitle\">";
+				if (cvar->FindVar("broadcast_auto_game")->GetBool())
+					this->WriteBroadcastGame(std::string(itemActive->GetString("title")));
 
-				std::string xmlBuf = itemActive->GetString("title");
-
-				size_t found = xmlBuf.find("&");
-				while (found != std::string::npos)
+				// Also update a JS file
+				FileHandle_t hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
+				if (hFile)
 				{
-					xmlBuf.replace(found, 1, "&amp;");
-					found = xmlBuf.find("&", found + 5);
+					std::string code = "gAnarchyTV.OnAArcadeCommand(\"startPlaying\", \"";
+					code += itemActive->GetString("info/id");
+					code += "\");\n";
+					g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
+					g_pFullFileSystem->Close(hFile);
 				}
-
-				found = xmlBuf.find("<");
-				while (found != std::string::npos)
-				{
-					xmlBuf.replace(found, 1, "&lt;");
-					found = xmlBuf.find("<", found + 4);
-				}
-
-				found = xmlBuf.find(">");
-				while (found != std::string::npos)
-				{
-					xmlBuf.replace(found, 1, "&gt;");
-					found = xmlBuf.find(">", found + 4);
-				}
-
-				xml += xmlBuf;
-
-				xml += "</activetitle>\n";
-
-				xml += "</div>";
-
-				g_pFullFileSystem->Write(xml.c_str(), xml.length(), hFile);
-				g_pFullFileSystem->Close(hFile);
-			}
-
-			// Also update a JS file
-			hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
-
-			if (hFile)
-			{
-				std::string code = "gAnarchyTV.OnAArcadeCommand(\"startPlaying\", \"";
-				code += itemActive->GetString("info/id");
-				code += "\");\n";
-				g_pFullFileSystem->Write(code.c_str(), code.length(), hFile);
-				g_pFullFileSystem->Close(hFile);
 			}
 		}
 
@@ -1797,33 +1733,11 @@ void C_AnarchyManager::RunAArcade()
 	}
 	else
 	{
-		//this->GetInputManager()->DeactivateInputMode(true);
-
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 		pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 		this->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
 
 		m_bSuspendEmbedded = false;
-			//m_bPaused = false;
-
-		//C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-		//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
-		/*
-		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
-		if (pSelectedEmbeddedInstance)
-		{
-
-			g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSelectedEmbeddedInstance);
-			pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
-		}
-		else
-		{
-			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-			pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
-
-			this->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
-		}
-		*/
 	}
 }
 
@@ -3351,70 +3265,83 @@ void C_AnarchyManager::OnWorkshopManagerReady()
 	//*/
 }
 
-void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path)
+void C_AnarchyManager::ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId)
 {
-	// detect any .set files in the legacy folder too
+	// detect any .set files
 	std::string file;
 	KeyValues* kv = new KeyValues("instance");
 	FileFindHandle_t findHandle;
-	DevMsg("Tester folder: %smaps\\*.set\n", path.c_str());
-	//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path.c_str()), "", &findHandle);
 
-	//const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "", &findHandle);
-	//const char *pFilename = g_pFullFileSystem->FindFirstEx("*.set", "GAME", &findHandle);
-//	const char *pFilename = g_pFullFileSystem->FindFirstEx("*", "GAME", &findHandle);
-	std::string goodMapName;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%s*.set", path.c_str()), searchPath.c_str(), &findHandle);
 	while (pFilename != NULL)
 	{
-		file = path + "maps\\" + std::string(pFilename);
-		//file = path + std::string(pFilename);
-
 		if (g_pFullFileSystem->FindIsDirectory(findHandle))
 		{
-			//this->ScanForLegacySaveRecursive(file + "\\");
 			pFilename = g_pFullFileSystem->FindNext(findHandle);
 			continue;
 		}
-		//else if (std::string(pFilename).)
 
-		//file = "maps\\" + std::string(pFilename);
-
+		file = path + std::string(pFilename);
+		DevMsg("Legacy instance detected at %s with filename %s\n", file.c_str(), pFilename);
 		// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
 		if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
 		{
-			// kv->GetString("map") can be corrupt on certain shitty saves that early access AArcade generated.  so use filename instead.
-			goodMapName = pFilename;
-			goodMapName = goodMapName.substr(0, goodMapName.find("."));
-
-			//if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
-			if(kv->FindKey("objects", true)->GetFirstSubKey())
+			if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
 			{
-				//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
+				//DevMsg("Map ID here is: %s\n", kv->GetString("map"));
 				// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
 				// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
 
 				std::string title = kv->GetString("title");
 				if (title == "")
 				{
-					//title = "Unnamed";
-					title = file;
-					size_t found = title.find_last_of("/\\");
-					if (found != std::string::npos)
-						title = title.substr(found + 1);
+					// attempt to load a .txt file from the legacy workshop addon that has the title
+					FileFindHandle_t infoFindHandle;
+					const char *pInfoFilename = g_pFullFileSystem->FindFirst(VarArgs("resource\\workshop\\*.txt", path), &infoFindHandle);
+					if (pInfoFilename)
+					{
+						KeyValues* infoKv = new KeyValues("info");
+						if (infoKv->LoadFromFile(g_pFullFileSystem, VarArgs("resource\\workshop\\%s", path, pInfoFilename)))
+							title = infoKv->GetString("title");
+						infoKv->deleteThis();
+					}
+					g_pFullFileSystem->FindClose(infoFindHandle);
 				}
 
-//				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
-				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), goodMapName.c_str(), title, file, "", "");
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, "", "", "");
-				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
+				if (title == "")
+					title = "Unnamed (" + std::string(pFilename) + ")";
+
+				std::string goodMapName = pFilename;
+				goodMapName = goodMapName.substr(0, goodMapName.find("."));
+
+				std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
+
+
+				// else, WORST CASE: figure out where the model is from based on its file location
+				char fullFilePath[AA_MAX_STRING];
+				PathTypeQuery_t pathTypeQuery;
+				g_pFullFileSystem->RelativePathToFullPath(file.c_str(), searchPath.c_str(), fullFilePath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
+				std::string fullpath = fullFilePath;
+				DevMsg("fullFIlePath: %s\n", fullpath.c_str());
+
+				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, fullpath, workshopIds, mountIds, backpackId, "");
+				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
 			}
 		}
 
-		kv->Clear();
 		pFilename = g_pFullFileSystem->FindNext(findHandle);
 	}
+
+	kv->Clear();
 	g_pFullFileSystem->FindClose(findHandle);
+}
+
+void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId)
+{
+	std::string legacyPathA = path + "maps\\";
+	std::string legacyPathB = path + "saves\\maps\\";
+	this->ScanForLegacySave(legacyPathA, searchPath, workshopIds, mountIds, backpackId);
+	this->ScanForLegacySave(legacyPathB, searchPath, workshopIds, mountIds, backpackId);
 }
 
 void C_AnarchyManager::ShowEngineOptionsMenu()
@@ -3651,11 +3578,16 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 		m_pMountManager->Init();
 		m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
 
+		m_pBackpackManager->Init();
+
 		m_pWorkshopManager = new C_WorkshopManager();
 		m_pWorkshopManager->Init();
 	}
 	else
+	{
+		m_pBackpackManager->ActivateAllBackpacks();
 		this->GetMetaverseManager()->DetectAllMaps();
+	}
 		//this->OnDetectAllMapsComplete();
 }
 
@@ -3747,7 +3679,7 @@ void C_AnarchyManager::xCastSetLiveURL()
 	//	return;
 
 	//DevMsg("Do anarchybot stuff\n");
-	std::string XSPlitLiveFolder = cvar->FindVar("broadcast_folder")->GetString();//"Z:\\scripts";
+	std::string XSPlitLiveFolder = cvar->FindVar("broadcast_folder")->GetString();
 	if (XSPlitLiveFolder == "")
 		return;
 
@@ -3930,7 +3862,6 @@ void C_AnarchyManager::xCastSetLiveURL()
 
 	// Also update a JS file to force the page to re-load
 	hFile = g_pFullFileSystem->Open(VarArgs("%s\\vote.js", XSPlitLiveFolder.c_str()), "a+", "");
-
 	if (hFile)
 	{
 		std::string selectedItemTitle = "";

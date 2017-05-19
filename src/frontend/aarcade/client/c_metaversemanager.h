@@ -16,6 +16,10 @@ public:
 	C_MetaverseManager();
 	~C_MetaverseManager();
 
+	void AddDefaultLibraryToDb(sqlite3** pDb);
+	void AddDefaultTables(sqlite3** pDb);
+	bool CreateDb(std::string libraryFile, sqlite3** pDb);
+	bool IsEmptyDb(sqlite3** pDb);
 	void Init();
 	
 	void Update();
@@ -26,20 +30,24 @@ public:
 	//void ImportSteamGame(std::string name, std::string appid);
 	void ImportSteamGames(KeyValues* kv);
 
+	void AddModel(KeyValues* pModel);
 	void AddItem(KeyValues* pItem);
-	void SaveItem(KeyValues* pItem);
-	void SaveSQL(const char* tableName, const char* id, KeyValues* kv);
+	void AddType(KeyValues* pType);
+	void SaveItem(KeyValues* pItem, sqlite3* pDb = null);
+	void SaveModel(KeyValues* pItem, sqlite3* pDb = null);
+	void SaveType(KeyValues* pType, sqlite3* pDb = null);
+	void SaveSQL(sqlite3** pDb, const char* tableName, const char* id, KeyValues* kv);
 	KeyValues* CreateItem(KeyValues* pInfo);
 
 	void SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst = true);// , bool bFullMerg, bool bRefreshArtworkIfNeeded = true);
 
-	bool LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv);
+	bool LoadSQLKevValues(const char* tableName, const char* id, KeyValues* kv, sqlite3* pDb = null);
 
 	void UpdateScrapersJS();
 
 	// local legacy
-	KeyValues* LoadLocalItemLegacy(bool& bIsModel, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
-	unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");	// probably obsolete!!!
+	KeyValues* LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlreadyLoaded, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "", std::string searchPath = "", bool bShouldAddToActiveLibrary = true);
+	//unsigned int LoadAllLocalItemsLegacy(unsigned int& uNumModels, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");	// probably obsolete!!!
 
 	void LoadFirstLocalItemLegacy(bool bFastMode = true, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "");
 	void LoadNextLocalItemLegacy();
@@ -49,18 +57,19 @@ public:
 	// local
 	std::string ResolveLegacyType(std::string legacyType);
 	KeyValues* LoadLocalType(std::string file, std::string filePath = "");
-	unsigned int LoadAllLocalTypes(std::string filePath = "");
+
+	unsigned int LoadAllLocalTypes(sqlite3* pDb = null, std::map<std::string, KeyValues*>* pResponseMap = null);
+	unsigned int LoadAllLocalApps(sqlite3* pDb = null, std::map<std::string, KeyValues*>* pResponseMap = null);
+	unsigned int LoadAllLocalModels(sqlite3* pDb = null, std::map<std::string, KeyValues*>* pResponseMap = null);
+	unsigned int LoadAllLocalItems(sqlite3* pDb = null, std::map<std::string, KeyValues*>* pResponseMap = null);
 
 	std::string ResolveLegacyModel(std::string legacyModel);
 	KeyValues* LoadLocalModel(std::string file, std::string filePath = "");
-	unsigned int LoadAllLocalModels(std::string filePath = "");
 
 	KeyValues* LoadLocalItem(std::string file, std::string filePath = "");
-	unsigned int LoadAllLocalItems(std::string filePath = "");
 
 	std::string ResolveLegacyApp(std::string legacyApp);
 	KeyValues* LoadLocalApp(std::string file, std::string filePath = "", std::string searchPath = "");
-	unsigned int LoadAllLocalApps(std::string filePath = "");
 	KeyValues* LoadFirstLocalApp(std::string filePath = "");
 	KeyValues* LoadNextLocalApp();
 	void LoadLocalAppClose();
