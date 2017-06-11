@@ -19,8 +19,8 @@
 
 			.hudSideContainerButton
 			{
-				font-size: 40px;
-				background-color: rgba(250, 50, 50, 0.7);/*rgba(150, 150, 150, 0.5);*/
+				/*font-size: 40px;*/
+				/*background-color: rgba(250, 50, 50, 0.7);*/
 				border-radius: 0 10px 10px 0;
 				border: 2px solid #000;
 				border-left: 0;
@@ -75,7 +75,7 @@
 
 			.hudSideContainerButton:hover
 			{
-				background-color: rgba(250, 50, 50, 0.9);
+				/*background-color: rgba(250, 50, 50, 0.9);*/
 				width: 200px;
 			}
 
@@ -83,7 +83,7 @@
 			{
 				display: none;
 				white-space: nowrap;
-				font-size: 26px;
+				/*font-size: 26px;*/
 				text-align: center;
 				vertical-align: middle;
 				font-family: Arial;
@@ -168,71 +168,125 @@
 
 		<div class="hudSideContainer">
 			<div class="hudSideContainerRow" id="objectMenu">
-				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.objectEdit();" help="Edit this object.">
+				<div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" onclick="arcadeHud.objectEdit();" help="Edit this object.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="objecticon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Edit Object</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("objecticon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="padding-left: 4px;">Object</div>
 						</td></tr>
 					</table>
-				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="moveObject();" help="Move this object.">
+				</div><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="moveObject();" help="Move this object.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="moveicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Move</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									document.write(arcadeHud.generateIconHTML("moveicon.png", 24, 24, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Move</div>
 						</td></tr>
 					</table>
-				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="deleteObject();" help="Remove this object from the world.">
+				</div><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="deleteObject();" help="Remove this object from the world.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="eraseicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Delete</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									document.write(arcadeHud.generateIconHTML("eraseicon.png", 24, 24, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Delete</div>
 						</td></tr>
 					</table>
 				</div>
 			</div>
 			<div class="hudSideContainerRow">
-				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item.">
+				<div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" onclick="arcadeHud.edit();" help="Edit this item.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="editicon.png" style="vertical-align: middle;" /><div class="buttonText">Edit Item</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("editicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="padding-left: 4px;">Item</div>
 						</td></tr>
 					</table>
-				</div><div id="metaSearchButton" class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Search for web images & videos to decorate this item.">
+				</div><div id="metaSearchButton" class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Search for web images & videos to decorate this item.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="webicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Meta Search</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("webicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Meta Search</div>
 						</td></tr>
 					</table>
-				</div><div style="display: none;"><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Apply images & videos from the current page to this item.">
+				</div><div style="display: none;"><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Apply images & videos from the current page to this item.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="scrapeicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Meta Scrape</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("scrapeicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Meta Scrape</div>
 						</td></tr>
 					</table>
 				</div></div>
 			</div>
 			<div class="hudSideContainerRow">
-				<div class="hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut in Windows.">
+				<div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" onclick="arcadeHud.play();" help="Launch this shortcut in Windows.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="launchicon.png" style="vertical-align: middle;" /><div class="buttonText">Launch</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("launchicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="padding-left: 4px;">Launch</div>
 						</td></tr>
 					</table>
-				</div><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.viewStream();" help="Watch this item's web stream on the in-game screen.">
+				</div><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.viewStream();" help="Watch this item's web stream on the in-game screen.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="streamicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Stream</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("streamicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Stream</div>
 						</td></tr>
 					</table>
-				</div><div style="display: none;"><div class="hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="" help="Run this item on the in-game screen using Libretro.">
+				</div><div style="display: none;"><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="" help="Run this item on the in-game screen using Libretro.">
 					<table style="width: 100%; height: 100%;">
-						<tr><td style="white-space: nowrap;">
-							<img src="runicon.png" style="vertical-align: middle;" />
-							<div class="buttonText">Run</div>
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("runicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Run</div>
 						</td></tr>
 					</table>
 				</div></div>
@@ -241,11 +295,17 @@
 
 		<div id="hudSideScrapeContainer">
 			<div class="hudSideContainerRow">
-				<div id="hudMetaScrapeButton" class="hudSideScrapeContainerButton helpNote" style="border-radius: 10px; width: 200px;" onclick="arcadeHud.metaScrapeCurrent(); document.querySelector('#hudSideScrapeContainer').style.display = 'none';" help="Search for web images and video to decorate this item.">
+				<div id="hudMetaScrapeButton" class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideScrapeContainerButton helpNote" style="border-radius: 10px; width: 200px;" onclick="arcadeHud.metaScrapeCurrent(); document.querySelector('#hudSideScrapeContainer').style.display = 'none';" help="Search for web images and video to decorate this item.">
 					<table style="width: 100%; height: 100%;">
 						<tr><td style="white-space: nowrap;">
-							<img src="scrapeicon.png" style="vertical-align: middle;" />
-							<div class="buttonText" style="display: inline;">Meta Scrape</div>
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("scrapeicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="display: inline;">Meta Scrape</div>
 						</td></tr>
 					</table>
 				</div>

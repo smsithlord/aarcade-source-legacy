@@ -11,6 +11,7 @@
 C_InputManager::C_InputManager()
 {
 	DevMsg("InputManager: Constructor\n");
+	m_bTempSelect = false;
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
 	m_bWasForcedInputMode = false;
@@ -212,9 +213,6 @@ void C_InputManager::ActivateInputMode(bool bFullscreen, bool bMainMenu, C_Embed
 		return;
 //	*/
 
-	if (m_bInputMode)
-		return;
-
 	m_bMainMenuMode = bMainMenu;
 
 		//engine->ClientCmd("pause");
@@ -354,7 +352,15 @@ void C_InputManager::DeactivateInputMode(bool bForce)
 		//g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/default.html");
 
 		if (!engine->IsInGame())
+		{
 			DevMsg("Warning: Did the main menu just get hidden and now the default one is showing?\n");
+			//g_pAnarchyManager->RunAArcade();
+
+			//C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
+			//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
+			//m_bSuspendEmbedded = false;
+		}
 	}
 //		g_pAnarchyManager->GetWebManager()->GetHudWebTab()->SetUrl("asset://ui/blank.html");
 

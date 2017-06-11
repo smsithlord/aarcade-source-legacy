@@ -2,505 +2,302 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
-		<script>
-			var itemContainer;
-		</script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 50%; position: fixed; left: 0; right: 0; top: 45%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			//window.location='asset://ui/libraryBrowser.html?category=items';
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Item Properties", "width: 600px;", false, true, "", "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "visual",
+						"title": "Visual"
+					},
+					{
+						"id": "other",
+						"title": "Other"
+					}
+				]
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Title:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Type:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<select fieldname="type" class="aaTextSizeFontSize" style="width: 100%;">
+							<option value="">Other</option>
+						</select>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Open With:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<select fieldname="app" class="aaTextSizeFontSize" style="width: 100%;">
+							<option>Windows (default)</option>
+						</select>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						File Target:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<input fieldname="file" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('file');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
 						</div>
-					</div>
-					<div class="hudContentHeaderCell" id="itemHeader">
-						Edit Item
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
-							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('file');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
 						</div>
-					</div>
-				</div>
-			</div>
-			<div id="itemContainer"></div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="visual">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Screen Image:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Marquee Image:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="marquee" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('marquee');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('marquee');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Preview Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="preview" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('preview');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="other">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Stream Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="stream" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('stream');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Download Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="download" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('download');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Reference Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="reference" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('reference');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Description:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="description" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr><tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Tags:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="keywords" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
-// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-function getParameterByName(name, url) {
-    if (!url) url = window.location.href;
-    name = name.replace(/[\[\]]/g, "\\$&");
-    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-        results = regex.exec(url);
-    if (!results) return null;
-    if (!results[2]) return '';
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
-
-			var id = getParameterByName("id");
-			itemContainer = document.querySelector("#itemContainer");
-
-			var fieldHelp = {
-				"title": "A short, unique, & descriptive title.",
-				"type": "(OPTIONAL) The type of this shortcut. Useful for searching, and especially useful for shortcuts that require \"Open With\" apps to launch.",
-				"app": "(OPTIONAL) Apps are useful when Windows can't launch a particular shortcut by itself. They are similar to using \"Open With\" when launching a regular desktop shortcut, but far more powerful.",
-				"file": "The local file location or internet URI that this shortcut launches.",
-				"reference": "(OPTIONAL) The internet URI to a unique wiki or reference page describing this shortcut, if applicable.",
-				"download": "(OPTIONAL) An internet URI where the local file that this shortcut launches can be downloaded, if applicable.",
-				"stream": "(OPTIONAL) An internet URI where a version of this shortcut's item can be streamed, rather than launching the shortcut to the local file version, if applicable.",
-				"preview": "(OPTIONAL) An internet URI to show on the shortcut's screen as a preview for when it gets selected.",
-				"screen": "(OPTIONAL) A local file location or internet URI of the image to use as the screen on this shortcut's 3D model.",
-				"marquee": "(OPTIONAL) A local file location or internet URI of the image to use as the marquee on this shortcut's 3D model.",
-				//"model": "(OPTIONAL) The recommended 3D model to use when first spawning this shortcut.",
-				"description": "(OPTIONAL) A brief description of the shortcut. Not really shown anywhere, but useful for searching."
-			};
-
-			var x, help, fieldContainer, fieldKey, fieldKeyNode, fieldValue, fieldValueInput;
+			var id = arcadeHud.getParameterByName("id");
 			var item = aaapi.library.getLibraryItem(id);
+			var entryForm = document.querySelector("#entryForm");
 
-			// make sure all default values show up on the form
-			/*
-			for( var y in fieldHelp )
+			function metaSearch(filedName)
 			{
-				if( !item.hasOwnProperty(y) )
-					item[y] = "";
-			}
-			*/
-
-			for( var x in fieldHelp )
-			{
-				if( x === "info" || x === "model" )
-					continue;
-
-				var val = (item.hasOwnProperty(x)) ? item[x] : "";
-
-				fieldContainer = document.createElement("div");
-				fieldContainer.className = "fieldContainer";
-
-				fieldKey = document.createElement("div");
-				//var simpleLabel = x;
-				//if( simpleLabel === "app" )
-					//simpleLabel = "open with";
-
-				fieldKeyNode = document.createTextNode(x);
-				fieldKey.appendChild(fieldKeyNode);
-				fieldContainer.appendChild(fieldKey);
-
-				fieldValue = document.createElement("form");
-				fieldValue.addEventListener('submit', function(e)
-				{
-					var elem = document.activeElement;
-					e.preventDefault();
-
-					var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
-
-					if( success )
-					{
-						item[elem.field] = elem.value;
-						console.log("Item updated!");
-					}
-					else
-						console.log("Item update rejected!");
-
-					elem.blur();
-				}, true);
-
-				if( x === "type" )
-				{
-					var fieldValueSelect = document.createElement("select");
-
-					var types = aaapi.library.getAllLibraryTypes();
-					var y;
-					for( y in types )
-					{
-						var type = types[y];
-						var fieldValueOption = document.createElement("option");
-						fieldValueOption.value = type.info.id;
-						fieldValueOption.text = type.title;
-						fieldValueSelect.appendChild(fieldValueOption);
-					}
-
-					fieldValueSelect.value = val;//item[x];
-					fieldValueSelect.field = x;
-					fieldValueSelect.addEventListener("change", function(e)
-					{
-						var elem = e.target;
-						
-						var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
-						if( success )
-						{
-							item[elem.field] = elem.value;
-							console.log("Item updated!");
-						}
-						else
-							console.log("Item update rejected!");
-					}, true);
-
-					fieldValue.appendChild(fieldValueSelect);
-				}
-				else if( x === "app" )
-				{
-				///*
-					var fieldValueSelect = document.createElement("select");
-					var fieldValueOption = document.createElement("option");
-					fieldValueOption.value = "";
-					fieldValueOption.text = "Windows";
-					fieldValueSelect.appendChild(fieldValueOption);
-
-					var apps = aaapi.library.getAllLibraryApps();
-					var app;
-					var y;
-					for( y in apps )
-					{
-						app =apps[y];
-						fieldValueOption = document.createElement("option");
-						fieldValueOption.value = app.info.id;
-						fieldValueOption.text = app.title;
-						fieldValueSelect.appendChild(fieldValueOption);
-					}
-
-					fieldValueSelect.value = val;//item[x];
-					fieldValueSelect.field = x;
-					fieldValueSelect.addEventListener("change", function(e)
-					{
-						var elem = e.target;
-						
-						var success = aaapi.library.updateItem(id, [elem.field, elem.value]);
-						if( success )
-						{
-							item[elem.field] = elem.value;
-							console.log("Item updated!");
-						}
-						else
-							console.log("Item update rejected!");
-					}, true);
-
-					fieldValue.appendChild(fieldValueSelect);
-					//*/
-				}
-				else
-				{
-					//var formElem = document.createElement("form");
-					//formElem.className = "fieldForm";
-
-					fieldValueInput = document.createElement("input");
-					fieldValueInput.type = "text";
-					fieldValueInput.value = val;//item[x];
-					fieldValueInput.field = x;
-					//fieldValueInput.setAttribute("fieldz", x);
-					fieldValueInput.addEventListener('blur', function(e)
-					{
-						var elem = e.target;
-						if( elem.value != item[elem.field] )
-							elem.value = (!!item[elem.field]) ? item[elem.field] : "";
-					}, true);
-					fieldValue.appendChild(fieldValueInput);
-
-					//formElem.appendChild(fieldValueInput);.
-					//fieldValue.appendChild(formElem);
-				}
-
-				fieldContainer.appendChild(fieldValue);
-				itemContainer.appendChild(fieldContainer);
-
-				if( x == "file" || x == "marquee" || x == "screen" || x == "preview" )
-				{
-					fieldValue.style.width = "73%";
-
-					var buttonBrowseContainer = document.createElement("div");
-					buttonBrowseContainer.className = "button";
-					buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-					buttonBrowseContainer.addEventListener("click", function(e)
-					{
-						arcadeHud.browseForFile(function(chosenFile)
-						{
-							if(chosenFile !== "")
-							{
-								if( item.app !== "" )
-								{
-									var app = aaapi.library.getLibraryApp(item.app);
-									var x;
-									for( x in app.filepaths )
-									{
-										if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
-										{
-											chosenFile = chosenFile.substring(app.filepaths[x].path.length);
-											break;
-										}
-									}
-								}
-
-								var myInput = this.parentNode.querySelector("input");
-								//item[myInput.field] = chosenFile;
-								myInput.value = chosenFile;
-								//myInput.focus();
-								//myInput.form.submit();
-
-								// update the item
-								var args = [myInput.field, chosenFile];
-							//	console.log("Item name is: " + item.info.id);
-								var success = aaapi.library.updateItem(item.info.id, args);
-								if( success )
-								{
-									var i;
-									var max = args.length;
-									for( i = 0; i < max; i += 2)
-									{
-										if( myInput.field == "all" || args[i] === myInput.field )
-											item[args[i]] = args[i+1];
-									}
-
-									console.log("Item updated!");
-
-									//aaapi.system.autoInspect(this.itemId);
-								}
-								else
-									console.log("Item update rejected!");
-							}
-						}.bind(this));
-//						aaapi.system.fileBrowse();
-					}.bind(buttonBrowseContainer), true);
-					buttonBrowseContainer.innerHTML = "<img src='browseicon.png' style='width: 20px;' />";
-					fieldContainer.appendChild(buttonBrowseContainer);
-
-					var buttonGlobeContainer = document.createElement("div");
-					buttonGlobeContainer.className = "button";
-					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-					buttonGlobeContainer.field = x;
-					var buttonGlobeImage = document.createElement("img");
-					buttonGlobeImage.style.cssText = "width: 20px;";
-					buttonGlobeImage.src = "webicon.png";
-					buttonGlobeImage.field = x;
-					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
-					buttonGlobeContainer.appendChild(buttonGlobeImage);
-					fieldContainer.appendChild(buttonGlobeContainer);
-/*
-					var buttonCurrentContainer = document.createElement("div");
-					buttonCurrentContainer.className = "button";
-					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-
-					var buttonCurrentImage = document.createElement("img");
-					buttonCurrentImage.style.cssText = "width: 20px;";
-					buttonCurrentImage.src = "scrapeicon.png";
-					buttonCurrentImage.field = x;
-					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
-*/
-					/*		
-					buttonCurrentImage.addEventListener("click", function(e)
-					{
-						
-						
-						arcadeHud.metaScrape("currenturi", function(scrapedData)
-						{
-							//console.log(this.field + " : " + scrapedData);
-
-							if( !!scrapedData[this.field] && scrapedData[this.field] !== "" )
-							{
-								var inputs = document.querySelectorAll("input");
-								var i;
-								for( i = 0; i < inputs.length; i++ )
-								{
-									//console.log(inputs[i].value);
-									if( inputs[i].field === this.field )
-									{
-										inputs[i].focus();
-										inputs[i].value = "xxx" + scrapedData.reference;//arcadeHud.getURL();
-										break;
-									}
-								}
-							}
-						}.bind(this));	
-										
-					}.bind(buttonCurrentImage), true);
-					*/
-					
-					//buttonCurrentContainer.appendChild(buttonCurrentImage);
-					//fieldContainer.appendChild(buttonCurrentContainer);
-				}
-
-				if( x == "stream" || x == "download" || x == "reference" )
-				{
-					fieldValue.style.width = "77%";
-
-					var buttonGlobeContainer = document.createElement("div");
-					buttonGlobeContainer.className = "button";
-					buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-					buttonGlobeContainer.field = x;
-					var buttonGlobeImage = document.createElement("img");
-					buttonGlobeImage.style.cssText = "width: 20px;";
-					buttonGlobeImage.src = "webicon.png";
-					buttonGlobeImage.field = x;
-					buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
-					buttonGlobeContainer.appendChild(buttonGlobeImage);
-					fieldContainer.appendChild(buttonGlobeContainer);
-/*
-					var buttonCurrentContainer = document.createElement("div");
-					buttonCurrentContainer.className = "button";
-					buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-
-					var buttonCurrentImage = document.createElement("img");
-					buttonCurrentImage.style.cssText = "width: 20px;";
-					buttonCurrentImage.src = "scrapeicon.png";
-					buttonCurrentImage.field = x;	
-					buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
-					*/
-					/*			
-					buttonCurrentImage.addEventListener("click", function(e)
-					{
-						arcadeHud.metaScrape("currenturi", function(scrapedData)
-						{
-							//console.log(this.field + " : " + scrapedData);
-
-							if( !!scrapedData[this.field] && scrapedData[this.field] !== "" )
-							{
-								var inputs = document.querySelectorAll("input");
-								var i;
-								for( i = 0; i < inputs.length; i++ )
-								{
-									//console.log(inputs[i].value);
-									if( inputs[i].field === this.field )
-									{
-										inputs[i].focus();
-										inputs[i].value = "xxx" + scrapedData.reference;//arcadeHud.getURL();
-										break;
-									}
-								}
-							}
-						}.bind(this));					
-					}.bind(buttonCurrentImage), true);
-*/
-
-					//buttonCurrentContainer.appendChild(buttonCurrentImage);	
-					//fieldContainer.appendChild(buttonCurrentContainer);
-				}
-
-				help = fieldHelp[x];
-				if( !!help )
-				{
-					fieldContainer.setAttribute("help", help);
-					arcadeHud.assignHelp(fieldContainer);
-				}
+				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(filedName);
+				return;
 			}
 
-			var metaScrapeContainer = document.querySelector("#itemHeader");
-			var buttonGlobeContainer = document.createElement("div");
-			buttonGlobeContainer.className = "button";
-			buttonGlobeContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
-			buttonGlobeContainer.field = "all";
-			var buttonGlobeImage = document.createElement("img");
-			buttonGlobeImage.style.cssText = "width: 20px;";
-			buttonGlobeImage.src = "webicon.png";
-			buttonGlobeImage.field = "all";
-			buttonGlobeImage.addEventListener("click", metaSearchButtonClicked.bind(buttonGlobeImage), true);			
-			buttonGlobeContainer.appendChild(buttonGlobeImage);
-			metaScrapeContainer.appendChild(buttonGlobeContainer);
-			//metaScrapeContainer.insertBefore(buttonGlobeContainer, metaScrapeContainer.firstChild);
-			//metaScrapeContainer.appendChild(buttonGlobeContainer);
-/*
-			var buttonCurrentContainer = document.createElement("div");
-			buttonCurrentContainer.className = "button";
-			buttonCurrentContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px; display: inline-block; height: 20px;";
-
-			var buttonCurrentImage = document.createElement("img");
-			buttonCurrentImage.style.cssText = "width: 20px;";
-			buttonCurrentImage.src = "scrapeicon.png";
-			buttonCurrentImage.field = "all";				
-			buttonCurrentImage.addEventListener("click", metaScrapeButtonClicked.bind(buttonCurrentImage), true);
-			
-			buttonCurrentContainer.appendChild(buttonCurrentImage);
-			metaScrapeContainer.appendChild(buttonCurrentContainer);
-*/
-			function metaScrapeButtonClicked(e)
+			function fileBrowse(fieldName)
 			{
-				console.log("enterprisexx:");
-				console.log(e.target.tagName);
+				var fieldElem = document.querySelector(".aaKeyValueTableValue > input[fieldname='" + fieldName + "'], .aaKeyValueTableValue > select[fieldname='" + fieldName + "']");
 
-				var elem = e.target;
-				while( elem.tagName != "DIV" )
-					elem = elem.parentNode;
-
-				var popupId = "genericId";
-				var rect = elem.getBoundingClientRect();
-				var x = rect.left;
-				var y = rect.top;
-				//var width = rect.right - rect.left;
-				var width = 220;
-				var height = rect.bottom - rect.top;
-				var itemHeight = height;
-				var fontSize = "16";
-				var selectedItem = "";
-				var rightAligned = "0";
-
-				var args = [popupId, x, y, width, height, height, fontSize, selectedItem, rightAligned];
-
-				// the callback
-				args.push(function(selectedOption)
+				arcadeHud.browseForFile(function(chosenFile)
 				{
-					console.log(selectedOption);
-					arcadeHud.metaScrape(selectedOption, this.field, function(scrapedData)
+					if(chosenFile !== "")
 					{
-						var usedFields = [];
-						var args = [];
-						var x, field;
-						for( x in scrapedData)
+						if( item.app !== "" )
 						{
-							field = scrapedData[x];
-							if(this.field !== "all" && this.field !== x)
-								continue;
-
-							if( x === "type" )
+							var app = aaapi.library.getLibraryApp(item.app);
+							var x;
+							for( x in app.filepaths )
 							{
-								var allTypes = aaapi.library.getAllLibraryTypes();
-								var y;
-								for( y in allTypes )
+								if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
 								{
-									console.log(allTypes[y].title);
-									if( allTypes[y].title === field )
-									{
-										field = allTypes[y].info.id;
-										break;
-									}
-								}
-							}
-
-							/*
-							var inputs = document.querySelectorAll("input, select");
-							var i;
-							for( i = 0; i < inputs.length; i++ )
-							{
-								if( inputs[i].field === x )
-								{
-									//inputs[i].focus();
-									inputs[i].value = field;
+									chosenFile = chosenFile.substring(app.filepaths[x].path.length);
 									break;
 								}
 							}
-							*/
-
-							args.push(x);
-							args.push(field);
-							usedFields.push(x);
 						}
 
-						var success = aaapi.library.updateItem(id, args);
+						this.value = chosenFile;
+						this.focus();
+						entryForm.querySelector("input[type='submit']").click();//submit();
 
+						/*
+						// update the item
+						var args = [myInput.field, chosenFile];
+						var success = aaapi.library.updateItem(item.info.id, args);
 						if( success )
 						{
-							// only update the item currently loaded if it matches the ID of the newly updated one.
-							if( item.id === this.itemId)
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
 							{
-								var i;
-								var max = args.length;
-								for( i = 0; i < max; i += 2)
-								{
-									if( this.field == "all" || args[i] === this.field )
-										item[args[i]] = args[i+1];
-								}
+								if( myInput.field == "all" || args[i] === myInput.field )
+									item[args[i]] = args[i+1];
 							}
 
 							console.log("Item updated!");
@@ -509,172 +306,176 @@ function getParameterByName(name, url) {
 						}
 						else
 							console.log("Item update rejected!");
-					}.bind(this));
-				}.bind(this));
-
-				// then add entries for each scraper...
-				var scraper;
-				var w;
-				for( w in arcadeHud.scrapers )
-				{
-					var scraper = arcadeHud.scrapers[w];
-
-					if( !!!scraper.fields[this.field] )
-						continue;
-
-					var entry = {};
-					entry.popType = "Option";
-					entry.popLabel = scraper.title;
-					entry.popTooltip = "";
-					entry.popAction = w;
-					entry.popRightToLeft = "0";
-					entry.popHasDirectionalOverride = "0";
-					entry.popEnabled = "0";
-					entry.checked = "0";
-
-					var z;
-					for( z in entry )
-						args.push(entry[z]);
-				}
-
-				arcadeHud.showScraperPopupMenu.apply(arcadeHud, args);
+						*/
+					}
+				}.bind(fieldElem));
 			}
 
-			function metaSearchButtonClicked(e)
+			// PREPARE FORM
+			entryForm.addEventListener("submit", function(e)
 			{
-				// just load the meta search page instead
-				/*
-				var term = item["title"];
-				var dateCull = term.indexOf(" (");
-				if( dateCull >= 0 )
-					term = term.substring(0, dateCull);
-				*/
+				e.preventDefault();
 
-//				arcadeHud.metaSearch(id, this.field, selectedOption, term);
-				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(this.field);
-				return;
+				var focusedElem = document.activeElement;
+				var focusedFieldName = focusedElem.getAttribute("fieldname");
+				var focusedFieldValue = focusedElem.value;
+				if( !focusedFieldName )
+					focusedElem = null;
 
-				console.log("enterprisexx:");
-				console.log(e.target.tagName);
-
-				var elem = e.target;
-				while( elem.tagName != "DIV" )
-					elem = elem.parentNode;
-
-				var popupId = "genericId";
-				var rect = elem.getBoundingClientRect();
-				var x = rect.left;
-				var y = rect.top;
-				//var width = rect.right - rect.left;
-				var width = 220;
-				var height = rect.bottom - rect.top;
-				var itemHeight = height;
-				var fontSize = "16";
-				var selectedItem = "";
-				var rightAligned = "0";
-
-				var args = [popupId, x, y, width, height, height, fontSize, selectedItem, rightAligned];
-
-				// the callback
-				args.push(function(selectedOption)
+				// DO WORK
+				if( !!focusedElem )
 				{
-					var term = item["title"];
-					var dateCull = term.indexOf(" (");
-					if( dateCull >= 0 )
-						term = term.substring(0, dateCull);
+					console.log("Entry form submitted with field " + focusedFieldName + " focused.");
 
-					arcadeHud.metaSearch(id, this.field, selectedOption, term);
-					document.location = "asset://ui/overlay.html";
-					/*
-					console.log(selectedOption);
-					arcadeHud.metaScrape(selectedOption, function(scrapedData)
+					var success = aaapi.library.updateItem(id, [focusedFieldName, focusedFieldValue]);
+					if( success )
 					{
-						var usedFields = [];
-						var args = [];
-						var x, field;
-						for( x in scrapedData)
-						{
-							field = scrapedData[x];
-							if( field === "" || (this.field !== "all" && this.field !== x))
-								continue;
+						focusedElem.style.webkitTransition = "initial";
+						focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+						focusedElem.offsetTop;
+						focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
 
-							if( x === "type" )
-							{
-								var allTypes = aaapi.library.getAllLibraryTypes();
-								var y;
-								for( y in allTypes )
-								{
-									console.log(allTypes[y].title);
-									if( allTypes[y].title === field )
-									{
-										field = allTypes[y].info.id;
-										break;
-									}
-								}
-							}
-							
-							var inputs = document.querySelectorAll("input, select");
-							var i;
-							for( i = 0; i < inputs.length; i++ )
-							{
-								if( inputs[i].field === x )
-								{
-									//inputs[i].focus();
-									inputs[i].value = field;
-									break;
-								}
-							}
+						item[focusedFieldName] = focusedFieldValue;
+						console.log("Item updated!");
+					}
+					else
+						console.log("Item update rejected!");
+				}
+				else
+					console.log("Entry form submitted via button click.");
 
-							args.push(x);
-							args.push(field);
-							usedFields.push(x);
-						}
+				// done doing work
+				if( !!focusedElem )
+					focusedElem.blur();
+			}, true);
 
-						var success = aaapi.library.updateItem(id, args);
+			// PREPARE TYPES
+			var allTypes = aaapi.library.getAllLibraryTypes();
+			var allTypesSorted = [];
 
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE APPS
+			var allApps = aaapi.library.getAllLibraryApps();
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE THE ITEM
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				if( fieldName === "type" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						var success = aaapi.library.updateItem(id, [fieldName, fieldValue]);
 						if( success )
 						{
-							var i;
-							var max = args.length;
-							for( i = 0; i < max; i += 2)
-							{
-								if( this.field == "all" || args[i] === this.field )
-									item[args[i]] = args[i+1];
-							}
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							item[fieldName] = fieldValue;
 							console.log("Item updated!");
 						}
 						else
 							console.log("Item update rejected!");
-					}.bind(this));
-*/
-				}.bind(this));
+					}, true);
 
-				// then add entries for each scraper...
-				var scraper;
-				var w;
-				for( w in arcadeHud.scrapers )
+					// populate any TYPE lists
+					for( var j = 0; j < allTypesSorted.length; j++ )
+					{
+						var optionElem = document.createElement("option");
+						optionElem.text = allTypesSorted[j].title;
+						optionElem.value = allTypesSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else if( fieldName === "app" )
 				{
-					var scraper = arcadeHud.scrapers[w];
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
 
-					if( !!!scraper.search || scraper.search === "" || !!!scraper.fields[this.field] )
-						continue;
+						var success = aaapi.library.updateItem(id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
 
-					var entry = {};
-					entry.popType = "Option";
-					entry.popLabel = scraper.title;
-					entry.popTooltip = "";
-					entry.popAction = w;
-					entry.popRightToLeft = "0";
-					entry.popHasDirectionalOverride = "0";
-					entry.popEnabled = "0";
-					entry.checked = "0";
+							item[fieldName] = fieldValue;
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+					}, true);
 
-					var z;
-					for( z in entry )
-						args.push(entry[z]);
+					// populate any APP lists
+					for( var j = 0; j < allAppsSorted.length; j++ )
+					{
+						var optionElem = document.createElement("option");
+						optionElem.text = allAppsSorted[j].title;
+						optionElem.value = allAppsSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != item[fieldName] )
+							elem.value = (!!item[fieldName]) ? item[fieldName] : "";
+					}, true);
 				}
 
-				arcadeHud.showScraperPopupMenu.apply(arcadeHud, args);
+				if( item.hasOwnProperty(fieldName) )
+					dummyElem.value = item[fieldName];
 			}
 		</script>
 	</body>

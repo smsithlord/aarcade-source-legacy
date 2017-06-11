@@ -2,227 +2,39 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
-		<style>
-			#addons
-			{
-				overflow-y: auto;
-				max-height: 600px;
-				width: 100%;
-				text-align: left;
-				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
-				border-radius: 10px;
-			}
-
-			#addons::-webkit-scrollbar
-			{
-				width: 15px;
-				height: 15px;
-			}
-
-			#addons::-webkit-scrollbar-track
-			{
-				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
-				border-radius: 10px;
-				background-color: rgba(100, 100, 100, 0.7);
-			}
-
-			#addons::-webkit-scrollbar-thumb
-			{
-				border-radius: 10px;
-				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
-				background-color: #777;
-			}
-
-			#addons::-webkit-scrollbar-corner
-			{
-				background-color: transparent;
-			}
-
-			.addon
-			{
-				border: 2px solid rgba(20, 20, 20, 0.9);
-				padding: 6px;
-				border-radius: 10px;
-				background-color: rgba(40, 40, 40, 0.8);
-			}
-
-			.addonTitle
-			{
-				padding-left: 10px;
-				vertical-align: middle;
-				font-size: 25px;
-				font-family: Arial;
-				font-weight: bold;
-				letter-spacing: 0.1em;
-				display: inline-block;
-			}
-
-			.addonButton
-			{
-				display: inline-block;
-				border: 2px solid black;
-				vertical-align: top;
-				padding: 3px;
-				border-radius: 5px;
-				background-color: rgba(150, 150, 150, 0.5);
-			}
-
-			.addonButton:hover
-			{
-				background-color: rgba(150, 150, 150, 0.8);
-			}
-
-			.addonPanel
-			{
-				margin-left: 20px;
-				margin-right: 20px;
-				margin-bottom: 4px;
-				border: 2px solid rgba(20, 20, 20, 0.9);
-				border-top: 0;
-				padding: 6px;
-				border-bottom-left-radius: 10px;
-				border-bottom-right-radius: 10px;
-				background-color: rgba(30, 30, 30, 0.8);
-			}
-
-			.addonImage
-			{
-				width: 200px;
-				height: 200px;
-				border: 5px solid rgba(40, 40, 40, 0.9);
-			}
-
-			.addonTabs
-			{
-			}
-
-			.addonTab
-			{
-				display: inline-block;
-				border: 3px solid rgba(100, 100, 100, 0.9);
-				border-radius: 12px;
-				border-bottom: 0;
-				border-bottom-left-radius: 0;
-				border-bottom-right-radius: 0;
-				padding: 6px;
-				padding-top: 2px;
-				padding-bottom: 2px;
-				font-size: 18px;
-				font-family: Arial;
-				font-weight: bold;
-				/*letter-spacing: 0.1em*/
-			}
-
-			.addonTab.displayed
-			{
-				background-color: rgba(80, 80, 80, 0.9);
-			}
-
-			.addonTab.hiddenTab
-			{
-				visibility: hidden;
-			}
-
-			.addonPanelContent
-			{
-				border: 3px solid rgba(100, 100, 100, 0.9);
-				border-radius: 10px;
-				height: 175px;
-				overflow-y: auto;
-			}
-
-			.addonPanelContent::-webkit-scrollbar
-			{
-				width: 15px;
-				height: 15px;
-			}
-
-			.addonPanelContent::-webkit-scrollbar-track
-			{
-				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
-				border-radius: 10px;
-				background-color: rgba(100, 100, 100, 0.7);
-			}
-
-			.addonPanelContent::-webkit-scrollbar-thumb
-			{
-				border-radius: 10px;
-				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
-				background-color: #777;
-			}
-
-			.addonPanelContent::-webkit-scrollbar-corner
-			{
-				background-color: transparent;
-			}
-
-			.originalContent
-			{
-				margin: 10px;
-				padding: 6px;
-				border: 3px solid black;
-				border-radius: 20px;
-				background-color: rgb(10, 10, 10);
-				font-family: Arial;
-				font-weight: bold;
-				font-size: 14px;
-				color: rgb(100, 200, 100);
-			}
-
-			.addonSection
-			{
-				display: inline-block;
-				margin: 15px;
-				margin-top: 0;
-				margin-bottom: 0;
-				vertical-align: top;
-			}
-
-			.addonSectionTitle
-			{
-				font-family: Arial;
-				/*font-weight: bold;*/
-				font-size: 14px;
-				color: #999;
-			}
-
-			.addonSectionValue
-			{
-				font-family: Arial;
-				/*font-weight: bold;*/
-				font-size: 14px;
-				color: white;
-			}
-		</style>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/workshop.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Backpacks
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
-				</div>
-			</div>
 
-			<center>
-			<div id="addons">
-				HELLO WASHINGTON
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Backpacks", "", false, true, "window.location='asset://ui/addons.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				Placeholder.
 			</div>
-			</center>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+		/*
 			var response = aaapi.system.getAllBackpacks();
 			var allBackpacks = response.backpacks;
 
@@ -238,6 +50,7 @@
 				for( var j = 0; j < max; j++ )
 					containerElem.innerHTML += backpack.files[j] + "<br />";
 			}
+		*/
 		</script>
 	</body>
 </html>

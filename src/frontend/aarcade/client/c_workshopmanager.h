@@ -72,10 +72,12 @@ public:
 	SteamWorkshopDetails_t* GetWorkshopSubscription(PublishedFileId_t id);
 	void AddWorkshopDetails(SteamWorkshopDetails_t* pDetails);
 
-	//void MountAllWorkshops();
 	void MountFirstWorkshop();
 	void MountNextWorkshop();
-	void MountWorkshopClose();
+
+	bool IsEnabled() { return m_bWorkshopEnabled; }
+
+	void OnFinishedMountingAllWorkshop();
 
 	unsigned int GetNumDetails();
 	SteamWorkshopDetails_t* GetDetails(unsigned int index);
@@ -89,11 +91,8 @@ private:
 	std::map<PublishedFileId_t, SteamWorkshopDetails_t*> m_details;
 	std::map<PublishedFileId_t, SteamWorkshopDetails_t*>::iterator m_previousMountWorkshopIterator;
 	bool m_bMountWorkshopIsLegacy;
-	//unsigned int m_uMountWorkshopNumLegacyItems;
 	unsigned int m_uMountWorkshopuNumItems;
 	unsigned int m_uMountWorkshopNumModels;
-//	unsigned int m_uMountWorkshopuNumItemsTotal;
-//	unsigned int m_uMountWorkshopNumModelsTotal;
 };
 
 class C_WorkshopQuery
@@ -105,12 +104,10 @@ public:
 	void Init(SteamAPICall_t hAPICall);
 	CCallResult<C_WorkshopQuery, SteamUGCQueryCompleted_t> callback;
 
-//	CCallResult<C_WorkshopQuery, SteamUGCQueryCompleted_t> m_callbackUGCQueried;
 	void OnUGCQueried(SteamUGCQueryCompleted_t *pResult, bool bIOFailure);
 
 private:
 	uint32 m_uPageNum;
-	//uint32 m_uTotalCount;
 };
 
 #endif

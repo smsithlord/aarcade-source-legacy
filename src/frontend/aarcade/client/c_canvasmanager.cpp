@@ -685,6 +685,7 @@ void C_CanvasManager::LevelShutdownPostEntity()
 
 	for (unsigned int i = 0; i < max; i++)
 	{
+		//DevMsg("Yarrrr: %s\n", m_webSurfaceProxies[i]->GetMaterial()->GetName());
 		m_webSurfaceProxies[i]->ReleaseStuff();
 		if (i == max - 1)
 		{

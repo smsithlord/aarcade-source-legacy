@@ -893,9 +893,36 @@ void ActivateInputMode(const CCommand &args)
 	// if not spawning an object, do regular stuff
 	if (!g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
 	{
+		bool bHandled = false;
 		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 		if (pSelectedEmbeddedInstance)
-			g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
+		{
+			C_BaseEntity* pEntity = C_BaseEntity::Instance(pSelectedEmbeddedInstance->GetOriginalEntIndex());
+			if (pEntity && pEntity == g_pAnarchyManager->GetSelectedEntity())
+			{
+				g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pSelectedEmbeddedInstance);// fullscreen);
+				bHandled = true;
+			}
+		}
+
+		if ( !bHandled )
+		{
+			C_EmbeddedInstance* pRememberedInstance = g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance();
+			if (!pRememberedInstance)
+				pRememberedInstance = g_pAnarchyManager->GetCanvasManager()->GetFirstInstanceToDisplay();
+
+			if (pRememberedInstance)
+			{
+				C_BaseEntity* pEntity = C_BaseEntity::Instance(pRememberedInstance->GetOriginalEntIndex());
+				if (pEntity)
+				{
+					g_pAnarchyManager->SelectEntity(pEntity);
+					g_pAnarchyManager->GetInputManager()->SetTempSelect(true);
+					g_pAnarchyManager->GetInputManager()->ActivateInputMode(false, false, pRememberedInstance);
+					bHandled = true;
+				}
+			}
+		}
 	}
 	else
 	{
@@ -931,8 +958,19 @@ ConCommand activateinputmode("+input_mode", ActivateInputMode, "Turns ON input m
 
 void DeactivateInputMode(const CCommand &args)
 {
-	if( !g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() )
-		g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+	if (!g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
+	{
+		if( !g_pAnarchyManager->GetInputManager()->IsTempSelect() )
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+		else
+		{
+			//g_pAnarchyManager->GetInputManager()->SetInputCapture(false);
+			g_pAnarchyManager->GetInputManager()->SetTempSelect(false);
+			g_pAnarchyManager->TaskRemember();
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode();
+			//g_pAnarchyManager->DeselectEntity("", false);
+		}
+	}
 	else
 	{
 		C_EmbeddedInstance* pSelectedEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
@@ -978,6 +1016,18 @@ void RemoteHolstered(const CCommand &args)
 		g_pAnarchyManager->HandleUiToggle();
 }
 ConCommand remoteholstered("remote_holstered", RemoteHolstered, "Notifies the client that the remote was holstered.", FCVAR_NONE);
+
+void HardPause(const CCommand &args)
+{
+	g_pAnarchyManager->HardPause();
+}
+ConCommand hardpause("hard_pause", HardPause, "Pauses AArcade and releases resources.", FCVAR_NONE);
+
+void WakeUp(const CCommand &args)
+{
+	g_pAnarchyManager->WakeUp();
+}
+ConCommand wakeup("wake_up", WakeUp, "Wakes AArcade up and reacquires the resources.", FCVAR_NONE);
 
 void SetBroadcastGame(const CCommand &args)
 {

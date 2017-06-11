@@ -26,6 +26,8 @@ C_InstanceManager::C_InstanceManager()
 	m_pTransform->rotY = 0;
 	m_pTransform->rotR = 0;
 	m_pTransform->scale = 1.0;
+
+	m_iUnspawnedWithinRangeEstimate = 0;
 }
 
 C_InstanceManager::~C_InstanceManager()
@@ -135,7 +137,7 @@ void C_InstanceManager::AdjustObjectScale(float scale)
 		m_pTransform->scale = scale;
 }
 
-void C_InstanceManager::ApplyChanges(std::string id, C_PropShortcutEntity* pShortcut)
+void C_InstanceManager::ApplyChanges(C_PropShortcutEntity* pShortcut)
 {
 	if (!m_pInstanceKV)
 	{
@@ -145,90 +147,54 @@ void C_InstanceManager::ApplyChanges(std::string id, C_PropShortcutEntity* pShor
 		return;
 	}
 
-	KeyValues* pObjectKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()));
-	if (!pObjectKV)
+	// untag as legacy, because any instance that gets saved out gets saved out in REDUX format
+	instance_t* instance = this->GetCurrentInstance();
+	if (instance && instance->legacy)
 	{
-		//KeyValues* pInstanceObjectsKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()), true);
-		pObjectKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", id.c_str()), true);//pInstanceObjectsKV->FindKey(VarArgs("%s", id.c_str()), true);
+		//KeyValues* pLegacyKV = m_pInstanceKV->FindKey("legacy");
 
-		KeyValues* pObjectInfoKV = pObjectKV->FindKey("local/info", true);
-		pObjectInfoKV->SetString("id", id.c_str());
-		//pObjectInfoKV->SetString("style", kv->GetString("nodestyle"));	// for nodes
-		//pObjectInfoKV->SetString("created", "0");
-		pObjectInfoKV->SetString("creator", "local");
-		//pObjectInfoKV->SetString("removed", "0");
-		//pObjectInfoKV->SetString("remover", "0");
-		//pObjectInfoKV->SetString("modified", "0");
-		//pObjectInfoKV->SetString("modifier", "0");
-
-		/*
-		std::string modelId = this->GenerateHashX(sub->GetString("model"));
-
-		pObjectKV->SetString("item", itemId.c_str());
-		pObjectKV->SetString("model", modelId.c_str());
-		pObjectKV->SetString("position", sub->GetString("origin"));
-		pObjectKV->SetString("rotation", sub->GetString("angles"));
-
-		float bufFloat = sub->GetFloat("scale", 1.0f);
-		if (bufFloat != 1.0f)
-			pObjectKV->SetFloat("scale", bufFloat);
-
-		int bufInt = sub->GetInt("slave");
-		if (bufInt != 0)
-			pObjectKV->SetInt("slave", bufInt);
-
-		bufInt = (sub->GetInt("nophysics") == 0) ? 1 : 0;
-		if (bufInt != 0)
-			pObjectKV->SetInt("physics", bufInt);
-
-		bufInt = sub->GetInt("ischild");
-		if (bufInt != 0)
-			pObjectKV->SetInt("child", bufInt);
-			*/
+		//if (pLegacyKV)
+			//pLegacyKV->SetInt("", 0);
+//			m_pInstanceKV->RemoveSubKey(pLegacyKV);
+		m_pInstanceKV->SetInt("legacy", 0);
+		instance->legacy = 0;
+		instance->file = "";
 	}
-	//pObjectKV->SetString("local/")
-	//object
-	//object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f, false);
 
-	//DevMsg("Object ID IS: %s\n", id.c_str());
-	//DevMsg("Model ID IS: %s\n", pShortcut->GetModelId().c_str());
+	std::string objectId = pShortcut->GetObjectId();
 
-	// also update this object's object_t
-	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pShortcut->GetObjectId());
+	// update this object's object_t
+	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(objectId);
 	if (!object)
 		DevMsg("FATAL ERROR: This shortcut has no object data struct!\n");
 
 	object->scale = pShortcut->GetModelScale();
 	object->itemId = pShortcut->GetItemId();
 	object->modelId = pShortcut->GetModelId();
-	DevMsg("Aaaaand here the model ID is: %s\n", object->modelId.c_str());
 	object->origin = pShortcut->GetAbsOrigin();
 	object->angles = pShortcut->GetAbsAngles();
 	object->slave = pShortcut->GetSlave();
 
-	pObjectKV->SetString("local/item", object->itemId.c_str());
-	pObjectKV->SetString("local/model", object->modelId.c_str());
+	KeyValues* pObjectKV = m_pInstanceKV->FindKey(VarArgs("objects/%s", objectId.c_str()), true);
 
-	//Vector origin = pShortcut->GetAbsOrigin();
-	//QAngle angles = pShortcut->GetAbsAngles();
-
+	// position
 	char buf[AA_MAX_STRING];
 	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->origin.x, object->origin.y, object->origin.z);
-	pObjectKV->SetString("local/position", buf);
+	std::string position = buf;
 
+	// rotation
 	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->angles.x, object->angles.y, object->angles.z);
-	pObjectKV->SetString("local/rotation", buf);
-
-	pObjectKV->SetFloat("local/scale", object->scale);
+	std::string rotation = buf;
 
 	int slave = (object->slave) ? 1 : 0;
-	pObjectKV->SetInt("local/slave", slave);
-	////bool slave = (sub->GetInt("local/slave") > 0);	// FIXME: slave mode needs to be determined somehow
-	//bool physics = (sub->GetInt("slave") > 0); // FIXME: TODO: Use the physics stuff too!
+	int child = (object->child) ? 1 : 0;
+
+	this->CreateObject(pObjectKV, objectId, object->itemId, object->modelId, position, rotation, object->scale, slave, child);
+
+	DevMsg("Saving instance ID %s vs %s\n", m_pInstanceKV->GetString("info/local/id"), instance->id.c_str());
 
 	// now save out to the SQL
-	//g_pAnarchyManager->GetMetaverseManager()->SaveItem()
-	g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+	g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/local/id"), m_pInstanceKV);
 }
 
 void C_InstanceManager::SetObjectEntity(std::string objectId, C_BaseEntity* pEntity)
@@ -246,6 +212,82 @@ C_BaseEntity* C_InstanceManager::GetObjectEntity(std::string objectId)
 		return null;
 }
 
+void C_InstanceManager::CreateObject(KeyValues* pObjectKV, std::string objectId, std::string itemId, std::string modelId, std::string position, std::string rotation, float scale, int slave, int child)
+{
+	////bool slave = (sub->GetInt("local/slave") > 0);	// FIXME: slave mode needs to be determined somehow
+	//bool physics = (sub->GetInt("slave") > 0); // FIXME: TODO: Use the physics stuff too!
+
+	// assume "local" user key.
+	pObjectKV->SetString("local/info/id", objectId.c_str());
+	pObjectKV->SetString("local/info/created", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));
+	pObjectKV->SetString("local/info/owner", "local");
+	pObjectKV->SetString("local/item", itemId.c_str());
+	pObjectKV->SetString("local/model", modelId.c_str());
+	pObjectKV->SetString("local/position", position.c_str());
+	pObjectKV->SetString("local/rotation", rotation.c_str());
+	pObjectKV->SetFloat("local/scale", scale);
+	pObjectKV->SetInt("local/slave", slave);
+	pObjectKV->SetInt("local/child", child);
+}
+
+std::string C_InstanceManager::CreateBlankInstance(int iLegacy, KeyValues* pInstanceKV, std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string style, C_Backpack* pBackpack)
+{
+	// DO WORK
+	// (create a new instance, save it to the db, then overwrite the instanceId with the newly created id.)
+
+	if (instanceId == "")
+		instanceId = g_pAnarchyManager->GenerateUniqueId();
+
+	if (title == "")
+	{
+		if (workshopIds != "")
+		{
+			SteamWorkshopDetails_t* pDetails = g_pAnarchyManager->GetWorkshopManager()->GetWorkshopSubscription((PublishedFileId_t)Q_atoui64(workshopIds.c_str()));
+			if (pDetails)
+				title = "Unnamed (" + pDetails->title + ")";
+		}
+
+		if (title == "")
+			title = "Unnamed (" + instanceId + ")";
+	}
+
+	bool bNeedCleanup = false;
+	if (!pInstanceKV)
+	{
+		// If we are creating the KV here, then save it out & clean it up right away as well.
+		bNeedCleanup = true;
+		pInstanceKV = new KeyValues("instance");
+	}
+
+	// set workshop & legacy versioning
+	pInstanceKV->SetInt("generation", 3);
+	pInstanceKV->SetInt("legacy", iLegacy);
+
+	// set local 
+	KeyValues* pInstanceInfoKV = pInstanceKV->FindKey("info/local", true);
+	pInstanceInfoKV->SetString("id", instanceId.c_str());
+	pInstanceInfoKV->SetString("created", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));
+	pInstanceInfoKV->SetString("owner", "local");
+	pInstanceInfoKV->SetString("title", title.c_str());
+	pInstanceInfoKV->SetString("map", mapId.c_str());
+	pInstanceInfoKV->SetString("style", style.c_str());	// for nodes
+	pInstanceInfoKV->SetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID), workshopIds.c_str());
+	pInstanceInfoKV->SetString(VarArgs("platforms/%s/mountId", AA_PLATFORM_ID), mountIds.c_str());
+	//pInstanceInfoKV->SetString(VarArgs("platforms/%s/backpackId", AA_PLATFORM_ID), backpackId.c_str());
+
+	if (!pBackpack)
+		g_pAnarchyManager->GetInstanceManager()->AddInstance(iLegacy, instanceId, mapId, title, file, workshopIds, mountIds, style);
+
+	if (bNeedCleanup)
+	{
+		g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", instanceId.c_str(), pInstanceKV);
+		pInstanceKV->deleteThis();
+		pInstanceKV = null;
+	}
+
+	return instanceId;
+}
+
 void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 {
 	auto it = std::find(m_unspawnedObjects.begin(), m_unspawnedObjects.end(), object);
@@ -255,6 +297,7 @@ void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 		return;
 	
 	object->spawned = true;	// FIXME: This really shouldn't be set to true until after it exists on the client. there should be a different state for waiting to spawn.
+	//DevMsg("Here it is: %s vs %s\n", object->modelId.c_str(), object->itemId.c_str());
 	std::string goodModelId = (object->modelId != "") ? object->modelId : object->itemId;
 
 	KeyValues* model = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(goodModelId);
@@ -318,14 +361,14 @@ object_t* C_InstanceManager::GetNearestObjectToPlayerLook(object_t* pStartingObj
 	return pNearObject;
 }
 
-object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created, std::string creator, unsigned int removed, std::string remover, unsigned int modified, std::string modifier, bool isChild)
+object_t* C_InstanceManager::AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created, std::string owner, unsigned int removed, std::string remover, unsigned int modified, std::string modifier, bool isChild)
 {
 	std::string goodObjectId = (objectId != "") ? objectId : g_pAnarchyManager->GenerateUniqueId();
 	DevMsg("Object ID here is: %s\n", goodObjectId.c_str());
 	object_t* pObject = new object_t();
 	pObject->objectId = goodObjectId;
 	pObject->created = created;
-	pObject->creator = creator;
+	pObject->owner = owner;
 	pObject->removed = removed;
 	pObject->remover = remover;
 	pObject->modified = modified;
@@ -380,7 +423,7 @@ void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity)
 			pObjectsKV->RemoveSubKey(pEntryKV);
 
 			// save out the instance KV
-			g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/id"), m_pInstanceKV);
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/local/id"), m_pInstanceKV);
 		}
 	}
 
@@ -399,6 +442,38 @@ void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity)
 	}
 
 	engine->ServerCmd(VarArgs("removeobject %i;\n", pShortcutEntity->entindex()), false);
+}
+
+int C_InstanceManager::SetNearestSpawnDist(double maxDist)
+{
+	m_fNearestSpawnDist = (float)maxDist;
+	
+	int count = 0;
+	// only do distance calculations if we need to
+	if (m_fNearestSpawnDist == 99999999999.9)
+		count = (int)m_unspawnedObjects.size();
+	else
+	{
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		Vector playerPos = pPlayer->GetAbsOrigin();
+
+		// figure out how many unspawned objects are within that range
+		object_t* pTestObject = null;
+
+		unsigned int uNumObjects = m_unspawnedObjects.size();
+		float fTestDist;
+		unsigned int i;
+		for (i = 0; i < uNumObjects; i++)
+		{
+			pTestObject = m_unspawnedObjects[i];
+			fTestDist = pTestObject->origin.DistTo(playerPos);
+			if (fTestDist < m_fNearestSpawnDist)
+				count++;
+		}
+	}
+
+	m_iUnspawnedWithinRangeEstimate = count;
+	return count;
 }
 
 bool C_InstanceManager::SpawnNearestObject()
@@ -450,7 +525,7 @@ bool C_InstanceManager::SpawnNearestObject()
 	return false;
 }
 
-void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string backpackId, std::string style)
+void C_InstanceManager::AddInstance(int iLegacy, std::string instanceId, std::string mapId, std::string title, std::string file, std::string workshopIds, std::string mountIds, std::string style)
 {
 	auto it = m_instances.find(instanceId);
 	if (it != m_instances.end())
@@ -459,7 +534,8 @@ void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, s
 		return;
 	}
 
-	//DevMsg("Add instance for mapid %s with title %s and with file %s\n", mapId.c_str(), title.c_str(), file.c_str());
+	DevMsg("Added instance w/ ID %s\n", instanceId.c_str());
+	//DevMsg("Adding instance for:\n\tID: %s\n\tMapID: %s\n\tTitle: %s\n\tStyle: %s\n\tFile: %s\n\tWorkshopIds: %s\n\tMountIds: %s\n\tLegacy: %i\n", instanceId.c_str(), mapId.c_str(), title.c_str(), style.c_str(), file.c_str(), workshopIds.c_str(), mountIds.c_str(), iLegacy);
 	instance_t* pInstance = new instance_t();
 	pInstance->id = instanceId;
 	pInstance->mapId = mapId;
@@ -468,8 +544,19 @@ void C_InstanceManager::AddInstance(std::string instanceId, std::string mapId, s
 	pInstance->file = file;
 	pInstance->workshopIds = workshopIds;
 	pInstance->mountIds = mountIds;
+	//pInstance->backpackId = backpackId;
+	pInstance->legacy = iLegacy;
 
 	m_instances[instanceId] = pInstance;
+}
+
+instance_t* C_InstanceManager::GetCurrentInstance()
+{
+	std::map<std::string, instance_t*>::iterator it = m_instances.find(g_pAnarchyManager->GetInstanceId());
+	if (it != m_instances.end())
+		return it->second;
+
+	return null;
 }
 
 instance_t* C_InstanceManager::GetInstance(std::string id)
@@ -481,12 +568,12 @@ instance_t* C_InstanceManager::GetInstance(std::string id)
 	return null;
 }
 
-instance_t* C_InstanceManager::FindInstance(std::string mapId)
+instance_t* C_InstanceManager::FindInstance(std::string instanceId)
 {
 	std::map<std::string, instance_t*>::iterator it = m_instances.begin();
 	while (it != m_instances.end())
 	{
-		if ( !Q_stricmp(it->second->mapId.c_str(), mapId.c_str()) )
+		if (!Q_stricmp(it->second->id.c_str(), instanceId.c_str()))
 			return it->second;
 
 		it++;
@@ -524,6 +611,151 @@ void C_InstanceManager::LegacyMapIdFix(std::string legacyMapName, std::string ma
 
 		it++;
 	}
+}
+
+// TODO: This will replace LoadLegacyInstance, because legacy instances will be consumed before loaded.
+bool C_InstanceManager::ConsumeLegacyInstance(std::string instanceId, std::string filename, std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack)
+{
+	DevMsg("Consuming legacy instance from %s%s\n", path.c_str(), filename.c_str());
+
+	/* These fields must be determined
+	pInstance->id = instanceId; (already given)
+	pInstance->workshopIds = workshopIds; (already given)
+	pInstance->mountIds = mountIds; (already given)
+	TODO: pInstance->backpackId = mountIds; (should be already given)
+	pInstance->file = file;
+	pInstance->title = title;
+	pInstance->style = style;
+	pInstance->mapId = mapId;	(but uses legacyMapId instead, and blank if just a node.)
+	*/
+
+	// file
+	std::string file = path + filename;
+
+	// Load up the SET file, it has useful info.
+	KeyValues* pLegacyInstanceKV = new KeyValues("instance");
+	if (!pLegacyInstanceKV->LoadFromFile(g_pFullFileSystem, file.c_str(), searchPath.c_str()))
+	{
+		DevMsg("ERROR: Failed to load legacy instance for consumption: %s\n", file.c_str());
+		return false;
+	}
+
+	// title
+	std::string title = pLegacyInstanceKV->GetString("title");	// gen2 nodes (there were no gen1 nodes) have titles in their SET file
+
+	// style
+	bool bIsNode = false;
+	std::string style = pLegacyInstanceKV->GetString("map");
+	if (style.find("node_") == 0)
+		bIsNode = true;
+	else
+		style = "";
+
+	// mapId
+	std::string legacyMapId;
+	std::string goodMapName;
+	if (!bIsNode)
+	{
+		goodMapName = filename.substr(0, filename.find("."));
+		legacyMapId = goodMapName;	// map ID's can only be found after all maps have been detected.  So use a legacyMapId right now, which gets fixed when Redux detects all BSP files.
+	}
+
+	// PRAISE TOM CRUISE!  There exists a function that gets called later on that fixes all the instance ID's of shit, outside of the KeyValues.
+	// The function gets called as part of "detecting all maps", which is scanning for BSP files, then adjusts the ID's of any instances that just blantantly reference the map file name (no extension).
+//	this->LegacyMapIdFix()
+
+	// Build a GEN3 instance KeyValues structure here and save it out
+	KeyValues* pInstanceKV = new KeyValues("instance");
+
+	// TODO:
+	//	1. Make THESE legacy functions the STANDARD for EXPORTING legacy stuff.
+	//	2. Improve/refactor the LoadLegacyInstance function (where ever it may be) to resolve these kinds of things when it loads, and it only needs to work with things w/ legacy = 1
+	//	3. Remember that mapId gets updated upon map detection.
+
+	// Note: We CANNOT assume this is a legacy GEN2 workshop item in the future.  Each GEN of workshop addon will likely need its own constumption method actually.
+	g_pAnarchyManager->GetInstanceManager()->CreateBlankInstance(1, pInstanceKV, instanceId, legacyMapId, title, file, workshopIds, mountIds, style);
+
+	KeyValues* pObjectsKV = pInstanceKV->FindKey("objects", true);
+	KeyValues* pLegacyObjectsKV = pLegacyInstanceKV->FindKey("objects", true);
+	
+	std::string legacyItemId;
+	std::string legacyModelId;
+	std::string objectId;
+	std::string position;
+	std::string rotation;
+	float scale;
+	bool slave;
+	bool child;
+	KeyValues* pObjectKV;
+	for (KeyValues *pLegacyObjectKV = pLegacyObjectsKV->GetFirstSubKey(); pLegacyObjectKV; pLegacyObjectKV = pLegacyObjectKV->GetNextKey())
+	{
+		legacyItemId = pLegacyObjectKV->GetString("itemfile");
+
+		/* THIS SHOULD BE DONE UPON LOADING THE INSTANCE NOW, when legacy = 1 is detected in its KV!
+		itemId = g_pAnarchyManager->ExtractLegacyId(pLegacyObjectKV->GetString("itemfile"));
+		if (itemId == "")
+		{
+			// don't generate item id's for legacy prop objects
+			testBuf = pLegacyObjectKV->GetString("itemfile");
+			size_t foundExt = testBuf.find(".mdl");
+			if (foundExt != testBuf.length() - 4)
+			{
+				KeyValues* pSearchInfo = new KeyValues("search");
+				pSearchInfo->SetString("file", pInstanceKV->GetString("itemfile"));
+
+				KeyValues* foundActive = null;
+				KeyValues* foundItem = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->FindLibraryItem(pSearchInfo));
+				if (foundItem)
+					itemId = foundActive->GetString("info/id");
+				else
+				{
+					DevMsg("Instance failed to resolve item with itemfile: %s\n", pInstanceKV->GetString("itemfile"));
+					itemId = g_pAnarchyManager->GenerateLegacyHash(pInstanceKV->GetString("itemfile"));
+				}
+			}
+		}
+		*/
+
+		legacyModelId = pLegacyObjectKV->GetString("model");
+
+		/* This should be handled just like itemId, and resolved with nearly the same logic
+		modelId = g_pAnarchyManager->GenerateLegacyHash(pLegacyObjectKV->GetString("model"));
+		*/
+
+		scale = pLegacyObjectKV->GetFloat("scale", 1.0f);
+		slave = (pLegacyObjectKV->GetInt("slave") > 0);
+		child = pLegacyObjectKV->GetBool("isChild");
+
+		objectId = g_pAnarchyManager->GenerateUniqueId();
+
+		position = pLegacyObjectKV->GetString("origin", "0 0 0");
+		rotation = pLegacyObjectKV->GetString("angles", "0 0 0");
+
+		// create an object in the KV
+		KeyValues* objectKV = pObjectsKV->FindKey(objectId.c_str(), true);
+		g_pAnarchyManager->GetInstanceManager()->CreateObject(objectKV, objectId, legacyItemId, legacyModelId, position, rotation, scale, slave, child);
+	}
+
+	// FIXME: This really should NOT be saved into the local library so early!!
+	// Saving the workshop instance should not happen until the user makes a change to it, however, until
+	// GEN2 workshop addons can be CONSUMED properly, we'll continue to instantly save workshop instances out
+	// to the user library to avoid any weird systems that will become obsolete once consuming GEN2 workshop items properly is finished.
+	// The only side-effect to doing it this way is that instances get saved to the user's library IMMEDIATELY upon consuming a workshop instance,
+	// instead of not until the user makes changes to them, which is how it will be eventually.
+
+	sqlite3** pDb = (pBackpack && pBackpack->GetSQLDbPointer()) ? pBackpack->GetSQLDbPointer() : null;
+	g_pAnarchyManager->GetMetaverseManager()->SaveSQL(pDb, "instances", instanceId.c_str(), pInstanceKV);
+
+	char fullFilePath[AA_MAX_STRING];
+	PathTypeQuery_t pathTypeQuery;
+	g_pFullFileSystem->RelativePathToFullPath(file.c_str(), searchPath.c_str(), fullFilePath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
+	std::string fullpath = fullFilePath;
+
+	g_pAnarchyManager->GetInstanceManager()->AddInstance(true, instanceId, legacyMapId, title, fullpath, workshopIds, mountIds, style);
+	pLegacyInstanceKV->deleteThis();
+	pLegacyInstanceKV = null;
+	pInstanceKV->deleteThis();
+	pInstanceKV = null;
 }
 
 //#include "../../../public/engine/ivdebugoverlay.h"
@@ -607,12 +839,8 @@ void C_InstanceManager::SpawnActionPressed()
 					KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pTestObject->itemId.c_str());
 					if (item)
 					{
-						KeyValues* active = item->FindKey("current");
-						if (!active)
-							active = item->FindKey("local", true);
-
-						if (active)
-							NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
+						KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
+						NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
 							//debugoverlay->AddTextOverlay(pTestObject->origin, 3.0, "%s", active->GetString("title"));
 					}
 					//std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
@@ -754,6 +982,7 @@ void C_InstanceManager::LevelShutdownPostEntity()
 	m_uNextFlashedObject = 0;
 	m_fLastSpawnActionPressed = 0;
 	m_fNearestSpawnDist = 0;
+	m_iUnspawnedWithinRangeEstimate = 0;
 
 	// clear out objects and unspanwed objects
 	auto it = m_objects.begin();
@@ -818,15 +1047,9 @@ void C_InstanceManager::Update()
 
 					if (kv)
 					{
-						KeyValues* active = kv->FindKey("current");
-						if (!active)
-							active = kv->FindKey("local", true);
-
-						if (active)
-						{
-							NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
-							break;
-						}
+						KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(kv);
+						NDebugOverlay::Text(pTestObject->origin, active->GetString("title"), true, fDuration);
+						break;
 						//debugoverlay->AddTextOverlay(pTestObject->origin, 3.0, "%s", active->GetString("title"));
 					}
 					//std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
@@ -847,33 +1070,137 @@ void C_InstanceManager::Update()
 
 void C_InstanceManager::LoadInstance(std::string instanceId, std::string position, std::string rotation)
 {
+	// FIXME: TODO: Legacy saves should un-legacy themselves after they are loaded!!
+	// FIXME: TODO: Legacy saves should be detected, converted, and saved, all in 1 swoop when being loaded.
+
 	DevMsg("Load the instance!!!\n");
 	instance_t* pInstance = this->GetInstance(instanceId);
 	
 	DevMsg("Attempting to load instance w/ ID: %s\n", instanceId.c_str());
 
 	KeyValues* instanceKV = new KeyValues("instance");
-	//if (!instanceKV->LoadFromFile(g_pFullFileSystem, VarArgs("library\\instances\\%s.key", pInstance->id.c_str())))
 	if ( !g_pAnarchyManager->GetMetaverseManager()->LoadSQLKevValues("instances", pInstance->id.c_str(), instanceKV))
 	{
+		// if this wasn't in our library, try other librarys.
+		// check all backpacks...
+		C_Backpack* pBackpack = g_pAnarchyManager->GetBackpackManager()->FindBackpackWithInstanceId(pInstance->id);
+		if (pBackpack)
+		{
+			// we found the backpack containing this instance ID
+			DevMsg("Loading from instance backpack w/ ID %s...\n", pBackpack->GetId().c_str());
+			pBackpack->OpenDb();
+			sqlite3* pDb = pBackpack->GetSQLDb();
+			if (!pDb || !g_pAnarchyManager->GetMetaverseManager()->LoadSQLKevValues("instances", pInstance->id.c_str(), instanceKV, pDb))
+			{
+				DevMsg("CRITICAL ERROR: Failed to load instance from library!\n");
+				pBackpack->CloseDb();
+				pBackpack = null;
+			}
+			else
+				pBackpack->CloseDb();
+		}
+
 		//instanceKV->deleteThis();
 
-		DevMsg("WARNING: Could not load instance! Attempting to load as legacy instance...\n");
-		if (pInstance->file != "")
-			this->LoadLegacyInstance(instanceId, instanceKV);	// FIXME: if this fails to load the instance, the KeyValues instanceKV is NOT deleted or cleaned up anywhere.
+		if ( !pBackpack )
+		{
+			DevMsg("WARNING: Could not load instance!");// Attempting to load as legacy instance...\n");
+			instanceKV->deleteThis();
+			instanceKV = null;
 
-		m_pInstanceKV = instanceKV;
+			//if (pInstance->file != "")
+				//this->LoadLegacyInstance(instanceId, instanceKV);
+
+			//m_pInstanceKV = instanceKV;	// FIXME: if this fails to load the instance, the KeyValues instanceKV is NOT deleted or cleaned up anywhere.
+		}
 	}
-	else
+
+	if (instanceKV)
 	{
 		std::string objectId;
 		std::string itemId;
 		std::string modelId;
+		std::string testItemId;
+		std::string testModelId;
 		for (KeyValues *sub = instanceKV->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 		{
 			objectId = sub->GetString("local/info/id");
+
 			itemId = sub->GetString("local/item");
+			if (pInstance->legacy)
+			{
+				testItemId = g_pAnarchyManager->ExtractLegacyId(itemId);
+
+				if (testItemId == "")
+				{
+					// don't generate item id's for legacy prop objects
+					testItemId = itemId;
+					size_t foundExt = testItemId.find(".mdl");
+					if (foundExt != testItemId.length() - 4)
+					{
+						KeyValues* pSearchInfo = new KeyValues("search");
+						pSearchInfo->SetString("file", itemId.c_str());
+
+						KeyValues* foundItem = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->FindLibraryItem(pSearchInfo));
+						if (foundItem)
+							testItemId = foundItem->GetString("info/id");
+						else
+						{
+							DevMsg("Instance failed to resolve item with itemfile: %s\n", itemId.c_str());
+							testItemId = g_pAnarchyManager->GenerateLegacyHash(itemId.c_str());
+						}
+
+						if (testItemId != "" && testItemId != "ffffffff" )
+							itemId = testItemId;
+					}
+				}
+				else
+					itemId = testItemId;
+
+				// write the resolved ID to the KV.  (don't forget to un-legacy tag it when saving out the instance!)
+				sub->SetString("local/item", itemId.c_str());
+			}
+
 			modelId = sub->GetString("local/model");
+			if (pInstance->legacy)
+			{
+				// model gets resolved on-the-fly for legacy saves
+				//modelId = g_pAnarchyManager->GenerateLegacyHash(modelId.c_str());
+
+				testModelId = g_pAnarchyManager->ExtractLegacyId(modelId);
+
+				if (testModelId == "")
+				{
+					// don't generate model id's for legacy prop objects
+					testModelId = modelId;
+					size_t foundExt = testModelId.find(".mdl");
+					if (foundExt == testModelId.length() - 4)
+					{
+						KeyValues* pSearchInfo = new KeyValues("search");
+						pSearchInfo->SetString("file", modelId.c_str());
+
+						KeyValues* foundModel = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->FindLibraryModel(pSearchInfo));
+						if (foundModel)
+							testModelId = foundModel->GetString("info/id");
+						else
+						{
+							// If no model exists for this MDL, but this MDL DOES exist, then create an MDL entry for it!
+
+							// TODO: DO THIS SHIT NEXT TIME!! AS DESCRIBED ABOVE!!!!!!!!!!!!!!!!
+							DevMsg("Instance failed to resolve model with modelfile: %s\n", modelId.c_str());
+							testModelId = g_pAnarchyManager->GenerateLegacyHash(modelId.c_str());
+						}
+
+						if (testModelId != "" && testModelId != "ffffffff")
+							modelId = testModelId;
+					}
+				}
+				else
+					modelId = testModelId;
+
+				// write the resolved ID to the KV.  (don't forget to un-legacy tag it when saving out the instance!)
+				sub->SetString("local/model", modelId.c_str());
+			}
 
 			// alright, spawn this object
 			Vector origin;
@@ -893,55 +1220,36 @@ void C_InstanceManager::LoadInstance(std::string instanceId, std::string positio
 			//bool physics = (sub->GetInt("slave") > 0); // FIXME: TODO: Use the physics stuff too!
 
 
-			DevMsg("IDs here are: %s\n", objectId.c_str());// , sub->GetName());
+			DevMsg("IDs here are: %s %s %s\n", objectId.c_str(), itemId.c_str(), modelId.c_str());
 			this->AddObject(objectId, itemId, modelId, origin, angles, scale, slave, 0, "", 0, "", 0, "", child);
-			/*
-			item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
-			if (item)
-			{
-			activeItem = item->FindKey("current");
-			if (!activeItem)
-			activeItem = item->FindKey("local", true);
-			}
-			*/
 		}
+
 		m_pInstanceKV = instanceKV;
-		//instanceKV->deleteThis();
+
+		// check if we should teleport
+		if (position != "" && rotation != "")
+		{
+			C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+			engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), position.c_str(), rotation.c_str()), true);
+		}
+
+
+		std::string loadingScreenshotId = g_pAnarchyManager->GetMetaverseManager()->GetLoadingScreenshotId();
+		//if ( this->GetInstanceObjectCount() > 0)
+		//{
+			std::string screenshotPostfix = (loadingScreenshotId != "") ? "&screenshot=" + loadingScreenshotId : "";
+			std::string uri = "asset://ui/spawnItems.html?max=" + std::string("99999999999.9") + screenshotPostfix;
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
+			pHudBrowserInstance->SetUrl(uri);
+			//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
+		//}
+		//else
+		//	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+		g_pAnarchyManager->GetMetaverseManager()->SetLoadingScreenshotId("");
 	}
-
-	// after the instance is loaded, spawn everything in it.
-	//std::string instanceId = g_pAnarchyManager->GetInstanceId();
-	//if (instanceId != "")
-	//{
-
-	/*
-	// check for the most recent screenshot
-	KeyValues* pScreenshotKV = g_pAnarchyManager->GetMetaverseManager()->FindMostRecentScreenshot();
-	if (pScreenshotKV)
-	{
-		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
-		engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), pScreenshotKV->GetString("body/position", "0 0 0"), pScreenshotKV->GetString("body/rotation", "0 0 0")), true);
-	}
-	*/
-
-	// check if we should teleport
-	if (position != "" && rotation != "")
-	{
-		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
-		engine->ServerCmd(VarArgs("teleport_player %i %s %s\n", pPlayer->entindex(), position.c_str(), rotation.c_str()), true);
-	}
-
-	if (this->GetInstanceObjectCount() > 0)
-	{
-		std::string uri = "asset://ui/spawnItems.html?max=" + std::string("99999999999.9");
-
-		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-		g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
-		pHudBrowserInstance->SetUrl(uri);
-		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
-	}
-	//}
-	//this->SpawnNearestObject();
 }
 
 void C_InstanceManager::LoadLegacyInstance(std::string instanceId, KeyValues* instanceKV)
@@ -976,7 +1284,7 @@ void C_InstanceManager::LoadLegacyInstance(std::string instanceId, KeyValues* in
 		info->SetString("map", pInstance->mapId.c_str());
 		info->SetString("style", pInstance->style.c_str());	// for nodes
 		//info->SetString("created", "0");	// store unsigned ints as strings, then %llu them
-		info->SetString("creator", "local");
+		info->SetString("owner", "local");
 
 
 		for (KeyValues *sub = legacyKv->FindKey("objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())

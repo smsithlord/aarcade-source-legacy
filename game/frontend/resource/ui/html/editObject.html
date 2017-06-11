@@ -4,25 +4,42 @@
 		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/overlay.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Edit Object
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
-				</div>
-			</div>
 
-			<div class="mainButton helpNote" onclick="aaapi.system.setSlaveScreen(true);" help="Screen always shows the selected video on it.">Enable Slave Screen</div>
-			<div class="mainButton helpNote" onclick="aaapi.system.setSlaveScreen(false);" help="Screen behaves normally.">Disable Slave Screen</div>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Edit Object", "", true, true, "", "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Activate Slave Screen" onclick="aaapi.system.setSlaveScreen(true);" /><br />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Deactivate Slave Screen" onclick="aaapi.system.setSlaveScreen(false);" />
+		</center>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>

@@ -4,29 +4,42 @@
 		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 30%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/import.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Import All My Steam Games
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Import Steam Games", "", false, true, "window.location='asset://ui/import.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				<div style="text-align: left; font-family: Arial;" class="aaTitleTextSizeFontSize aaTextColorTwoColor">
+					<ol style="margin: 0;">
+						<li>Continue to your Steam Profile.</li>
+						<li>Click the Import All Games button.</li>
+					</ol>
 				</div>
 			</div>
 
-			<div style="font-family: Arial; font-size: 18px; font-weight: bold; padding: 10px;">Anarchy Arcade can automatically add all of your Steam games from your public Steam Community profile to your AArcade library.<br /><br />
-			Note that your profile <b>must</b> be public (or you must be logged in) for your Steam games list to be accessible for AArcade to scan.<br /><br />
-			<font style="color: #ffff00;">Your Steam profile will be loaded in a web tab.  Click the blue <b>META SCRAPE</b> button on the left-hand side when it appears.</font><br /><br />
-			</div>
-			<div class="mainButton helpNote" style="width: 350px;" onclick="aaapi.system.beginImportSteamGames();" help="Continue to your Steam games list.">Continue</div>
-			<div class="mainButton helpNote" style="width: 350px;" onclick="window.location='asset://ui/import.html';" help="Go back.">Cancel</div>
+			<br />
+
+			<!-- Continue -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Continue" onclick="aaapi.system.beginImportSteamGames();" help="Continue to your Steam games list." />
+
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>

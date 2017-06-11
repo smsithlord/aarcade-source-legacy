@@ -179,7 +179,7 @@ void CInputSlate::SelfDestruct()
 	DevMsg("Begin input slate destructing...\n");
 	//delete this;
 
-	if (!g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined() && m_pMaterialVar->IsTexture())
+	if (m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined() && m_pMaterialVar->IsTexture())
 	{
 		if (m_pOriginalTexture)
 		{

@@ -86,8 +86,23 @@ void C_Backpack::CreateDb()
 	//m_pDb = null;
 }
 
+void C_Backpack::OpenDb()
+{
+	if (this->IsDbOpen())
+		return;
+
+	std::string backpackFolderName = g_pAnarchyManager->GetBackpackManager()->ExtractBackpackFoldeNameFromPath(m_backpackFolder);
+	//std::string backpackSearchPath = "pack" + backpackFolderName;
+
+	std::string libraryFile = std::string("aarcade_user/custom/") + backpackFolderName + std::string("/library.db");
+	g_pAnarchyManager->GetMetaverseManager()->CreateDb(libraryFile, &m_pDb);
+}
+
 void C_Backpack::CloseDb()
 {
+	if (!this->IsDbOpen())
+		return;
+
 	DevMsg("Closed backpack DB.\n");
 	sqlite3_close(m_pDb);
 	m_pDb = null;
@@ -95,6 +110,7 @@ void C_Backpack::CloseDb()
 
 void C_Backpack::LegacyAuditDb()
 {
+	DevMsg("Auditing backpack...\n");
 	// Legacy Audit will:
 	// 1. Use the TEMP search path to hold all paths from this backpack.
 	// 2. Basically legacy export the contents of the searchpath into its library.db
@@ -146,6 +162,9 @@ void C_Backpack::LegacyAuditDb()
 	unsigned int itemCount = 0;
 	unsigned int modelCount = 0;
 
+
+	DevMsg("Scanning backpack's library folder for content...\n");
+
 	KeyValues* pItem;
 	std::string loadLocalItemLegacyFilePath;
 	std::string loadLocalItemLegacyFolderPath;
@@ -192,7 +211,7 @@ void C_Backpack::LegacyAuditDb()
 			std::string workshopId = "";
 			std::string mountId = "";
 			//std::string filePath = backpackFolder + loadLocalItemLegacyFolderPath;
-			pItem = g_pAnarchyManager->GetMetaverseManager()->LoadLocalItemLegacy(bIsModel, bWasLoaded, foundName, "", workshopId, mountId, tempSearchPath, false);
+			pItem = g_pAnarchyManager->GetMetaverseManager()->LoadLocalItemLegacy(bIsModel, bWasLoaded, foundName, "", workshopId, mountId, this, tempSearchPath, false);
 
 			// now save pItem to the BACKPACK'S library.db, so we don't have to scan for models next time.
 			// TODO: That.
@@ -200,12 +219,14 @@ void C_Backpack::LegacyAuditDb()
 			{
 				if (bIsModel)
 				{
+					DevMsg("Model detected & saved to backpack library: %s\n", g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItem)->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
 					g_pAnarchyManager->GetMetaverseManager()->SaveModel(pItem, m_pDb);
 					pItem->deleteThis();
 					modelCount++;
 				}
 				else
 				{
+					DevMsg("Item detected & saved to backpack library: %s\n", g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItem)->GetString("file"));
 					g_pAnarchyManager->GetMetaverseManager()->SaveItem(pItem, m_pDb);
 					pItem->deleteThis();
 					itemCount++;
@@ -231,70 +252,7 @@ void C_Backpack::LegacyAuditDb()
 	DevMsg("Backpack fodlername: %s\n", backpackFolderName.c_str());
 	//std::string folder = g_pAnarchyManager->GetBackpackManager()->GetCustomFolder() + backpackFolderName;
 	//DevMsg("Full folder: %s\n", folder.c_str());
-	g_pAnarchyManager->ScanForLegacySaveRecursive("", tempSearchPath, "", "", m_id);
-	/*
-	std::string file;
-	KeyValues* kv = new KeyValues("instance");
-	FileFindHandle_t findHandle;
-	VarArgs("Tester folder: %s\\maps\\*.set", m_backpackFolder.c_str());
-	//tempSearchPath
-	const char *pFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\maps\\*.set", m_backpackFolder.c_str()), &findHandle);
-	while (pFilename != NULL)
-	{
-		if (g_pFullFileSystem->FindIsDirectory(findHandle))
-		{
-			pFilename = g_pFullFileSystem->FindNext(findHandle);
-			continue;
-		}
-
-		file = m_backpackFolder + "\\maps\\" + std::string(pFilename);
-
-		// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
-		if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
-		{
-			if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
-			{
-				//DevMsg("Map ID here is: %s\n", kv->GetString("map"));
-				// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
-				// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
-
-				std::string title = kv->GetString("title");*/
-				/* GEN2 addons are loaded from the workshop cache.  no point looking for title in a txt file here.
-				if (title == "")
-				{
-				// attempt to load a .txt file from the legacy workshop addon that has the title
-				FileFindHandle_t infoFindHandle;
-				const char *pInfoFilename = g_pFullFileSystem->FindFirst(VarArgs("%s\\resource\\workshop\\*.txt", backpackFolder.c_str()), &infoFindHandle);
-				if (pInfoFilename)
-				{
-				KeyValues* infoKv = new KeyValues("info");
-				if (infoKv->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\resource\\workshop\\%s", backpackFolder.c_str(), pInfoFilename)))
-				title = infoKv->GetString("title");
-				infoKv->deleteThis();
-				}
-				g_pFullFileSystem->FindClose(infoFindHandle);
-				}
-				*/
-	/*
-
-				if (title == "")
-					title = "Unnamed";
-
-				std::string goodMapName = pFilename;
-				goodMapName = goodMapName.substr(0, goodMapName.find("."));
-
-				std::string workshopId = "";//VarArgs("%llu", details->publishedFileId)
-				std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, file, workshopId, "", "");
-			}
-		}
-
-		pFilename = g_pFullFileSystem->FindNext(findHandle);
-	}
-	g_pFullFileSystem->FindClose(findHandle);
-	kv->Clear();
-	kv->deleteThis();
-	*/
+	g_pAnarchyManager->ScanForLegacySaveRecursive("", tempSearchPath, "", "", this);
 
 	// now start loading the items from it
 	//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, fullPath, id, "");
@@ -321,7 +279,7 @@ void C_Backpack::MergDb()
 		DevMsg("Type from DB addon is: %s\n", typesIt->first.c_str());
 		if (!g_pAnarchyManager->GetMetaverseManager()->GetLibraryType(typesIt->first))
 		{
-			//g_pAnarchyManager->GetMetaverseManager()->AddType(typesIt->second);
+			g_pAnarchyManager->GetMetaverseManager()->AddType(typesIt->second);
 		}
 		else
 		{
@@ -351,7 +309,8 @@ void C_Backpack::MergDb()
 	m_items.clear();
 
 	// MODELS
-	g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalModels(m_pDb, &m_models);
+	unsigned int numCabinets = 0;
+	g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalModels(numCabinets, m_pDb, &m_models);
 
 	auto modelsIt = m_models.begin();
 	while (modelsIt != m_models.end())
@@ -369,6 +328,7 @@ void C_Backpack::MergDb()
 	m_models.clear();
 
 	// APPS
+	/* DISABLED
 	g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalApps(m_pDb, &m_apps);
 
 	auto appsIt = m_apps.begin();
@@ -387,18 +347,40 @@ void C_Backpack::MergDb()
 		appsIt++;
 	}
 	m_apps.clear();
+	*/
+
+	// NOTE: Instances should NOT be cleared, this way LoadInstance can ask the backpack if it contains an instance ID BEFORE it bothers to Prepare and load the instance from it!
+	// DO THIS NEXT!!
 
 	// INSTANCES
-	/*
 	g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalInstances(m_pDb, &m_instances);
 
 	auto instancesIt = m_instances.begin();
 	while (instancesIt != m_instances.end())
 	{
 		DevMsg("Instance from DB addon is: %s\n", instancesIt->first.c_str());
-		if (!g_pAnarchyManager->GetMetaverseManager()->GetLibraryInstance(instancesIt->first))
+		if (!g_pAnarchyManager->GetInstanceManager()->GetInstance(instancesIt->first))
 		{
-			//g_pAnarchyManager->GetMetaverseManager()->AddInstance(instancesIt->second);
+			KeyValues* pInstanceKV = instancesIt->second;
+
+			int generation = pInstanceKV->GetInt("generation", 3);
+			int iLegacy = pInstanceKV->GetInt("legacy", 0);
+
+			KeyValues* pInstanceInfoKV = pInstanceKV->FindKey("info/local", true);
+			std::string instanceId = pInstanceInfoKV->GetString("id");
+			std::string mapId = pInstanceInfoKV->GetString("map");
+			std::string title = pInstanceInfoKV->GetString("title");
+			if (title == "")
+				title = "Unnamed (" + instanceId + ")";
+			std::string file = "";
+			std::string workshopIds = pInstanceInfoKV->GetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID));
+			std::string mountIds = pInstanceInfoKV->GetString(VarArgs("platforms/%s/mountIds", AA_PLATFORM_ID));
+			//std::string backpackId = pInstanceInfoKV->GetString(VarArgs("platforms/%s/backpackId", AA_PLATFORM_ID));
+			std::string style = pInstanceInfoKV->GetString("style");
+			g_pAnarchyManager->GetInstanceManager()->AddInstance(iLegacy, instanceId, mapId, title, file, workshopIds, mountIds, style);
+
+			instancesIt->second->deleteThis();
+			instancesIt->second = null;
 		}
 		else
 		{
@@ -407,8 +389,7 @@ void C_Backpack::MergDb()
 		}
 		instancesIt++;
 	}
-	m_instances.clear();
-	*/
+	//m_instances.clear();
 }
 
 void C_Backpack::GetAllVPKs(std::vector<std::string>& allVPKs)
@@ -442,6 +423,15 @@ void C_Backpack::GetAllFilesRecursive(std::vector<std::string>& allFiles, std::s
 
 		pFilename = g_pFullFileSystem->FindNext(fileFindHandle);
 	}
+}
+
+bool C_Backpack::HasInstance(std::string id)
+{
+	auto it = m_instances.find(id);
+	if (it != m_instances.end())
+		return true;
+	else
+		return false;
 }
 
 void C_Backpack::GetAllFiles(std::vector<std::string>& allFiles)
@@ -589,7 +579,12 @@ void C_Backpack::Release()
 {
 	// Releasing will:
 	// 1. Unload the library.db.
-	// 2. Clear all the m_items and stuff out.
+	// 2. Clear all the m_items and stuff out.	// (this is done automatically right now after merging with active library, EXCEPT for instance stubs, which must always remain for fast "hasInstance" checking.
+
+	//if (this->IsDbOpen())
+		//this->CloseDb();
+	//if (this->IsPrepared())
+		//this->Unprepare();
 }
 
 void C_Backpack::Init(std::string id, std::string title, std::string backpackFolder)

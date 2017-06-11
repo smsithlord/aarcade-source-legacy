@@ -572,8 +572,12 @@ void C_LibretroManager::DestroyLibretroInstance(C_LibretroInstance* pInstance)
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
 
+	/*
 	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
 		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(pInstance);
+	*/
+
+
 	//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
 
 	//if (g_pAnarchyManager->GetInputManager()->GetInputCanvasTexture() == pInstance->GetTexture())
@@ -666,7 +670,7 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
 void C_LibretroManager::RunEmbeddedLibretro(std::string core, std::string file)
 {
 	C_LibretroInstance* pLibretroInstance = this->CreateLibretroInstance();
-	pLibretroInstance->Init("", "Manual Libretro Instance");
+	pLibretroInstance->Init("", "Manual Libretro Instance", -1);
 	pLibretroInstance->SetOriginalGame(file);
 //	pLibretroInstance->SetOriginalItemId(itemId);
 	if (!pLibretroInstance->LoadCore(core))	// FIXME: elegantly revert back to autoInspect if loading the core failed!

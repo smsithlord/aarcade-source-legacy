@@ -40,7 +40,75 @@
 		</style>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Redux Beta Briefing", "width: 600px;", false, true, "", "window.location='asset://ui/welcome.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Display Resolution</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify;'>
+				Internal resolution is locked to 16:9 for now & will SCALE to what ever your AArcade resolution is.  You should only change your resolution from AArcade's launcher.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Steam Games</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				You can go to Addons > Import Games & Content to get all of your games into your library.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Multiplayer</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Redux has no multiplayer mode yet.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Pause Mode</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Redux only has an improved "minimal" pause mode when you launch shortcuts. It cannot dump system resources & "hard pause" yet.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Source Engine Games</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Redux will automatically mount any compatible Source engine games that you have installed.  However, Redux is not able to launch other Source engine games yet.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Steam Workshop</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Your current workshop subscriptions ARE compatible with Redux. AArcade should be CLOSED when you subscribe to workshop items. Also, you can't publish new workshop items from Redux yet.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Open-With Apps & Libretro</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Apps cannot be configured yet, so you won't be able to setup your emulators to launch.  Libretro support is also limited until there is a way to configure apps.  Local video files DO currently work though.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Import Library</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				You can go to Options > Manage Library > Import Legacy Content if you are an old-school AArcade user and want to use all your old stuff in Redux.
+			</div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">VR Mode</div>
+			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
+				Redux does not have VR support yet.  It will receive preliminary VR support thanks to the Marulu Source 1 VR Fix.  This should happen within a couple months.
+			</div>
+			<br /><br />
+			<center>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">THANKS FOR PLAYING!</div>
+			<center>
+			<br />
+
+		</div>
+
+		<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="OK" onclick="window.location='asset://ui/welcome.html';" help="Welcome to Anarchy Arcade!" />
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+		
+		<div class="hudContent" style="display: none; width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell"></div>

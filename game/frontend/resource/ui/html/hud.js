@@ -154,6 +154,41 @@ function ArcadeHud()
 
 		this.DOMReady = true;
 
+		var aaTabs = document.querySelectorAll(".aaTab");
+		if( aaTabs.length > 0 )
+		{
+			var aaTabContent;
+			var aaTabContents = document.querySelectorAll(".aaTabContent");
+			for( var i = 0; i < aaTabContents.length; i++ )
+			{
+				aaTabContent = aaTabContents[i];
+				aaTabContent.style.display = "none";
+			}
+
+			var activeTab;
+			var aaTab;
+			for( var i = 0; i < aaTabs.length; i++ )
+			{
+				aaTab = aaTabs[i];
+				if( aaTab.getAttribute("activetab") == 1 )
+					activeTab = aaTab;
+
+				// update z-indexes
+				aaTab.style.zIndex = aaTabs.length - i;
+
+				aaTab.addEventListener("click", function(e)
+				{
+					arcadeHud.activateMenuTab(this);
+				}.bind(aaTab), true);
+			}
+
+			// if no selected tab is given, then just select the 1st tab.
+			if( !!!activeTab )
+				activeTab = aaTabs[0];
+
+			this.activateMenuTab(activeTab);
+		}
+
 		// inject the browser menu
 		//var bodyElem = document.body;
 
@@ -345,15 +380,43 @@ function ArcadeHud()
 		
 		//aaapi.system.requestActivateInputMode();
 
-		this.helpElem = document.createElement("div");
-		this.helpElem.className = "helpContainer";
+		this.helpElem = document.querySelector(".aaHelpContainer");
 
-		this.hudLoadingMessagesContainer = document.createElement("div");
-		this.hudLoadingMessagesContainer.className = "hudLoadingMessagesContainer";
-		this.helpElem.appendChild(this.hudLoadingMessagesContainer);
-		document.body.appendChild(this.helpElem);
+		var needsHelpAdded = false;
+		if( !!!this.helpElem )
+		{
+			needsHelpAdded = true;
+			this.helpElem = document.createElement("div");
+			this.helpElem.className = "helpContainer";
+		}
 
-		if( document.location.href !== "asset://ui/imageLoader.html" && document.location.href !== "asset://ui/startup.html" )
+		this.hudLoadingMessagesContainer = document.querySelector(".hudLoadingMessagesContainer");
+		if( !!!this.hudLoadingMessagesContainer )
+		{
+			this.hudLoadingMessagesContainer = document.createElement("div");
+			this.hudLoadingMessagesContainer.className = "hudLoadingMessagesContainer";
+			this.helpElem.appendChild(this.hudLoadingMessagesContainer);
+		}
+
+		if( needsHelpAdded )
+			document.body.appendChild(this.helpElem);
+
+		if( document.location.href === "asset://ui/startup.html" || document.location.href.indexOf("asset://ui/loading.html") === 0 )
+		{
+			var startupWallpaper = localStorage.getItem("aaStartupWallpaper");
+			if( !!startupWallpaper )
+			{
+				// replace all \ with / so that it can be used in CSS background URL syntax
+				var wallpaperSrc = startupWallpaper.replace(/\\/g, "/");
+
+				if( wallpaperSrc.indexOf(":") === 1 )
+					wallpaperSrc = "asset://local/" + wallpaperSrc;
+
+				document.body.style.background = "transparent url('" + wallpaperSrc + "') center";
+				document.body.style.backgroundSize = "cover";
+			}
+		}
+		else if( document.location.href !== "asset://ui/imageLoader.html" )
 		{
 			console.log("Requesting activate input mode from " + document.location.href);
 			aaapi.system.requestActivateInputMode();	// gets called needlessly when an object is de-selected, but fuck it.
@@ -543,6 +606,206 @@ function ArcadeHud()
 		if( document.location.href === "asset://ui/imageLoader.html" || document.location.href === "asset://ui/hud.html" )
 			aaapi.system.specialReady();
 	}.bind(this));
+
+	// sizes
+	// default
+	this.themeSizes = {
+		"TextSize": "20px",
+		"IconSize": "24px",
+		"TitleTextSize": "28px",
+		"BigIconSize": "32px"
+	};
+
+	this.themes = {};
+	this.themes["redBaron"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(200, 40, 40)",
+			"highValue": "rgb(255, 100, 100)",
+			"lowValue": "rgb(150, 30, 30)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(240, 240, 240)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(10, 10, 10)",
+			"highValue": "rgb(150, 150, 150)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"ActiveColor":
+		{
+			"defaultValue": "rgb(25, 150, 25)",
+			"highValue": "rgb(50, 200, 50)",
+			"lowValue": "rgb(10, 100, 10)"
+		}
+	};
+
+	this.themes["redBaronDark"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(200, 40, 40)",
+			"highValue": "rgb(255, 100, 100)",
+			"lowValue": "rgb(150, 30, 30)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(20, 20, 20)",
+			"highValue": "rgb(30, 30, 30)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(240, 240, 240)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		}
+	};
+	
+	this.themes["fiftyShadesDark"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(40, 40, 40)",
+			"highValue": "rgb(60, 60, 60)",
+			"lowValue": "rgb(30, 30, 30)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(20, 20, 20)",
+			"highValue": "rgb(30, 30, 30)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(170, 170, 170)",
+			"highValue": "rgb(200, 200, 200)",
+			"lowValue": "rgb(140, 140, 140)"
+		}
+	};
+
+	this.themes["fiftyShades"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(40, 40, 40)",
+			"highValue": "rgb(60, 60, 60)",
+			"lowValue": "rgb(30, 30, 30)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(240, 240, 240)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(10, 10, 10)",
+			"highValue": "rgb(150, 150, 150)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"ActiveColor":
+		{
+			"defaultValue": "rgb(25, 150, 25)",
+			"highValue": "rgb(50, 200, 50)",
+			"lowValue": "rgb(10, 100, 10)"
+		}
+	};
+
+	this.themes["windowsWannabe"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(24, 131, 215)",
+			"highValue": "rgb(78, 172, 255)",
+			"lowValue": "rgb(19, 97, 159)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(240, 240, 240)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(10, 10, 10)",
+			"highValue": "rgb(150, 150, 150)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"ActiveColor":
+		{
+			"defaultValue": "rgb(25, 150, 25)",
+			"highValue": "rgb(50, 200, 50)",
+			"lowValue": "rgb(10, 100, 10)"
+		}
+	};
+
+	this.themes["windowsWannabeDark"] = {
+		"ThemeColorOne":
+		{
+			"defaultValue": "rgb(24, 131, 215)",
+			"highValue": "rgb(78, 172, 255)",
+			"lowValue": "rgb(19, 97, 159)"
+		},
+		"TextColorOne":
+		{
+			"defaultValue": "rgb(250, 250, 250)",
+			"highValue": "rgb(255, 255, 255)",
+			"lowValue": "rgb(220, 220, 220)"
+		},
+		"ThemeColorTwo":
+		{
+			"defaultValue": "rgb(20, 20, 20)",
+			"highValue": "rgb(30, 30, 30)",
+			"lowValue": "rgb(0, 0, 0)"
+		},
+		"TextColorTwo":
+		{
+			"defaultValue": "rgb(170, 170, 170)",
+			"highValue": "rgb(200, 200, 200)",
+			"lowValue": "rgb(140, 140, 140)"
+		}
+	};
+
+	var themeName = localStorage.getItem("aaColorThemeName");
+	if( !!!themeName || !!!this.themes[themeName] )
+	{
+		themeName = "redBaron";
+		localStorage.setItem("aaColorThemeName", themeName);
+	}
+
+	this.themeColors = this.themes[themeName];
+	this.addCSSRules.call(this);
 }
 
 ArcadeHud.prototype.navigateToURI = function(uri)
@@ -630,7 +893,7 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	var num = elems.length;
 	var i;
 	for( i = 0; i < num; i++ )
-		elems[i].style.display = (isMapLoaded) ? "block" : "none";
+		elems[i].style.display = (isMapLoaded) ? "initial" : "none";
 
 	if( this.oldIsMapLoaded !== isMapLoaded )
 	{
@@ -723,7 +986,7 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 
 	var elem = document.querySelector("#objectMenu");
 	console.log("Is selected object: " + isSelectedObject + " and " + (isSelectedObject === 1));
-	if( isSelectedObject === 1 )
+	if( isSelectedObject === 1 && !!elem )
 		elem.style.display = "block";
 	//else
 	//	elem.style.display = "none";
@@ -757,6 +1020,37 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 			this.libretroHudButtonElem.style.display = "none";
 	}
 
+	// if there's no map loaded, show the startup wallpaper
+	if( !isMapLoaded )
+	{
+		var startupWallpaper = localStorage.getItem("aaStartupWallpaper");
+		if( !!startupWallpaper )
+		{
+			// replace all \ with / so that it can be used in CSS background URL syntax
+			var wallpaperSrc = startupWallpaper.replace(/\\/g, "/");
+
+			if( wallpaperSrc.indexOf(":") === 1 )
+				wallpaperSrc = "asset://local/" + wallpaperSrc;
+
+			document.body.style.background = "transparent url('" + wallpaperSrc + "') center";
+			document.body.style.backgroundSize = "cover";
+		}
+	}
+
+	// call any callback on the page, if one exists.
+	if( typeof window["aaOnActivateInputMode"] === "function" )
+		window["aaOnActivateInputMode"]({
+			"fullscreen": isFullscreen,
+			"hudPinned": isHudPinned,
+			"mapLoaded": isMapLoaded,
+			"objectSelected": isObjectSelected,
+			"itemSelected": isItemSelected,
+			"mainMenu": isMainMenu,
+			"url": url,
+			"selectedObject": isSelectedObject,
+			"embeddedInstanceType": embeddedInstanceType
+		});
+
 	this.onURLChanged(url);
 };
 
@@ -770,7 +1064,7 @@ ArcadeHud.prototype.setHudTitle = function(text)
 
 ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, max, current, callbackMethod)
 {
-	var message = {
+	var myMessage = {
 		"type": type,
 		"text": text,
 		"title": title,
@@ -781,23 +1075,36 @@ ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, 
 		"callbackMethod": callbackMethod	// always in the system sub-object
 	};
 
+	//var keys = Object.keys(this.hudLoadingMessages);
+	//console.log(JSON.stringify(keys));
+
 	if( !!!this.hudLoadingMessages[id] )
 	{
+		//console.log("Checkpoint A: " + id);
 		this.hudLoadingMessages[id] = {
-			"message": message
+			"message": myMessage
 		};
 	}
 	else
 	{
 		if( !!!this.hudLoadingMessages[id].message )
+		{
 			this.hudLoadingMessages[id].message = {};
+			//console.log("Checkpoint B" + id);
+		}
 
 		var x;
-		for( x in message )
+		for( x in myMessage )
 		{
-			this.hudLoadingMessages[id].message[x] = message[x];
+			this.hudLoadingMessages[id].message[x] = myMessage[x];
 		}
 	}
+
+	if( this.hudLoadingMessages[id].message.text === "" )
+		this.hudLoadingMessages[id].message.text = this.hudLoadingMessages[id].message.title;
+
+
+//console.log(JSON.stringify(this.hudLoadingMessages[id]));
 
 	if( this.DOMReady )
 		this.dispatchHudLoadingMessages();
@@ -805,6 +1112,7 @@ ArcadeHud.prototype.addHudLoadingMessage = function(type, text, title, id, min, 
 
 ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 {
+	/*
 	var startupIds = [
 		"locallibrarytypes",
 		"locallibrarymodels",
@@ -820,35 +1128,44 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 		"oldlibrarymodels",
 		"oldlibraryitems"
 		];
+	*/
 
-	var bStartupHandled = false;
+	//var bStartupHandled = false;
 
 	var isNewMsg = false;
 	var empty = true;
 	var x, message, messageObject, className, progressText, percent;
-	for( x in this.hudLoadingMessages )
+	var hudLoadingMessageKeys = Object.keys(this.hudLoadingMessages);
+	//for( x in this.hudLoadingMessages )
+	for( var i = 0; i < hudLoadingMessageKeys.length; i++ )
 	{
-		messageObject = this.hudLoadingMessages[x];
-		//console.log(messageObject.message);
+		messageObject = this.hudLoadingMessages[hudLoadingMessageKeys[i]];
 
-		if( !!messageObject.message && !!this.startupLoadingMessagesContainer && startupIds.indexOf(messageObject.message.id) >= 0 )
-			bStartupHandled = true;
+		if( !!!messageObject.message )
+			continue;
+
+		//if( !!messageObject.message && !!this.startupLoadingMessagesContainer )// && startupIds.indexOf(messageObject.message.id) >= 0 )
+		//	bStartupHandled = true;
 
 		if( !!!messageObject.container )
 		{
 			isNewMsg = true;
 
 			messageObject.container = document.createElement("div");
+			//if( !!this.startupLoadingMessagesContainer )
+			//	messageObject.container.className = "hudLoadingMessageContainer aaTextSizeFontSize aaTextColorOneColor aaThemeColorOneShadedBorderColor";
+			//else
+				messageObject.container.className = "hudLoadingMessageContainer aaTextSizeFontSize aaTextColorOneColor aaThemeColorOneShadedBorderColor";
 
-			if( bStartupHandled )
+			if( !!this.startupLoadingMessagesContainer )
 				this.startupLoadingMessagesContainer.appendChild(messageObject.container);
 			else
 				this.hudLoadingMessagesContainer.appendChild(messageObject.container);
 		}
 		else
 		{
-			if( !!!messageObject.message )
-				continue;
+			//if( !!!messageObject.message )
+			//	continue;
 
 			// empty out the container
 			var firstChild = messageObject.container.firstChild;
@@ -887,7 +1204,8 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 					progressText = " (" + goodCurrent + ")";
 			}
 
-			className = "hudLoadingMessageContainer progress";
+			//className = "hudLoadingMessageContainer progress";
+			messageObject.container.classList.add("progress");
 
 			percent = 0;
 			if( messageObject.message.max === "0" || messageObject.message.max === "" )
@@ -910,12 +1228,15 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 				*/
 			}
 
-			messageObject.container.style.backgroundImage = "-webkit-linear-gradient(left, rgba(100, 100, 100, 1.0), rgba(100, 100, 100, 1.0) " + percent + "%, rgba(50, 50, 50, 0.7) " + percent + "%, rgba(50, 50, 50, 0.7) 100%)";
+			messageObject.container.style.backgroundImage = "-webkit-linear-gradient(left, " + this.themeColors.ThemeColorOne.defaultValue + ", " + this.themeColors.ThemeColorOne.defaultValue + " " + percent + "%, " + this.themeColors.ThemeColorOne.lowValue + " " + percent + "%, " + this.themeColors.ThemeColorOne.lowValue + " 100%)";
+			//messageObject.container.innerHTML = "<div style='border: 2px solid pink;'>" + messageObject.message.title + progressText + "</span>";
 			messageObject.container.innerText = messageObject.message.title + progressText;
 		}
 		else
 		{
-			className = "hudLoadingMessageContainer";
+			messageObject.container.classList.add("aaThemeColorOneBackgroundColor");
+			//className = "hudLoadingMessageContainer";
+			//messageObject.container.innerHTML = "<div style='border: 2px solid pink;'>" + messageObject.message.title + progressText + "</span>";
 			messageObject.container.innerText = messageObject.message.text;
 		}
 
@@ -932,12 +1253,14 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 			}
 		}
 
-		messageObject.container.className = className;
-		delete messageObject.message;
+		//messageObject.container.className = className;
+		//delete messageObject.message;
+		delete this.hudLoadingMessages[hudLoadingMessageKeys[i]].message;
 	}
 
 	if( !empty )
 	{
+		/*
 		if( !bStartupHandled )
 		{
 			if( isNewMsg )
@@ -947,9 +1270,10 @@ ArcadeHud.prototype.dispatchHudLoadingMessages = function()
 		}
 		else
 		{
+			*/
 			if( isNewMsg )
-				this.startupLoadingMessagesContainer.scrollTop = this.startupLoadingMessagesContainer.scrollHeight;
-		}
+				this.startupLoadingMessagesContainer.parentNode.scrollTop = this.startupLoadingMessagesContainer.parentNode.scrollHeight;
+		//}
 	}
 };
 
@@ -1040,7 +1364,7 @@ ArcadeHud.prototype.showScraperPopupMenu = function(popupId, x, y, width, height
 	container.className = "popupMenuContainer";
 	container.style.left = popup.x - 2 + "px";
 	container.style.top = popup.y + popup.height + "px";
-	container.style.width = popup.width -2 + "px";
+	container.style.width = popup.width - 2 + "px";
 	//container.style.height = popup.height + "px";
 
 	var popupMenuItems = document.createElement("div");
@@ -1159,8 +1483,8 @@ ArcadeHud.prototype.showScraperPopupMenu = function(popupId, x, y, width, height
 
 ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemHeight, fontSize, selectedItem, rightAligned)
 {
-	console.log("Popup is: " + popupId);
-	console.log(JSON.stringify(arguments));
+	//console.log("Popup is: " + popupId);
+	//console.log(JSON.stringify(arguments));
 	var popup = {
 		"popupId": popupId,
 		"x": parseInt(x),
@@ -1210,10 +1534,10 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	}, true);
 
 	var container = document.createElement("div");
-	container.className = "popupMenuContainer";
-	container.style.left = popup.x - 2 + "px";
+	container.className = "popupMenuContainer aaThemeColorTwoBackgroundColor aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+	container.style.left = popup.x - 0 + "px";
 	container.style.top = popup.y + popup.height + "px";
-	container.style.width = popup.width -2 + "px";
+	container.style.width = popup.width - 2 + "px";
 	//container.style.height = popup.height + "px";
 
 	var popupMenuItems = document.createElement("div");
@@ -1224,7 +1548,7 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	for( i = 0; i < numItems; i++ )
 	{
 		option = document.createElement("div");
-		option.className = "popupMenuItem";
+		option.className = "popupMenuItem aaThemeColorTwoHighHoverBackgroundColor";
 		option.style.fontSize = Math.round(popup.fontSize) + "px";
 //		if( popup.selectedItem === i )
 //			option.className += " selectedPopupMenuItem";
@@ -1283,6 +1607,8 @@ ArcadeHud.prototype.showPopupMenu = function(popupId, x, y, width, height, itemH
 	}, true);
 
 	var optionSearch = document.createElement("input");
+	optionSearch.className = "aaThemeColorTwoLowBackgroundColor";//aaThemeColorTwoShadedBackground";
+	optionSearch.style.cssText = "background: none; margin: 0; padding: 0;";
 	optionSearch.popupMenuItems = popupMenuItems;
 	optionSearch.type = "text";
 	optionSearch.placeholder = "Search...";
@@ -1356,41 +1682,88 @@ ArcadeHud.prototype.assignHelp = function(elem)
 
 ArcadeHud.prototype.removeHelp = function()
 {
-	// empty out messages
-	var firstChild = this.helpElem.firstChild;
-	while( firstChild )
+	var tagName = this.helpElem.tagName;
+	var allOfTagName = document.querySelectorAll(".aaWindow " + tagName);
+	var isInAAWindow = false;
+	for( var i = 0; i < allOfTagName.length; i++ )
 	{
-		if( firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+		if( allOfTagName[i] === this.helpElem )
+		{
+			isInAAWindow = true;
 			break;
-
-		this.helpElem.removeChild(firstChild);
-		firstChild = this.helpElem.firstChild;
+		}
 	}
+	
+	if( isInAAWindow )
+	{
+		this.helpElem.innerHTML = "";
+		var helpParent = this.helpElem.parentNode;
+		helpParent.style.display = "none";
+		//helpParent.style.height = "0";
+		//helpParent.style.webkitTransition = "height 0.5s ease-in-out 0.5s";
+	}
+	else
+	{
+		// empty out messages
+		var firstChild = this.helpElem.firstChild;
+		while( firstChild )
+		{
+			if( firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+				break;
 
-	// if there are no loading messages, hide the message slate
-	if( !firstChild || !!!firstChild.firstChild )
-		this.helpElem.style.display = "none";
+			this.helpElem.removeChild(firstChild);
+			firstChild = this.helpElem.firstChild;
+		}
+
+		// if there are no loading messages, hide the message slate
+		if( !firstChild || !!!firstChild.firstChild )
+			this.helpElem.style.display = "none";
+	}
 };
 
 ArcadeHud.prototype.addHelpMessage = function(text)
 {
-	// empty out messages
-	var firstChild = this.helpElem.firstChild;
-	while( firstChild )
+	var tagName = this.helpElem.tagName;
+	var allOfTagName = document.querySelectorAll(".aaWindow " + tagName);
+	var isInAAWindow = false;
+	for( var i = 0; i < allOfTagName.length; i++ )
 	{
-		if( firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+		if( allOfTagName[i] === this.helpElem )
+		{
+			isInAAWindow = true;
 			break;
-
-		this.helpElem.removeChild(firstChild);
-		firstChild = this.helpElem.firstChild;
+		}
 	}
 
-	var helpText = document.createElement("div");
-	helpText.className = "helpMessage";
-	var helpTextNode = document.createTextNode(text);
-	helpText.appendChild(helpTextNode);
-	this.helpElem.insertBefore(helpText, this.helpElem.firstChild);
-	this.helpElem.style.display = "block";
+	if( isInAAWindow )
+	{
+		this.helpElem.innerHTML = text;
+
+		var helpParent = this.helpElem.parentNode;
+		helpParent.style.display = "block";
+		//helpParent.style.height = "initial";
+		//helpParent.style.webkitTransition = "height 0.5s ease-in-out 0s";
+	}
+	else
+	{
+		// empty out messages
+		var firstChild = this.helpElem.firstChild;
+		while( firstChild )
+		{
+			if( firstChild.classList.contains("hudLoadingMessagesContainer") ) //firstChild.className.search(/\bhudLoadingMessagesContainer\b/) >= 0 )
+				break;
+
+			this.helpElem.removeChild(firstChild);
+			firstChild = this.helpElem.firstChild;
+		}
+
+		var helpText = document.createElement("div");
+		helpText.className = "helpMessage";
+		var helpTextNode = document.createTextNode(text);
+		helpText.appendChild(helpTextNode);
+		this.helpElem.insertBefore(helpText, this.helpElem.firstChild);
+		this.helpElem.style.display = "block";
+	}
 };
 
 //ArcadeHud.prototype.metaSearch = function(scraperId, callback)
@@ -1852,7 +2225,7 @@ ArcadeHud.prototype.isImageExtension = function(url)
 		return false;
 };
 
-ArcadeHud.prototype.loadItemBestImage = function(imageElem, item)
+ArcadeHud.prototype.loadItemBestImage = function(imageElem, item, callback)
 {
 	var dummy = {
 		"imageElem": imageElem,
@@ -1905,7 +2278,10 @@ ArcadeHud.prototype.loadItemBestImage = function(imageElem, item)
 
 	imageElem.addEventListener("load", function()
 	{
-		this.imageElem.style.display = "block";
+		if( !!callback )
+			callback.call(this.imageElem);
+		else
+			this.imageElem.style.display = "block";
 	}.bind(dummy));
 
 	tryPotential.call(dummy);
@@ -1931,6 +2307,410 @@ ArcadeHud.prototype.viewStream = function()
 	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
 	if( item )
 		aaapi.system.viewStream(item.info.id);
+};
+
+ArcadeHud.prototype.activateMenuTab = function(activeTab)
+{
+	var aaTabs = document.querySelectorAll(".aaTab");
+
+	var aaTab;
+	var aaTabContent;
+	for( var i = 0; i < aaTabs.length; i++ )
+	{
+		aaTab = aaTabs[i];
+		//aaTab.style.zIndex = aaTabs.length;
+		if( aaTab === activeTab )
+		{
+			if( !aaTab.classList.contains("aaTabActive") )
+				aaTab.classList.add("aaTabActive");
+
+			if( aaTab.classList.contains("aaThemeColorTwoHoverShadedBackground") )
+				aaTab.classList.remove("aaThemeColorTwoHoverShadedBackground");
+
+			if( !aaTab.classList.contains("aaThemeColorTwoHighBackgroundColor") )
+				aaTab.classList.add("aaThemeColorTwoHighBackgroundColor");
+
+			aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
+			if( !!aaTabContent )
+				aaTabContent.style.display = "block";
+		}
+		else
+		{
+			//aaTab.style.zIndex = aaTabs.length - i;
+
+			if( aaTab.classList.contains("aaTabActive") )
+				aaTab.classList.remove("aaTabActive");
+
+			if( !aaTab.classList.contains("aaThemeColorTwoHoverShadedBackground") )
+				aaTab.classList.add("aaThemeColorTwoHoverShadedBackground");
+
+			if( aaTab.classList.contains("aaThemeColorTwoHighBackgroundColor") )
+				aaTab.classList.remove("aaThemeColorTwoHighBackgroundColor");
+
+			aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
+
+			if( !!aaTabContent )			
+				aaTabContent.style.display = "none";
+		}
+	}
+
+	//var firstTab = aaTabs[0];
+	//lastTab.parentNode.appendChild(activeTab);
+
+	//var firstTab = aaTabs[0];
+	//firstTab.parentNOde.instertBefore(activeTab, firstTab);
+
+	// update z-indexes
+	/*
+	aaTabs = document.querySelectorAll(".aaTab");
+	for( var i = 0; i < aaTabs.length; i++ )
+	{
+		aaTab = aaTabs[i];
+		aaTab.style.zIndex = aaTabs.length - i;
+	}
+	*/
+
+	if( typeof window[activeTab.getAttribute("onChangeCallbackName")] === "function" )
+		window[activeTab.getAttribute("onChangeCallbackName")](activeTab.getAttribute("tabid"));
+};
+
+ArcadeHud.prototype.generateWindowFooterHTML = function()
+{
+	//return "</div>";
+
+	var iconSize = parseInt(arcadeHud.themeSizes.IconSize);
+	var html = "";
+	html += '\
+		</td></tr>\
+		<tr style="padding: 0;">\
+			<td style="padding: 0; height: 4px; background-color: transparent;">\
+				<div style="position: relative;">\
+					<div class="aaThemeColorOneShadedBorderColor" style="display: none; overflow-y: hidden; border-style: solid; border-width: 2px; position: absolute; right: 8px; left: 8px; margin-top: 5px; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); border-top: 0; border-radius: 4px; border-top-left-radius: 0; border-top-right-radius: 0;">\
+						<div class="aaHelpContainer aaThemeColorOneBackgroundColor aaTextColorOneFontColor aaTextSizeFontSize" style="padding: 10px;"></div>\
+					</div>\
+				</div>\
+				<div class="aaCornerGripContainer">\
+					<div class="aaCornerGrip" style="left: -' + iconSize + 'px; top: -' + iconSize + 'px; opacity: 0.2;" onmousedown="arcadeHud.gripListener(this);">\
+						' + this.generateIconHTML("cornerGrip.png", iconSize, iconSize, "aaTextColorTwoColor") + '\
+					</div>\
+				</div>\
+			</td>\
+		</tr>\
+	</table>';
+
+	return html;	
+};
+
+ArcadeHud.prototype.generateWindowTabsHeaderHTML = function(options)
+{
+	if( !!!options.onChangeCallbackName )
+		options.onChangeCallbackName = "";
+
+	var html = '\
+		<table class="aaTabs aaThemeColorTwoDarkBackgroundColor" cellspacing="0" style="width: 100%;">\
+			<tr><td style="-webkit-transform: scale(1, -1); padding-left: 5px; padding-right: 8px;">\
+	';
+
+	var tabs = options.tabs;
+	var tab;
+	var activeTabValue;
+	for( var i = 0; i < tabs.length; i++ )
+	{
+		tab = tabs[i];
+		activeTabValue = (options.activeTabId === tab.id) ? "1" : "0";
+		html += '\
+			<div class="aaTab aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="-webkit-transform: scale(1, -1);" tabid="' + tab.id + '" onchangecallbackname="' + options.onChangeCallbackName + '" activetab="' + activeTabValue + '">\
+				' + tab.title + '\
+			</div>\
+		';
+	}
+
+	html += '\
+		</td></tr>\
+		<tr><td>\
+	';
+
+	return html;
+};
+
+ArcadeHud.prototype.generateWindowTabsFooterHTML = function()
+{
+	var html = "";
+	html += '\
+			</td></tr>\
+		</table>\
+	';
+
+	return html;
+};
+
+ArcadeHud.prototype.dragListener = function(titleBarElem)
+{
+	var windowElem = titleBarElem.parentNode.parentNode.parentNode.parentNode;
+	var rect = windowElem.getBoundingClientRect();
+
+	windowElem.style.position = "absolute";
+	windowElem.style.top = rect.top;
+	windowElem.style.left = rect.left;
+
+	var noResizeX = false;//(windowElem.getAttribute("noresizex") == 1) ? true : false;
+	var noResizeY = false;//(windowElem.getAttribute("noresizey") == 1) ? true : false;
+
+	var previous;
+
+	function mouseMoveListener(e)
+	{
+		var oldY;
+		var oldX;
+
+		if( !!!previous )
+		{
+			oldY = rect.top;
+			oldX = rect.left;
+
+			previous = {
+				"x": e.clientX,
+				"y": e.clientY
+			};
+		}
+		else
+		{
+			oldY = parseInt(windowElem.style.top);
+			oldX = parseInt(windowElem.style.left);
+		}
+
+		var delta = {
+			"x": e.clientX - previous.x,
+			"y": e.clientY - previous.y
+		};
+
+
+		if( !noResizeY )
+			windowElem.style.top = oldY + delta.y + "px";
+
+		if( !noResizeX )
+			windowElem.style.left = oldX + delta.x + "px";
+
+		previous.x = e.clientX;
+		previous.y = e.clientY;
+	}
+
+	document.addEventListener("mouseup", function(e)
+	{
+		e.preventDefault();
+		document.removeEventListener("mousemove", mouseMoveListener, false);
+		document.removeEventListener(arguments.callee, true);
+	}, true);
+
+	document.addEventListener("mousemove", mouseMoveListener, false);
+};
+
+ArcadeHud.prototype.gripListener = function(titleBarElem)
+{
+	// 1 more .parentNode than dragListener
+	var windowElem = titleBarElem.parentNode.parentNode.parentNode.parentNode.parentNode;
+	var noResizeX = (windowElem.getAttribute("noresizex") == 1) ? true : false;
+	var noResizeY = (windowElem.getAttribute("noresizey") == 1) ? true : false;
+
+	var rect = windowElem.getBoundingClientRect();
+
+	// break out of dock mode when resizing
+	if( false )
+	{
+		windowElem.style.position = "absolute";
+		windowElem.style.top = rect.top;
+		windowElem.style.left = rect.left;
+		if( !noResizeY )
+			windowElem.style.height = rect.height;
+		if( !noResizeX )
+			windowElem.style.width = rect.width;
+	}
+	// done breaking out
+
+	var previous;
+	function mouseMoveListener(e)
+	{
+		var oldY;
+		var oldX;
+
+		if( !!!previous )
+		{
+			oldY = rect.height;
+			oldX = rect.width;
+
+			previous = {
+				"x": e.clientX,
+				"y": e.clientY
+			};
+		}
+		else
+		{
+			oldY = parseInt(windowElem.style.height);
+			oldX = parseInt(windowElem.style.width);
+		}
+
+		var delta = {
+			"x": e.clientX - previous.x,
+			"y": e.clientY - previous.y
+		};
+
+		if( windowElem.style.position !== "absolute" )
+		{
+			delta.x *= 2;
+			delta.y *= 2;
+		}
+
+
+		if( !noResizeY )
+			windowElem.style.height = oldY + delta.y + "px";
+
+		if( !noResizeX )
+			windowElem.style.width = oldX + delta.x + "px";
+
+		previous.x = e.clientX;
+		previous.y = e.clientY;
+	}
+
+	document.addEventListener("mouseup", function(e)
+	{
+		e.preventDefault();
+		document.removeEventListener("mousemove", mouseMoveListener, false);
+		document.removeEventListener(arguments.callee, true);
+	}, true);
+
+	document.addEventListener("mousemove", mouseMoveListener, false);
+};
+
+ArcadeHud.prototype.addCSSRules = function()
+{
+	var style = document.createElement("style");
+	style.appendChild(document.createTextNode(""));
+	document.head.appendChild(style);
+	var stylesheet = style.sheet;
+
+	var themeSizes = this.themeSizes;
+	var themeColors = this.themeColors;
+
+	for( var className in themeSizes )
+	{
+		stylesheet.insertRule(".aa" + className + "FontSize { font-size: " + themeSizes[className] + "; }");
+		stylesheet.insertRule(".aa" + className + "Size { width: " + themeSizes[className] + "; height: " + themeSizes[className] + "; }");
+		stylesheet.insertRule(".aa" + className + "MinSize { min-width: " + themeSizes[className] + "; min-height: " + themeSizes[className] + "; }");
+		stylesheet.insertRule(".aa" + className + "Width { width: " + themeSizes[className] + "; }");
+		stylesheet.insertRule(".aa" + className + "Height { height: " + themeSizes[className] + "; }");
+	}
+
+	var defaultValue, highValue, lowValue;
+	for( var className in themeColors )
+	{
+		defaultValue = themeColors[className].defaultValue;
+		highValue = themeColors[className].highValue;
+		lowValue = themeColors[className].lowValue;
+
+		/* Defaults */
+		stylesheet.insertRule(".aa" + className + "Color, .aa" + className + "HoverColor { color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "BackgroundColor, .aa" + className + "HoverBackgroundColor { background-color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "BorderColor { border-color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "ShadedBorderColor { border-top-color: " + highValue + "; border-left-color: " + highValue + "; border-bottom-color: " + lowValue + "; border-right-color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "InverseShadedBorderColor { border-top-color: " + lowValue + "; border-left-color: " + lowValue + "; border-bottom-color: " + highValue + "; border-right-color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "ShadedBackground, .aa" + className + "HoverShadedBackground { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverColor:hover { color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverBackgroundColor:hover { background-color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground:hover { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + defaultValue + "); }");
+
+		/* Highs */
+		stylesheet.insertRule(".aa" + className + "HighColor, .aa" + className + "HighHoverColor { color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HighBorderColor { border-color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HighBackgroundColor, .aa" + className + "HighHoverBackgroundColor { background-color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HighHoverColor:hover { color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HighHoverBackgroundColor:hover { background-color: " + defaultValue + "; }");
+
+		/* Lows */
+		stylesheet.insertRule(".aa" + className + "LowColor, .aa" + className + "LowHoverColor { color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "LowBorderColor { border-color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "LowBackgroundColor, .aa" + className + "LowHoverBackgroundColor { background-color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "LowHoverColor:hover { color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "LowHoverBackgroundColor:hover { background-color: " + defaultValue + "; }");
+	}
+};
+
+ArcadeHud.prototype.generateIconHTML = function(iconImage, width, height, cssClass, cssColorClass)
+{
+	var dummyElem = document.createElement("div");
+	dummyElem.className = cssClass;
+	document.head.appendChild(dummyElem);
+	var dummyStyle = window.getComputedStyle(dummyElem);
+	var dummyBackgroundColor = dummyStyle.getPropertyValue('color');
+	dummyElem.parentNode.removeChild(dummyElem);
+
+	var bgColors = dummyBackgroundColor.split("(")[1].split(")")[0].split(",");
+	bgColors.forEach(function(element, index, array)
+	{
+		element = parseFloat(element);
+		if( index < 3 )
+			element = element / 255.0;
+		array[index] = element;
+	});
+
+	if( bgColors.length < 4 )
+		bgColors.push(1);
+
+	var filterId = "filter" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
+
+	var html = "";
+	html += '\
+		<svg width="' + width + '" height="' + height + '">\
+		<filter id="' + filterId + '">\
+			<feColorMatrix type="matrix" values="' + bgColors[0] + ' 0 0 0 0\
+			0 ' + bgColors[1] + ' 0 0 0\
+			0 0 ' + bgColors[2] + ' 0 0\
+			0 0 0 ' + bgColors[3] + ' 0" />\
+		</filter>\
+		<image filter="url(#' + filterId + ')" width="' + width + '" height="' + height + '" perserveAspectRatio="xMinYMin slice" xlink:href="' + iconImage + '" />\
+	</svg>';
+
+	return html;
+};
+
+ArcadeHud.prototype.generateWindowHeaderHTML = function(title, cssText, noresizex, noresizey, backCallbackText, closeCallbackText)
+{
+	//return "<div style='background-color: pink;'>";
+	var noResizeX = (noresizex == 1) ? "1" : "0";
+	var noResizeY = (noresizey == 1) ? "1" : "0";
+
+	var backButtonDisplay = (!!backCallbackText) ? "initial" : "none";
+	var closeButtonDisplay = (!!closeCallbackText) ? "initial" : "none";
+
+	var html = "";
+	html += '\
+		<table class="aaWindow aaThemeColorTwoShadedBackground aaThemeColorOneShadedBorderColor" noresizex="' + noResizeX + '" noresizey="' + noResizeY + '" cellspacing="0" cellpadding="0" style="' + cssText + '">\
+			<tr><td class="aaBigIconSizeHeight">\
+				<table class="aaTitleBar" onmousedown="arcadeHud.dragListener(this);">\
+					<thead>\
+						<tr>\
+							<td class="aaThemeColorOneBackgroundColor aaTitleBarIcon" style="width: 1%;">\
+								<img src="aaicon.png" class="aaBigIconSizeSize" style="-webkit-filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.8));" />\
+							</td>\
+							<td class="aaThemeColorOneBackgroundColor" style="text-align: left;">\
+								<div class="aaTextColorOneColor aaTitleText aaTitleTextSizeFontSize">\
+									' + title + '\
+								</div>\
+							</td>\
+							<td style="display:' + backButtonDisplay + ';" class="aaThemeColorOneHoverBackgroundColor aaTitleBarIcon aaIconSizeSize aaIconSizeMinSize" onclick="' + backCallbackText + '">\
+								' + arcadeHud.generateIconHTML("barrow.png", parseInt(arcadeHud.themeSizes.IconSize), parseInt(arcadeHud.themeSizes.IconSize), "aaTextColorOneColor") + '\
+							</td>\
+							<td style="display:' + closeButtonDisplay + ';" class="aaThemeColorOneHoverBackgroundColor aaTitleBarIcon aaIconSizeSize aaIconSizeMinSize" onclick="' + closeCallbackText + '">\
+								' + arcadeHud.generateIconHTML("close.png", parseInt(arcadeHud.themeSizes.IconSize), parseInt(arcadeHud.themeSizes.IconSize), "aaTextColorOneColor") + '\
+							</td>\
+						</tr>\
+					</thead>\
+				</table>\
+			</td></tr>\
+			</td></tr>\
+			<tr><td class="aaWindowPane" valign="top">\
+	';
+
+    return html;
 };
 
 // Originally from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent

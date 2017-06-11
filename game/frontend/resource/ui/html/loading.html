@@ -2,22 +2,114 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+		<style>
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			#briefing::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#briefing::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#briefing::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#briefing::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+		</style>
+
+		<script>
+			var mapId = arcadeHud.getParameterByName("map");
+			var map = aaapi.system.getMap(mapId).map;
+			var instanceId = arcadeHud.getParameterByName("instance");
+			var position = arcadeHud.getParameterByName("pos");
+			var rotation = arcadeHud.getParameterByName("rot");
+			var screenshotId = arcadeHud.getParameterByName("screenshot");
+			var screenshot = aaapi.system.getScreenshot(screenshotId).screenshot;
+
+			setTimeout(function()
+			{
+				aaapi.system.loadMap(mapId, instanceId, position, rotation, screenshotId);
+			}, 100);
+			
+		</script>
 	</head>
 	<body>
-		<div class="hudHeaderContainer">
-			<div class="hudHeaderRow">
-				<div class="hudHeaderCell" style="text-align: left;">
-				</div>
-				<div class="hudHeaderCell">
-					<div>
-						Loading Anarchy Arcade
-					</div>
-				</div>
-				<div class="hudHeaderCell" style="text-align: right;">
-				</div>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Loading World...", "width: 400px;", true, true, "", "");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor">
+				<div id="mapImage"></div>
+				<div class="mapTitle aaTitleTextSizeFontSize"></div>
 			</div>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
-		<br />
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var elems = document.querySelectorAll(".mapTitle");
+			for( var i = 0; i < elems.length; i++ )
+				elems[i].innerHTML = map.title;
+
+			if( !!screenshot )
+			{
+				var tga = new TGA();
+
+				var mapImageContainer = document.createElement("div");
+				mapImageContainer.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; display: none;";
+
+				tga.open( "shots/" + screenshot.id + ".tga", function(){
+					var elem = tga.getCanvas();
+					elem.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; width: 100%;";
+				   this.appendChild(elem);
+				   this.style.display = "block";
+				}.bind(mapImageContainer));
+
+				var elem = document.querySelector("#mapImage");
+				elem.appendChild(mapImageContainer);
+			}
+		</script>
 	</body>
 </html>

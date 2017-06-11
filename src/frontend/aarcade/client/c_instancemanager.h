@@ -6,12 +6,13 @@
 #include <vector>
 #include <string>
 #include "c_prop_shortcut.h"
+#include "c_backpack.h"
 
 struct object_t
 {
 	std::string objectId;
 	unsigned int created;
-	std::string creator;
+	std::string owner;
 	unsigned int removed;
 	std::string remover;
 	unsigned int modified;
@@ -37,6 +38,8 @@ struct instance_t
 	std::string file;
 	std::string workshopIds;
 	std::string mountIds;
+	//std::string backpackId;
+	int legacy;
 };
 
 struct transform_t
@@ -63,7 +66,7 @@ public:
 	void LoadInstance(std::string instanceId, std::string position = "", std::string rotation = "");
 	void LoadLegacyInstance(std::string instanceId, KeyValues* instanceKV);
 
-	void ApplyChanges(std::string id, C_PropShortcutEntity* pShortcut);
+	void ApplyChanges(C_PropShortcutEntity* pShortcut);
 	void ResetObjectChanges(C_PropShortcutEntity* pShortcut);
 
 	transform_t* GetTransform() { return m_pTransform; }
@@ -77,30 +80,38 @@ public:
 
 	object_t* GetNearestObjectToPlayerLook(object_t* pStartingObject = null);
 
+	std::string CreateBlankInstance(int iLegacy = 0, KeyValues* pInstanceKV = null, std::string instanceId = "", std::string mapId = "", std::string title = "", std::string file = "", std::string workshopIds = "", std::string mountIds = "", std::string style = "", C_Backpack* pBackpack = null);
+	void CreateObject(KeyValues* pObjectKV, std::string objectId, std::string itemId, std::string modelId, std::string position, std::string rotation, float scale, int slave, int child);
+
 	void SpawnObject(object_t* object, bool bShouldGhost = false);
-	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string creator = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false);
+	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string owner = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false);
 	object_t* GetInstanceObject(std::string objectId);
 	unsigned int GetInstanceObjectCount();
 	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity);
 	bool SpawnNearestObject();
 	//void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
-	void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)maxDist; }
+	int SetNearestSpawnDist(double maxDist);	// returns how many unspawned objects are within that dist
 
-	void AddInstance(std::string instanceId, std::string mapId, std::string title, std::string file = "", std::string workshopIds = "", std::string mountIds = "", std::string backpackId = "", std::string style = "");
+	void AddInstance(int iLegacy, std::string instanceId, std::string mapId, std::string title, std::string file = "", std::string workshopIds = "", std::string mountIds = "", std::string style = "");
 	instance_t* GetInstance(std::string id);
-	instance_t* FindInstance(std::string mapId);
+	instance_t* FindInstance(std::string instanceId);
+	instance_t* GetCurrentInstance();
 	void FindAllInstances(std::string mapId, std::vector<instance_t*> &instances);
 	void LegacyMapIdFix(std::string legacyMapName, std::string mapId);
+
+	bool ConsumeLegacyInstance(std::string instanceId, std::string filename, std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 	void SpawnActionPressed();
 	void ChangeModel(C_BaseEntity* pEntity, std::string modelId, std::string in_modelFile);
 	//void SpawnItem(std::string id);
 
 	// accessors
+	int GetUnspawnedWithinRangeEstimate() { return m_iUnspawnedWithinRangeEstimate; }
 
 	// mutators
 	
 private:
+	int m_iUnspawnedWithinRangeEstimate;
 	transform_t* m_pTransform;
 	KeyValues* m_pInstanceKV;
 	unsigned int m_uNextFlashedObject;

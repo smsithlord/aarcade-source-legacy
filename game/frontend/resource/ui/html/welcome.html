@@ -1,62 +1,1174 @@
 <html>
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
-		<script src="asset://ui/hud.js"></script>
-<!--
-		<link rel="stylesheet" type="text/css" href="rangeslider.css">
-		<script src="jquery-2.1.3.min.js"></script>
-		<script src="rangeslider.min.js"></script>
-		<script>
-		    // Initialize a new plugin instance for all
-		    // e.g. $('input[type="range"]') elements.
-		    $('input[type="range"]').rangeslider();
-
-		    // Destroy all plugin instances created from the
-		    // e.g. $('input[type="range"]') elements.
-		    $('input[type="range"]').rangeslider('destroy');
-
-		    // Update all rangeslider instances for all
-		    // e.g. $('input[type="range"]') elements.
-		    // Usefull if you changed some attributes e.g. `min` or `max` etc.
-		    $('input[type="range"]').rangeslider('update', true);
-		-->
-		</script>
-
-		
+		<script src="asset://ui/hud.js"></script>	
+		<script src="asset://ui/tga.js"></script>	
 	</head>
 	<body>
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell"></div>
-					<div class="hudContentHeaderCell">
-						Main
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
-				</div>
+
+		<script>
+			var tga = new TGA();
+
+			var worldInfo = aaapi.system.getWorldInfo();
+			var screenshots = aaapi.system.getAllMapScreenshots(worldInfo.map.info.id);
+
+			var goodScreenshots = [];
+			var screenshot;
+			var screenshotKeys = Object.keys(screenshots);
+			for( var i = 0; i < screenshotKeys.length; i++ )
+			{
+				screenshot = screenshots[screenshotKeys[i]];
+
+				if( screenshot.instance.id == worldInfo.instance.id )
+					goodScreenshots.push(screenshot);
+			}
+
+			// most recent screenshots on top
+			goodScreenshots.sort(function(a, b)
+			{
+				var aCreated = parseInt(a.created);
+				var bCreated = parseInt(b.created);
+				if( aCreated > bCreated )
+					return -1;
+				else if( aCreated < bCreated )
+					return 1;
+				else
+					return 0;
+			});
+		</script>
+		
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Main", "", false, false, "", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div id="dummyMarker"></div>
+
+		<center>
+			<table style="width: 100%;">
+				<tr>
+					<td valign="top" style="width: 1px;">
+
+			<!-- World Info, Leave -->
+			<div class="aaOnlyIfMapLoaded">
+				<!--
+				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+				-->
+				<!--
+				<table style="width: 100%;" cellspacing="0" cellpadding="0">
+					<tr><td>
+						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="World Info" onclick="window.location='asset://ui/worldInfo.html';" help="View mount & workshop info about this world." />
+					</td><td>
+						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+					</td></tr>
+				</table>
+				-->
 			</div>
 
-			<div class="aaOnlyIfMapLoaded" style="width: 90%; display: block; text-align: center; margin-left: 5%; display: none;">
-				<div class="mainButton helpNote" style="width: 70%; display: inline-block; float: left;" onclick="window.location='asset://ui/worldInfo.html';" help="View mount & workshop info about this world.">World Info</div>
-				<div class="mainButton helpNote" style="width: 25%; display: inline-block; float: right;" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu.">Leave</div>
+			<!-- Library -->
+			<div class="aaOnlyIfMapLoaded">
+				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library." /><br />
 			</div>
 
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/play.html';" help="Load a map.">Play</div>
-			<div class="mainButton helpNote aaOnlyIfMapLoaded" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library.">Library</div>
-			<div class="mainButton disabledButton">Multiplayer</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine.">Options</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/addons.html';" help="Manage your workshop & other addons, or import Steam games, maps & models, or legacy content.">Addons</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade.">Feedback</div>
-			<div class="mainButton helpNote" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows.">Quit</div>
+			<!-- Multiplayer
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Multiplayer" onclick="" help="" disabled /><br />
+			 -->
+
+			<!-- Options -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Options" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine." /><br />
+
+			<!-- Addons -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Addons" onclick="window.location='asset://ui/addons.html';" help="Manage your workshop & other addons, or import Steam games, maps & models, or legacy content." /><br />
+
+			<!-- Feedback -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Feedback" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade." /><br />
+
+			<!-- Quit -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Quit" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows." />
+
+					</td>
+					<td valign="top" id="extraPanel" style="max-width: 1280px; display: none;">
+						<div style="height: 100%; width: 100%; min-width: 600px; display: inline-block;">
+						<script>
+							var extraPanel = document.querySelector("#extraPanel");
+
+							var extraPanelVal = sessionStorage.getItem("extraPanel");
+							if( arcadeHud.getParameterByName("tab") )
+								extraPanelVal = "block";
+							if( !!extraPanelVal && extraPanelVal !== "" )
+								extraPanel.style.display = extraPanelVal;
+
+							// prefer a tab ID given in the URL
+							var tabId = arcadeHud.getParameterByName("tab");
+
+							// otherwise, use session storage
+							if( !!!tabId )
+								tabId = sessionStorage.getItem("aaMainTab", tabId);
+
+							// otherwise, let arcadeHud decide
+							if( !!!tabId )
+								tabId = "";
+
+							var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+								"tabs": [
+									{
+										"id": "worlds",
+										"title": "Worlds"
+									},
+									{
+										"id": "tasks",
+										"title": "Tasks"
+									},
+									{
+										"id": "screenshots",
+										"title": "Screenshots"
+									},
+									{
+										"id": "commands",
+										"title": "Commands"
+									}
+								],
+								"activeTabId": tabId,
+								"onChangeCallbackName": "onChangeCallback"
+							});
+							document.write(windowTabsHeaderHTML);
+
+							function onChangeCallback(tabId)
+							{
+								sessionStorage.setItem("aaMainTab", tabId);
+							}
+						</script>
+
+						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="worlds" style="">
+							<!--<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Your World</div>-->
+							<div class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor" style="border-style: solid; border-width: 2px; padding: 10px; border-radius: 6px; display: inline-block; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);" onclick="window.location='asset://ui/play.html';">
+								<div class="mapImage aaThemeColorOneInverseShadedBorderColor" style="width: 240px; height: 135px; border-width: 2px; border-style: solid; border-radius: 4px;"></div>
+								<div class="mapTitle aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor"></div>
+							</div>
+							<br /><br />
+							<!-- <div class="instanceTitle aaTitleTextSizeFontSize"></div> -->
+							<div id="worldsContainer" style="display: none;"></div>
+							<!--
+							<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Other Worlds</div>
+							<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify;'>
+								Yadda yadda.
+							</div>
+							-->
+							<!-- Play & Leave
+							<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="View Old Play Menu" onclick="window.location='asset://ui/play.html';" help="Load a map." /><br />
+							<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+							-->
+						</div>
+
+						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="tasks">
+
+							<div class="taskCategory aaThemeColorTwoHoverShadedBackground">
+								<div class="taskButton" style="vertical-align: middle;">
+									<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'tasks');" id="toggleTasksButton" />
+								</div>
+								<div class="taskCategoryTitle">
+									In-Game
+								</div>
+							</div>
+
+							<div id="tasks" style="display: none;">
+								<div id="noTasksOpen">No in-game tasks are running.</div>
+							</div>
+
+							<div class="taskCategory aaThemeColorTwoHoverShadedBackground">
+								<div class="taskButton" style="vertical-align: middle;">
+									<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'windowsTasks');" id="toggleWindowsTasksButton" />
+								</div>
+								<div class="taskCategoryTitle">
+									Windows
+								</div>
+							</div>
+
+							<div id="windowsTasks" style="display: none;">
+							</div>
+
+							<div class="taskCategory aaThemeColorTwoHoverShadedBackground">
+								<div class="taskButton" style="vertical-align: middle;">
+									<img src="collapse.png" style="width: 20px;" onclick="toggleCategory(this, 'hiddenTasks');" id="toggleHiddenTasksButton" />
+								</div>
+								<div class="taskCategoryTitle">
+									Hidden
+								</div>
+							</div>
+
+							<div id="hiddenTasks" style="display: none;">
+							</div>
+						</div>
+
+						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="screenshots">
+							<div id="screenshotList" style="padding: 10px;"></div>
+						</div>
+
+						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="commands" style="border-radius: 4px; height: 100%; display: block; height: 416px;">
+							<div id="commands" style="padding: 4px; text-align: center;"></div>
+						</div>
+
+						<script>
+							var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+							document.write(windowTabsFooterHTML);
+						</script>
+						</div>
+					</td>
+					<td valign="bottom" align="right">
+						<div style="position: relative; float: right;">
+							<div style="position: absolute; top: -120px; left: 16px; opacity: 0.7;">
+								<div class="aaButton aaThemeColorOneHoverShadedBackground aaTextColorTwoColor aaThemeColorOneShadedBorderColor" style="border-style: solid; border-width: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0; min-width: 16px; width: 24px; height: 120px; display: inline-block; font-size: 14px; font-weight: 900; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);" onclick="toggleExtraPanel();">
+									<div style="-webkit-transform: rotate(90deg); letter-spacing: 0.1em;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EXTRA</div>
+								</div>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
+		<style>
+			.command
+			{
+				font-family: Arial;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				color: #aaa;
+				font-size: 25px;
+
+				border-radius: 10px;
+				white-space: nowrap;
+				text-align: center;
+				vertical-align: middle;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 10px;
+				margin: 4px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.command:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+		</style>
 		<script>
-			//var elem = document.querySelector("#worldInfoButton");
-			//console.log()
+			var screenshotListElem = document.querySelector("#screenshotList");
+
+			var commands = [
+				{
+					"title": "Toggle Mute",
+					"command": "toggle volume 0 1",
+					"closeMenu": true,
+					"help": "Toggle the Source engine volume on/off."
+				},
+				{
+					"title": "Fly Mode",
+					"command": "noclip",
+					"closeMenu": true,
+					"help": "Fly through solid objects instead of walking."
+				},
+				{
+					"title": "Reflections",
+					"command": "toggle mat_fastspecular",
+					"closeMenu": true,
+					"help": "Toggles reflections.  This can fix over-bright props or hard-to-see screens."
+				},
+				{
+					"title": "HDR Level",
+					"command": "toggle mat_hdr_level 0 2",
+					"closeMenu": true,
+					"help": "HDR simulates your pupils adjusting to lighting conditions.  Turning it off can fix how some maps look."
+				},
+				{
+					"title": "All Guns",
+					"command": "impulse 101",
+					"closeMenu": true,
+					"help": "Also can be used to replenish your ammo."
+				},
+				{
+					"title": "Air Boat",
+					"command": "ch_createairboat",
+					"closeMenu": true,
+					"help": "Try not to spawn it stuck into the ground."
+				},
+				{
+					"title": "Headcrab",
+					"command": "npc_create npc_headcrab",
+					"closeMenu": true,
+					"help": "They are your buddies, but they don't move around so well."
+				},
+				{
+					"title": "Stop Sounds",
+					"command": "stopsound",
+					"closeMenu": true,
+					"help": "Stops all the sounds that are currently playing from the map."
+				},
+				{
+					"title": "Developer",
+					"command": "toggle developer",
+					"closeMenu": true,
+					"help": "Shows excessive debug information in the console & on-screen."
+				}
+			];
+
+			commands.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else
+					return 0;
+			});
+
+			var commandsElem = document.querySelector("#commands");
+			var command, commandElem;
+			for( var i = 0; i < commands.length; i++ )
+			{
+				command = commands[i];
+				//<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Multiplayer" onclick="" help="" disabled /><br />
+				commandElem = document.createElement("input");
+				commandElem.type = "button";
+				commandElem.className = "aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote";//"aaTitleTextSize aaTitleText aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneShadedBorderColor helpNote";
+				commandElem.value = command.title;
+				commandElem.style.cssText = "letter-spacing: 0.1em; padding: 10px; border-radius: 4px; border-style: solid; border-width: 2px; display: block; width: 100%;";
+
+				commandElem.command = command;
+				//commandElem.className = "command helpNote";
+				commandElem.setAttribute("help", command.help);
+				//commandElem.innerHTML = command.title;
+				commandElem.addEventListener("click", function(e)
+				{
+					if( this.command.closeMenu )
+						aaapi.system.consoleCommand(this.command.command, true);
+					else
+						aaapi.system.consoleCommand(this.command.command);
+				}.bind(commandElem), true);
+				commandsElem.appendChild(commandElem);
+			}
 		</script>
+
+		<script>
+			var worldInfo = aaapi.system.getWorldInfo();
+			var instance = worldInfo.instance;
+			var map = worldInfo.map;
+
+			if( !!instance )
+			{
+				elems = document.querySelectorAll(".instanceTitle");
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].innerHTML = instance.title;
+			}
+
+			if( !!map )
+			{
+				elems = document.querySelectorAll(".mapTitle");
+				for( var i = 0; i < elems.length; i++ )
+					elems[i].innerHTML = map.title;
+			}
+
+
+			var mapImageInstance = document.querySelector(".mapImage");
+			if( !!mapImageInstance && goodScreenshots.length > 0 )
+			{
+				var mapImageContainer = document.createElement("div");
+				mapImageContainer.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; display: none;";
+
+				tga.open( "shots/" + goodScreenshots[0].id + ".tga", function(){
+					var elem = tga.getCanvas();
+					elem.style.cssText = "max-width: 100%; max-height: 420px; margin-left: auto; margin-right: auto; width: 100%;";
+					this.appendChild(elem);
+					this.style.display = "block";
+				}.bind(mapImageContainer));
+
+				mapImageInstance.appendChild(mapImageContainer);
+			}
+		</script>
+
+
+
+
+		<style>
+			#noTasksOpen
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+			}
+
+			#hiddenTasks
+			{
+				display: none;
+			}
+
+			#tasks, #hiddenTasks, #windowsTasks
+			{
+				/*max-height: 186px;*/
+				overflow-y: auto;
+			}
+
+			#windowsTasks
+			{
+				max-height: 310px;
+			}
+
+			.taskContainer
+			{
+				height: 40px;
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: bold;
+				letter-spacing: 0.1em;
+				padding: 10px;
+				border-radius: 4px;
+				/*
+				border: 1px solid black;
+				background-color: rgba(50, 50, 100, 0.7);
+				*/
+			}
+
+			#tasks::-webkit-scrollbar, #hiddenTasks::-webkit-scrollbar, #windowsTasks::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			#tasks::-webkit-scrollbar-track, #hiddenTasks::-webkit-scrollbar-track, #windowsTasks::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			#tasks::-webkit-scrollbar-thumb, #hiddenTasks::-webkit-scrollbar-thumb, #windowsTasks::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
+				background-color: #777;
+			}
+
+			#tasks::-webkit-scrollbar-corner, #hiddenTasks::-webkit-scrollbar-corner, #windowsTasks::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.taskCategory
+			{
+				display: none;
+				/*background-color: rgba(50, 50, 50, 0.5);*/
+				font-weight: bold;
+				font-family: Arial;
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.9);
+				border-radius: 4px;
+				height: 40px;
+				padding-left: 10px;
+			}
+
+			.taskCategoryTitle
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+			}
+
+			.taskAllButton
+			{
+				font-size: 16px;
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+				display: inline-block;
+				float: right;
+			}
+
+			.windowsButton
+			{
+
+				display: inline-block;
+				border: 2px solid transparent;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.taskButton
+			{
+				background: none;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				/*border: 2px solid black;*/
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+				/*background-color: rgba(150, 150, 150, 0.5);*/
+			}
+
+			.displayed .taskButton.displayIcon
+			{
+				background-color: rgba(50, 200, 50, 0.8);
+			}
+
+			.taskButton:hover
+			{
+				background-color: rgba(150, 150, 150, 0.8);
+			}
+
+			.taskTitle
+			{
+				width: 85%;
+				height: 100%;
+				line-height: 40px;
+				white-space: nowrap;
+				overflow: hidden;
+			}
+
+			.tab
+			{
+				border-radius: 0 0 10px 10px;
+				white-space: nowrap;
+				font-size: 18px;
+				text-align: center;
+				vertical-align: middle;
+				font-family: Arial;
+				padding: 5px;
+				font-style: italic;
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				border-collapse: separate;
+				border-spacing: 0;
+				padding: 5px;
+				display: inline-block;
+				-webkit-box-shadow: 3px 5px 8px #000;
+				margin-top: -2px;
+				/*
+				margin-left: 1px;
+				margin-right: 1px;
+				*/
+				color: #aaa;
+				border: 3px solid #000;
+				background-color: rgba(50, 50, 50, 0.9);
+			}
+
+			.tab:hover
+			{
+				color: #fff;
+				background-color: rgba(70, 70, 70, 0.9);
+			}
+
+			.tabOn
+			{
+				background-color: rgba(250, 50, 50, 0.7);
+			}
+
+			.tabOn:hover
+			{
+				background-color: rgba(250, 50, 50, 0.9);
+			}
+
+			.iconsContainer
+			{
+				/*display: none;*/
+				display: inline-block;
+				visibility: hidden;
+			}
+
+			.taskContainer:hover .iconsContainer
+			{
+				/*display: inline-block;*/
+				visibility: visible;
+			}
+		</style>
+
+
+
+		<script>
+			var response = aaapi.system.getAllTasks(true);	// param is supposed to update thumbnails, doesn't work yet. No thumbnails for tasks yet.
+			var tasks = response.tasks;
+			var windowsTasks = response.windowsTasks;
+			
+			var tasksContainer = document.querySelector("#tasks");
+			var toggleTasksButton = document.querySelector("#toggleTasksButton");
+
+			var windowsTasksContainer = document.querySelector("#windowsTasks");
+			var toggleWindowsTasksButton = document.querySelector("#toggleWindowsTasksButton");
+
+			var hiddenWindowsTasksContainer = document.querySelector("#hiddenTasks");
+			var toggleHiddenTasksButton = document.querySelector("#toggleHiddenTasksButton");
+
+			function toggleHiddenTasks(elem)
+			{
+				var hidden = (hiddenWindowsTasksContainer.style.display === "none");
+				if( !!elem )
+				{
+					if( hidden )
+						elem.innerHTML = "DON'T SHOW HIDDEN";
+					else
+						elem.innerHTML = "SHOW HIDDEN";
+				}
+
+				if( hidden )
+					hiddenWindowsTasksContainer.style.display = "block";
+				else
+					hiddenWindowsTasksContainer.style.display = "none";
+			}
+
+			function toggleCategory(elem, category)
+			{
+				var categoryElem = document.querySelector("#" + category);
+				var isHidden = (categoryElem.style.display === "none");
+
+				if( isHidden )
+				{
+					elem.src = "expand.png";
+					categoryElem.style.display = "block";
+					sessionStorage.setItem("taskMenu_" + category, "block");
+				}
+				else
+				{
+					elem.src = "collapse.png";
+					categoryElem.style.display = "none";
+					sessionStorage.setItem("taskMenu_" + category, "none");
+				}
+			}
+
+			function toggleExtraPanel()
+			{
+				var elem = extraPanel;
+				/*
+				if( extraPanel.style.display !== "none" )
+					extraPanel.style.display = "none";
+				else
+					extraPanel.style.display = "initial";
+				*/
+
+				var isHidden = (elem.style.display === "initial");
+				if( isHidden )
+				{
+					elem.style.display = "none";
+					sessionStorage.setItem("extraPanel", "none");
+				}
+				else
+				{
+					elem.style.display = "initial";
+					sessionStorage.setItem("extraPanel", "initial");
+				}
+			}
+
+			// session storage to remember UI stuff
+			var menuSettings = 
+			{
+				"taskMenu_tasks": "block",
+				"taskMenu_windowsTasks": "block",
+				"taskMenu_hiddenTasks": "none"
+			};
+
+			var menuSettingVal;
+			var menuSettingsKeys = Object.keys(menuSettings);
+			for( var i = 0; i < menuSettingsKeys.length; i++ )
+			{
+				menuSettingVal = sessionStorage.getItem(menuSettingsKeys[i]);
+				if( !!menuSettingVal && menuSettingVal !== "" )
+					menuSettings[menuSettingsKeys[i]] = menuSettingVal;
+			}
+
+			if( menuSettings["taskMenu_tasks"] !== windowsTasksContainer.style.display )
+				toggleCategory(toggleTasksButton, "tasks");
+
+			if( menuSettings["taskMenu_windowsTasks"] !== windowsTasksContainer.style.display )
+				toggleCategory(toggleWindowsTasksButton, "windowsTasks");
+
+			if( menuSettings["taskMenu_hiddenTasks"] !== hiddenWindowsTasksContainer.style.display )
+				toggleCategory(toggleHiddenTasksButton, "hiddenTasks");
+
+			if( tasks.length <= 2 )
+			{
+				document.querySelector("#closeAllButton").style.display = "none";	// obsolete
+				document.querySelector("#noTasksOpen").style.display = "block";
+			}
+			else
+				document.querySelector("#noTasksOpen").style.display = "none";
+
+			var task, taskContainer, taskElem, iconsContainer, iconButton, iconImage;
+			/*
+			if( true )	// WINDOWS
+			{
+				// NON-HIDDEN WINDOWS
+				for( var i = 0; i < windowsTasks.length; i++ )
+				{
+					task = windowsTasks[i];
+
+					if( task.isHiddenTask )
+						continue;
+
+					taskContainer = document.createElement("div");
+					taskContainer.className = "taskContainer";
+					//taskContainer.style.cssText = "height: 40px; font-family: Arial; font-size: 20px; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 10px; border: 1px solid black; background-color: rgba(50, 50, 100, 0.7);";
+
+					if( task.isDisplayTask )
+						taskContainer.className += " displayed";
+
+					taskElem = document.createElement("div");
+					taskElem.className = "taskTitle";
+					//taskElem.innerHTML = "<img src='windows.png?cahce=busted' style='vertical-align: middle;' /> " + task.title;
+					taskElem.innerHTML = task.title;
+
+					iconsContainer = document.createElement("div");
+					iconsContainer.style.cssText = "float: right;";
+
+					iconButton = document.createElement("div");
+					iconButton.className = "windowsButton helpNote";
+					iconButton.setAttribute("help", "This is a Windows task.  AArcade does NOT have control over it.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconImage = document.createElement("img");
+					iconImage.src = "windowsicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton helpNote";
+					iconButton.setAttribute("help", "Switch to this Windows task.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function(e)
+					{
+						aaapi.system.switchToTask(this.taskId);
+						var slate = document.createElement("div");
+						slate.style.cssText = "position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);"
+						document.body.appendChild(slate);
+
+						var elem = document.createElement("div");
+						elem.style.cssText = "font-family: Arial; font-weight: bold; font-size: 30px; position: absolute; text-align: center; width: 200px; position: absolute;";
+						elem.style.left = e.clientX - 100 + "px";
+						elem.style.top = e.clientY - 50 + "px";
+						elem.innerHTML = "Release TAB";
+						document.addEventListener("mousemove", function(e)
+						{
+							this.style.left = e.clientX - 100 + "px";
+							this.style.top = e.clientY - 50 + "px";
+						}.bind(elem), true);
+
+						document.body.appendChild(elem);
+					});
+					iconImage = document.createElement("img");
+					iconImage.src = "switchicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton displayIcon helpNote";
+					iconButton.setAttribute("help", "Hide this Windows task, so it doesn't appear on this menu any more.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						//aaapi.system.displayTask(this.taskId);
+						aaapi.system.hideTask(this.taskId);
+						location.reload();
+					});
+					iconImage = document.createElement("img");
+					//iconImage.className = "displayIcon";
+					iconImage.src = "minusicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					taskContainer.appendChild(iconsContainer);
+
+					taskContainer.appendChild(taskElem);
+					windowsTasksContainer.appendChild(taskContainer);
+				}
+
+				// HIDDEN WINDOWS
+				for( var i = 0; i < windowsTasks.length; i++ )
+				{
+					task = windowsTasks[i];
+
+					if( !task.isHiddenTask || task.isPresetHidden )
+						continue;
+
+					taskContainer = document.createElement("div");
+					taskContainer.className = "taskContainer";
+					taskContainer.style.cssText = "height: 40px; font-family: Arial; font-size: 20px; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 10px; border: 1px solid black; background-color: rgba(50, 50, 100, 0.7);";
+
+					if( task.isDisplayTask )
+						taskContainer.className += " displayed";
+
+					taskElem = document.createElement("div");
+					taskElem.className = "taskTitle";
+					//taskElem.innerHTML = "<img src='windows.png?cahce=busted' style='vertical-align: middle;' /> " + task.title;
+					taskElem.innerHTML = task.title;
+
+					iconsContainer = document.createElement("div");
+					iconsContainer.style.cssText = "float: right;";
+
+					iconButton = document.createElement("div");
+					iconButton.className = "windowsButton helpNote";
+					iconButton.setAttribute("help", "This is a Windows task.  AArcade does NOT have control over it.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconImage = document.createElement("img");
+					iconImage.src = "windowsicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton helpNote";
+					iconButton.setAttribute("help", "Switch to this Windows task.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function(e)
+					{
+						aaapi.system.switchToTask(this.taskId);
+						var slate = document.createElement("div");
+						slate.style.cssText = "position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);"
+						document.body.appendChild(slate);
+
+						var elem = document.createElement("div");
+						elem.style.cssText = "font-family: Arial; font-weight: bold; font-size: 30px; position: absolute; text-align: center; width: 200px; position: absolute;";
+						elem.style.left = e.clientX - 100 + "px";
+						elem.style.top = e.clientY - 50 + "px";
+						elem.innerHTML = "Release TAB";
+						document.addEventListener("mousemove", function(e)
+						{
+							this.style.left = e.clientX - 100 + "px";
+							this.style.top = e.clientY - 50 + "px";
+						}.bind(elem), true);
+
+						document.body.appendChild(elem);
+					});
+					iconImage = document.createElement("img");
+					iconImage.src = "switchicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton displayIcon helpNote";
+					iconButton.setAttribute("help", "Unhide this Windows task, so it appears in AArcade's Task Menu again.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						aaapi.system.unhideTask(this.taskId);
+						location.reload();
+					});
+					iconImage = document.createElement("img");
+					//iconImage.className = "displayIcon";
+					iconImage.src = "plusicon.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+
+					taskContainer.appendChild(iconsContainer);
+
+					taskContainer.appendChild(taskElem);
+					hiddenWindowsTasksContainer.appendChild(taskContainer);
+				}
+			}
+			*/
+
+			// AARCADE TASKS
+			for( var i = 0; i < tasks.length; i++ )
+			{
+				task = tasks[i];
+
+				if( task.isHiddenTask )
+					continue;
+
+				taskContainer = document.createElement("div");
+
+				taskContainer.className = "taskContainer aaTitleTextSize aaTitleText";
+				if( task.isDisplayTask )
+					taskContainer.className += " displayed aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+				else
+					taskContainer.className += " aaThemeColorTwoHoverShadedBackground aaThemeColorOneShadedBorderColor";
+
+				taskContainer.style.cssText = "font-family: Arial; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 4px; border-style: solid; border-width: 2px; cursor-events: all; margin-top: 4px; margin-bottom: 4px; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); margin-right: 4px;";
+
+				taskElem = document.createElement("div");
+
+				var taskImageContainer = document.createElement("div");
+				taskImageContainer.style.cssText = "display: inline-block; margin-right: 10px; vertical-align: top; width: 90px; height: 38px; text-align: center; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);";
+
+				var taskImage = document.createElement("img");
+				taskImage.style.display = "none";
+				//taskImage.style.cssText = "display: inline-block; max-width: 90px; max-height: 40px;";
+				taskImage.item = task.item;
+				taskImageContainer.appendChild(taskImage);
+				taskElem.appendChild(taskImageContainer);
+				taskElem.image = taskImage;
+				taskContainer.addEventListener("mouseover", function(e)
+				{
+					if(false && !!this.image.ready)
+					{
+						var table = document.querySelector("#dummyMarker").parentNode.parentNode.parentNode.parentNode;
+						table.style.background = "transparent url('" + this.image.src + "') center scroll no-repeat";
+						table.style.backgroundSize = "cover";
+					}
+					e.preventDefault();
+				}.bind(taskElem), true);
+
+				if( task.isDisplayTask )
+				{
+					arcadeHud.loadItemBestImage(taskImage, taskImage.item, function()
+					{
+						this.ready = true;
+
+						var imageContainer = this.parentNode;
+						console.log(imageContainer.tagName);
+						imageContainer.style.background = "transparent url('" + this.src + "') center";
+						imageContainer.style.backgroundSize = "cover";
+						//console.log(imageContainer.style.background);
+						/*
+						if( false && extraPanel.style.display !== "none" )
+						{
+							var table = document.querySelector("#dummyMarker").parentNode.parentNode.parentNode.parentNode;
+							console.log(table.tagName);
+							table.style.background = "transparent url('" + this.src + "')";
+							table.style.backgroundSize = "cover";
+						}
+						*/
+					});
+				}
+				else
+				{
+					arcadeHud.loadItemBestImage(taskImage, taskImage.item, function()
+					{
+						this.ready = true;
+
+						var imageContainer = this.parentNode;
+						imageContainer.style.background = "transparent url('" + this.src + "') center";
+						imageContainer.style.backgroundSize = "cover";
+					});
+				}
+
+				if( task.isDisplayTask )
+					taskElem.className = "taskTitle aaTextColorOneColor";
+				else
+				{
+					taskElem.className = "taskTitle aaTextColorTowColor";
+					taskElem.style.cssText += " text-shadow: none;";
+				}
+
+				var textNode = document.createTextNode(task.item.title);
+				taskElem.appendChild(textNode);
+				//taskElem.innerHTML += task.item.title;
+				//taskElem.innerHTML = task.title;
+
+				taskElem.addEventListener("click", function(e)
+				{
+					//aaapi.system.selectTaskObject(this.id);
+					aaapi.system.displayTask(this.id);
+					aaapi.system.deactivateInputMode();
+				}.bind(task));
+
+				iconsContainer = document.createElement("div");
+				iconsContainer.className = "iconsContainer";
+				iconsContainer.style.cssText = "float: right;";
+
+				/*
+				iconButton = document.createElement("div");
+				iconButton.className = "taskButton aaThemeColorOneHoverShadedBackground helpNote";
+				iconButton.setAttribute("help", "Select this task's object.");
+				iconButton.style.cssText = "margin-right: 8px;";
+				iconButton.taskId = task.id;
+				iconButton.addEventListener("click", function()
+				{
+					aaapi.system.selectTaskObject(this.taskId);
+				});
+				iconImage = document.createElement("img");
+				iconImage.src = "objecticon.png";
+				iconButton.appendChild(iconImage);
+				iconsContainer.appendChild(iconButton);
+				*/
+
+				/*
+				if( !task.isDisplayTask )
+				{
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton aaThemeColorOneHoverShadedBackground helpNote displayIcon";
+					iconButton.setAttribute("help", "Show this task on all slave screens.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						aaapi.system.displayTask(this.taskId);
+						aaapi.system.deactivateInputMode();
+					});
+					iconImage = document.createElement("img");
+					iconImage.src = "eye.png";
+					iconButton.appendChild(iconImage);
+					iconsContainer.appendChild(iconButton);
+				}
+				*/
+
+				iconButton = document.createElement("div");
+				//if( !task.isDisplayTask )
+				//	iconButton.className = "taskButton aaThemeColorTwoHoverShadedBackground helpNote";
+				//else
+					iconButton.className = "taskButton aaThemeColorOneHoverShadedBackground helpNote";
+
+				iconButton.setAttribute("help", "Close this in-game task.");
+				iconButton.style.cssText = "margin-right: 8px;";
+				iconButton.taskId = task.id;
+				iconButton.addEventListener("click", function()
+				{
+					aaapi.system.closeTask(this.taskId);
+					location.reload();
+				});
+				iconImage = document.createElement("img");
+				iconImage.src = "close.png";
+				iconButton.appendChild(iconImage);
+				iconsContainer.appendChild(iconButton);
+
+				taskContainer.appendChild(iconsContainer);
+
+				taskContainer.appendChild(taskElem);
+				tasksContainer.appendChild(taskContainer);
+			}
+		</script>
+
+		<style>
+			.hotshot
+			{
+				display: inline-block;
+				padding: 4px;
+				/*background-color: rgba(0, 0, 0, 0.9);*/
+				border-width: 3px;
+				border-style: solid;
+				border-radius: 4px;
+				border-color: transparent;
+				margin: 4px;
+			}
+
+			.hotshot:hover
+			{
+				/*border-color: white;*/
+				/*
+				background-color: rgba(192, 35, 35, 0.8);
+				*/
+			}
+
+			.trashButtonContainer
+			{
+				display: none;
+			}
+
+			.hotshot:hover .trashButtonContainer
+			{
+				display: block;
+			}
+		</style>
+
+		<script>
+			// Add the "take new screenshot" button to the front of the list.
+			var screenshotElem = document.createElement("div");
+			screenshotElem.className = "hotshot aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor helpNote";
+			screenshotElem.style.cssText = "width: 240px; height: 135px;";
+			screenshotElem.setAttribute("help", "Capture a new screenshot from your current position.");
+			screenshotElem.addEventListener("click", function()
+			{
+				aaapi.system.takeScreenshot();
+				window.location='asset://ui/welcome.html?tab=screenshots';
+			}.bind(screenshotElem));
+
+			var elem = document.createElement("img");
+			elem.style.cssText = "width: 240px; height: 135px;";
+			elem.src = "takeshot.png";
+
+			screenshotElem.appendChild(elem);
+			screenshotListElem.appendChild(screenshotElem);
+
+			var trashButtonContainer;
+			var trashButton;
+			for( var i = 0; i < goodScreenshots.length; i++ )
+			{
+				screenshot = goodScreenshots[i];
+				screenshotElem = document.createElement("div");
+				screenshotElem.className = "hotshot aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor helpNote";
+
+				trashButtonContainer = document.createElement("div");
+				trashButtonContainer.className = "trashButtonContainer helpNote";
+				trashButtonContainer.setAttribute("help", "Delete this screenshot.");
+				trashButtonContainer.style.cssText = "position: relative; float: right; left: -36px; top: 4px;";
+
+				trashButton = document.createElement("div");
+				trashButton.className = "aaThemeColorOneHoverShadedBackground";
+				trashButton.style.cssText = "position: absolute; padding: 4px; border-radius: 4px;";
+				var iconSize = arcadeHud.themeSizes.IconSize;
+				var html = arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
+				trashButton.innerHTML = html;
+				trashButton.shotId = screenshot.id;
+				trashButton.addEventListener("click", function(e)
+				{
+					e.stopImmediatePropagation();
+
+					aaapi.system.deleteScreenshot(this.shotId);
+					window.location='asset://ui/welcome.html?tab=screenshots';
+				}.bind(trashButton), true);
+
+				trashButtonContainer.appendChild(trashButton);
+				screenshotElem.appendChild(trashButtonContainer);
+
+				screenshotElem.screenshotId = screenshot.id;
+				screenshotElem.setAttribute("help", "Teleport to this location.");
+				screenshotElem.addEventListener("click", function()
+				{
+					aaapi.system.teleportScreenshot(this.screenshotId, true);
+				}.bind(screenshotElem));
+
+				screenshotElem.style.cssText = "width: 240px; height: 135px;";
+				tga.open( "shots/" + screenshot.id + ".tga", function()
+				{
+					var elem = tga.getCanvas();
+					elem.style.cssText = "width: 240px; height: 135px;";
+					this.appendChild(elem);
+				}.bind(screenshotElem));
+
+				screenshotListElem.appendChild(screenshotElem);
+			}
+		
+			/*
+
+				<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Your World</div>
+				<div class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor" style="border-style: solid; border-width: 2px; padding: 10px; border-radius: 6px; display: inline-block; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);">
+					<div class="mapImage aaThemeColorOneInverseShadedBorderColor" style="width: 240px; height: 135px; border-width: 2px; border-style: solid; border-radius: 4px;"></div>
+					<div class="mapTitle aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor"></div>
+					<div class="instanceTitle aaTitleTextSizeFontSize"></div>
+				</div>
+
+			*/
+
+			var worldsContainer = document.querySelector("#worldsContainer");
+			worldsContainer.innerHTML = "TODO: Progressively get every map & a screenshot to go with it.";
+
+		</script>
+
 	</body>
 </html>

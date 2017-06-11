@@ -205,7 +205,7 @@ void CWebSurfaceProxy::ReleaseCurrent()
 void CWebSurfaceProxy::ReleaseStuff()
 {
 	DevMsg("WebSurfaceProxy: Release Stuff\n");
-	if (m_pMaterialTextureVar && m_pOriginalTexture && m_pCurrentTexture && m_pOriginalTexture != m_pCurrentTexture)
+	if (this->GetMaterial() && m_pMaterialTextureVar && m_pOriginalTexture && m_pCurrentTexture && m_pOriginalTexture != m_pCurrentTexture)
 	{
 		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 	}
@@ -556,8 +556,13 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 
 void CWebSurfaceProxy::UnreferenceTexture(ITexture* pTexture)
 {
-	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture() && m_pMaterialTextureVar->GetTextureValue() == pTexture )
+	if (m_pMaterialTextureVar && m_pMaterialTextureVar->IsDefined() && m_pMaterialTextureVar->IsTexture() && m_pMaterialTextureVar->GetTextureValue() == pTexture)
+	{
+		if (!m_pOriginalTexture->IsError())
+			DevMsg("ERROR: Original texture was error!\n");
+		else
 			m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+	}
 }
 
 void CWebSurfaceProxy::UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)

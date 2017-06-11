@@ -26,6 +26,7 @@ C_LibretroInstance::C_LibretroInstance()
 	m_pTexture = null;
 	m_iLastRenderedFrame = -1;
 	m_iLastVisibleFrame = -1;
+	m_iOriginalEntIndex = -1;
 //	m_pOpenGLManager = null;
 }
 
@@ -64,13 +65,15 @@ void C_LibretroInstance::CleanUpTexture()
 	}
 }
 
-void C_LibretroInstance::Init(std::string id, std::string title)
+void C_LibretroInstance::Init(std::string id, std::string title, int iEntIndex)
 {
 	std::string goodTitle = (title != "") ? title : "Untitled Libretro Tab";
 	m_title = goodTitle;
 	m_id = id;
 	if (m_id == "")
 		m_id = g_pAnarchyManager->GenerateUniqueId();
+
+	m_iOriginalEntIndex = iEntIndex;
 
 	// create the texture (each instance has its own texture)
 	std::string textureName = "canvas_";

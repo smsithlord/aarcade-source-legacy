@@ -30,6 +30,7 @@ public:
 	ITexture* GetInputSlateCanvasTexture();
 
 	// accessors
+	bool IsTempSelect() { return m_bTempSelect; }
 	bool GetInputCapture() { return m_bInputCapture; }
 	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
 	bool GetInputMode() { return m_bInputMode; }
@@ -56,10 +57,12 @@ public:
 	void MouseWheelUp();
 
 	// mutators
+	void SetTempSelect(bool value) { m_bTempSelect = value; }
 	void SetInputCapture(bool value) { m_bInputCapture = value; }
 	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
 	
 private:
+	bool m_bTempSelect;
 	std::map<std::string, vgui::KeyCode> m_sourceKeyEnumMap;
 	C_EmbeddedInstance* m_pEmbeddedInstance;
 	bool m_bWasForcedInputMode;

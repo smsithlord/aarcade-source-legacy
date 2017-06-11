@@ -18,6 +18,7 @@ public:
 	void Prepare();
 	void Release();
 	void CreateDb();
+	void OpenDb();
 	void CloseDb();
 	void LegacyAuditDb();
 	void MergDb();
@@ -26,6 +27,7 @@ public:
 	void vpkDetect();
 	void GetAllVPKs(std::vector<std::string>& allVPKs);
 	void GetAllFiles(std::vector<std::string>& allFiles);
+	bool HasInstance(std::string id);
 	//void GetBackpackInfo(KeyValues* pBackpackKV);
 
 	// accessors
@@ -33,6 +35,8 @@ public:
 	std::string GetId() { return m_id; }
 	std::string GetTitle() { return m_title; }
 	std::string GetBackpackFolder() { return m_backpackFolder; }
+	sqlite3* GetSQLDb() { return m_pDb; }
+	sqlite3** GetSQLDbPointer() { return &m_pDb; }
 	
 	// mutators
 	void SetPrepared(bool bValue) { m_bPrepared = bValue; }

@@ -139,6 +139,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 
 				SendResponse(request_id, strlen(generatedPage.c_str()), (unsigned char*)generatedPage.c_str(), WSLit("text/html"));
 			}
+			buf.Purge();
 		}
 		else if (shortPath.find(".js") == shortPath.length() - 3)
 		{
@@ -156,6 +157,7 @@ void UiDataSource::OnRequest(int request_id, const ResourceRequest& request, con
 
 				SendResponse(request_id, strlen(loadedContent.c_str()), (unsigned char*)loadedContent.c_str(), WSLit("application/javascript"));
 			}
+			buf.Purge();
 		}
 		else if (shortPath.find(".css") == shortPath.length() - 4)
 		{
@@ -309,6 +311,7 @@ void ScreenshotDataSource::OnRequest(int request_id, const ResourceRequest& requ
 
 				SendResponse(request_id, strlen(generatedPage.c_str()), (unsigned char*)generatedPage.c_str(), WSLit("text/html"));
 			}
+			buf.Purge();
 		}
 		else if (shortPath.find(".js") == shortPath.length() - 3)
 		{
@@ -326,6 +329,7 @@ void ScreenshotDataSource::OnRequest(int request_id, const ResourceRequest& requ
 
 				SendResponse(request_id, strlen(loadedContent.c_str()), (unsigned char*)loadedContent.c_str(), WSLit("application/javascript"));
 			}
+			buf.Purge();
 		}
 		else if (shortPath.find(".css") == shortPath.length() - 4)
 		{

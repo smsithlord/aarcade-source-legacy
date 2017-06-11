@@ -57,7 +57,7 @@ void C_BackpackManager::Init()
 
 	m_bInitialized = true;
 
-	this->DetectAllBackpacks(); // disabled
+	//this->DetectAllBackpacks(); // disabled
 }
 
 C_Backpack* C_BackpackManager::GetBackpack(std::string backpackId)
@@ -110,6 +110,22 @@ void C_BackpackManager::DetectAllBackpacks()
 
 		pFilename = g_pFullFileSystem->FindNext(findHandle);
 	}
+}
+
+C_Backpack* C_BackpackManager::FindBackpackWithInstanceId(std::string id)
+{
+	C_Backpack* pBackpack = null;
+	auto it = m_backpacks.begin();
+	while (it != m_backpacks.end())
+	{
+		pBackpack = it->second;
+		if (pBackpack->HasInstance(id))
+			return pBackpack;
+
+		it++;
+	}
+
+	return null;
 }
 
 void C_BackpackManager::ActivateAllBackpacks()

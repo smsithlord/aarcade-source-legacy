@@ -22,11 +22,13 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 
-	m_tabMenuFile = "taskMenu.html";
+	m_tabMenuFile = "taskMenu.html";	// OBSOLETE!!
 	m_bIsShuttingDown = false;
 	m_bIsHoldingPrimaryFire = false;
 	m_pHoverGlowEntity = null;
 	m_pLastNearestObjectToPlayerLook = null;
+
+	m_bIsDisconnecting = false;
 
 	m_iLastDynamicMultiplyer = -1;
 	m_pPicMipConVar = null;
@@ -177,6 +179,295 @@ void C_AnarchyManager::PostInit()
 	*/
 }
 
+void C_AnarchyManager::OnStartup()
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->Select();
+	pHudBrowserInstance->Focus();
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
+}
+
+void C_AnarchyManager::OnUpdateLibraryVersionCallback()
+{
+	int iLibraryVersion = m_pMetaverseManager->ExtractLibraryVersion();
+	if (iLibraryVersion == -1)
+		iLibraryVersion = 0;
+
+	if (iLibraryVersion < AA_LIBRARY_VERSION)
+	{
+		DevMsg("Making a backup then converting your library from version %i to %i\n", iLibraryVersion, (iLibraryVersion + 1));
+		if (m_pMetaverseManager->ConvertLibraryVersion(0, 1))
+		{
+			DevMsg("Done updating library.  Backup copy placed in the backups folder just in case.\n");
+			//this->OnReadyToLoadUserLibrary();
+		}
+		else
+			DevMsg("CRITICAL ERROR: Could not convert library version! Aborting! You should make a copy of the newest backup in aarcade_user/backups and replace the aarcade_user/library.db file with the backup and try again. If it still fails, let me know on during a Twitch stream and I'll help figure things out with you! - SM Sith Lord\n");
+	}
+
+	this->OnStartupCallback(true);
+}
+
+void C_AnarchyManager::OnStartupCallback(bool bForceDefaultAdd)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	
+	// Now start loading stuff in... (if this is our 1st time here...)
+	m_pMetaverseManager->Init();
+
+	// check if library version is obsolete
+	int iLibraryVersion = m_pMetaverseManager->ExtractLibraryVersion();
+	if (iLibraryVersion == -1)
+		iLibraryVersion = 0;
+	//DevMsg("CRITICAL ERROR: Could not extract library version from library.db!\n");
+
+	if (iLibraryVersion < AA_LIBRARY_VERSION)
+	{
+		//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Backing up & updating your library...", "userlibrary", "0", "0", "5", "defaultLibraryReadyCallback");
+		pHudBrowserInstance->AddHudLoadingMessage("", "", "Backing Up & Updating Your Library", "updatelibraryversion", "", "", "", "updateLibraryVersionCallback");
+		return;
+	}
+
+	bool bNeedsDefault = m_pMetaverseManager->IsEmptyDb();
+	if (bNeedsDefault)
+	{
+		//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding Default Library", "defaultlibrary", "", "4", "+", "addNextDefaultLibraryCallback");
+
+		// the current DB is already created, but empty.
+		// we just need to add stuff to it.
+		m_pMetaverseManager->AddDefaultTables();
+	}
+
+	if (bNeedsDefault || iLibraryVersion < AA_LIBRARY_VERSION || bForceDefaultAdd)
+	{	
+		//this->OnAddNextDefaultLibraryCallback();
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Apps", "defaultapps", "", "", "+0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Cabinets", "defaultcabinets", "", "", "+0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Maps", "defaultmaps", "", "", "+0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Models", "defaultmodels", "", "", "+0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Types", "defaulttypes", "", "", "+0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding Default Library", "defaultlibrary", "", "5", "+0", "addNextDefaultLibraryCallback");
+	}
+	else
+	{
+		/*
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Types", "usertypes", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Cabinets", "usercabinets", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Models", "usermodels", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Apps", "userapps", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Items", "useritems", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Instances", "userinstances", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading User Library", "userlibrary", "0", "0", "5", "defaultLibraryReadyCallback");
+		*/
+
+		this->OnDefaultLibraryReady();
+	}
+}
+
+void C_AnarchyManager::OnAddNextDefaultLibraryCallback()
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
+	addDefaultLibraryContext_t* context = m_pMetaverseManager->GetAddDefaultLibraryContext();
+
+	if (!context)
+	{
+		context = new addDefaultLibraryContext_t();
+		context->pDb = null;
+		context->numApps = 0;
+		context->numCabinets = 0;
+		context->numMaps = 0;
+		context->numModels = 0;
+		context->numTypes = 0;
+		context->kv = null;
+		context->state = 0;
+
+		m_pMetaverseManager->SetAddDefaultLibraryToDbIterativeContext(context);
+	}
+
+	// remember which value gets incremeneted
+	unsigned int oldState = context->state;
+	unsigned int oldNumApps = context->numApps;
+	unsigned int oldNumCabinets = context->numCabinets;
+	unsigned int oldNumMaps = context->numMaps;
+	unsigned int oldNumModels = context->numModels;
+	unsigned int oldNumTypes = context->numTypes;
+
+	m_pMetaverseManager->AddDefaultLibraryToDbIterative(context);
+
+	std::string callbackName = (context->state == 1) ? "" : "addNextDefaultLibraryCallback";
+
+	if ( oldNumApps != context->numApps )
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Apps", "defaultapps", "", "", "+", callbackName);
+	else if (oldNumCabinets != context->numCabinets)
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Cabinets", "defaultcabinets", "", "", "+", callbackName);
+	else if (oldNumMaps != context->numMaps)
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Maps", "defaultmaps", "", "", "+", callbackName);
+	else if (oldNumModels != context->numModels)
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Models", "defaultmodels", "", "", "+", callbackName);
+	else if (oldNumTypes != context->numTypes)
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Default Types", "defaulttypes", "", "", "+", callbackName);
+
+	// for now...
+	std::string curState = "0";
+	if (oldState != context->state)
+	{
+		if (context->state == 3)
+			curState = "1";
+		else if (context->state == 4)
+			curState = "2";
+		else if (context->state == 5)
+			curState = "3";
+		else if (context->state == 6)
+			curState = "4";
+		else if (context->state == 1)
+			curState = "5";
+
+		if (context->state != 1)
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding Default Library", "defaultlibrary", "", "5", curState);
+	}
+
+	if (context->state == 1)
+	{
+		m_pMetaverseManager->DeleteAddDefaultLibraryContext(context);
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding Default Library", "defaultlibrary", "", "5", "5", "defaultLibraryReadyCallback");
+		//this->OnDefaultLibraryReady();
+	}
+}
+
+void C_AnarchyManager::OnReadyToLoadUserLibrary()
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+
+	unsigned int uCount;
+	std::string num;
+
+
+	// TODO: All of these should be incremental (per-group)
+	// And continue starting up
+	uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalTypes();
+	num = VarArgs("%u", uCount);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Types", "usertypes", "", "", num);
+
+	unsigned int uNumDynamic = 0;
+	uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalModels(uNumDynamic);
+	num = VarArgs("%u", uNumDynamic);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Cabinets", "usercabinets", "", "", num);
+	num = VarArgs("%u", uCount - uNumDynamic);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Models", "usermodels", "", "", num);
+
+	uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalApps();
+	num = VarArgs("%u", uCount);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Apps", "userapps", "", "", num);
+
+	uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItems();
+	num = VarArgs("%u", uCount);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Items", "useritems", "", "", num);
+
+	uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalInstances();
+	num = VarArgs("%u", uCount);
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Instances", "userinstances", "", "", num);
+
+	//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading User Library", "userlibrary", "0", "6", "6");
+
+	// time to add in some search paths
+	if (m_legacyFolder != "")
+	{
+		g_pFullFileSystem->AddSearchPath(m_legacyFolder.c_str(), "MOD", PATH_ADD_TO_TAIL);
+		g_pFullFileSystem->AddSearchPath(m_legacyFolder.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+		std::string workshopMapsPath = m_legacyFolder + std::string("workshop\\workshopmaps\\");
+		g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
+
+		std::string workshopFile;
+		FileFindHandle_t findHandle;
+		const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", m_legacyFolder.c_str()), "", &findHandle);
+		while (pFilename != NULL)
+		{
+			workshopFile = m_legacyFolder + std::string("workshop\\") + std::string(pFilename);
+
+			if (workshopFile.find(".vpk") == workshopFile.length() - 4)
+			{
+				DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
+				g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
+			}
+
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+		}
+		g_pFullFileSystem->FindClose(findHandle);
+
+		std::string customFolder;
+		pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%scustom\\*", m_legacyFolder.c_str()), "", &findHandle);
+		while (pFilename != NULL)
+		{
+			if (Q_strcmp(pFilename, ".") && Q_strcmp(pFilename, "..") && g_pFullFileSystem->FindIsDirectory(findHandle))
+			{
+				customFolder = m_legacyFolder + std::string("custom\\") + std::string(pFilename);
+				DevMsg("Adding %s to the search paths.\n", customFolder.c_str());
+				g_pFullFileSystem->AddSearchPath(customFolder.c_str(), "GAME", PATH_ADD_TO_TAIL);
+			}
+
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+		}
+		g_pFullFileSystem->FindClose(findHandle);
+	}
+
+	// Create the mount manager & initialize it
+	m_pMountManager = new C_MountManager();
+	m_pMountManager->Init();
+	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
+
+	// Initialize the backpack manager (it already exists)
+	m_pBackpackManager->Init();
+
+	// Create the workshop manager & initialize it
+	m_pWorkshopManager = new C_WorkshopManager();
+	m_pWorkshopManager->Init();
+}
+
+void C_AnarchyManager::OnDefaultLibraryReadyCallback()
+{
+	this->OnDefaultLibraryReady();
+}
+
+void C_AnarchyManager::OnDefaultLibraryReady()
+{
+	/*
+	// check if library version is obsolete
+	int iLibraryVersion = m_pMetaverseManager->ExtractLibraryVersion();
+	if (iLibraryVersion == -1)
+		iLibraryVersion = 0;
+		//DevMsg("CRITICAL ERROR: Could not extract library version from library.db!\n");
+
+	if (iLibraryVersion < AA_LIBRARY_VERSION)
+	{
+		DevMsg("Making a backup then converting your library from version %i to %i\n", iLibraryVersion, (iLibraryVersion + 1));
+		if (m_pMetaverseManager->ConvertLibraryVersion(0, 1))
+		{
+			DevMsg("Done updating library.  Backup copy placed in the backups folder just in case.\n");
+			this->OnReadyToLoadUserLibrary();
+		}
+		else
+			DevMsg("CRITICAL ERROR: Could not convert library version! Aborting! You should make a copy of the newest backup in aarcade_user/backups and replace the aarcade_user/library.db file with the backup and try again. If it still fails, let me know on during a Twitch stream and I'll help figure things out with you! - SM Sith Lord\n");
+	}
+	else
+	*/
+		//this->OnReadyToLoadUserLibrary();
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	/*
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Types", "usertypes", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Cabinets", "usercabinets", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Models", "usermodels", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Apps", "userapps", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Items", "useritems", "", "", "0");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "User Instances", "userinstances", "", "", "0");
+	*/
+	//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading User Library", "userlibrary", "0", "6", "0", "readyToLoadUserLibraryCallback");
+
+	pHudBrowserInstance->AddHudLoadingMessage("", "", "Loading User Library...", "userlibrary", "", "", "", "readyToLoadUserLibraryCallback");
+}
+
 void C_AnarchyManager::Shutdown()
 {
 	DevMsg("AnarchyManager: Shutdown\n");
@@ -252,6 +543,8 @@ void C_AnarchyManager::Shutdown()
 void C_AnarchyManager::LevelInitPreEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPreEntity\n");
+	m_bIsDisconnecting = false;
+
 	m_instanceId = m_pNextLoadInfo->instanceId;// m_nextInstanceId;
 
 	C_AwesomiumBrowserInstance* pImagesBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("images");
@@ -293,7 +586,7 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
 	m_bSuspendEmbedded = true;
-
+	
 	C_BaseEntity* pEntity = this->GetSelectedEntity();
 	if (pEntity)
 		this->DeselectEntity();
@@ -356,7 +649,7 @@ void C_AnarchyManager::PreRender()
 
 void C_AnarchyManager::IncrementState()
 {
-	DevMsg("Increment tate called.\n");
+	DevMsg("Increment state called.\n");
 
 	if (m_bIncrementState)
 		DevMsg("CRITICAL ERROR: State attempted to increment while it was still waiting for the previous increment!\n");
@@ -526,7 +819,10 @@ void C_AnarchyManager::Update(float frametime)
 
 			m_pInstanceManager = new C_InstanceManager();
 			m_pMetaverseManager = new C_MetaverseManager();
-			m_pMetaverseManager->Init();
+			//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Meta Scrapers", "loadmetascrapers", "", "", "69", "loadNextMetaScraper");
+			m_pMetaverseManager->UpdateScrapersJS();	// make sure everything that hud.js loads is ready right away, to avoid cache issues
+
+			//m_pMetaverseManager->Init();	// try to delay this until after startup
 			m_pBackpackManager = new C_BackpackManager();
 			m_pInputManager = new C_InputManager();
 
@@ -841,10 +1137,12 @@ bool C_AnarchyManager::HandleCycleToPrevWeapon()
 void C_AnarchyManager::Pause()
 {
 	m_bPaused = true;
+	//this->HardPause();
 }
 
 void C_AnarchyManager::Unpause()
 {
+	//this->WakeUp();
 	m_bPaused = false;
 
 	m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud")->SetUrl("asset://ui/default.html");
@@ -956,6 +1254,32 @@ void C_AnarchyManager::AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV)
 		else
 			targetKV->SetString(sub->GetName(), sub->GetString());
 	}
+}
+
+void C_AnarchyManager::LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId)
+{
+	m_pMetaverseManager->SetLoadingScreenshotId(screenshotId);
+
+	KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->GetMap(mapId);
+	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(map);
+
+	std::string mapName = active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
+	mapName = mapName.substr(0, mapName.length() - 4);
+
+	std::string title = "Unnamed (" + mapName + ")";
+
+	if (instanceId == "")
+		instanceId = g_pAnarchyManager->GetInstanceManager()->CreateBlankInstance(0, null, "", mapId, title);
+
+	g_pAnarchyManager->SetNextLoadInfo(instanceId, position, rotation);
+	//g_pAnarchyManager->SetNextInstanceId(instanceId);
+
+	//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+	//C_AwesomiumBrowserInstance* pHudInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	//std::string url = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId;
+	//pHudInstance->SetUrl(url);
+
+	engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
 }
 
 bool C_AnarchyManager::WeaponsEnabled()
@@ -1144,148 +1468,136 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 	if (item)
 	{
 		// if there is an item, attempt to get the active node kv
-		itemActive = item->FindKey("current");
-		if (!itemActive)
-			itemActive = item->FindKey("local", true);
+		itemActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
+		bItemGood = true;
 
-		if (itemActive)
+		// if there is an active node kv for the item, attempt to get file
+		file = itemActive->GetString("file");
+		if (file != "")
 		{
-			bItemGood = true;
-
-			// if there is an active node kv for the item, attempt to get file
-			file = itemActive->GetString("file");
-			if (file != "")
+			// does it have an app?
+			if (Q_strcmp(itemActive->GetString("app"), ""))
 			{
-				// does it have an app?
-				if (Q_strcmp(itemActive->GetString("app"), ""))
+				bHasApp = true;
+
+				app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
+				appActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(app);
+				bAppGood = true;
+
+				// if there is an app, attempt to get its executable
+				appExecutable = appActive->GetString("file");
+				if (appExecutable != "")
 				{
-					bHasApp = true;
+					bAppExecutableGood = true;
 
-					app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
-					appActive = app->FindKey("current");
-					if (!appActive)
-						appActive = app->FindKey("local", true);
-
-					if (appActive)
+					// just grab the FIRST filepath for now.
+					// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+					// Note: Apps are not required to have a filepath specified.
+					std::string testFile;
+					std::string testPath;
+					KeyValues* filepaths = appActive->FindKey("filepaths", true);
+					for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 					{
-						bAppGood = true;
+						// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+						// (because in that case the local user probably needs to specify a correct location for it.)
+						bHasAppFilepath = true;
 
-						// if there is an app, attempt to get its executable
-						appExecutable = appActive->GetString("file");
-						if (appExecutable != "")
+						testPath = sub->GetString("path");
+
+						// test if this path exists
+						// FIXME: always assume it exists for now
+						//if (true)
+						if (g_pFullFileSystem->FileExists(testPath.c_str()))
 						{
-							bAppExecutableGood = true;
+							bAtLeastOneAppFilepathExists = true;
 
-							// just grab the FIRST filepath for now.
-							// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
-							// Note: Apps are not required to have a filepath specified.
-							std::string testFile;
-							std::string testPath;
-							KeyValues* filepaths = appActive->FindKey("filepaths", true);
-							for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+							// test if the file exists inside of this filepath
+							testFile = testPath + file;
+
+							// FIXME: always assume the file exists in this path for now.
+							if (g_pFullFileSystem->FileExists(testFile.c_str()))
 							{
-								// true if even 1 filepath exists for the app, even if it is not found on the local PC.
-								// (because in that case the local user probably needs to specify a correct location for it.)
-								bHasAppFilepath = true;
-
-								testPath = sub->GetString("path");
-
-								// test if this path exists
-								// FIXME: always assume it exists for now
-								//if (true)
-								if (g_pFullFileSystem->FileExists(testPath.c_str()))
-								{
-									bAtLeastOneAppFilepathExists = true;
-
-									// test if the file exists inside of this filepath
-									testFile = testPath + file;
-
-									// FIXME: always assume the file exists in this path for now.
-									if (g_pFullFileSystem->FileExists(testFile.c_str()))
-									{
-										composedFile = testFile;
-										appFilepath = testPath;
-										bAppFilepathGood = true;
-										bItemFileGood = true;
-										break;
-									}
-								}
-							}
-
-							// resolve the composedFile now
-							if (!bAppFilepathGood)
-								composedFile = file;
-
-							// generate the commands
-							// try to apply a command format
-							appCommands = appActive->GetString("commandformat");
-							if (appCommands != "")
-							{
-								// if the app has a command syntax, replace item variables with their values.
-
-								// replace $FILE with active->GetString("file")
-								// replace $QUOTE with a double quote
-								// replace $SHORTFILE with active->GetString("file")'s filename only
-								// replace etc.
-
-								size_t found;
-
-								found = appCommands.find("$FILE");
-								if (found != std::string::npos)
-								{
-									if (this->AlphabetSafe(composedFile) && this->DirectorySafe(composedFile))
-									{
-										while (found != std::string::npos)
-										{
-											appCommands.replace(found, 5, composedFile);
-											found = appCommands.find("$FILE");
-										}
-									}
-									else
-										errorType = UNKNOWN_ERROR;
-								}
-
-								found = appCommands.find("$QUOTE");
-								while (found != std::string::npos)
-								{
-									appCommands.replace(found, 6, "\"");
-									found = appCommands.find("$QUOTE");
-								}
-							}
-							else
-							{
-								// otherwise, apply the default Windows command syntax for "open with"
-								appCommands = "\"" + composedFile + "\"";
+								composedFile = testFile;
+								appFilepath = testPath;
+								bAppFilepathGood = true;
+								bItemFileGood = true;
+								break;
 							}
 						}
 					}
-				}
 
-				if (!bAppExecutableGood)
-					composedFile = file;
+					// resolve the composedFile now
+					if (!bAppFilepathGood)
+						composedFile = file;
 
-				if (!bAppFilepathGood)
-				{
-					// check if the file exists.
-					// (file could also be an HTTP or STEAM protocol address at this point.)
-
-					// are we a web address missing an http?
-					if (composedFile.find("www.") == 0)
-						composedFile = "http://" + composedFile;
-
-					// is it a steam appid?
-					if (!Q_strcmp(VarArgs("%llu", Q_atoui64(composedFile.c_str())), composedFile.c_str()))
+					// generate the commands
+					// try to apply a command format
+					appCommands = appActive->GetString("commandformat");
+					if (appCommands != "")
 					{
-						composedFile = "steam://run/" + composedFile;
-						bItemFileGood = true;
+						// if the app has a command syntax, replace item variables with their values.
+
+						// replace $FILE with active->GetString("file")
+						// replace $QUOTE with a double quote
+						// replace $SHORTFILE with active->GetString("file")'s filename only
+						// replace etc.
+
+						size_t found;
+
+						found = appCommands.find("$FILE");
+						if (found != std::string::npos)
+						{
+							if (this->AlphabetSafe(composedFile) && this->DirectorySafe(composedFile))
+							{
+								while (found != std::string::npos)
+								{
+									appCommands.replace(found, 5, composedFile);
+									found = appCommands.find("$FILE");
+								}
+							}
+							else
+								errorType = UNKNOWN_ERROR;
+						}
+
+						found = appCommands.find("$QUOTE");
+						while (found != std::string::npos)
+						{
+							appCommands.replace(found, 6, "\"");
+							found = appCommands.find("$QUOTE");
+						}
 					}
-					else if (composedFile.find("http") == 0)
-						bItemFileGood = true;
-					else if (g_pFullFileSystem->FileExists(composedFile.c_str()))
-						bItemFileGood = true;
-					//else if (true)	// check if local file exists // FIXME: assume it always exists for now
-						//bItemFileGood = true;
+					else
+					{
+						// otherwise, apply the default Windows command syntax for "open with"
+						appCommands = "\"" + composedFile + "\"";
+					}
 				}
+			}
+
+			if (!bAppExecutableGood)
+				composedFile = file;
+
+			if (!bAppFilepathGood)
+			{
+				// check if the file exists.
+				// (file could also be an HTTP or STEAM protocol address at this point.)
+
+				// are we a web address missing an http?
+				if (composedFile.find("www.") == 0)
+					composedFile = "http://" + composedFile;
+
+				// is it a steam appid?
+				if (!Q_strcmp(VarArgs("%llu", Q_atoui64(composedFile.c_str())), composedFile.c_str()))
+				{
+					composedFile = "steam://run/" + composedFile;
+					bItemFileGood = true;
+				}
+				else if (composedFile.find("http") == 0)
+					bItemFileGood = true;
+				else if (g_pFullFileSystem->FileExists(composedFile.c_str()))
+					bItemFileGood = true;
+				//else if (true)	// check if local file exists // FIXME: assume it always exists for now
+					//bItemFileGood = true;
 			}
 		}
 	}
@@ -1824,7 +2136,8 @@ void C_AnarchyManager::ShowTaskMenu()
 	//if (!enginevgui->IsGameUIVisible())
 	//{
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-		pHudBrowserInstance->SetUrl(VarArgs("asset://ui/%s", this->GetTabMenuFile().c_str()));//taskMenu.html");
+		//pHudBrowserInstance->SetUrl(VarArgs("asset://ui/%s", this->GetTabMenuFile().c_str()));//taskMenu.html");
+		pHudBrowserInstance->SetUrl("asset://ui/welcome.html?tab=tasks");
 		m_pInputManager->ActivateInputMode(true, true);
 	//}
 }
@@ -2016,6 +2329,7 @@ void C_AnarchyManager::ObsoleteLegacyCommandReceived()
 			filesystem->WriteFile("config/config_redux.cfg", "DEFAULT_WRITE_PATH", buf);
 			engine->ClientCmd("exec config_redux\n");
 		}
+		buf.Purge();
 	}
 	else
 	{
@@ -2104,6 +2418,20 @@ void C_AnarchyManager::Feedback(std::string type)
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage(goodUrl.c_str());
 }
 
+void C_AnarchyManager::HardPause()
+{
+	//m_bPausePending = true;
+	engine->ClientCmd("stopsound");
+	materials->ReleaseResources();
+	materials->Flush(true);
+	materials->EvictManagedResources();
+}
+
+void C_AnarchyManager::WakeUp()
+{
+	materials->ReacquireResources();
+}
+
 void C_AnarchyManager::TaskClear()
 {
 	if (this->GetSelectedEntity())
@@ -2134,6 +2462,7 @@ void C_AnarchyManager::TaskRemember()
 				testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
 				if (testerInstance && testerInstance->GetTexture())
 				{
+					//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(testerInstance);
 					g_pAnarchyManager->DeselectEntity("", false);
 					break; // only put the 1st embedded instance on continous play
 				}
@@ -2151,13 +2480,12 @@ void C_AnarchyManager::SetSlaveScreen(bool bVal)
 
 	if (pShortcut)
 	{
-		std::string objectId = pShortcut->GetObjectId();
-		object_t* pObject = this->GetInstanceManager()->GetInstanceObject(objectId);
+		object_t* pObject = this->GetInstanceManager()->GetInstanceObject(pShortcut->GetObjectId());
 		if (pObject)
 		{
 			//pObject->slave = bVal;
 			pShortcut->SetSlave(bVal);
-			this->GetInstanceManager()->ApplyChanges(objectId, pShortcut);	// will also update the object
+			this->GetInstanceManager()->ApplyChanges(pShortcut);	// will also update the object
 		}
 	}
 }
@@ -2191,29 +2519,14 @@ inline int Floor2Int(float a)
 #include <chrono>
 void C_AnarchyManager::GenerateUniqueId(char* result)
 {
-	/*
-	DevMsg("AnarchyManager: GenerateUniqueId\n");
-
-	// pseudo random pseudo unique ids until the firebase id generator can be ported to C++
-	std::string id = "random";
-
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-
-	return id;
-	*/
-
 	std::string PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
-	//double now = vgui::system()->GetCurrentTime();
-	//using namespace std::chrono;
-	double now = std::chrono::system_clock::now().time_since_epoch().count();//GetCurrentTime();// vgui::system()->GetCurrentTime();
+	double now = std::chrono::system_clock::now().time_since_epoch().count();
 	now = floor(now / 64.0);
 	now = floor(now / 64.0);
 
-	//DevMsg("Time now: %lf\n", now);
+	while (now <= m_dLastGenerateIdTime)
+		now++;
 
 	bool duplicateTime = (now == m_dLastGenerateIdTime);
 	m_dLastGenerateIdTime = now;
@@ -2223,11 +2536,7 @@ void C_AnarchyManager::GenerateUniqueId(char* result)
 	for (unsigned int i = 8; i > 0; i--)
 	{
 		timeStampChars.replace(i - 1, 1, 1, PUSH_CHARS.at(fmod(now, 64.0)));
-		// NOTE: Can't use << here because javascript will convert to int and lose the upper bits.
-		//		if (now >= 64.0)
 		now = floor(now / 64.0);
-		//	else
-		//	now = 0;
 	}
 
 	if (now != 0)
@@ -2236,16 +2545,10 @@ void C_AnarchyManager::GenerateUniqueId(char* result)
 	}
 
 	std::string id = timeStampChars;
-	//bool bCharsExist = (m_lastGeneratedChars != "");
 	if (!duplicateTime)
 	{
 		for (unsigned int i = 0; i < 12; i++)
-		{
-			//			if (bCharsExist)
 			m_lastGeneratedChars.replace(i, 1, 1, (char)floor(random->RandomFloat() * 64.0L));
-			//		else
-			//		m_lastGeneratedChars += VarArgs("%c", (char)floor(random->RandomFloat() * 64.0L));
-		}
 	}
 	else
 	{
@@ -2273,43 +2576,23 @@ void C_AnarchyManager::GenerateUniqueId(char* result)
 
 const char* C_AnarchyManager::GenerateUniqueId()
 {
-	/*
-	DevMsg("AnarchyManager: GenerateUniqueId\n");
-
-	// pseudo random pseudo unique ids until the firebase id generator can be ported to C++
-	std::string id = "random";
-
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-
-	return id;
-	*/
-
 	std::string PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
-	
-	//double now = vgui::system()->GetCurrentTime();
-	//using namespace std::chrono;
-	double now = std::chrono::system_clock::now().time_since_epoch().count();//GetCurrentTime();// vgui::system()->GetCurrentTime();
+
+	double now = std::chrono::system_clock::now().time_since_epoch().count();
 	now = floor(now / 64.0);
 	now = floor(now / 64.0);
 
-	//DevMsg("Time now: %lf\n", now);
+	while (now <= m_dLastGenerateIdTime)
+		now++;
 
 	bool duplicateTime = (now == m_dLastGenerateIdTime);
 	m_dLastGenerateIdTime = now;
 
-	//char* timeStampChars[8];
 	std::string timeStampChars = "00000000";
 	for (unsigned int i = 8; i > 0; i--)
 	{
 		timeStampChars.replace(i-1, 1, 1, PUSH_CHARS.at(fmod(now, 64.0)));
-		// NOTE: Can't use << here because javascript will convert to int and lose the upper bits.
-//		if (now >= 64.0)
-			now = floor(now / 64.0);
-	//	else
-		//	now = 0;
+		now = floor(now / 64.0);
 	}
 
 	if (now != 0)
@@ -2318,16 +2601,10 @@ const char* C_AnarchyManager::GenerateUniqueId()
 	}
 
 	std::string id = timeStampChars;
-	//bool bCharsExist = (m_lastGeneratedChars != "");
 	if (!duplicateTime)
 	{
 		for (unsigned int i = 0; i < 12; i++)
-		{
-//			if (bCharsExist)
 				m_lastGeneratedChars.replace(i, 1, 1, (char)floor(random->RandomFloat() * 64.0L));
-	//		else
-		//		m_lastGeneratedChars += VarArgs("%c", (char)floor(random->RandomFloat() * 64.0L));
-		}
 	}
 	else
 	{
@@ -2346,8 +2623,6 @@ const char* C_AnarchyManager::GenerateUniqueId()
 
 	if (id.length() != 20)
 		DevMsg("ERROR: Lngth should be 20.\n");
-
-	//Q_strcpy(result, id.c_str());
 
 	return VarArgs("%s", id.c_str());	// works on instance menu	// GETS ALL CALLS DURING SAME TICK
 	//return id.c_str();	// works on library browser menu	// GETS CALLS ON DIFFERENT TICKS
@@ -2355,43 +2630,23 @@ const char* C_AnarchyManager::GenerateUniqueId()
 
 const char* C_AnarchyManager::GenerateUniqueId2()
 {
-	/*
-	DevMsg("AnarchyManager: GenerateUniqueId\n");
-
-	// pseudo random pseudo unique ids until the firebase id generator can be ported to C++
-	std::string id = "random";
-
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-	id += std::to_string(random->RandomInt(0, 10));
-
-	return id;
-	*/
-
 	std::string PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
-	//double now = vgui::system()->GetCurrentTime();
-	//using namespace std::chrono;
-	double now = std::chrono::system_clock::now().time_since_epoch().count();//GetCurrentTime();// vgui::system()->GetCurrentTime();
+	double now = std::chrono::system_clock::now().time_since_epoch().count();
 	now = floor(now / 64.0);
 	now = floor(now / 64.0);
 
-	//DevMsg("Time now: %lf\n", now);
+	while (now <= m_dLastGenerateIdTime)
+		now++;
 
 	bool duplicateTime = (now == m_dLastGenerateIdTime);
 	m_dLastGenerateIdTime = now;
 
-	//char* timeStampChars[8];
 	std::string timeStampChars = "00000000";
 	for (unsigned int i = 8; i > 0; i--)
 	{
 		timeStampChars.replace(i - 1, 1, 1, PUSH_CHARS.at(fmod(now, 64.0)));
-		// NOTE: Can't use << here because javascript will convert to int and lose the upper bits.
-		//		if (now >= 64.0)
 		now = floor(now / 64.0);
-		//	else
-		//	now = 0;
 	}
 
 	if (now != 0)
@@ -2400,16 +2655,10 @@ const char* C_AnarchyManager::GenerateUniqueId2()
 	}
 
 	std::string id = timeStampChars;
-	//bool bCharsExist = (m_lastGeneratedChars != "");
 	if (!duplicateTime)
 	{
 		for (unsigned int i = 0; i < 12; i++)
-		{
-			//			if (bCharsExist)
 			m_lastGeneratedChars.replace(i, 1, 1, (char)floor(random->RandomFloat() * 64.0L));
-			//		else
-			//		m_lastGeneratedChars += VarArgs("%c", (char)floor(random->RandomFloat() * 64.0L));
-		}
 	}
 	else
 	{
@@ -2428,8 +2677,6 @@ const char* C_AnarchyManager::GenerateUniqueId2()
 
 	if (id.length() != 20)
 		DevMsg("ERROR: Lngth should be 20.\n");
-
-	//Q_strcpy(result, id.c_str());
 
 	//return VarArgs("%s", id.c_str());	// works on instance menu	// GETS ALL CALLS DURING SAME TICK
 	return id.c_str();	// works on library browser menu	// GETS CALLS ON DIFFERENT TICKS
@@ -2583,7 +2830,16 @@ return id;
 void C_AnarchyManager::Disconnect()
 {
 	// called when a player clicks the LEAVE button on the main menu.  However, there are other ways they could disconnect w/o clicking that.
+	m_bIsDisconnecting = true;
 	engine->ClientCmd("disconnect;\n");
+
+
+	//if (m_bIsDisconnecting)//&& !Q_strcmp(this->MapName(), "")
+	//{
+		//m_bIsDisconnecting = false;
+		//this->RunAArcade();
+		//this->HandleUiToggle();
+	//}
 }
 
 void C_AnarchyManager::AnarchyStartup()
@@ -2642,127 +2898,6 @@ void C_AnarchyManager::OnWebManagerReady()
 }
 */
 
-void C_AnarchyManager::OnLoadAllLocalAppsComplete()
-{
-	/*
-	m_pMountManager = new C_MountManager();
-	m_pMountManager->Init();
-	m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
-	*/
-
-	// add legacy search paths
-	if (m_legacyFolder != "")
-	{
-		//std::string path = this->GetLegacyFolder();
-		g_pFullFileSystem->AddSearchPath(m_legacyFolder.c_str(), "MOD", PATH_ADD_TO_TAIL);
-		g_pFullFileSystem->AddSearchPath(m_legacyFolder.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-		// and legacy workshop search paths (from workshop folder)
-		std::string workshopMapsPath = m_legacyFolder + std::string("workshop\\workshopmaps\\");
-		//g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "MOD", PATH_ADD_TO_TAIL);
-		g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-		std::string workshopFile;
-		FileFindHandle_t findHandle;
-		const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", m_legacyFolder.c_str()), "", &findHandle);
-		while (pFilename != NULL)
-		{
-			workshopFile = m_legacyFolder + std::string("workshop\\") + std::string(pFilename);
-
-			if (workshopFile.find(".vpk") == workshopFile.length() - 4) //g_pFullFileSystem->FindIsDirectory(findHandle)
-			{
-				DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
-				//g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "MOD", PATH_ADD_TO_TAIL);
-				g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
-			}
-
-			pFilename = g_pFullFileSystem->FindNext(findHandle);
-		}
-
-		std::string customFolder;
-		pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%scustom\\*", m_legacyFolder.c_str()), "", &findHandle);
-		while (pFilename != NULL)
-		{
-			if (Q_strcmp(pFilename, ".") && Q_strcmp(pFilename, "..") && g_pFullFileSystem->FindIsDirectory(findHandle))
-			{
-				customFolder = m_legacyFolder + std::string("custom\\") + std::string(pFilename);
-				DevMsg("Adding %s to the search paths.\n", customFolder.c_str());
-				//g_pFullFileSystem->AddSearchPath(customFolder.c_str(), "MOD", PATH_ADD_TO_TAIL);
-				g_pFullFileSystem->AddSearchPath(customFolder.c_str(), "GAME", PATH_ADD_TO_TAIL);
-			}
-
-			pFilename = g_pFullFileSystem->FindNext(findHandle);
-		}
-
-
-	}
-	/*
-	KeyValues* pLegacyLogKV = new KeyValues("legacy");
-	if (pLegacyLogKV->LoadFromFile(g_pFullFileSystem, "legacy_log.key", "DEFAULT_WRITE_PATH"))
-	{
-		if (pLegacyLogKV->GetInt("exported"))
-		{
-			std::string path = this->GetLegacyFolder();
-			g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
-			g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-			// and legacy workshop search paths (from workshop folder)
-			std::string workshopMapsPath = path + "workshop\\workshopmaps\\";
-			//g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "MOD", PATH_ADD_TO_TAIL);
-			g_pFullFileSystem->AddSearchPath(workshopMapsPath.c_str(), "GAME", PATH_ADD_TO_TAIL);
-
-			std::string workshopFile;
-			FileFindHandle_t findHandle;
-			const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%sworkshop\\*", path.c_str()), "", &findHandle);
-			while (pFilename != NULL)
-			{
-				workshopFile = path + "workshop\\" + std::string(pFilename);
-
-				if (workshopFile.find(".vpk") == workshopFile.length() - 4) //g_pFullFileSystem->FindIsDirectory(findHandle)
-				{
-					DevMsg("Adding %s to the search paths.\n", workshopFile.c_str());
-					//g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "MOD", PATH_ADD_TO_TAIL);
-					g_pFullFileSystem->AddSearchPath(workshopFile.c_str(), "GAME", PATH_ADD_TO_TAIL);
-					//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, workshopFile, "", "");
-				}
-
-				pFilename = g_pFullFileSystem->FindNext(findHandle);
-			}
-		}
-	}
-	pLegacyLogKV->deleteThis();
-	*/
-
-	/* DISABLE MOUNTING OF LEGACY AARCADE CONTENT
-	std::string pathDownload = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\download\\";	// for resolving cached images
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "MOD", PATH_ADD_TO_TAIL);
-	g_pFullFileSystem->AddSearchPath(path.c_str(), "GAME", PATH_ADD_TO_TAIL);
-	g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, path, "", "");
-	*/
-
-	// INSTEAD, do the following:
-	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-	unsigned int uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalItems();
-	std::string num = VarArgs("%u", uCount);
-	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Items", "locallibraryitems", "0", num, num);
-
-	// AND THIS IS WHAT USUALLY GETS CALLED AFTER LOADFIRSTLOCALITEMLEGACY IS FINISHED:
-	//g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalItemLegacy(true, "", "", "");
-
-
-
-	//g_pAnarchyManager->GetMetaverseManager()->SetPreviousLocaLocalItemLegacyWorkshopIds("dummy");
-	//g_pAnarchyManager->GetWorkshopManager()->OnMountWorkshopSucceed();
-	this->OnMountAllWorkshopsComplete();	// the first time this is called initializes it all
-
-
-
-
-
-	//C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Mounting Workshop Subscriptions", "mountworkshops", "", "0", "+", "mountNextWorkshopCallback");
-}
-
 bool C_AnarchyManager::OnSteamBrowserCallback(unsigned int unHandle)
 {
 	/*
@@ -2789,8 +2924,7 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 		DevMsg("CHANGES CONFIRMED\n");
 		g_pAnarchyManager->DeactivateObjectPlacementMode(true);
 
-		std::string id = pShortcut->GetObjectId();
-		m_pInstanceManager->ApplyChanges(id, pShortcut);
+		m_pInstanceManager->ApplyChanges(pShortcut);
 
 		return SelectEntity(pShortcut);
 	}
@@ -2931,9 +3065,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 					item = m_pMetaverseManager->GetLibraryItem(itemId);
 					if (item)
 					{
-						active = item->FindKey("current");
-						if (!active)
-							active = item->FindKey("local", true);
+						active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
 
 						/*
 						std::string uri = "asset://ui/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
@@ -3037,45 +3169,39 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 									{
 										bool bHasApp = true;
 										KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(active->GetString("app"));
-										KeyValues* appActive = app->FindKey("current");
-										if (!appActive)
-											appActive = app->FindKey("local", true);
+										KeyValues* appActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(app);
+										bool bHasAppFilepath = false;
+										bool bAtLeastOneAppFilepathExists = false;
 
-										if (appActive)
+										// just grab the FIRST filepath for now.
+										// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+										// Note: Apps are not required to have a filepath specified.
+										std::string testFile;
+										std::string testPath;
+										KeyValues* filepaths = appActive->FindKey("filepaths", true);
+										for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 										{
-											bool bHasAppFilepath = false;
-											bool bAtLeastOneAppFilepathExists = false;
+											// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+											// (because in that case the local user probably needs to specify a correct location for it.)
+											bHasAppFilepath = true;
 
-											// just grab the FIRST filepath for now.
-											// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
-											// Note: Apps are not required to have a filepath specified.
-											std::string testFile;
-											std::string testPath;
-											KeyValues* filepaths = appActive->FindKey("filepaths", true);
-											for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+											testPath = sub->GetString("path");
+
+											// test if this path exists
+											// FIXME: always assume it exists for now
+											if (true)
 											{
-												// true if even 1 filepath exists for the app, even if it is not found on the local PC.
-												// (because in that case the local user probably needs to specify a correct location for it.)
-												bHasAppFilepath = true;
+												bAtLeastOneAppFilepathExists = true;
 
-												testPath = sub->GetString("path");
+												// test if the file exists inside of this filepath
+												testFile = testPath + file;
 
-												// test if this path exists
-												// FIXME: always assume it exists for now
+												// FIXME: always assume the file exists in this path for now.
 												if (true)
 												{
-													bAtLeastOneAppFilepathExists = true;
-
-													// test if the file exists inside of this filepath
-													testFile = testPath + file;
-
-													// FIXME: always assume the file exists in this path for now.
-													if (true)
-													{
-														file = testFile;
-														bFileIsGood = true;
-														break;
-													}
+													file = testFile;
+													bFileIsGood = true;
+													break;
 												}
 											}
 										}
@@ -3085,7 +3211,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 								if (bFileIsGood)
 								{
 									C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
-									pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")));
+									pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")), pShortcut->entindex());
 									DevMsg("Setting game to: %s\n", file.c_str());
 									pLibretroInstance->SetOriginalGame(file);
 									pLibretroInstance->SetOriginalItemId(itemId);
@@ -3257,21 +3383,40 @@ void C_AnarchyManager::OnWorkshopManagerReady()
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	// mount ALL workshops
-	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Gen 1 Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
-	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
-	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
+
+	if (m_pWorkshopManager->IsEnabled())
+	{
+		/*
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Skipping Gen 1 Legacy Workshop Subscriptions", "skiplegacyworkshops", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Models", "workshoplibrarymodels", "", "", "0");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Workshop Items", "workshoplibraryitems", "", "", "0");
+		*/
+	}
+	else
+	{
+		pHudBrowserInstance->AddHudLoadingMessage("", "", "Skipping All Workshop", "workshopskip", "", "", "");
+	}
 
 	m_pWorkshopManager->MountFirstWorkshop();
 	//*/
 }
 
-void C_AnarchyManager::ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId)
+void C_AnarchyManager::ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack)
 {
-	// detect any .set files
-	std::string file;
-	KeyValues* kv = new KeyValues("instance");
-	FileFindHandle_t findHandle;
+	// Legacy saves come from:
+	//	1. Legacy Workshop Backpacks (GEN1)
+	//	2. Legacy Workshop Subscriptions (GEN2)
+	//	3. Mounted Legacy Folder (GEN1 & GEN2)
 
+	// Legacy saves can be in:
+	//	1. saves/maps/[MAP_NAME].[ADDON_ID].set (GEN1)
+	//	2. maps/[BSP_NAME].[ADDON_ID].set (GEN2) (potentially a NODE)
+	// This function gets called for both of those folder locations.
+
+	// detect any .set files
+	//std::string file;
+	//KeyValues* kv = new KeyValues("instance");
+	FileFindHandle_t findHandle;
 	const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%s*.set", path.c_str()), searchPath.c_str(), &findHandle);
 	while (pFilename != NULL)
 	{
@@ -3281,67 +3426,34 @@ void C_AnarchyManager::ScanForLegacySave(std::string path, std::string searchPat
 			continue;
 		}
 
-		file = path + std::string(pFilename);
-		DevMsg("Legacy instance detected at %s with filename %s\n", file.c_str(), pFilename);
-		// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
-		if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
+		std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
+		std::string filename = pFilename;
+		std::string file = path + filename;
+
+		// Does this instance already exist?
+		bool bConsumed;
+		instance_t* pInstance = g_pAnarchyManager->GetInstanceManager()->GetInstance(instanceId);
+		if (pInstance)
 		{
-			if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
-			{
-				//DevMsg("Map ID here is: %s\n", kv->GetString("map"));
-				// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
-				// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
-
-				std::string title = kv->GetString("title");
-				if (title == "")
-				{
-					// attempt to load a .txt file from the legacy workshop addon that has the title
-					FileFindHandle_t infoFindHandle;
-					const char *pInfoFilename = g_pFullFileSystem->FindFirst(VarArgs("resource\\workshop\\*.txt", path), &infoFindHandle);
-					if (pInfoFilename)
-					{
-						KeyValues* infoKv = new KeyValues("info");
-						if (infoKv->LoadFromFile(g_pFullFileSystem, VarArgs("resource\\workshop\\%s", path, pInfoFilename)))
-							title = infoKv->GetString("title");
-						infoKv->deleteThis();
-					}
-					g_pFullFileSystem->FindClose(infoFindHandle);
-				}
-
-				if (title == "")
-					title = "Unnamed (" + std::string(pFilename) + ")";
-
-				std::string goodMapName = pFilename;
-				goodMapName = goodMapName.substr(0, goodMapName.find("."));
-
-				std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
-
-
-				// else, WORST CASE: figure out where the model is from based on its file location
-				char fullFilePath[AA_MAX_STRING];
-				PathTypeQuery_t pathTypeQuery;
-				g_pFullFileSystem->RelativePathToFullPath(file.c_str(), searchPath.c_str(), fullFilePath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
-				std::string fullpath = fullFilePath;
-				DevMsg("fullFIlePath: %s\n", fullpath.c_str());
-
-				g_pAnarchyManager->GetInstanceManager()->AddInstance(instanceId, g_pAnarchyManager->GenerateLegacyHash(goodMapName.c_str()), title, fullpath, workshopIds, mountIds, backpackId, "");
-				//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, VarArgs("%llu", details->m_nPublishedFileId), "");
-			}
+			DevMsg("Skipping consumption of legacy save file because it already existed in user library: %s\n", file.c_str());
+			bConsumed = false;
 		}
+		else
+			bConsumed = g_pAnarchyManager->GetInstanceManager()->ConsumeLegacyInstance(instanceId, filename, path, searchPath, workshopIds, mountIds, pBackpack);
 
 		pFilename = g_pFullFileSystem->FindNext(findHandle);
 	}
 
-	kv->Clear();
+//	kv->Clear();
 	g_pFullFileSystem->FindClose(findHandle);
 }
 
-void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId)
+void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack)
 {
 	std::string legacyPathA = path + "maps\\";
 	std::string legacyPathB = path + "saves\\maps\\";
-	this->ScanForLegacySave(legacyPathA, searchPath, workshopIds, mountIds, backpackId);
-	this->ScanForLegacySave(legacyPathB, searchPath, workshopIds, mountIds, backpackId);
+	this->ScanForLegacySave(legacyPathA, searchPath, workshopIds, mountIds, pBackpack);
+	this->ScanForLegacySave(legacyPathB, searchPath, workshopIds, mountIds, pBackpack);
 }
 
 void C_AnarchyManager::ShowEngineOptionsMenu()
@@ -3508,72 +3620,8 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 {
 	if (!m_pMountManager)	// it is our first time here
 	{
-		/*
-		bool bObsoleteLegacyTester = true;
-		if (bObsoleteLegacyTester)
-		{
-			std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-			this->ScanForLegacySaveRecursive(path);
-
-			std::string workshopPath;
-			unsigned int max = m_pWorkshopManager->GetNumDetails();
-			for (unsigned int i = 0; i < max; i++)
-			{
-				SteamUGCDetails_t* pDetails = m_pWorkshopManager->GetDetails(i);
-				workshopPath = path + "workshop\\" + std::string(VarArgs("%llu", pDetails->m_nPublishedFileId)) + "\\";
-				this->ScanForLegacySaveRecursive(workshopPath);
-			}
-
-			// detect any .set files in the legacy folder too
-			std::string file;
-			KeyValues* kv = new KeyValues("instance");
-			FileFindHandle_t findHandle;
-			//DevMsg("Tester folder: %smaps\\*.set", path);
-			//std::string path = "A:\\SteamLibrary\\steamapps\\common\\Anarchy Arcade\\aarcade\\";
-			//const char *pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("%smaps\\*.set", path), "", &findHandle);
-			const char *pFilename = g_pFullFileSystem->FindFirstEx("maps\\*.set", "GAME", &findHandle);
-			while (pFilename != NULL)
-			{
-				if (g_pFullFileSystem->FindIsDirectory(findHandle))
-				{
-					pFilename = g_pFullFileSystem->FindNext(findHandle);
-					continue;
-				}
-
-				//file = std::string(path) + "maps\\" + std::string(pFilename);
-				file = "maps\\" + std::string(pFilename);
-
-				// FIXME: build an ACTUAL generation 3 instance key values here, and save it out!!
-				if (kv->LoadFromFile(g_pFullFileSystem, file.c_str()))
-				{
-					if (kv->FindKey("map") && kv->FindKey("objects", true)->GetFirstSubKey())
-					{
-						//	DevMsg("Map ID here is: %s\n", kv->GetString("map"));
-						// FIXME: instance_t's should have mapId's, not MapNames.  The "mapName" should be considered the title.  The issue is that maps usually haven't been detected by this point, so assigning a mapID based on the legacy map name is complex.
-						// For now, mapId's will be resolved upon map detection if mapID's equal a detected map's filename.
-
-						std::string title = kv->GetString("title");
-						if (title == "")
-						{
-							//title = "Unnamed";
-							title = file;
-							size_t found = title.find_last_of("/\\");
-							if (found != std::string::npos)
-								title = title.substr(found + 1);
-						}
-
-						g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateUniqueId(), kv->GetString("map"), title, file, "", "");
-						//g_pAnarchyManager->GetInstanceManager()->AddInstance(g_pAnarchyManager->GenerateLegacyHash(kv->GetString("map")), kv->GetString("map"), kv->GetString("map"), file, "", "");
-					}
-				}
-
-				kv->Clear();
-				pFilename = g_pFullFileSystem->FindNext(findHandle);
-			}
-			g_pFullFileSystem->FindClose(findHandle);
-		}
-		*/
-
+		// SHOULD NEVER BE HTERE!!!!!
+		// OBSOLETE!!!! 
 		m_pMountManager = new C_MountManager();
 		m_pMountManager->Init();
 		m_pMountManager->LoadMountsFromKeyValues("mounts.txt");
@@ -3588,7 +3636,22 @@ void C_AnarchyManager::OnMountAllWorkshopsComplete()
 		m_pBackpackManager->ActivateAllBackpacks();
 		this->GetMetaverseManager()->DetectAllMaps();
 	}
-		//this->OnDetectAllMapsComplete();
+}
+
+void C_AnarchyManager::OnRebuildSoundCacheCallback()
+{
+	DevMsg("Reinitializing sound system (so sounds work in addon maps)...\n");
+
+	// restart the sound system so that mounted paths can play sounds
+	engine->ClientCmd("snd_restart");
+
+	ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
+	pConVar->SetValue(m_oldEngineNoFocusSleep.c_str());
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
+	//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
+	pHudBrowserInstance->SetUrl("asset://ui/betasplash.html");
+	g_pAnarchyManager->SetInitialized(true);
 }
 
 void C_AnarchyManager::OnDetectAllMapsComplete()
@@ -3607,8 +3670,8 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 
 		// iterate through all models and assign the dynamic property to them
 		// FIXME: THIS SHOULD BE DONE UPON MODEL IMPORT/LOADING!!
-		//m_pMetaverseManager->DetectAllLegacyCabinets();
 		m_pMetaverseManager->FlagDynamicModels();
+		m_pMetaverseManager->DetectAllLegacyCabinets();
 
 		// this is where steamGames.key could be auto-scanned to make sure all Steam games exist in the library, if wanted.
 		if (false && g_pFullFileSystem->FileExists("steamGames.key", "DEFAULT_WRITE_PATH"))
@@ -3618,18 +3681,9 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 			g_pAnarchyManager->GetMetaverseManager()->ImportSteamGames(kv);
 		}
 
-		DevMsg("Reinitializing sound system (so sounds work in addon maps)...\n");
-
-		// restart the sound system so that mounted paths can play sounds
-		engine->ClientCmd("snd_restart");
-		
-		ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
-		pConVar->SetValue(m_oldEngineNoFocusSleep.c_str());
-
+		DevMsg("Initializing sound system...\n");
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
-		//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
-		pHudBrowserInstance->SetUrl("asset://ui/betasplash.html");
-		g_pAnarchyManager->SetInitialized(true);
+		pHudBrowserInstance->AddHudLoadingMessage("", "", "Initializing Sound System...", "rebuildsound", "", "", "", "rebuildSoundCacheCallback");
 	}
 	else
 	{
@@ -3695,11 +3749,7 @@ void C_AnarchyManager::xCastSetLiveURL()
 		{
 			KeyValues* pItem = m_pMetaverseManager->GetLibraryItem(pShortcut->GetItemId());
 			if (pItem)
-			{
-				active = pItem->FindKey("current");
-				if (!active)
-					active = pItem->FindKey("local", true);
-			}
+				active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItem);
 		}
 	}
 	else
@@ -3736,9 +3786,7 @@ void C_AnarchyManager::xCastSetLiveURL()
 				KeyValues* pItem = m_pMetaverseManager->GetLibraryItem(originalItemId);
 				if (pItem)
 				{
-					active = pItem->FindKey("current");
-					if (!active)
-						active = pItem->FindKey("local", true);
+					active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItem);
 
 					if ( active )
 						break;
@@ -3926,6 +3974,7 @@ void C_AnarchyManager::TestSQLite2()
 		CUtlBuffer buf(0, length, 0);	// the length param should NEVER be zero.
 		buf.CopyBuffer(sqlite3_column_blob(stmt, 1), length);
 		pTesterKV->ReadAsBinary(buf);
+		buf.Purge();
 		DevMsg("Value here is: %s\n", pTesterKV->GetString("originalTesterKey"));
 
 		/*

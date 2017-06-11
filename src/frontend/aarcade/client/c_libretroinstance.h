@@ -205,7 +205,7 @@ public:
 
 	void CleanUpTexture();
 
-	void Init(std::string id = "", std::string title = "");
+	void Init(std::string id, std::string title, int iEntIndex);
 	bool CreateWorkerThread(std::string core);
 	void Update();
 	bool LoadCore(std::string coreFile = "");
@@ -215,6 +215,9 @@ public:
 	static bool BuildInterface(libretro_raw* raw, void* pLib);
 	static void CreateAudioStream();
 	static void DestroyAudioStream();
+	std::string GetOriginalItemId() { return m_originalItemId; }
+	int GetOriginalEntIndex() { return m_iOriginalEntIndex; }
+	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 
 	bool HasInfo() { return (m_info != null); }
 	std::vector<libretro_core_option*>& GetAllOptions() { return m_info->options; }	// others should always check if m_info exists first themselves!!
@@ -269,13 +272,13 @@ public:
 	C_InputListener* GetInputListener();
 	//std::mutex m_mutex;
 	std::string GetOriginalGame() { return m_originalGame; }
-	std::string GetOriginalItemId() { return m_originalItemId; }
+//	std::string GetOriginalItemId() { return m_originalItemId; }
 	std::string GetTitle() { return m_title; }
 
 	// mutators
 	bool SetGame(std::string file);
 	void SetOriginalGame(std::string file) { m_originalGame = file; }
-	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
+//	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
 	void SetTitle(std::string title) { m_title = title; }
 
 private:
@@ -293,6 +296,7 @@ private:
 	std::string m_systemPath;
 	std::string m_savePath;
 	LibretroInstanceInfo_t* m_info;
+	int m_iOriginalEntIndex;
 	//C_OpenGLManager* m_pOpenGLManager;
 	//CSysModule* m_pModule;
 };

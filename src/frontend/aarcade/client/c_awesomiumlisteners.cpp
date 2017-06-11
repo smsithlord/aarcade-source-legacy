@@ -99,51 +99,10 @@ void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is
 {
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	std::string urlSpec = WebStringToCharString(url.spec());
-	size_t found = urlSpec.find("startup.html");
-	if (caller == pHudBrowserInstance->GetWebView() && !g_pAnarchyManager->IsInitialized() && found == urlSpec.length() - 12)
+	if (caller == pHudBrowserInstance->GetWebView() && !g_pAnarchyManager->IsInitialized() && urlSpec == "asset://ui/startup.html" )
 	{
-		// Now start loading stuff in...
-		//C_WebTab* pHudWebTab = m_pWebManager->GetHudWebTab();
-		//C_EmbeddedInstance* pEmbeddedInstance = m_p
-		//g_pAnarchyManager->GetAwesomiumBrowserManager()->SelectAwesomiumBrowserInstance(pHudBrowserInstance);
-		pHudBrowserInstance->Select();
-		pHudBrowserInstance->Focus();
-		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
-		//g_pAnarchyManager->GetInputManager()->ActivateInputMode(true);
-
-		unsigned int uCount;
-		std::string num;
-
-		// And continue starting up
-		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalTypes();
-		num = VarArgs("%u", uCount);
-		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
-
-		//= m_pMetaverseManager->LoadAllLocalTypes();
-		//std::string num = VarArgs("%u", uItemCount);
-		//	pHudWebTab->AddHudLoadingMessage("progress", "", "Loading Types", "locallibrarytypes", "0", num, num);
-
-		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalModels();
-		num = VarArgs("%u", uCount);
-		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Models", "locallibrarymodels", "0", num, num);
-
-		//uItemCount = m_pMetaverseManager->LoadAllLocalApps();
-
-		// load ALL local apps
-		/*
-		KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->LoadFirstLocalApp("MOD");
-		if (app)
-			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "", "", "+", "loadNextLocalAppCallback");
-		else
-			g_pAnarchyManager->OnLoadAllLocalAppsComplete();
-		*/
-
-		uCount = g_pAnarchyManager->GetMetaverseManager()->LoadAllLocalApps();
-		num = VarArgs("%u", uCount);
-		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Loading Apps", "locallibraryapps", "0", num, num);
-		g_pAnarchyManager->OnLoadAllLocalAppsComplete();
-
-		//g_pAnarchyManager->SetInitialized(true);	// wait to do this later, when everything is actually done loading.
+		g_pAnarchyManager->OnStartup();
+		return;
 	}
 }
 

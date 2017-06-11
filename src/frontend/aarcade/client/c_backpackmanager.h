@@ -74,6 +74,8 @@ public:
 	C_Backpack* FindBackpackByFolder(std::string backpackFolder);
 	std::string ExtractBackpackFoldeNameFromPath(std::string backpackFolder);
 
+	C_Backpack* FindBackpackWithInstanceId(std::string id);
+
 	void ActivateAllBackpacks();
 	void DetectBackpack(std::string backpackFolder);
 	void DetectAllBackpacks();

@@ -4,7 +4,42 @@
 		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Embedded Apps", "", true, true, "window.location='asset://ui/addons.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<!-- Libretro Framework -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Libretro Framework" onclick="window.location='asset://ui/libretroConfig.html';" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens." /><br />
+
+			<!-- Steamworks Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steamworks" onclick="window.location='asset://ui/steamworksBrowserConfig.html';" help="The Steamworks web browser is what displays web content on the in-game screens." /><br />
+
+			<!-- Awesomium Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Awesomium" onclick="window.location='asset://ui/awesomiumConfig.html';" help="Awesomium is what displays the AArcade HUD & UI." />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+
+
+
+		<div class="hudContent" style="display: none; width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">

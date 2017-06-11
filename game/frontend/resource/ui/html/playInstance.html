@@ -111,19 +111,9 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		<script>
 			var tga = new TGA();
-// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-function getParameterByName(name, url) {
-    if (!url) url = window.location.href;
-    name = name.replace(/[\[\]]/g, "\\$&");
-    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-        results = regex.exec(url);
-    if (!results) return null;
-    if (!results[2]) return '';
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
 
 			var titleElem = document.body.querySelector("#mapTitle");
-			var mapId = getParameterByName("id");
+			var mapId = arcadeHud.getParameterByName("id");
 
 			var screenshots = aaapi.system.getAllMapScreenshots(mapId);
 			var screenshotsKeys = Object.keys(screenshots);
@@ -197,7 +187,7 @@ function getParameterByName(name, url) {
 				screenshotElem.instanceId = instanceId;
 				screenshotElem.addEventListener("click", function()
 				{
-					play(this.instanceId, "", "");
+					play(this.instanceId, "", "", "");
 				}.bind(screenshotElem));
 
 				var elem = document.createElement("img");
@@ -263,7 +253,7 @@ function getParameterByName(name, url) {
 					screenshotElem.screenshot = screenshot;
 					screenshotElem.addEventListener("click", function()
 					{
-						play(this.instanceId, this.screenshot.body.position, this.screenshot.body.rotation);
+						play(this.instanceId, this.screenshot.body.position, this.screenshot.body.rotation, this.screenshot.id);
 					}.bind(screenshotElem));
 
 					screenshotElem.style.cssText = "width: 240px; height: 135px; margin: auto;";
@@ -287,7 +277,7 @@ function getParameterByName(name, url) {
 					screenshotElem.instanceId = instance.id;
 					screenshotElem.addEventListener("click", function()
 					{
-						play(this.instanceId, "", "");
+						play(this.instanceId, "", "", "");
 					}.bind(screenshotElem));
 
 					instanceScreenshotListElem.appendChild(screenshotElem);
@@ -302,7 +292,7 @@ function getParameterByName(name, url) {
 			instanceBar.setAttribute("help", "Create a new, blank instance on this map.");
 			instanceBar.addEventListener("click", function()
 			{
-				play("", "", "");
+				play("", "", "", "");
 			});
 
 			instanceBarText = document.createElement("div");
@@ -311,10 +301,19 @@ function getParameterByName(name, url) {
 			instanceBar.appendChild(instanceBarText);
 			instanceListElem.appendChild(instanceBar);
 
-			function play(instanceId, position, rotation)
+			function play(instanceId, position, rotation, screenshotId)
 			{
-				//aaapi.system.deactivateInputMode();
-				aaapi.system.loadMap(mapId, instanceId, position, rotation);
+				//aaapi.system.loadMap(mapId, instanceId, position, rotation);
+				if( !!!position )
+					position = "";
+
+				 if( !!!rotation )
+				 	rotation = "";
+
+				 if( !!!screenshotId )
+				 	screenshotId = "";
+
+				window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId + "&pos=" + position + "&rot=" + rotation + "&screenshot=" + screenshotId;
 			}
 		</script>
 	</body>

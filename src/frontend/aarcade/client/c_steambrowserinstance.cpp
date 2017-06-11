@@ -152,8 +152,13 @@ void C_SteamBrowserInstance::SelfDestruct()
 	DevMsg("\tIs Input Manager's EmbeddedInstance: %i\n", (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this));
 	DevMsg("\tIs Input Slate's CanvasTexture: %i\n", (g_pAnarchyManager->GetInputManager()->GetInputSlateCanvasTexture() == m_pTexture));
 
+	/*
 	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == this)
 		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(this);
+	*/
+
+
+
 		//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
 
 

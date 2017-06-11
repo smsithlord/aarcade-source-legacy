@@ -4,7 +4,55 @@
 		<script src="asset://ui/hud.js"></script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Addons", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<!-- Workshop -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Workshop" onclick="window.location='asset://ui/workshop.html';" help="Explore the Steam workshop or manage your current subscriptions." /><br />
+
+			<!-- Backpacks -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Backpacks" onclick="window.location='asset://ui/backpacks.html';" help="See something you like? Stuff it into your backpack and keep it for ever." /><br />
+			
+			<!-- Mounted Games -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Mounted Games" onclick="window.location='asset://ui/mounts.html';" help="Manage which of your games' assets get mounted when you launch AArcade." /><br />
+			
+			<!-- Mounted Custom -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Mounted Custom" onclick="window.location='asset://ui/customMounts.html';" help="Have your own folder or VPK's you want mounted?  These are custom mounts." disabled /><br />
+			
+			<!-- Embedded Apps -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Embedded Apps" onclick="window.location='asset://ui/embeddedApps.html';" help="Configure the embedded apps that run on the in-game screens." /><br />
+			
+			<!-- Import Games & Content -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Import" onclick="window.location='asset://ui/import.html';" help="Import all of your Steam games, maps & models in your folders, or your legacy content." /><br />
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+
+
+
+
+
+
+
+		<div class="hudContent" style="display: none; width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">

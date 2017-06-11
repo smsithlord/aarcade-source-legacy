@@ -66,6 +66,14 @@ public:
 
 	virtual bool Init();
 	virtual void PostInit();
+	void OnStartup();
+	void OnStartupCallback(bool bForceDefaultAdd = false);
+	void OnAddNextDefaultLibraryCallback();
+	void OnDefaultLibraryReadyCallback();
+	void OnDefaultLibraryReady();
+	void OnUpdateLibraryVersionCallback();
+	void OnReadyToLoadUserLibrary();
+	void OnRebuildSoundCacheCallback();
 	virtual void Shutdown();
 	bool IsShuttingDown() { return m_bIsShuttingDown; }
 
@@ -116,6 +124,7 @@ public:
 	void AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV);	// TODO: Make the sibling to this weirdly named function a method of the anarchy manager too.
 
 	bool WeaponsEnabled();
+	void LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId);
 
 	uint64 GetTimeNumber();
 	std::string GetTimeString();
@@ -134,6 +143,8 @@ public:
 
 	void Feedback(std::string type);
 
+	void HardPause();
+	void WakeUp();
 	void TaskClear();
 	void TaskRemember();
 	void ShowTaskMenu();
@@ -154,7 +165,6 @@ public:
 	void Disconnect();
 	void AnarchyStartup();
 	void OnWebManagerReady();
-	void OnLoadAllLocalAppsComplete();
 	void OnWorkshopManagerReady();
 	void OnMountAllWorkshopsComplete();
 	void OnDetectAllMapsComplete();
@@ -175,7 +185,7 @@ public:
 	void OnBrowseFileSelected(std::string browseId, std::string response);
 	//void ReleaseFileBrowseParams();
 
-	void ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId);
+	void ScanForLegacySaveRecursive(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut, const char* mode = "spawn");
 	void DeactivateObjectPlacementMode(bool confirm);
@@ -244,9 +254,10 @@ public:
 	void SetTabMenuFile(std::string url) { m_tabMenuFile = url; }
 	
 protected:
-	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, std::string backpackId);
+	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 private:
+	bool m_bIsDisconnecting;
 	ConVar* m_pWeaponsEnabledConVar;
 	std::string m_tabMenuFile;
 	int m_iLastDynamicMultiplyer;

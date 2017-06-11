@@ -38,6 +38,14 @@
 #define AA_PLATFORM_ID "-KJvcne3IKMZQTaG7lPo"
 #endif
 
+#ifndef AA_DEFAULT_TYPEID
+#define AA_DEFAULT_TYPEID ""//"-KKa1MHJTls2KqNphWFM"
+#endif
+
+#ifndef AA_LIBRARY_VERSION
+#define AA_LIBRARY_VERSION 1
+#endif
+
 /*
 #ifndef AA_LIBRETRO_PATH
 #define AA_LIBRETRO_PATH "D:\\Projects\\AArcade-Source\\game\\frontend\\libretro\\cores"

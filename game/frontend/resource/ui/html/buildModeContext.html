@@ -9,37 +9,36 @@
 		</script>
 	</head>
 	<body style="background-color: transparent;">
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell"></div>
-					<div class="hudContentHeaderCell">
-						Build Mode
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
-				</div>
-			</div>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
 
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Context Menu", "", true, true, "", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
 
+		<center>
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 65%;" value="Object Info" onclick="viewObjectInfo();" help="View mount & workshop info about this object." /><input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; width: 35%;" value="Delete" onclick="deleteObject();" help="Remove this object from the world." /><br />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move the object under your crosshair." /><br /><!--
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Edit Item" onclick="editItem();" help="Select & move the object under your crosshair." /><br />-->
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn." />
+		</center>
 
-			<div style="width: 90%; display: block; text-align: center; margin-left: 5%;">
-				<div class="mainButton helpNote" style="width: 70%; display: inline-block; float: left;" onclick="viewObjectInfo();" help="View mount & workshop info about this object.">Object Info</div>
-				<div class="mainButton helpNote" style="width: 25%; display: inline-block; float: right;" onclick="deleteObject();" help="Remove this object from the world.">Delete</div>
-			</div>
-			<!--
-			<div class="mainButton helpNote" onclick="" help="View mount & workshop info about this object.">Object Info</div>-->
-			<div class="mainButton helpNote" onclick="moveObject();" help="Select & move the object under your crosshair.">Move</div>
-			<!--
-			<div class="mainButton helpNote" onclick="deleteObject();" help="Remove the object under your crosshair from the map.">Delete Object</div>-->
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn.">Library</div>
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
-		//window.location='asset://ui/objectInfo.html';
 			function viewObjectInfo()
 			{
 				aaapi.system.viewObjectInfo(entityIndex);
@@ -53,6 +52,15 @@
 			function deleteObject()
 			{
 				aaapi.system.deleteObject(entityIndex);
+			}
+
+			function editItem()
+			{
+				/*
+				var info = aaapi.system.getObjectInfo(entityIndex);
+				var itemInfo = info.item;
+				console.log(JSON.stringify(itemInfo));
+				*/
 			}
 		</script>
 	</body>
