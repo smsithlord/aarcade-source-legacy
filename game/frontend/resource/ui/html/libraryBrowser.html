@@ -2,115 +2,410 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
-		<style>
-			#createNewButton:not( .disabledButton )
-			{
-		 		border: 2px solid rgba(250, 50, 50, 0.7);
-		 	}
-		</style>
 	</head>
 	<body>
-		<div class="hudContent" style="height: 65%; position: fixed; top: 15%; width: 80%; left: 0; right: 0;">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Library Browser: <div id="libBrowserType" style="display: inline-block; text-transform: capitalize;"></div>
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html'; aaapi.system.deactivateInputMode();" help="Close the HUD.">
-							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
-						</div>
-					</div>
-				</div>
-			</div>
 
-			<div style="display: table; height: 100%; width: 100%; border-collapse: separate; table-layout: fixed;">
-				<div style="display: table-row;">
-					<div style="display: table-cell;">
-						<div class="librarySearchContainer" style="padding: 0;">
-							<table style="width: 100%;"><tr>
-								<td style="width: 140px;">
-									<select id="filterSelect" class="helpNote" help="(OPTIONAL) Select a filter field to narrow your search results." style="width: 100%;">
-									</select>
-								</td>
-								<td style="padding-left: 8px; padding-right: 8px;">
-									<form id="searchBox">
-										<input class="helpNote" type="text" placeholder="Search..." help="Type the name of what you're looking for into this box." style="width: 100%;" />
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//if( !uiBack )
+			//	uiBack = "window.location='asset://ui/welcome.html';";
+
+			var nodestyle = arcadeHud.getParameterByName("nodestyle");
+			if( !nodestyle )
+				nodestyle = "";
+
+			//"node_smallwall";//node_metahood_style_a";
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Library", "width: 1200px;", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<script>
+			var libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
+			var category = (libraryBrowserContext.category) ? libraryBrowserContext.category : "items";
+			var types = aaapi.library.getAllLibraryTypes();
+
+			var activeTabId = arcadeHud.getParameterByName("activeTabId");
+			if( !activeTabId )
+			{
+				activeTabId = "items";
+
+				if( category === "models" )
+					activeTabId = "props";
+			}
+
+			if( nodestyle !== "" )
+				activeTabId = "nodes";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "items",
+						"title": "Items"
+					},
+					{
+						"id": "props",
+						"title": "Props"
+					}/*,
+					{
+						"id": "cabinets",
+						"title": "Cabinets"
+					},
+					{
+						"id": "maps",
+						"title": "Maps"
+					},
+					{
+						"id": "nodes",
+						"title": "Nodes"
+					},
+					{
+						"id": "apps",
+						"title": "Apps"
+					},
+					{
+						"id": "types",
+						"title": "Types"
+					},
+					{
+						"id": "instances",
+						"title": "Instances"
+					}*/
+				], "onChangeHandlerName": "tabChangeHandler", "activeTabId": activeTabId
+			});
+			document.write(windowTabsHeaderHTML);
+
+
+			if( nodestyle !== "" )
+			{
+				var tabElem;
+				var tabElems = document.querySelectorAll(".aaTab");
+				for( var i = 0; i < tabElems.length; i++ )
+				{
+					tabElem = tabElems[i];
+					if( tabElem.innerHTML.toLowerCase().trim() !== "nodes" )
+						tabElem.style.display = "none";
+				}
+			}
+
+			var initialTabSwitch = true;
+			function tabChangeHandler(e)
+			{
+				if( activeTabId === e.targetTabId && !initialTabSwitch )
+				{
+					e.preventDefault();
+					return;
+				}
+
+				// if this is the initial logic, then prefer the initial category value.
+				if( initialTabSwitch )
+				{
+					if( activeTabId === "nodes" )
+						targetTabId = activeTabId;
+					else
+					{
+						var targetTabId;
+						if (category === "items")
+							targetTabId = "items";
+						else
+							targetTabId = "props";
+
+						e.targetTabId = targetTabId;
+					}
+				}
+
+				// if the target tab IS the current tab, ignore.
+				var selectedEntry = document.querySelector(".selectedEntry");
+				if( !!selectedEntry && selectedEntry.getAttribute("tabid") === e.targetTabId )
+
+				var shouldUpdateContext = !initialTabSwitch;
+
+				if( !initialTabSwitch )
+				{
+					// reset the file box
+					entryValueInputElem.value = "";
+					onEntryValueChange();
+				}
+
+				// reset the search box
+				var searchBox = searchBoxForm.querySelector("input");
+				//searchBox.value = "";	// why not carry the search term over?
+				searchBox.focus();
+				searchBox.select();
+
+				// multi-purpose logic of generic methods
+				// TODO: Work... elsewhere.
+
+				var isNodes = "no";
+				// tab-specific preparation
+				if( e.targetTabId === "props" )
+				{
+					browseInput.placeholder = "";
+					browseInput.readOnly = true;
+					setCategory("models");
+				}
+				else if( e.targetTabId === "items" )
+				{
+					browseInput.placeholder = "Paste URL or click BROWSE...";
+					browseInput.readOnly = false;
+					setCategory("items");
+				}
+				else if( e.targetTabId === "nodes" )
+				{
+					isNodes = "yes";
+					browseInput.placeholder = "";
+					browseInput.readOnly = true;
+					setCategory("items", true);
+				}
+
+				// re-build the results
+				libraryTable.setAttribute("category", category);
+				libraryTable.setAttribute("isNodes", isNodes);
+
+				activeTabId = e.targetTabId;
+				startLibrarySearch(shouldUpdateContext);
+
+				// alter the default tab switching UI behavior
+				//if( !initialTabSwitch )
+					e.setPseudo();
+
+				initialTabSwitch = false;
+				//activeTabId = e.targetTabId;
+			}
+		</script>
+
+		<style>
+			.detailsButton
+			{
+				padding: 1px;
+				padding-left: 20px;
+				padding-right: 20px;
+			}
+
+			.selectedEntry
+			{
+				
+			}
+
+			.resultsTable
+			{
+				/*border-collapse: separate;*/
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			.resultsTable td
+			{
+				border-top-style: solid;
+				border-top-width: 2px;
+				padding: 3px;
+				height: 60px;
+			}
+
+			.resultsTable tr
+			{
+				box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+			}
+
+			.resultsTable tr td:first-child
+			{
+				border-top-left-radius: 8px;
+				border-bottom-left-radius: 8px;
+				width: 1%;
+				white-space: nowrap;
+				padding-left: 12px;
+				padding-right: 20px;
+				opacity: 0.5;
+			}
+
+			.resultsTable tr td:last-child
+			{
+				border-top-right-radius: 8px;
+				border-bottom-right-radius: 8px;
+				padding-left: 20px;
+				padding-right: 20px;
+			}
+
+			.editButton
+			{
+				background: none;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.buttonsContainer
+			{
+				display: none;
+				float: right;
+			}
+
+			tr:hover > td > .buttonsContainer
+			{
+				display: inline-block;
+			}
+
+			.resultsTableContainer
+			{
+				padding: 2px;
+				height: 400px;
+				max-height: 400px;
+				overflow-y: auto;
+			}
+
+			.entryTitleContainer
+			{
+				float: left;
+				display: inline-block;
+			}
+
+			.entryTitleContainer
+			{
+				margin-right: 8px;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+			}
+
+			.entryTitle
+			{
+				display: inline-block;
+				max-width: 750px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.resultsTable tr:not(.selectedEntry) .entryTitle
+			{
+				text-shadow: none;
+			}
+
+			.entryFilter
+			{
+				display: inline-block;
+				width: 100px;
+				max-width: 100px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.hasSelectedEntry #browseInput
+			{
+				/*background-color: red;*/
+			}
+
+			#libraryTable[category='models'] #filterSelectCell, #libraryTable[category='models'] #auxButton, #libraryTable[category='models'] #browseButton #libraryTable[isNodes='yes'] #filterSelectCell, #libraryTable[isNodes='yes'] #auxButton, #libraryTable[isNodes='yes'] #browseButton, #libraryTable[isNodes='yes'] #browseInput
+			{
+				display: none;
+			}
+		</style>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" style="padding: 0; display: block;">
+			<table id="libraryTable" category="" style="width: 100%;" cellspacing="0" cellpadding="0">
+				<tr>
+					<td>
+						<table style="width: 100%;" cellspacing="0" cellpadding="0">
+							<tr>
+								<td style="padding: 4px;">
+									<form id="searchBoxForm" style="padding: 0; margin: 0;">
+										<input type="text" style="width: 100%;" class="aaTitleTextSizeFontSize" placeholder="Search..." />
 									</form>
 								</td>
-								<td style="width: 140px;">
-									<select id="categorySelect" class="helpNote" help="Yadda yadda." style="width: 100%;"></select>
+								<td style="padding: 4px; width: 1%; white-space: nowrap;" id="filterSelectCell">
+									<select id="filterSelect" class="aaTitleTextSizeFontSize" style="width: 100%;">
+										<!--<option>All Types<option>-->
+									</select>
 								</td>
-							</tr></table>
+							</tr>
+						</table>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<div class="resultsTableContainer aaScrollBars">
+							<table class="resultsTable" cellspacing="0" cellpadding="0">
+								<tbody class="resultsBody">
+								</tbody>
+							</table>
 						</div>
-					</div>
-				</div>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding: 4px;">
+						<form id="fileLocationForm" style="padding: 0; margin: 0;">
+							<table style="width: 100%; border-style: solid; border-width: 2px;" cellspacing="0" cellpadding="0" class="aaThemeColorOneShadedBackground aaThemeColorOneShadedBorderColor">
+								<tr>
+									<td style="padding: 20px;">
+										<input type="text" id="browseInput" style="margin: 0; margin-left: 10px; margin-right: 10px; padding-left: 4px; width: 100%; height: 100%; border-style: solid; border-width: 2px; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);" class="fileBox aaTextSizeFontSize aaThemeColorTwoInverseShadedBorderColor" placeholder="" />
+									</td>
+									<td style="width: 1%; white-space: nowrap; padding: 20px; padding-left: 0px;">
+										<input type="button" id="browseButton" value="Browse..." class="detailsButton aaButton aaTitleTextSizeFontSize aaTextColorTwoColor aaThemeColorTwoHoverShadedBackground aaThemeColorTwoShadedBorderColor" style="margin-left: 10px; margin-right: 10px;" onclick="browse(document.querySelector('#browseInput'), document.querySelector('#createNewButton'));" />
+										<input type="button" id="auxButton" value="Scrapers" class="detailsButton aaButton aaTitleTextSizeFontSize aaTextColorTwoColor aaThemeColorTwoHoverShadedBackground aaThemeColorTwoShadedBorderColor" onclick="window.location='asset://ui/scrapers.html';" />
+										<input type="submit" id="createNewButton" value="OK" class="detailsButton aaButton aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor" style="margin-left: 10px; margin-right: 10px;" disabled />
+									</td>
+								</tr>
+							</table>
+						</form>
+					</td>
+				</tr>
+			</table>
+		</div>
 
-				<div style="display: table-row; height: 100%;">
-					<div style="display: table-cell;">
-						<div id="libraryContainer"></div>
-					</div>
-				</div>
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
 
-				<div style="display: table-row; height: 108px;">
-					<div style="display: table-cell;">
-						<div class="librarySearchContainer">
-							<table style="width: 100%;"><tr>
-								<td align="left">
-									<table style="width: 80%;"><tr>
-										<td>
-											<nobr>
-												<div class="button disabledButton" onclick="chooseSelected();" style="display: inline-block;" id="createNewButton">OK</div> <form id="fileLocationForm" style="display: inline;"><input id="browseInput" type="text" size="30" style="font-size: 22px; width: 84%; background-color: #222; border-radius: 4px; height: 39px; padding-left: 10px; color: white; border: 2px solid white;" placeholder="Paste URL here or click BROWSE" /></form> <div class="button" onclick="browse(document.getElementById('browseInput'), document.getElementById('createNewButton'));" style="display: inline-block;">&nbsp;<img src="browseicon.png" style="width: 20px;" />&nbsp;Browse </div> <div class="button" onclick="window.location='asset://ui/scrapers.html';" style="display: inline-block;">&nbsp;Scrapers&nbsp;</div> <div class="button" onclick="window.location='asset://ui/import.html';" style="display: inline-block;" id="importButton">&nbsp;Import&nbsp;</div>
-											</nobr>
-										</td>
-									</tr></table>
-								</td>
-								<td align="right">
-									<table><tr>
-										<td>
-											<div id="launchButton" class="button disabledButton helpNote" onclick="launchSelected();" help="Launch the selected shortcut in Windows.">Launch</div>
-										</td>
-										<td>
-											<div class="button disabledButton">Delete</div>
-										</td>
-										<td>
-											<div id="editButton" class="button disabledButton helpNote" onclick="editSelected();" help="Manage the details of the selected entry.">Edit</div>
-										</td>
-									</tr></table>
-								</td>
-							</tr></table>
-						</div>
-					</div>
-				</div>
-			</div>
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var resultsBody = document.querySelector(".resultsBody");
+			var libraryTable = document.querySelector("#libraryTable");
+			var okButtonElem = document.querySelector("#createNewButton");
+			var auxButton = document.querySelector("#auxButton");
+			var browseButton = document.querySelector("#browseButton");
+
 			// FUNCTIONS
 			function onEntryValueChange(doNotDeselect)
 			{
 				if( entryValueInputElem.value !== "" )
 				{
-					okButtonElem.className = "button";
-					okButtonElem.style.backgroundColor = "rgba(250, 50, 50, 0.7)";
-					entryValueInputElem.style.border = "2px solid rgba(250, 50, 50, 0.7)";
+					okButtonElem.disabled = false;
+					//okButtonElem.className = "button";
+					//okButtonElem.style.backgroundColor = "rgba(250, 50, 50, 0.7)";
+					//entryValueInputElem.style.border = "2px solid rgba(250, 50, 50, 0.7)";
 				}
 				else
 				{
-					okButtonElem.className = "button disabledButton";
-					okButtonElem.style.backgroundColor = "";
-					entryValueInputElem.style.border = "2px solid white";
+					okButtonElem.disabled = true;
+					//entryValueInputElem.style.border = "2px solid white";
 				}
 
 				if( typeof doNotDeselect !== "boolean" || !doNotDeselect )
-					deselectLibraryEntry();
+				{
+					var selectedEntry = document.querySelector(".selectedEntry");
+					if( !!selectedEntry )
+							deselectLibraryEntry(selectedEntry);
+				}
 			}
 
 			function browse(inputElem)
@@ -119,20 +414,46 @@
 				{
 					if(chosenFile !== "")
 					{
-						inputElem.value = chosenFile;
+						this.value = chosenFile;
 						onEntryValueChange();
+						fileLocationFormElem.querySelector("input[type='submit']").click();//submit();
 					}
-				}.bind(this));
+				}.bind(inputElem));
 			}
-/*
-			function selectLibraryEntry()
-			{
 
-			}
-			*/
-
-			function selectLibraryEntry(elem)
+			function selectLibraryEntry(entryRow)
 			{
+				// select entry
+				entryRow.classList.add("selectedEntry");
+				//okButtonElem
+
+				var cells = entryRow.querySelectorAll("td");
+				//var entryFilterCell = cells[0];
+				//var entryTitleCell = cells[1];
+				var cell;
+				for( var i = 0; i < cells.length; i++ )
+				{
+					cell = cells[i];
+					cell.classList.remove("aaThemeColorTwoShadedBackground");
+					cell.classList.remove("aaTextColorTwoColor");
+					cell.classList.add("aaThemeColorOneShadedBackground");
+					cell.classList.add("aaTextColorOneColor");
+				}
+
+				var entry = entryRow.entry;
+
+				// update selected entry value
+				var itemValue;
+				if( category === "items" )
+					itemValue = entry.file;
+				else if( category === "models" )
+					itemValue = entry.platforms[arcadeHud.platformId].file;
+				entryValueInputElem.value = itemValue;
+				onEntryValueChange(true);
+
+				libraryTable.classList.add("hasSelectedEntry");
+
+				/*
 				// FIXME: this always assumes category "items"
 
 				// Remove the disabledButton class
@@ -158,63 +479,72 @@
 					itemValue = elem.entry.platforms[arcadeHud.platformId].file;
 				entryValueInputElem.value = itemValue;
 				onEntryValueChange(true);
+				*/
 			}
 
-			function deselectLibraryEntry()
+			function deselectLibraryEntry(entryRow)
 			{
-				if( !libraryContainer.selectedEntry )
+				if( !!!entryRow )
 					return;
 
-				// reset the victim's style
-				var victim = libraryContainer.selectedEntry;
-				victim.style.backgroundColor = victim.oldBgColor;
-				victim.oldBgColor = "";
+				// deselect entry
+				entryRow.classList.remove("selectedEntry");
 
-				// reset item value field
-				entryValueInputElem.value = "";
-				onEntryValueChange(true);
+				var cells = entryRow.querySelectorAll("td");
+				//var entryFilterCell = cells[0];
+				//var entryTitleCell = cells[1];
+				var cell;
+				for( var i = 0; i < cells.length; i++ )
+				{
+					cell = cells[i];
+					cell.classList.remove("aaThemeColorOneShadedBackground");
+					cell.classList.remove("aaTextColorOneColor");
+					cell.classList.add("aaThemeColorTwoShadedBackground");
+					cell.classList.add("aaTextColorTwoColor");
+				}
 
-				// deselect
-				libraryContainer.selectedEntry = null;
-
-				// adjust disabled buttons accordingly
-				// FIXME: Need a more generalized way to toggle the buttons
-				var button = document.querySelector("#editButton");
-				if( button.className.search(/\bdisabledButton\b/) === -1 )
-					button.className += " disabledButton";
-
-				button = document.querySelector("#launchButton");
-				if( button.className.search(/\bdisabledButton\b/) === -1 )
-					button.className += " disabledButton";
+				libraryTable.classList.remove("hasSelectedEntry");
 			}
 
 			function startLibrarySearch(updateContext)
 			{
 				// empty the list & reset action button states
-				deselectLibraryEntry();
+				var selectedEntry = document.querySelector(".selectedEntry");
+				if( !!selectedEntry )
+					deselectLibraryEntry(selectedEntry);
+
 				clearRepeaterHandle();
 				clearList();
 
-				var searchElem = searchBox.querySelector("input");
+				var searchElem = searchBoxForm.querySelector("input");
+				var filterText = filterSelect.value;
+				if( category !== "items" )	// disable filters for non-items for now.
+					filterText = "";
 
 				if( typeof updateContext !== "boolean" || updateContext )
 				{
 					var searchText = searchElem.value;
-					var filterText = filterSelect.value;
 					aaapi.system.setLibraryBrowserContext(category, "", searchText, filterText);
 				}
 
 				// now figure out if we are finding or getting
 				var response;	// response = {"success": BOOL, "entry": OBJECT, "queryId": STRING}
 				var method;
-				if( searchElem.value !== "" || filterSelect.value !== "")
+				if( searchElem.value !== "" || filterText !== "")
 				{
 					method = "find";
 
-					if( filterSelect.value === "" )
+					if( filterText === "" )
 						response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value);
 					else
-						response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterSelect.value);
+					{
+						if( activeTabId !== "nodes" || nodestyle === "" )
+							response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterText);//, "nodestyle", "node_highrise_studio");
+						else
+						{
+							response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterText, "nodestyle", nodestyle);
+						}
+					}
 				}
 				else
 				{
@@ -233,37 +563,27 @@
 				if( category !== "models" || !response.entry.dynamic )
 					appendEntry(response.entry);
 
-				libraryFetch(libraryQueryId, method, 99);
+				libraryFetch(libraryQueryId, method, 40);
 			}
 
-			function chooseSelected()
+			function chooseSelected(selectedEntry)
 			{
-				//if( !libraryContainer.selectedEntry )
-				//	return;
-
 				// get some values that we're probably going to have to pass to AArcade
-				var searchElem = searchBox.querySelector("input");
+				var searchElem = searchBoxForm.querySelector("input");
 				var searchText = searchElem.value;
 				var filterText = filterSelect.value;
 
-				if( !!libraryContainer.selectedEntry )// && entryValueInputElem.value === libraryContainer.selectedEntry.entry.file )
+				if( !!selectedEntry )
 				{
 					// entry exists
-					if( category === "items" )// && entryValueInputElem.value === libraryContainer.selectedEntry.entry.file )
+					if( category === "items" )
 					{
-						// always spawn items for now.
-						//aaapi.system.spawnItem(libraryContainer.selectedEntry.entry.info.id);
-						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+						// always spawn item for now.
+						aaapi.system.spawnEntry(category, selectedEntry.entry.info.id, searchText, filterText);
 					}
 					else
 					{
-						// spawnEntry(category, entryId, search, filter)
-						//aaapi.system.setLibraryBrowserContext("items", "", searchText, filterText);
-						// FIXME: Automatically switch to items mode (but what about spawning models directly?)
-
-						//aaapi.system.spawnEntry("items", libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
-
-						aaapi.system.spawnEntry(category, libraryContainer.selectedEntry.entry.info.id, searchText, filterText);
+						aaapi.system.spawnEntry(category, selectedEntry.entry.info.id, searchText, filterText);
 					}
 				}
 				else if( entryValueInputElem.value !== "" )
@@ -309,6 +629,7 @@
 
 			function editSelected()
 			{
+				console.log("UPDATE THIS METHOD!");
 				if( !libraryContainer.selectedEntry || entryValueInputElem.value !== libraryContainer.selectedEntry.entry.file )
 					return;
 
@@ -322,6 +643,8 @@
 
 			function launchSelected()
 			{
+				console.log("UPDATE THIS METHOD!");
+
 				if( !libraryContainer.selectedEntry || entryValueInputElem.value !== libraryContainer.selectedEntry.entry.file )
 					return;
 
@@ -336,128 +659,204 @@
 			// add an entry to the table
 			function appendEntry(entry)
 			{
-				var entryContainer = document.createElement("div");
-				entryContainer.className = "libraryEntryContainer";
-
-				entryContainer.onselectstart = function(e)
+				if( !!!entry )
 				{
-					e.preventDefault;
-					return false;
-				};
+					console.log("Warning: Attempted to append an entry with no entry given.");
+					return;
+				}
 
-				entryContainer.entry = entry;
-				entryContainer.oldBgColor = "";
-
-				//dblclick
-				entryContainer.addEventListener("dblclick", function(e)
-				{
-					console.log("dbl clicked!");
-					if(libraryContainer.selectedEntry)
-					{
-						// we have chosen it
-						//var elem = document.querySelector("#editButton");
-						//editSelected();
-						chooseSelected();
-					}
-				}, true);
-
-				entryContainer.addEventListener("mouseover", function(e)
-				{
-					var elem = e.srcElement;
-					arcadeHud.showCursorPreviewImage(elem.entry.marquee, elem.entry.screen);
-				}, true);
-
-				entryContainer.addEventListener("mouseout", function(e)
-				{
-					var elem = e.srcElement;
-					arcadeHud.hideCursorPreviewImage();
-				}, true);
-
-				entryContainer.addEventListener("click", function(e)
-				{
-					var elem = e.srcElement;
-					if( !!!elem.entry )
-						return;
-
-					deselectLibraryEntry();
-					selectLibraryEntry(elem);
-				}, true);				
-
-				// FIXME: generalize the filters to be more than just "item type"
-				// entry filter
-				var type = document.createElement("div");
-				type.className = "libraryEntryFilter";
-				type.style.pointerEvents = "none";
-
-				var typeNode;
-				if(!!types[entry.type])
-					typeNode = document.createTextNode(types[entry.type].title);
-				else
-					typeNode = document.createTextNode("");
-
-				type.appendChild(typeNode);
-				entryContainer.appendChild(type);
-
-				// entry title
-				var title = document.createElement("div");
-				title.className = "libraryEntryTitle";
-				title.style.pointerEvents = "none";
-
-				var titleNode = document.createTextNode(entry.title);
-				title.appendChild(titleNode);
-				entryContainer.appendChild(title);
+				if( !!types[entry.type] && types[entry.type].title === "node" && activeTabId !== "nodes" )
+					return;
 
 				// add this row to the table
-				libraryContainer.appendChild(entryContainer);
+				var entryRow = document.createElement("tr");
+				entryRow.className = "aaThemeColorTwoHoverShadedBackground";
+				entryRow.entry = entry;
+				entryRow.addEventListener("click", function(e)
+				{
+					var selectedEntry = document.querySelector(".selectedEntry");
+					if( !!selectedEntry )
+						deselectLibraryEntry(selectedEntry);
+
+					selectLibraryEntry(this);
+				}.bind(entryRow), true);
+
+				//dblclick
+				// issue: double click is firing even if it wasn't the SAME item you clicked twice
+				// solution: what ever.
+				entryRow.addEventListener("dblclick", function(e)
+				{
+					chooseSelected(this);
+				}.bind(entryRow), true);	
+
+				var entryFilterCell = document.createElement("td");
+				entryFilterCell.className = "aaThemeColorTwoHighBorderColor aaTextSizeFontSize aaTextColorTwoColor aaTitleText";
+
+				var entryFilterContainer = document.createElement("div");
+				entryFilterContainer.className = "entryFilterContainer";
+
+				var entryFilter = document.createElement("div");
+				//entryFilter.className = "aaTextSizeFontSize aaTextColorTwoColor aaTitleText";
+				entryFilter.className = "entryFilter";
+				entryFilter.innerHTML = ( !!types[entry.type] ) ? types[entry.type].title : "";
+
+				var entryTitleCell = document.createElement("td");
+				entryTitleCell.className = "aaThemeColorTwoHighBorderColor aaTextColorTwoColor aaTitleTextSizeFontSize aaTitleText";
+
+				var useImages = (category === "items");
+				if( useImages )
+				{
+					var taskImageContainer = document.createElement("div");
+					taskImageContainer.style.cssText = "display: inline-block; margin-right: 10px; vertical-align: top; width: 90px; height: 38px; text-align: center; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);";
+
+					var taskImage = document.createElement("img");
+					taskImage.style.display = "none";
+					//taskImage.entry = task.entry;
+					taskImageContainer.appendChild(taskImage);
+
+					arcadeHud.loadItemBestImage(taskImage, entry, function()
+					{
+						this.ready = true;
+
+						var imageContainer = this.parentNode;
+						imageContainer.style.background = "transparent url('" + this.src + "') center";
+						imageContainer.style.backgroundSize = "cover";
+						//console.log(imageContainer.style.background);
+						/*
+						if( false && extraPanel.style.display !== "none" )
+						{
+							var table = document.querySelector("#dummyMarker").parentNode.parentNode.parentNode.parentNode;
+							console.log(table.tagName);
+							table.style.background = "transparent url('" + this.src + "')";
+							table.style.backgroundSize = "cover";
+						}
+						*/
+					});
+				}
+
+				var entryTitleContainer = document.createElement("div");
+				entryTitleContainer.className = "entryTitleContainer";
+
+				var entryTitle = document.createElement("div");
+				entryTitle.className = "entryTitle";
+				entryTitle.innerHTML = entry.title;
+
+				var buttonsContainer = document.createElement("div");
+				buttonsContainer.className = "buttonsContainer";
+
+				var editButton = document.createElement("div");
+				editButton.className = "editButton aaThemeColorOneHoverShadedBackground helpNote";
+				editButton.setAttribute("help", "Edit this item's details.");
+				editButton.entry = entry;
+				editButton.addEventListener("click", function(e)
+				{
+					if( category === "items" )
+					{
+						if( nodestyle != "" )
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?nodestyle=" + nodestyle + "&activeTabId=" + activeTabId + "';");
+						}
+						else
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=" + activeTabId + "';");
+						}
+					}
+					else if( category === "models" )
+					{
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+				}.bind(editButton), true);
+
+				var editButtonImage = document.createElement("img");
+				editButtonImage.src = "editicon.png";
+
+				// compose
+				// 1st cell
+				entryFilterContainer.appendChild(entryFilter);
+				entryFilterCell.appendChild(entryFilterContainer);
+
+				// 2nd cell
+				if( useImages )
+					entryTitleContainer.appendChild(taskImageContainer);
+
+				entryTitleContainer.appendChild(entryTitle);
+				editButton.appendChild(editButtonImage);
+				buttonsContainer.appendChild(editButton);
+				entryTitleCell.appendChild(entryTitleContainer);
+				entryTitleCell.appendChild(buttonsContainer);
+
+				// row
+				entryRow.appendChild(entryFilterCell);
+				entryRow.appendChild(entryTitleCell);
+				resultsBody.appendChild(entryRow);
+				return;
 			}
 
 			// update the category mode of the library browser
-			function setCategory(param)
+			function setCategory(param, isNode)
 			{
+				if( typeof isNode === 'undefined' )
+					isNode = false;
+
 				category = param;
-				libBrowserTypeElem.innerHTML = param;
 
-				// also handle the filters list
-				// clear the filters
-				while (filterSelect.options.length)
-					filterSelect.remove(0);
-
-				// add category-specific filters
 				if( category === "items" )
 				{
-					var fieldValueOption = document.createElement("option");
-					fieldValueOption.value = "";
-					fieldValueOption.text = "All Types";
-					filterSelect.appendChild(fieldValueOption);
+					//libBrowserTypeElem.innerHTML = param;
 
-					var x;
-					for( y in types )
+					// also handle the filters list
+					// clear the filters
+					while (filterSelect.options.length)
+						filterSelect.remove(0);
+
+					// add category-specific filters
+					if( category === "items" )
 					{
-						var type = types[y];
-						fieldValueOption = document.createElement("option");
-						fieldValueOption.value = type.info.id;
-						fieldValueOption.text = type.title;
-
-						if( type.info.id === libraryBrowserContext.filter )
-							fieldValueOption.selected = true;
-
+						var fieldValueOption = document.createElement("option");
+						fieldValueOption.value = "";
+						fieldValueOption.text = "All Types";
 						filterSelect.appendChild(fieldValueOption);
-					}
-				}
-				else
-				{
-					var fieldValueOption = document.createElement("option");
-					fieldValueOption.value = "";
-					fieldValueOption.text = "All Models";
-					filterSelect.appendChild(fieldValueOption);
 
-					// FIXME: the calls to aaapi need to be adjusted for non-type filters.
-					/*
-					fieldValueOption = document.createElement("option");
-					fieldValueOption.value = "";
-					fieldValueOption.text = "All Models";
-					filterSelect.appendChild(fieldValueOption);
-					*/
+						var x;
+						for( y in types )
+						{
+							var type = types[y];
+
+							if( !isNode && type.title === "node" )
+								continue;
+
+							fieldValueOption = document.createElement("option");
+							fieldValueOption.value = type.info.id;
+							fieldValueOption.text = type.title;
+
+							if( isNode && type.title === "node" )
+								fieldValueOption.selected = true;
+							else if( type.info.id === libraryBrowserContext.filter )
+								fieldValueOption.selected = true;
+
+							filterSelect.appendChild(fieldValueOption);
+
+							if( isNode )
+								filterSelect.style.display = "none";
+							else
+								filterSelect.style.display = "inline-block";
+						}
+					}
+					else
+					{
+						var fieldValueOption = document.createElement("option");
+						fieldValueOption.value = "";
+						fieldValueOption.text = "All Models";
+						filterSelect.appendChild(fieldValueOption);
+
+						// FIXME: the calls to aaapi need to be adjusted for non-type filters.
+						/*
+						fieldValueOption = document.createElement("option");
+						fieldValueOption.value = "";
+						fieldValueOption.text = "All Models";
+						filterSelect.appendChild(fieldValueOption);
+						*/
+					}
 				}
 			}
 
@@ -465,9 +864,9 @@
 			function clearList()
 			{
 				// clear out the contents of the search results
-				while(libraryContainer.firstChild)
-					libraryContainer.removeChild(libraryContainer.firstChild);
-
+				while(resultsBody.firstChild)
+					resultsBody.removeChild(resultsBody.firstChild);
+/*
 				if(libraryContainer.selectedEntry)
 				{
 					libraryContainer.selectedEntry = null;
@@ -481,6 +880,7 @@
 					if( button.className.search(/\bdisabledButton\b/) === -1 )
 						button.className += " disabledButton";
 				}
+*/
 			}
 
 			// clear the auto-fetch interval for library searches
@@ -525,20 +925,16 @@
 
 		<script>
 			var repeaterHandle = null;	// for library queries
-			var types = aaapi.library.getAllLibraryTypes();	// this could be deferred until we're sure we need the types
-			var libraryBrowserContext = aaapi.system.getLibraryBrowserContext();
-			var category = (libraryBrowserContext.category) ? libraryBrowserContext.category : "items";
 			//console.log(JSON.stringify(libraryBrowserContext));
 			//var category = arcadeHud.getParameterByName("category");	// still need to setCategory
-			var libraryContainer = document.querySelector("#libraryContainer");
+			//#libraryContainer");
 			var libBrowserTypeElem = document.querySelector("#libBrowserType");
 			var fileLocationFormElem = document.querySelector("#fileLocationForm");
 			var categorySelect = document.querySelector("#categorySelect");
 			var entryValueInputElem = document.querySelector("#browseInput");
-			var okButtonElem = document.querySelector("#createNewButton");
 			var filterSelect = document.querySelector("#filterSelect");
-			var searchBox = document.querySelector("#searchBox");
-			searchBox.querySelector("input").value = libraryBrowserContext.search;
+			var searchBoxForm = document.querySelector("#searchBoxForm");
+			searchBoxForm.querySelector("input").value = libraryBrowserContext.search;
 
 			// listeners
 			entryValueInputElem.addEventListener("input", onEntryValueChange);
@@ -546,16 +942,14 @@
 			fileLocationForm.addEventListener("submit", function(e)
 			{
 				e.preventDefault();
-				chooseSelected();
+
+				var selectedEntry = document.querySelector(".selectedEntry");
+				if( !!selectedEntry )
+					chooseSelected(selectedEntry);
+				else if( category === "items" && entryValueInputElem.value !== "" )
+					chooseSelected();
+
 				return false;
-			}, true);
-			
-			categorySelect.addEventListener("change", function(e)
-			{
-				var elem = e.srcElement;
-				category = elem.options[elem.selectedIndex].value;
-				setCategory(category);
-				startLibrarySearch();
 			}, true);
 			
 			filterSelect.addEventListener("change", function(e)
@@ -563,13 +957,14 @@
 				startLibrarySearch();
 			}, true);
 
-			searchBox.addEventListener("submit", function(e)
+			searchBoxForm.addEventListener("submit", function(e)
 			{
 				e.preventDefault();
 				startLibrarySearch();
 				return false;
 			}, true);
 
+/*
 			// INITIATE THE WORK
 			var categoryNames = ["items", "models"];
 			var x, categoryOption;
@@ -584,26 +979,9 @@
 
 				categorySelect.appendChild(categoryOption);
 			}
-
-			// deselect
-			libraryContainer.selectedEntry = null;
-
-			// build the filters list & update the menu title
-			setCategory(category);
-
-			// repeat the previous search (or just get the 1st 100 entries)
-			startLibrarySearch(false);
-
-			// focus the search box for user input
-			searchBox.querySelector("input").focus();
-			searchBox.querySelector("input").select();
-			//searchBox.querySelector("input").setSelectionRange(0, searchBox.value.length);
-/*
-			function onIsMapLoaded()
-			{
-				document.querySelector("#importButton").innerHTML = "Import Steam Games or Legacy Content";
-			}
-			*/
+*/
+			//setCategory(category);
+			libraryTable.setAttribute("category", category);
 		</script>
 	</body>
 </html>

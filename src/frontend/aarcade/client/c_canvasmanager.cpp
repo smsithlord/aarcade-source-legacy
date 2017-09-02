@@ -604,7 +604,7 @@ void C_CanvasManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embedded
 {
 	//g_pAnarchyManager->GetAwesomiumBrowserManager()->GetAllInstances(embeddedInstances);
 	g_pAnarchyManager->GetSteamBrowserManager()->GetAllInstances(embeddedInstances);
-	//g_pAnarchyManager->GetLibretroManager()->GetAllInstances(embeddedInstances);
+	g_pAnarchyManager->GetLibretroManager()->GetAllInstances(embeddedInstances);
 }
 
 void C_CanvasManager::CaptureInstanceThumbnail(C_EmbeddedInstance* pEmbeddedInstance)
@@ -734,6 +734,7 @@ void C_CanvasManager::SetDifferentDisplayInstance(C_EmbeddedInstance* pEmbeddedI
 			continue;
 
 		m_pDisplayInstance = embeddedInstances[i];
+		break;
 	}
 }
 

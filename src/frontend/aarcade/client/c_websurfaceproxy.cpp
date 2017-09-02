@@ -10,18 +10,51 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-std::map<std::string, std::map<std::string, ITexture*>> CWebSurfaceProxy::s_simpleImages;
+//std::map<std::string, std::map<std::string, ITexture*>> CWebSurfaceProxy::s_simpleImages;
+CUtlMap<std::string, ITexture*> CWebSurfaceProxy::s_screenSimpleImages;
+CUtlMap<std::string, ITexture*> CWebSurfaceProxy::s_marqueeSimpleImages;
+bool CWebSurfaceProxy::s_bLessThanReady = false;
 
 //int CWebSurfaceProxy::s_textureCount = 0;
 CCanvasRegen* CWebSurfaceProxy::s_pCanvasRegen = null;
 
 void CWebSurfaceProxy::OnSimpleImageRendered(std::string channel, std::string itemId, std::string field, ITexture* pTexture)
 {
+	// Assume that channel & field can ONLY be "screen" or "marquee"
+	DevMsg("Simple image render: \"%s\" and \"%s\"\n", channel.c_str(), field.c_str());
+	// TODO: Figure out WHY the "field" value is sometimes "file".  It might have to do with requesting something re-load?
+
+
 //	DevMsg("WebSurfaceProxy: OnSimpleImageRendered %s %s %s\n", channel.c_str(), itemId.c_str(), field.c_str());
+
+	/* OLD STD::MAP WAY
 	s_simpleImages[channel][itemId] = pTexture;
 
 	if (field != "" && field != channel && field != "file")	// FIXME: more intellegent look-ahead before requesting images be rendered would speed stuff up a lot.
 		s_simpleImages[field][itemId] = pTexture;
+	*/
+
+	// New CUtlMap way
+	CUtlMap<std::string, ITexture*>* pUtlMap = (channel == "marquee") ? &s_marqueeSimpleImages : &s_screenSimpleImages;
+	pUtlMap->InsertOrReplace(itemId, pTexture);
+
+	/* DISABLED FOR NOW, not sure if it's still needed??
+	if (field != "" && field != channel && field != "file")	// FIXME: more intellegent look-ahead before requesting images be rendered would speed stuff up a lot.
+	{
+		int iFieldSimpleImagesMapIndex = s_simpleImages.Find(field);
+		if (iFieldSimpleImagesMapIndex == s_simpleImages.InvalidIndex())
+		{
+			// Create the field
+			CUtlMap<std::string, ITexture*> itemMap;	// FIXME: Shouldn't use HEAP for this. (probably)
+			SetDefLessFunc(itemMap);
+			iFieldSimpleImagesMapIndex = s_simpleImages.Insert(field, itemMap);
+		}
+
+		// We now have a VALID iFieldSimpleImagesMapIndex
+		CUtlMap<std::string, ITexture*> itemMap = s_simpleImages.Element(iFieldSimpleImagesMapIndex);
+		itemMap.InsertOrReplace(itemId, pTexture);
+	}
+	*/
 }
 
 CWebSurfaceProxy::CWebSurfaceProxy()
@@ -40,6 +73,13 @@ CWebSurfaceProxy::CWebSurfaceProxy()
 	m_iOriginalAutoCreate = 1;
 	m_originalUrl = "";
 	m_originalSimpleImageChannel = "";
+	
+	if (!s_bLessThanReady)
+	{
+		SetDefLessFunc(s_screenSimpleImages);
+		SetDefLessFunc(s_marqueeSimpleImages);
+		s_bLessThanReady = true;
+	}
 
 	//g_pAnarchyManager->GetCanvasManager()->RegisterProxy(this);
 }
@@ -100,9 +140,44 @@ bool CWebSurfaceProxy::Init(IMaterial *pMaterial, KeyValues *pKeyValues)
 	return true;
 }
 
-void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>& simpleImages)
+//void ReleaseSimpleImages(CUtlMap<std::string, CUtlMap<std::string, ITexture*>>& simpleImages)
+void ReleaseSimpleImages(CUtlMap<std::string, ITexture*>& simpleImages, CUtlMap<ITexture*, bool>& usedTextures)
 {
 	// set all owned textures's regenerator to null
+	ITexture* pTexture;
+	//CUtlMap<ITexture*, bool> usedTextures;
+	//SetDefLessFunc(usedTextures);
+
+	for (int iSimpleImagesMapIndex = simpleImages.FirstInorder(); iSimpleImagesMapIndex != simpleImages.InvalidIndex(); iSimpleImagesMapIndex = simpleImages.NextInorder(iSimpleImagesMapIndex))
+	{
+		pTexture = simpleImages.Element(iSimpleImagesMapIndex);
+
+		if (pTexture)
+			usedTextures.InsertOrReplace(pTexture, true);
+	}
+
+	//for (int iSimpleImagesMapIndex = simpleImages.FirstInorder(); iSimpleImagesMapIndex != simpleImages.InvalidIndex(); iSimpleImagesMapIndex = simpleImages.NextInorder(iSimpleImagesMapIndex))
+	//	simpleImages.Element(iSimpleImagesMapIndex).PurgeAndDeleteElements();
+
+	//simpleImages.PurgeAndDeleteElements();
+	//usedTextures.PurgeAndDeleteElements();
+	//DevMsg("Mark one\n");
+	simpleImages.RemoveAll();
+
+
+
+
+
+
+
+
+
+
+	// OLD WAY BELOW HERE!! (but might have useful insta-texture clean up code.)
+
+
+	// set all owned textures's regenerator to null
+	/*
 	ITexture* pTexture;
 	std::map<ITexture*, bool> usedTextures;
 	std::map<std::string, std::map<std::string, ITexture*>>::iterator it = simpleImages.begin();
@@ -118,7 +193,7 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 				usedTextures[pTexture] = true;
 			//	pTexture->DecrementReferenceCount();	// FIXME: Disabled on 10/21/2016 for testing
 			}
-
+			*/
 			/*
 			if (usedTextures.find(it2->second) == usedTextures.end())
 			{
@@ -147,7 +222,7 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 				}
 			}
 			*/
-
+	/*
 			it2++;
 		}
 
@@ -178,6 +253,7 @@ void ReleaseSimpleImages(std::map<std::string, std::map<std::string, ITexture*>>
 
 	simpleImages.clear();
 	usedTextures.clear();
+	*/
 }
 
 void CWebSurfaceProxy::StaticLevelShutdownPreEntity()
@@ -189,7 +265,25 @@ void CWebSurfaceProxy::StaticLevelShutdownPreEntity()
 void CWebSurfaceProxy::StaticLevelShutdownPostEntity()
 {
 	// THIS SHOULD ONLY BE CALLED ONCE!!!!
-	ReleaseSimpleImages(s_simpleImages);
+	CUtlMap<ITexture*, bool> usedTextures;
+	SetDefLessFunc(usedTextures);
+
+	ReleaseSimpleImages(s_screenSimpleImages, usedTextures);
+	ReleaseSimpleImages(s_marqueeSimpleImages, usedTextures);
+
+	ITexture* pTexture;
+	for (int iUsedTexturesMapIndex = usedTextures.FirstInorder(); iUsedTexturesMapIndex != usedTextures.InvalidIndex(); iUsedTexturesMapIndex = usedTextures.NextInorder(iUsedTexturesMapIndex))
+	{
+		pTexture = usedTextures.Key(iUsedTexturesMapIndex);
+
+		if (pTexture)
+		{
+			pTexture->DecrementReferenceCount();
+			pTexture->SetTextureRegenerator(null);
+			pTexture->DeleteIfUnreferenced();
+		}
+	}
+	usedTextures.Purge();
 }
 
 void CWebSurfaceProxy::LevelShutdownPreEntity()
@@ -204,9 +298,10 @@ void CWebSurfaceProxy::ReleaseCurrent()
 
 void CWebSurfaceProxy::ReleaseStuff()
 {
-	DevMsg("WebSurfaceProxy: Release Stuff\n");
+	DevMsg("WebSurfaceProxy: Release Stuff: %s\n", m_originalSimpleImageChannel.c_str());
 	if (this->GetMaterial() && m_pMaterialTextureVar && m_pOriginalTexture && m_pCurrentTexture && m_pOriginalTexture != m_pCurrentTexture)
 	{
+		DevMsg("Route A\n");
 		m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
 	}
 
@@ -308,6 +403,9 @@ void CWebSurfaceProxy::Release()
 
 void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 {
+	//if (m_originalSimpleImageChannel == "")
+	//	return;
+
 	//C_EmbeddedInstance* pSelectedEmebeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 	C_EmbeddedInstance* pSelectedEmebeddedInstance = null;
 	
@@ -468,6 +566,29 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 					if ( itemId != "")
 					{
 						// we still need to find the texture so we can process the image loading still.
+						//CUtlMap<std::string, CUtlMap<std::string, ITexture*>>
+						CUtlMap<std::string, ITexture*>* pUtlMap = (m_originalSimpleImageChannel == "screen") ? &s_screenSimpleImages : &s_marqueeSimpleImages;
+						int iSimpleImagesMapIndex = pUtlMap->Find(itemId);
+						if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+						{
+							if (!bSwappedEmbeddedInstanceIn && m_pMaterialTextureVar)
+							{
+								// we have found our texture.  swap it in and we're done.
+								ITexture* pTexture = pUtlMap->Element(iSimpleImagesMapIndex);
+								if (pTexture)
+									m_pMaterialTextureVar->SetTextureValue(pTexture);
+								else
+									m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+							}
+
+							bTextureExists = true;
+						}
+
+
+
+
+						// OLD STD::MAP WAY HERE!
+						/*
 						std::map<std::string, std::map<std::string, ITexture*>>::iterator it = s_simpleImages.find(m_originalSimpleImageChannel);
 						if (it != s_simpleImages.end())
 						{
@@ -488,6 +609,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 								bTextureExists = true;
 							}
 						}
+						*/
 
 						if (!bTextureExists)
 						{
@@ -495,7 +617,10 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 							if (pImagesBrowserInstance && pImagesBrowserInstance->RequestLoadSimpleImage(m_originalSimpleImageChannel, itemId))
 							{
 								// If the request was accepted, then we need to get rdy to get the result.
-								s_simpleImages[m_originalSimpleImageChannel][itemId] = null;
+								//s_simpleImages[m_originalSimpleImageChannel][itemId] = null;
+								//int iSimpleImagesMapIndex = pUtlMap->Find(m_originalSimpleImageChannel);
+								//if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+								pUtlMap->InsertOrReplace(itemId, null);	// FIXME: This *might* be able to just remove the element right away if we areon't doing deferred texture cleanup.
 							}
 						}
 					}
@@ -533,6 +658,33 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 	if (!m_pMaterialTextureVar)
 		return;
 
+	CUtlMap<std::string, ITexture*>* pUtlMap = (channel == "marquee") ? &s_marqueeSimpleImages : &s_screenSimpleImages;
+	int iSimpleImagesMapIndex = pUtlMap->Find(itemId);
+	if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+	{
+		ITexture* pTexture = pUtlMap->Element(iSimpleImagesMapIndex);
+		if (pTexture && m_pMaterialTextureVar->GetTextureValue() == pTexture)
+			m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+	}
+
+	if (channel == "ALL")
+	{
+		pUtlMap = &s_marqueeSimpleImages;
+
+		// Do the exact same thing, but using the new pUtlMap...
+		// TODO: Generalize this logic.
+		int iSimpleImagesMapIndex = pUtlMap->Find(itemId);
+		if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+		{
+			ITexture* pTexture = pUtlMap->Element(iSimpleImagesMapIndex);
+			if (pTexture && m_pMaterialTextureVar->GetTextureValue() == pTexture)
+				m_pMaterialTextureVar->SetTextureValue(m_pOriginalTexture);
+		}
+	}
+
+
+	// OLD STD::MAP STUFF HERE...
+	/*
 	auto channelIt = s_simpleImages.begin();
 	while (channelIt != s_simpleImages.end())
 	{
@@ -552,6 +704,7 @@ void CWebSurfaceProxy::PrepareRefreshItemTextures(std::string itemId, std::strin
 
 		channelIt++;
 	}
+	*/
 }
 
 void CWebSurfaceProxy::UnreferenceTexture(ITexture* pTexture)
@@ -582,6 +735,82 @@ void CWebSurfaceProxy::UnreferenceEmbeddedInstance(C_EmbeddedInstance* pEmbedded
 
 void CWebSurfaceProxy::RefreshItemTextures(std::string itemId, std::string channel)
 {
+	CUtlMap<std::string, ITexture*>* pUtlMap = (channel == "marquee") ? &s_marqueeSimpleImages : &s_screenSimpleImages;
+	int iSimpleImagesMapIndex = pUtlMap->Find(itemId);
+	if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+	{
+		ITexture* pTexture = pUtlMap->Element(iSimpleImagesMapIndex);
+		if (pTexture)
+		{
+			// if there's already a texture for this item, we're gonna have to replace it.  So that means releasing it first.
+			// FIXME: do work...
+
+			// aaaand theeeeen....
+			pTexture->SetTextureRegenerator(null);	// we WANT to delete this texture rtfn, but safer to let it stick around until map transition.
+			//DevMsg("Deleted texture.\n");
+		}
+
+		//delete pTexture;	// To simulate what std::map does with its erase method!
+		pUtlMap->RemoveAt(iSimpleImagesMapIndex);
+	}
+
+	if (channel == "ALL")
+	{
+		pUtlMap = &s_marqueeSimpleImages;
+
+		// Do the exact same thing, but using the new pUtlMap...
+		// TODO: Generalize this logic.
+		int iSimpleImagesMapIndex = pUtlMap->Find(itemId);
+		if (iSimpleImagesMapIndex != pUtlMap->InvalidIndex())
+		{
+			ITexture* pTexture = pUtlMap->Element(iSimpleImagesMapIndex);
+			if (pTexture)
+			{
+				// if there's already a texture for this item, we're gonna have to replace it.  So that means releasing it first.
+				// FIXME: do work...
+
+				// aaaand theeeeen....
+				pTexture->SetTextureRegenerator(null);	// we WANT to delete this texture rtfn, but safer to let it stick around until map transition.
+				//DevMsg("Deleted texture 2.\n");
+			}
+
+			//delete pTexture;	// To simulate what std::map does with its erase method!
+			pUtlMap->RemoveAt(iSimpleImagesMapIndex);
+		}
+	}
+
+	/*
+	for (int iSimpleImagesMapIndex = s_simpleImages.FirstInorder(); iSimpleImagesMapIndex != s_simpleImages.InvalidIndex(); iSimpleImagesMapIndex = s_simpleImages.NextInorder(iSimpleImagesMapIndex))
+	{
+		if (channel == "ALL" || s_simpleImages.Key(iSimpleImagesMapIndex) == channel)
+		{
+			CUtlMap<std::string, ITexture*> itemMap = s_simpleImages.Element(iSimpleImagesMapIndex);
+
+			int iItemMapIndex = itemMap.Find(itemId);
+			if (iItemMapIndex != itemMap.InvalidIndex())
+			{
+				ITexture* pTexture = itemMap.Element(iItemMapIndex);
+				if (pTexture)
+				{
+					// if there's already a texture for this item, we're gonna have to replace it.  So that means releasing it first.
+					// FIXME: do work...
+
+					// aaaand theeeeen....
+				}
+
+				delete pTexture;	// To simulate what std::map does with its erase method!
+				itemMap.RemoveAt(iItemMapIndex);
+			}
+
+			if (channel != "ALL")
+				break;
+		}
+	}
+	*/
+
+
+	/*
+	// OLD STD::STRING STUFF HERE...
 	auto channelIt = s_simpleImages.begin();
 	while (channelIt != s_simpleImages.end())
 	{
@@ -608,6 +837,7 @@ void CWebSurfaceProxy::RefreshItemTextures(std::string itemId, std::string chann
 
 		channelIt++;
 	}
+	*/
 }
 
 	//DevMsg("WebSurfaceProxy: OnBind\n");

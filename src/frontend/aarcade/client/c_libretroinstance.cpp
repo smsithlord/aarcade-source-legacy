@@ -11,6 +11,8 @@
 #include "c_canvasregen.h"
 #include "c_embeddedinstance.h"
 
+#include <algorithm>
+
 #include "XUnzip.h"
 
 #include <mutex>
@@ -27,6 +29,22 @@ C_LibretroInstance::C_LibretroInstance()
 	m_iLastRenderedFrame = -1;
 	m_iLastVisibleFrame = -1;
 	m_iOriginalEntIndex = -1;
+
+	m_info = null;
+
+	//m_pOverlayKV = null;
+	m_pOverlayKV = new KeyValues("overlay");
+
+	//{
+		//std::string id = "PANASONIC.DARK.cfg";
+		//if (id.length() < 5)
+		//id = id.substr(0, id.length() - 4);
+	//}
+	//m_fPositionX = 0.25;// 0;
+	//m_fPositionY = 0.25;// 0;
+	//m_fSizeX = 0.5;// 1;
+	//m_fSizeY = 0.5;// 1;
+	//m_pOverlayKV->deleteThis();
 //	m_pOpenGLManager = null;
 }
 
@@ -36,12 +54,253 @@ C_LibretroInstance::~C_LibretroInstance()
 	this->CleanUpTexture();
 }
 
+void C_LibretroInstance::ClearOverlay(std::string type, std::string overlayId)
+{
+	std::string folder = "resource\\ui\\html\\overlays";
+	g_pFullFileSystem->CreateDirHierarchy(folder.c_str(), "DEFAULT_WRITE_PATH");
+	std::string file = VarArgs("%s\\%s.cfg", folder.c_str(), overlayId.c_str());
+
+	//m_pOverlayKV
+	std::string prettyCore = m_info->prettycore;
+	std::string prettyGame = m_info->prettygame;
+	KeyValues* pDefaultKV = m_pOverlayKV->FindKey("settings/default", true);
+	KeyValues* pTargetKV = null;
+
+	std::string testerCore;
+	std::string testerGame;
+	for (KeyValues *sub = m_pOverlayKV->FindKey("settings", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		if (!Q_stricmp(sub->GetName(), "default"))
+			continue;
+
+		testerCore = sub->GetString("core");
+		testerGame = sub->GetString("game");
+
+		if (type == "core" && testerCore == prettyCore && testerGame == "")
+			pTargetKV = sub;
+		else if (testerCore == prettyCore && testerGame == prettyGame && type == "game")
+		{
+			pTargetKV = sub;
+			break;
+		}
+	}
+
+	if (pTargetKV)
+	{
+		pTargetKV->Clear();
+		pTargetKV->SetString(null, "");
+
+		if (!m_pOverlayKV->SaveToFile(g_pFullFileSystem, file.c_str(), "DEFAULT_WRITE_PATH"))
+			DevMsg("ERROR: Could not wite file %s\n", file.c_str());
+
+		this->SetOverlay(overlayId);
+	}
+}
+
+void C_LibretroInstance::SaveOverlay(std::string type, std::string overlayId, float x, float y, float width, float height)
+{
+	/*
+	if (overlayId == "none")
+	{
+		x = 0;
+		y = 0;
+		width = 1;
+		height = 1;
+	}
+	*/
+
+	std::string folder = "resource\\ui\\html\\overlays";
+	g_pFullFileSystem->CreateDirHierarchy(folder.c_str(), "DEFAULT_WRITE_PATH");
+	std::string file = VarArgs("%s\\%s.cfg", folder.c_str(), overlayId.c_str());
+
+	//m_pOverlayKV
+	std::string prettyCore = m_info->prettycore;
+	std::string prettyGame = m_info->prettygame;
+	std::string preferredOverlayId = g_pAnarchyManager->GetLibretroManager()->DetermineOverlay(prettyCore, prettyGame);
+	KeyValues* pDefaultKV = m_pOverlayKV->FindKey("settings/default", true);
+	KeyValues* pCoreKV = null;
+	KeyValues* pGameKV = null;
+	//KeyValues* pTargetKV = null;
+
+	std::string testerCore;
+	std::string testerGame;
+	for (KeyValues *sub = m_pOverlayKV->FindKey("settings", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		if (!Q_stricmp(sub->GetName(), "default"))
+			continue;
+
+		testerCore = sub->GetString("core");
+		testerGame = sub->GetString("game");
+
+		if (testerCore == prettyCore && testerGame == "")
+			pCoreKV = sub;
+		else if (testerCore == prettyCore && testerGame == prettyGame)
+			pGameKV = sub;
+		/*
+		if ((type == "core" || type == "default")  && testerCore == prettyCore && testerGame == "")
+			pTargetKV = sub;
+		else if (testerCore == prettyCore && testerGame == prettyGame && (type == "game" || type == "default"))
+		{
+			pTargetKV = sub;
+			break;
+		}
+		*/
+	}
+
+	if (type == "game")
+	{
+		if (!pGameKV)
+		{
+			pGameKV = m_pOverlayKV->FindKey("settings", true)->CreateNewKey();
+			pGameKV->SetName("setting");
+			pGameKV->SetString("core", prettyCore.c_str());
+			pGameKV->SetString("game", prettyGame.c_str());
+		}
+
+		pGameKV->SetFloat("x", x);
+		pGameKV->SetFloat("y", y);
+		pGameKV->SetFloat("width", width);
+		pGameKV->SetFloat("height", height);
+	}
+	else if (type == "core")
+	{
+		if (!pCoreKV)
+		{
+			pCoreKV = m_pOverlayKV->FindKey("settings", true)->CreateNewKey();
+			pCoreKV->SetName("setting");
+			pCoreKV->SetString("core", prettyCore.c_str());
+		}
+
+		pCoreKV->SetFloat("x", x);
+		pCoreKV->SetFloat("y", y);
+		pCoreKV->SetFloat("width", width);
+		pCoreKV->SetFloat("height", height);
+	}
+	else if (type == "default")
+	{
+		pDefaultKV->SetFloat("x", x);
+		pDefaultKV->SetFloat("y", y);
+		pDefaultKV->SetFloat("width", width);
+		pDefaultKV->SetFloat("height", height);
+	}
+
+	if (preferredOverlayId == overlayId)
+	{
+		m_pOverlayKV->SetFloat("current/x", x);
+		m_pOverlayKV->SetFloat("current/y", y);
+		m_pOverlayKV->SetFloat("current/width", width);
+		m_pOverlayKV->SetFloat("current/height", height);
+	}
+
+	if (!m_pOverlayKV->SaveToFile(g_pFullFileSystem, file.c_str(), "DEFAULT_WRITE_PATH"))
+		DevMsg("ERROR: Could not wite file %s\n", file.c_str());
+
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this)
+	{
+		vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+		if (pInputSlate)
+			pInputSlate->AdjustOverlay(m_pOverlayKV->GetFloat("current/x", 0), m_pOverlayKV->GetFloat("current/y", 0), m_pOverlayKV->GetFloat("current/width", 1), m_pOverlayKV->GetFloat("current/height", 1), m_overlayId);
+	}
+}
+
+void C_LibretroInstance::SetOverlay(std::string overlayId)
+{
+	if (!m_info)
+		return;
+
+	std::string goodOverlayId = overlayId;
+
+	std::string prettyCore = m_info->prettycore;
+	std::string prettyGame = m_info->prettygame;
+
+	std::string preferredOverlayId = g_pAnarchyManager->GetLibretroManager()->DetermineOverlay(prettyCore, prettyGame);
+	//return;
+	//if (preferredOverlayId != goodOverlayId)
+		//return;
+	goodOverlayId = preferredOverlayId;
+
+	if (m_pOverlayKV)
+		m_pOverlayKV->Clear();
+
+	//m_overlayId = goodOverlayId;
+	if (goodOverlayId != "" && goodOverlayId != "none" && m_pOverlayKV->LoadFromFile(g_pFullFileSystem, VarArgs("resource\\ui\\html\\overlays\\%s.cfg", goodOverlayId.c_str()), "MOD"))
+	{
+		//m_overlayId = overlayId;
+		//m_pOverlayKV->SetString("current/overlayId", overlayId.c_str());
+
+		std::string testerCore;
+		std::string testerGame;
+
+		KeyValues* pDefaultOverlayKV = m_pOverlayKV->FindKey("settings/default");
+		if (!pDefaultOverlayKV)
+		{
+			pDefaultOverlayKV = m_pOverlayKV->FindKey("settings/default", true);
+			pDefaultOverlayKV->SetFloat("x", 0);
+			pDefaultOverlayKV->SetFloat("y", 0);
+			pDefaultOverlayKV->SetFloat("width", 1);
+			pDefaultOverlayKV->SetFloat("height", 1);
+		}
+
+		//KeyValues* pBestOverlayKV = null;
+		KeyValues* pCoreOverlayKV = null;
+		KeyValues* pGameOverlayKV = null;
+		for (KeyValues *sub = m_pOverlayKV->FindKey("settings", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		{
+			if (sub == pDefaultOverlayKV)
+				continue;
+
+			testerCore = sub->GetString("core");
+			testerGame = sub->GetString("game");
+
+			if (testerCore == prettyCore && testerGame == "")
+				pCoreOverlayKV = sub;
+			else if (testerCore == prettyCore && testerGame == prettyGame)
+				pGameOverlayKV = sub;
+		}
+
+		KeyValues* pBestOverlayKV = (pGameOverlayKV) ? pGameOverlayKV : pCoreOverlayKV;
+		if (!pBestOverlayKV)
+			pBestOverlayKV = pDefaultOverlayKV;
+
+		if (preferredOverlayId == goodOverlayId)
+		{
+			m_pOverlayKV->SetFloat("current/x", pBestOverlayKV->GetFloat("x", 0));
+			m_pOverlayKV->SetFloat("current/y", pBestOverlayKV->GetFloat("y", 0));
+			m_pOverlayKV->SetFloat("current/width", pBestOverlayKV->GetFloat("width", 1));
+			m_pOverlayKV->SetFloat("current/height", pBestOverlayKV->GetFloat("height", 1));
+		}
+	}
+	else
+	{
+		m_pOverlayKV->SetFloat("current/x", 0);
+		m_pOverlayKV->SetFloat("current/y", 0);
+		m_pOverlayKV->SetFloat("current/width", 1);
+		m_pOverlayKV->SetFloat("current/height", 1);
+	}
+
+	if ( g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this)
+	{
+		vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+		if (pInputSlate)
+			pInputSlate->AdjustOverlay(m_pOverlayKV->GetFloat("current/x", 0), m_pOverlayKV->GetFloat("current/y", 0), m_pOverlayKV->GetFloat("current/width", 1), m_pOverlayKV->GetFloat("current/height", 1), goodOverlayId);
+	}
+
+	m_overlayId = goodOverlayId;
+}
+
 void C_LibretroInstance::SelfDestruct()
 {
 	DevMsg("LibretroInstance: SelfDestruct\n");
 	g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen()->NotifyInstanceAboutToDie(this);
-	m_info->libretroinstance = null;
-	m_info->close = true;
+
+	if (m_info)
+	{
+		m_info->libretroinstance = null;
+		m_info->close = true;
+	}
+
+	if (m_pOverlayKV)
+		m_pOverlayKV->deleteThis();
 	/*
 	if (m_pLastFrameData)
 		free(m_pLastFrameData);
@@ -101,20 +360,6 @@ void C_LibretroInstance::Init(std::string id, std::string title, int iEntIndex)
 	CCanvasRegen* pRegen = g_pAnarchyManager->GetCanvasManager()->GetOrCreateRegen();
 	//pRegen->SetEmbeddedInstance(this);
 	m_pTexture->SetTextureRegenerator(pRegen);
-	
-	//m_corePath = engine->GetGameDirectory();
-	m_corePath = "\\libretro\\cores";
-
-	m_userBase = engine->GetGameDirectory();// "libretro\\assets";
-	size_t found = m_userBase.find_last_of("/\\");
-	if (found != std::string::npos)
-		m_userBase = m_userBase.substr(0, found);
-
-	m_userBase += "\\aarcade_user";
-
-	m_assetsPath += m_userBase + "\\libretro\\assets";
-	m_systemPath += m_userBase + "\\libretro\\system";
-	m_savePath += m_userBase + "\\libretro\\save";
 
 	m_raw = new libretro_raw();
 }
@@ -125,7 +370,9 @@ void C_LibretroInstance::Update()
 		return;
 
 	if (m_info->state == 1)
+	{
 		OnCoreLoaded();
+	}
 	else if (m_info->state == 5 )// && m_info->audiostream)	// added m_info to try and detect failed video loads!! (FIXME: Should be removed after proper failed video load is added elsewhere.
 	{
 		unsigned int numPorts = m_info->numports;
@@ -178,23 +425,26 @@ bool C_LibretroInstance::LoadCore(std::string coreFile)
 	{
 		// first check for cores in the user folder, then check for cores in the frontend folder.
 
-		std::string core = m_userBase + m_corePath + std::string("\\") + coreFile;
+		bool bReady = false;
+		std::string core = g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_USER_BASE) + g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_CORE_PATH) + std::string("\\") + coreFile;
 		if (g_pFullFileSystem->FileExists(core.c_str()))
+			bReady = true;
+		else
 		{
+			core = engine->GetGameDirectory() + g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_CORE_PATH) + std::string("\\") + coreFile;
+			if (g_pFullFileSystem->FileExists(core.c_str()))
+				bReady = true;
+		}
+
+		if ( bReady )
+		{
+			//g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Core Opened (%i running)", g_pAnarchyManager->GetLibretroManager()->GetInstanceCount()));
 			CreateWorkerThread(core);
 			return true;
 		}
-		else
-		{
-			core = engine->GetGameDirectory() + m_corePath + std::string("\\") + coreFile;
-			if (g_pFullFileSystem->FileExists(core.c_str()))
-			{
-				CreateWorkerThread(core);
-				return true;
-			}
-		}
 	}
 
+	g_pAnarchyManager->AddToastMessage("Libretro Core Aborted");
 	return false;
 	/*
 
@@ -212,10 +462,51 @@ void C_LibretroInstance::OnGameLoaded()
 	m_info->state = 5;
 }
 
+
+std::string C_LibretroInstance::GetLibretroCore()
+{
+	if (m_info)
+		return m_info->core;
+	else
+		return "";
+}
+
+std::string C_LibretroInstance::GetLibretroFile()
+{
+	if (m_info)
+		return m_info->game;
+	else
+		return "";
+}
+
+void C_LibretroInstance::SetReset(bool bValue)
+{
+	if (m_info)
+		m_info->reset = bValue;
+}
+
+void C_LibretroInstance::SetPause(bool bValue)
+{
+	if (m_info)
+		m_info->paused = bValue;
+}
+
+void C_LibretroInstance::SetVolume(float fVolume)
+{
+	if (m_info)
+		m_info->volume = fVolume;
+}
+
+bool C_LibretroInstance::GetPause()
+{
+	if (!m_info)
+		return false;
+	else
+		return m_info->paused;
+}
+
 bool C_LibretroInstance::LoadGame()
 {
-	//std::string filename = "V:\\Movies\\Teenage Mutant Ninja Turtles(1990).avi";
-
 	uint uId = ThreadGetCurrentId();
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 
@@ -224,316 +515,257 @@ bool C_LibretroInstance::LoadGame()
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 
-	/*
-	if (file == "")
-	{
-		info->game = "V:\\Movies\\Teenage Mutant Ninja Turtles(1990).avi";
-		//file = info->game;
-	}
-	else
-		info->game = file;
-	*/
-
-
 	std::string filename = info->game;
-	//DevMsg("filename: %s\n", filename.c_str());
 
-//	DevMsg("Load the damn game, son!\n");
-//	return false;
-	///*
+	// If this core *requires* a full file path, then we can check if the file extension is supported RIGHT NOW.
+	// OTHERWISE, we might have to open up a ZIP file before we can check the real file extension.
 
-	/*
-	bool bForceDataLoad = true;
-	bool bForceDataLoad = false;
-	*/
+	std::string fileExtension = filename;
+	std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), ::tolower);
+	size_t extensionFound = fileExtension.find_last_of(".");
+	if (extensionFound != std::string::npos)
+		fileExtension = fileExtension.substr(extensionFound + 1);
+	else
+		fileExtension = "";
 
-	//char* filenameFixed = new char[MAX_STRING_LENGTH];
-	//Q_strcpy(filenameFixed, pFilename);
-	//V_FixSlashes(filenameFixed, '/');
+	if (fileExtension == "")
+	{
+		DevMsg("libretro: ABORTED: The file has no file extension.\n");
+		//info->close = true;
+		return false;
+	}
+
+	// Format Example:
+	//   valid_extensions: mkv|avi|f4v|f4f|3gp|ogm|flv|mp4|mp3|flac|ogg|m4a
+	std::string testerExtensions = info->valid_extensions;
+	std::transform(testerExtensions.begin(), testerExtensions.end(), testerExtensions.begin(), ::tolower);
+
+	std::vector<std::string> tokens;
+	g_pAnarchyManager->Tokenize(testerExtensions, tokens, "|");
+
+	bool bIsZip = (fileExtension == "zip");
+	bool bIsValidExtension = true;
+
+	// If this is NOT a ZIP (or if ZIP is a supported file extension for the core, OR(?) if the core requires fullpath) we can confirm validity RIGHT NOW.
+	if (info->need_fullpath || !bIsZip || std::find(tokens.begin(), tokens.end(), "zip") != tokens.end())	//info->need_fullpath
+	{
+		if (std::find(tokens.begin(), tokens.end(), fileExtension) != tokens.end())
+			DevMsg("Found extension %s within %s\n", fileExtension.c_str(), testerExtensions.c_str());
+		else
+			bIsValidExtension = false;
+	}
 
 	// FIXME: Why always pick this pixel format???
 	info->videoformat = RETRO_PIXEL_FORMAT_0RGB1555;
 
-	if (!g_pFullFileSystem->FileExists(filename.c_str()))
+	//s_bSupportsNoGame
+
+	void* fileData;
+	bool bDataLoaded = false;
+	bool bReadyToLoad = false;
+
+	struct retro_game_info game;
+	game.path = filename.c_str();
+
+	if (!bIsValidExtension)
 	{
-		DevMsg("libretro: ERROR file does not exist: %s\n", filename.c_str());
-		info->close = true;
-		return false;
-	}
-	else
-		DevMsg("libretro: LOAD GAME %s\n", filename.c_str());
-
-	info->raw->init();	// could take a while
-	if (info->close)
-		return false;
-
-	/*
-	if (!g_pFullFileSystem->FileExists(pFilename))
-	{
-		DevMsg("libretro: Error - File does not exist!\n");
-		return false;
-	}
-
-	if (s_bSupportsNoGame)
-	{
-		DevMsg("libretro: Error - This core does not support games.\n");
-		return false;
-	}
-
-	std::string buf = pFilename;
-	bool bZipDetected = (buf.find(".zip") == buf.length() - 4 || buf.find(".ZIP") == buf.length() - 4);
-
-	if (bFilenameOnly && !bZipDetected && !bForceDataLoad)
-	{
-	*/
-	bool success = false;
-	if (info->need_fullpath)
-	{
-		/*
-		std::string path = filename;
-		size_t found = path.find_last_of("/\\");
-		if (found != std::string::npos)
-			path = path.substr(0, found);
-		*/
-
-		struct retro_game_info game;
-		game.path = filename.c_str();
-		game.data = NULL;
-		game.size = 0;
-		game.meta = NULL;
-
-		DevMsg("loading game\n");
-		success = info->raw->load_game(&game);
-
-		//pLibretroInstance->OnGameLoaded();
-		//bDidItWork = s_raw->load_game(&game);
-	}
-	else
-	{
-		DevMsg("File must be loaded by frontend!\n");
+		DevMsg("libretro: ABORTED: Invalid file extension %s for this core. Valid extensions for %s are: %s\n", fileExtension.c_str(), info->prettycore.c_str(), testerExtensions.c_str());
 		//info->close = true;
-		//return false;
-		char pFilename[AA_MAX_STRING];
-		Q_strcpy(pFilename, filename.c_str());
-
-		bool bZipDetected = (filename.find(".zip") == filename.length() - 4 || filename.find(".ZIP") == filename.length() - 4);
-
-		if (bZipDetected)
+	}
+	else
+	{
+		if (info->need_fullpath)
 		{
-			DevMsg("libretro: ZIP file detected. Attempting to extract the 1st file..\n");
-			HZIP hz = OpenZip((void*)pFilename, 0, ZIP_FILENAME);
-
-			int zipIndex = 0;
-			ZIPENTRY zipEntry;
-			ZRESULT result = GetZipItem(hz, zipIndex, &zipEntry);
-
-			while (result == ZR_OK)
-			{
-				if (zipEntry.attr & FILE_ATTRIBUTE_DIRECTORY)
-				{
-					zipIndex++;
-					result = GetZipItem(hz, zipIndex, &zipEntry);
-					continue;
-				}
-
-				break;
-			}
-
-			if (result != ZR_OK)
-			{
-				DevMsg("libretro: Error - failed to locate a valid file in ZIP.");
-				CloseZip(hz);
-				return false;
-			}
-
-			//unsigned int fileSize = g_pFullFileSystem->Size(pFilename);
-			long fileSize = zipEntry.unc_size;
-
-			//unsigned char* fileData = new unsigned char[fileSize*20];
-
-			void* fileData = malloc(fileSize);
-			//Q_memcpy(dest, data, fileSize);
-
-			result = UnzipItem(hz, zipIndex, fileData, fileSize, ZIP_MEMORY);
-
-			if (result != ZR_OK && result != 1536)
-			{
-				DevMsg("libretro: Error - failed to unzip the file. ERROR CODE %i\n", result);
-				CloseZip(hz);
-
-				free(fileData);
-				return false;
-			}
-
-			//fileData[fileSize] = 0; // null terminator
-
-			CloseZip(hz);
-
-			// The unzipped file is now in fileData.  Give it to the core.
-			struct retro_game_info game;
-			game.path = pFilename;
-			game.data = fileData;
-			game.size = fileSize;
-			game.meta = NULL;
-			success = info->raw->load_game(&game);
-			free(fileData);
-		}
-		/*
-		else
-		{
-			struct retro_game_info game;
-			game.path = pFilename;
 			game.data = NULL;
 			game.size = 0;
 			game.meta = NULL;
 
-			FileHandle_t fileHandle = filesystem->Open(pFilename, "rb");
-			if (fileHandle)
-			{
-				int bufferSize = filesystem->Size(fileHandle);
-				unsigned char* fileContents = new unsigned char[bufferSize + 1];
-
-				filesystem->Read((void*)fileContents, bufferSize, fileHandle);
-				fileContents[bufferSize] = 0; // null terminator
-
-				filesystem->Close(fileHandle);
-
-				game.data = fileContents;
-				game.size = bufferSize;
-
-				bDidItWork = s_raw->load_game(&game);
-
-				delete[] fileContents;
-			}
-		}
-		*/
-	}
-
-	if (!success)	// this could take a while
-	{
-		DevMsg("ERROR LOADING LIBRETRO GAME!!\n");
-		info->close = true;
-		return false;
-	}
-	else
-	{
-		DevMsg("done loading game\n");
-		if (!info->close)
-		{
-			info->state = 5;
-			return true;
+			bReadyToLoad = true;
 		}
 		else
 		{
-			DevMsg("However, the instance already wants to close. :(\n");
-			return false;
-		}
-	}
-		/*
-	}
-	else
-	{
-		if (bZipDetected)
-		{
-			DevMsg("libretro: ZIP file detected. Attempting to extract the 1st file..\n");
-			HZIP hz = OpenZip((void*)pFilename, 0, ZIP_FILENAME);
+			DevMsg("libretro: File must be loaded by frontend!\n");
 
-			int zipIndex = 0;
-			ZIPENTRY zipEntry;
-			ZRESULT result = GetZipItem(hz, zipIndex, &zipEntry);
+			// for easy char string access
+			char pFilename[AA_MAX_STRING];
+			Q_strcpy(pFilename, filename.c_str());
 
-			while (result == ZR_OK)
+			if (bIsZip)
 			{
-				if (zipEntry.attr & FILE_ATTRIBUTE_DIRECTORY)
+				DevMsg("libretro: ZIP file detected. Attempting to extract the 1st file..\n");
+
+				bool bFailedUnzip = false;
+				if (!g_pFullFileSystem->FileExists(filename.c_str()))
 				{
-					zipIndex++;
-					result = GetZipItem(hz, zipIndex, &zipEntry);
-					continue;
+					DevMsg("libretro: ABORTED: ZIP file does not exist %s\n", pFilename);
+					bFailedUnzip = true;
+				}
+				else
+				{
+					HZIP hz = OpenZip(pFilename, 0, ZIP_FILENAME);
+					if (!hz)
+					{
+						DevMsg("libretro: ABORTED: Failed to open ZIP file %s\n", pFilename);
+						bFailedUnzip = true;
+					}
+					else
+					{
+						int zipIndex = 0;
+						ZIPENTRY zipEntry;
+						ZRESULT result = GetZipItem(hz, zipIndex, &zipEntry);
+
+						std::string entryTesterExtension;
+						size_t entryExtensionFound;
+						bool bFoundFile = false;
+						while (result == ZR_OK)
+						{
+							if (zipEntry.attr & FILE_ATTRIBUTE_DIRECTORY)
+							{
+								zipIndex++;
+								result = GetZipItem(hz, zipIndex, &zipEntry);
+								continue;
+							}
+
+							if (testerExtensions == "")
+								bFoundFile = true;
+							else
+							{
+								entryTesterExtension = zipEntry.name;
+								std::transform(entryTesterExtension.begin(), entryTesterExtension.end(), entryTesterExtension.begin(), ::tolower);
+								entryExtensionFound = entryTesterExtension.find_last_of(".");
+								if (entryExtensionFound != std::string::npos)
+									entryTesterExtension = entryTesterExtension.substr(entryExtensionFound + 1);
+								else
+									entryTesterExtension = "";
+
+								if (entryTesterExtension != "" && std::find(tokens.begin(), tokens.end(), entryTesterExtension) != tokens.end())
+									bFoundFile = true;
+							}
+
+							if (bFoundFile)
+								break;
+						}
+
+						if (!bFoundFile || result != ZR_OK)
+						{
+							DevMsg("libretro: ABORTED: Failed to locate a valid file in ZIP.");
+							bFailedUnzip = true;
+						}
+						else
+						{
+							long fileSize = zipEntry.unc_size;
+							fileData = malloc(fileSize);
+							bDataLoaded = true;
+
+							result = UnzipItem(hz, zipIndex, fileData, fileSize, ZIP_MEMORY);
+
+							if (result != ZR_OK && result != ZR_MORE)
+							{
+								DevMsg("libretro: ABORTED: Failed to unzip the file. ERROR CODE %i\n", result);
+								bFailedUnzip = true;
+							}
+							else
+							{
+								game.data = fileData;
+								game.size = fileSize;
+								game.meta = NULL;
+
+								bReadyToLoad = true;
+							}
+						}
+
+						CloseZip(hz);
+					}
 				}
 
-				break;
+				// if bFailedUnzip is false, we have failed to unzip.
 			}
-
-			if (result != ZR_OK)
+			else
 			{
-				DevMsg("libretro: Error - failed to locate a valid file in ZIP.");
-				CloseZip(hz);
-				return false;
+				game.data = NULL;
+				game.size = 0;
+				game.meta = NULL;
+
+				FileHandle_t fileHandle = filesystem->Open(pFilename, "rb");
+				if (!fileHandle)
+				{
+					DevMsg("libretro: ABORTED: Failed to open file %s\n", pFilename);
+					//info->close = true;
+				}
+				else
+				{
+					int bufferSize = filesystem->Size(fileHandle);
+					fileData = malloc(bufferSize);
+					bDataLoaded = true;
+
+					filesystem->Read(fileData, bufferSize, fileHandle);
+					filesystem->Close(fileHandle);
+
+					game.data = fileData;
+					game.size = bufferSize;
+
+					bReadyToLoad = true;
+				}
 			}
+		}
+	}
 
-			//unsigned int fileSize = g_pFullFileSystem->Size(pFilename);
-			long fileSize = zipEntry.unc_size;
-
-			//unsigned char* fileData = new unsigned char[fileSize*20];
-
-			void* fileData = malloc(fileSize);
-			//Q_memcpy(dest, data, fileSize);
-
-			result = UnzipItem(hz, zipIndex, fileData, fileSize, ZIP_MEMORY);
-
-			if (result != ZR_OK && result != 1536)
+	bool bSuccess = false;
+	if (bReadyToLoad)
+	{
+		// load any existing save state
+		//if (g_pFullFileSystem->FileExists(VarArgs("%s\\%s\\%s.sav", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str())))
+		//{
+		if (info->settings && info->settings->GetBool("statesaves"))
+		{
+			FileHandle_t fileHandle = filesystem->Open(VarArgs("%s\\%s\\%s.sav", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str()), "rb", "");
+			if (fileHandle)
 			{
-				DevMsg("libretro: Error - failed to unzip the file. ERROR CODE %i\n", result);
-				CloseZip(hz);
-
-				free(fileData);
-				return false;
+				info->statesize = filesystem->Size(fileHandle);	// statesize remains ZERO if game was loaded state saves disabled.  this prevents erroneous cleanup.
+				info->statedata = malloc(info->statesize);
+				filesystem->Read(info->statedata, info->statesize, fileHandle);
+				filesystem->Close(fileHandle);
 			}
+		}
+		//}
 
-			//fileData[fileSize] = 0; // null terminator
+		info->raw->init();	// could take a while
 
-			CloseZip(hz);
-
-			// The unzipped file is now in fileData.  Give it to the core.
-			struct retro_game_info game;
-			game.path = pFilename;
-			game.data = fileData;
-			game.size = fileSize;
-			game.meta = NULL;
-
-			bDidItWork = s_raw->load_game(&game);
-
-			free(fileData);
+		if (info->close)	// somebody else could have closed us from a different thread while we were doing that bottleneck above
+		{
+			DevMsg("libretro: ABORTED: Canceled before loading game.\n");
+			//info->close = true;
 		}
 		else
 		{
-			struct retro_game_info game;
-			game.path = pFilename;
-			game.data = NULL;
-			game.size = 0;
-			game.meta = NULL;
-
-			FileHandle_t fileHandle = filesystem->Open(pFilename, "rb");
-			if (fileHandle)
+			if (!info->raw->load_game(&game))
 			{
-				int bufferSize = filesystem->Size(fileHandle);
-				unsigned char* fileContents = new unsigned char[bufferSize + 1];
+				DevMsg("libretro: ABORTED: Core could not load game.\n");
+				//info->close = true;
+			}
+			else
+			{
+				DevMsg("libretro: Finished loading game %s\n", filename.c_str());
 
-				filesystem->Read((void*)fileContents, bufferSize, fileHandle);
-				fileContents[bufferSize] = 0; // null terminator
-
-				filesystem->Close(fileHandle);
-
-				game.data = fileContents;
-				game.size = bufferSize;
-
-				bDidItWork = s_raw->load_game(&game);
-
-				delete[] fileContents;
+				if (!info->close)
+				{
+					info->state = 5;
+					bSuccess = true;
+				}
+				else
+				{
+					DevMsg("libretro: ABORTED: Canceled while loading game.\n");
+					bSuccess = false;
+					//info->close = true;
+				}
 			}
 		}
 	}
 
-	if (bDidItWork)
-	{
-		s_bGameIsLoaded = true;
-		s_bReadyToRun = true;
-	}
+	if (bDataLoaded)
+		free(fileData);
 
-	return bDidItWork;
-	*/
-
-	return false;
+	return bSuccess;
 }
 
 void C_LibretroInstance::OnCoreLoaded()
@@ -553,6 +785,11 @@ bool C_LibretroInstance::BuildInterface(libretro_raw* raw, void* pLib)
 	HMODULE hModule = *static_cast<HMODULE*>(pLib);
 
 	//void(*get_system_info)(struct retro_system_info * info);
+
+	// check if this is a libretro core...
+	if (!GetProcAddress(hModule, "retro_get_system_info"))
+		return false;
+
 	raw->set_environment = (void(*)(retro_environment_t))GetProcAddress(hModule, "retro_set_environment");
 	raw->set_video_refresh = (void(*)(retro_video_refresh_t))GetProcAddress(hModule, "retro_set_video_refresh");
 	raw->set_audio_sample = (void(*)(retro_audio_sample_t))GetProcAddress(hModule, "retro_set_audio_sample");
@@ -730,71 +967,69 @@ void C_LibretroInstance::DestroyAudioStream()
 
 unsigned MyThread(void *params)
 {
+	bool bDidRun = false;
+
 	LibretroInstanceInfo_t* info = (LibretroInstanceInfo_t*)params; // always use a struct!
 
+	CSysModule* pModule;
+	bool bDidLoadDll = false;
 	if (info->libretroinstance && !info->close)
 	{
-		//DevMsg("Cannot print to console from this threaded function\n");
-
-		CSysModule* pModule = Sys_LoadModule(info->core.c_str());
+		bool bDidLoadModule = false;
+		//HMODULE	hModule;
+		pModule = Sys_LoadModule(info->core.c_str());
 		if (!pModule)
 		{
-			DevMsg("Failed to load %s\n", info->core.c_str());
-			// FIXME FIX ME Probably need to clean up!
-			return 0;
-		}
-
-		HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
-		if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
-		{
-			DevMsg("libretro: Failed to build interface!\n");
-			return 0;
+			DevMsg("libretro: ERROR - Failed to load %s\n", info->core.c_str());
+			info->runninglibretrocores->last_error = "Core Load Failed";
+			info->state = 6;
 		}
 		else
-			info->module = pModule;
+		{
+			bDidLoadDll = true;
+			HMODULE hModule = reinterpret_cast<HMODULE>(pModule);
+			if (!hModule || !C_LibretroInstance::BuildInterface(info->raw, &hModule))
+			{
+				DevMsg("libretro: ERROR - Failed to build interface!\n");
+				info->runninglibretrocores->last_error = "Core Initialization Failed";
+				info->state = 6;
+			}
+			else
+			{
+				bDidLoadModule = true;
 
-		info->threadid = ThreadGetCurrentId();
-		info->coreloaded = true;
+				info->module = pModule;
+				info->threadid = ThreadGetCurrentId();
+				info->coreloaded = true;
 
-		struct retro_system_info system_info;
-		info->raw->get_system_info(&system_info);
+				struct retro_system_info system_info;
+				info->raw->get_system_info(&system_info);
 
-		info->library_name = system_info.library_name;
-		info->library_version = system_info.library_version;
-		info->valid_extensions = system_info.valid_extensions;
-		info->need_fullpath = system_info.need_fullpath;
-		info->block_extract = system_info.block_extract;
+				info->library_name = system_info.library_name;
+				info->library_version = system_info.library_version;
+				info->valid_extensions = system_info.valid_extensions;
+				info->need_fullpath = system_info.need_fullpath;
+				info->block_extract = system_info.block_extract;
 
-		DevMsg("Loaded libretro core:\n");
-		DevMsg("\tlibrary_name: %s\n", info->library_name.c_str());
-		DevMsg("\tlibrary_version: %s\n", info->library_version.c_str());
-		DevMsg("\tvalid_extensions: %s\n", info->valid_extensions.c_str());
-		DevMsg("\tneed_fullpath: %i\n", info->need_fullpath);
-		DevMsg("\tblock_extract: %i\n", info->block_extract);
+				DevMsg("Loaded libretro core:\n");
+				DevMsg("\tlibrary_name: %s\n", info->library_name.c_str());
+				DevMsg("\tlibrary_version: %s\n", info->library_version.c_str());
+				DevMsg("\tvalid_extensions: %s\n", info->valid_extensions.c_str());
+				DevMsg("\tneed_fullpath: %i\n", info->need_fullpath);
+				DevMsg("\tblock_extract: %i\n", info->block_extract);
 
-		g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
+				g_pAnarchyManager->GetLibretroManager()->OnLibretroInstanceCreated(info);	// FIXME: If instance is closed by the time this line is reached, might cause the crash!
 
+				DevMsg("Thread: core loaded.\n");
+			}
+		}
 
-
-		DevMsg("Thread: core loaded.\n");
-
-		//	C_LibretroInstance* pLibretroInstance;
+		int state;
 		libretro_raw* raw = info->raw;
-		int state = info->state;
-		unsigned int lastFrameNumber = 0;
-		bool bDidNotify = false;
-
-		//while (state != 666)
 		while (!info->close)	//&& glfwWindowShouldClose(window) == 0
 		{
-		//	glfwPollEvents();
-
-		//	if ( info->close )
+			//	glfwPollEvents();
 			state = info->state;
-			//pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetSelectedLibretroInstance();
-			//raw = pLibretroInstance->GetRaw();
-			//if (!raw)
-			//			continue;
 
 			if (info->window && glfwWindowShouldClose(info->window))
 				info->close = true;
@@ -815,26 +1050,6 @@ unsigned MyThread(void *params)
 				else
 					DevMsg("Failed to load portaudio_x86.dll.\n");
 
-				// this should be done in the manager class.
-				/*
-				raw->set_environment(C_LibretroInstance::cbEnvironment);
-				raw->set_video_refresh(C_LibretroInstance::cbVideoRefresh);
-				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
-				raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
-				raw->set_input_poll(C_LibretroInstance::cbInputPoll);
-				raw->set_input_state(C_LibretroInstance::cbInputState);
-				*/
-
-				/*
-				if (s_raw->api_version() != RETRO_API_VERSION)
-				{
-				DevMsg("libretro: Failed version check!\n");
-				// FIXME FIX ME Probably need to clean up!
-				return false;
-				}
-				*/
-
-
 				info->state = 3;
 			}
 			else if (state == 3)
@@ -845,7 +1060,8 @@ unsigned MyThread(void *params)
 				raw->set_audio_sample(C_LibretroInstance::cbAudioSample);
 				raw->set_audio_sample_batch(C_LibretroInstance::cbAudioSampleBatch);
 				raw->set_input_poll(C_LibretroInstance::cbInputPoll);
-				raw->set_input_state(C_LibretroInstance::cbInputState);
+				if (raw->set_input_state)
+					raw->set_input_state(C_LibretroInstance::cbInputState);
 				info->state = 4;
 			}
 			else if (state == 4)
@@ -853,94 +1069,199 @@ unsigned MyThread(void *params)
 				// load a game if we have one
 				if (info->game != "")
 				{
-						DevMsg("Load the game next!!\n");
+					DevMsg("Load the game next!!\n");
 					//info->state = 5;
 					if (C_LibretroInstance::LoadGame())
 					{
 						if (info->state == 5)
 						{
+							// setup the memory map prior to the 1st call to run
+
+							/*
+							info->memorymap->rtcsize = info->raw->get_memory_size(RETRO_MEMORY_RTC);
+							if (info->memorymap->rtcsize > 0)
+							{
+							info->memorymap->rtcdata = (uint8_t*)info->raw->get_memory_data(RETRO_MEMORY_RTC);
+
+							// data must be altered PRIOR to the 1st run
+							// TODO: work
+							}
+							*/
+							if (true)
+							{
+								info->memorymap->saveramsize = info->raw->get_memory_size(RETRO_MEMORY_SAVE_RAM);
+								if (info->memorymap->saveramsize > 0)
+								{
+									info->memorymap->saveramdata = (uint8_t*)info->raw->get_memory_data(RETRO_MEMORY_SAVE_RAM);
+
+									// data must be altered PRIOR to the 1st run
+									if (info->settings && info->settings->GetBool("cartsaves") && g_pFullFileSystem->FileExists(VarArgs("%s\\%s\\%s.srm", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str())))
+									{
+										FileHandle_t fileHandle = filesystem->Open(VarArgs("%s\\%s\\%s.srm", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str()), "rb", "");
+										if (fileHandle)
+										{
+											filesystem->Read((void*)info->memorymap->saveramdata, info->memorymap->saveramsize, fileHandle);
+											filesystem->Close(fileHandle);
+										}
+									}
+								}
+							}
+
+							/*
+							info->memorymap->systemramsize = info->raw->get_memory_size(RETRO_MEMORY_SYSTEM_RAM);
+							if (info->memorymap->systemramsize > 0)
+							{
+							info->memorymap->systemramdata = (uint8_t*)info->raw->get_memory_data(RETRO_MEMORY_SYSTEM_RAM);
+
+							// data must be altered PRIOR to the 1st run
+							// TODO: work
+							}
+
+							info->memorymap->videoramsize = info->raw->get_memory_size(RETRO_MEMORY_VIDEO_RAM);
+							if (info->memorymap->videoramsize > 0)
+							{
+							info->memorymap->videoramdata = (uint8_t*)info->raw->get_memory_data(RETRO_MEMORY_VIDEO_RAM);
+
+							// data must be altered PRIOR to the 1st run
+							// TODO: work
+							}
+							*/
+
 							//DevMsg("Pt A\n");
 							info->raw->run();	// complete the game loading by executing 1 run
+
+
+							// remember old state size
+							if (info->settings && info->settings->GetBool("statesaves"))
+							{
+								// get current state size
+								size_t currentStateSize = raw->serialize_size();
+
+								size_t oldStateSize = info->statesize;
+
+								// handle auto-loaded save states
+								if (oldStateSize != 0)
+								{
+									if (oldStateSize != currentStateSize)
+									{
+										free(info->statedata);
+										info->statedata = malloc(currentStateSize);
+										raw->serialize(info->statedata, currentStateSize);	// so it's never empty or garbage
+									}
+									else if (oldStateSize == currentStateSize)
+									{
+										// load the state already contained within statedata
+										if( raw->unserialize(info->statedata, oldStateSize) )
+											info->runninglibretrocores->last_msg = "State Loaded";
+									}
+								}
+								else
+								{
+									info->statedata = malloc(currentStateSize);
+									raw->serialize(info->statedata, currentStateSize);	// so it's never empty or garbage
+								}
+
+								// *always* accept the statesize provided by the core... UNLESS we have state saves disabled, then statesize MUST remain zero to avoid erroneous cleanup
+								info->statesize = currentStateSize;
+							}
+
+							bDidRun = true;
+
 							//DevMsg("Pt B\n");
 						}
+					}
+					else
+					{
+						info->runninglibretrocores->last_error = "Game Load Failed";
+						info->state = 6;
 					}
 					//	DevMsg("cuatro\n");
 				}
 			}
 			else if (state == 5)
 			{
-				/*
-				if (!info->processingaudio)
+				if (info->reset)
 				{
-				info->processingaudio = true;
-				info->raw->run();
+					info->reset = false;
+					info->paused = false;
+					info->raw->reset();
 				}
-				*/
-				//DevMsg("Pt C\n");
-				info->raw->run();
-
-				if (AA_LIBRETRO_3D)
+				else if (!info->paused)
 				{
-					info->lastrendered = gpGlobals->curtime;
-
-					if (info->readyfornextframe && !info->copyingframe)
+					/*
+					if (!info->processingaudio)
 					{
-						info->readyfornextframe = false;
-						info->readytocopyframe = false;
-
-						if (info->samplerate == 0)
-						{
-							DevMsg("Get AV info\n");
-							struct retro_system_av_info avinfo;
-							info->raw->get_system_av_info(&avinfo);
-
-							if (avinfo.timing.sample_rate > 0)
-							{
-								info->samplerate = int(avinfo.timing.sample_rate);
-								info->framerate = int(avinfo.timing.fps);
-								C_LibretroInstance::CreateAudioStream();
-							}
-						}
-
-
-						//glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
-						//glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
-						//glClear(GL_COLOR_BUFFER_BIT);
-						//glfwMakeContextCurrent(info->window);
-						//glfwSwapBuffers(info->window);
-						//glfwPollEvents();	// this is what makes the window actually be responsive
-
-
-						//WORD red_mask = 0xF800;
-						//WORD green_mask = 0x7E0;
-						//WORD blue_mask = 0x1F;
-
-						//DevMsg("Doin it\n");
-
-						//DevMsg("video refresh\n");
-
-						unsigned int width = info->lastframewidth;
-						unsigned int height = info->lastframeheight;
-						size_t pitch = info->lastframepitch;
-						void* dest = malloc(pitch*height);
-						if (AA_LIBRETRO_3D && info->context_type != RETRO_HW_CONTEXT_NONE)
-						{
-							//DevMsg("Format is: %i %i x %i\n", info->videoformat, pitch, height);
-							//glfwSwapBuffers(info->window);
-							glReadPixels(0, 0, pitch / 3, height, GL_RGB, GL_UNSIGNED_BYTE, dest);// GL_RGBA8
-							//glfwSwapBuffers(info->window);
-						}
-
-						if (info->lastframedata)
-							free(info->lastframedata);
-
-						info->lastframedata = dest;
-						info->readytocopyframe = true;
+					info->processingaudio = true;
+					info->raw->run();
 					}
-				}
-				/*
-				if (info->window)
-				{
+					*/
+					//DevMsg("Pt C\n");
+					info->raw->run();
+
+					if (AA_LIBRETRO_3D)
+					{
+						info->lastrendered = gpGlobals->curtime;
+
+						if (info->readyfornextframe && !info->copyingframe)
+						{
+							info->readyfornextframe = false;
+							info->readytocopyframe = false;
+
+							if (info->samplerate == 0)
+							{
+								DevMsg("Get AV info\n");
+								struct retro_system_av_info avinfo;
+								info->raw->get_system_av_info(&avinfo);
+
+								if (avinfo.timing.sample_rate > 0)
+								{
+									info->samplerate = int(avinfo.timing.sample_rate);
+									info->framerate = int(avinfo.timing.fps);
+									C_LibretroInstance::CreateAudioStream();
+								}
+							}
+
+
+							//glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
+							//glClearColor(0.3f, 0.4f, 0.1f, 1.0f);
+							//glClear(GL_COLOR_BUFFER_BIT);
+							//glfwMakeContextCurrent(info->window);
+							//glfwSwapBuffers(info->window);
+							//glfwPollEvents();	// this is what makes the window actually be responsive
+
+
+							//WORD red_mask = 0xF800;
+							//WORD green_mask = 0x7E0;
+							//WORD blue_mask = 0x1F;
+
+							//DevMsg("Doin it\n");
+
+							//DevMsg("video refresh\n");
+
+							unsigned int width = info->lastframewidth;
+							unsigned int height = info->lastframeheight;
+							size_t pitch = info->lastframepitch;
+							if (!info->lastframedata)
+								info->lastframedata = malloc(pitch*height);
+							//void* dest = malloc(pitch*height);
+							if (AA_LIBRETRO_3D && info->context_type != RETRO_HW_CONTEXT_NONE)
+							{
+								//DevMsg("Format is: %i %i x %i\n", info->videoformat, pitch, height);
+								//glfwSwapBuffers(info->window);
+								glReadPixels(0, 0, pitch / 3, height, GL_RGB, GL_UNSIGNED_BYTE, info->lastframedata);// GL_RGBA8
+								//glfwSwapBuffers(info->window);
+							}
+
+							//if (info->lastframedata)
+								//free(info->lastframedata);
+
+							//info->lastframedata = dest;
+							info->readytocopyframe = true;
+						}
+					}
+					/*
+					if (info->window)
+					{
 					//DevMsg("Pt 1\n");
 					// background color
 					glDisable(GL_DEPTH_TEST); // here for illustrative purposes, depth test is initially DISABLED (key!)
@@ -951,32 +1272,33 @@ unsigned MyThread(void *params)
 					//DevMsg("Pt 3\n");
 					glfwPollEvents();
 					//DevMsg("Pt 4\n");
-				}
-				*/
+					}
+					*/
 
-				/*
-				bool bShouldRender = false;
-				if (lastFrameNumber != gpGlobals->framecount)
-				{
-				lastFrameNumber = gpGlobals->framecount;
+					/*
+					bool bShouldRender = false;
+					if (lastFrameNumber != gpGlobals->framecount)
+					{
+					lastFrameNumber = gpGlobals->framecount;
 
-				if (info->framerate == 0)
-				bShouldRender = true;
-				else
-				{
-				float dif = 1 / (info->framerate * 1.0);
-				if (gpGlobals->curtime - info->lastrendered >= dif * 1.5 || true)	// sense the blocking audio API is being used, we should render every chance we get to be synced to audio.
-				bShouldRender = true;
-				}
+					if (info->framerate == 0)
+					bShouldRender = true;
+					else
+					{
+					float dif = 1 / (info->framerate * 1.0);
+					if (gpGlobals->curtime - info->lastrendered >= dif * 1.5 || true)	// sense the blocking audio API is being used, we should render every chance we get to be synced to audio.
+					bShouldRender = true;
+					}
 
-				if (bShouldRender)
-				{
-				//				info->lastrendered = gpGlobals->curtime;
-				//				if (info->readyfornextframe)
-				info->raw->run();
+					if (bShouldRender)
+					{
+					//				info->lastrendered = gpGlobals->curtime;
+					//				if (info->readyfornextframe)
+					info->raw->run();
+					}
+					}
+					*/
 				}
-				}
-				*/
 			}
 			else if (state == 6) // waiting to die (requested by the libretro core)
 			{
@@ -987,10 +1309,46 @@ unsigned MyThread(void *params)
 
 	if (info)
 	{
-		// clean up the memory
-		if (info->module)
+		// save any current state contained in the core to a file.
+		if (bDidRun)
 		{
-			Sys_UnloadModule(info->module);
+			//g_pFullFileSystem->
+			//filesystem->WriteFile(char* name, char* path, CUtlBuffer &buf)
+
+			if (info->statesize > 0 && info->settings && info->settings->GetBool("statesaves"))
+			{
+				info->raw->serialize(info->statedata, info->statesize);
+
+				CUtlBuffer buf;
+				buf.Put(info->statedata, info->statesize);
+				g_pFullFileSystem->CreateDirHierarchy(VarArgs("%s\\%s", info->savepath.c_str(), info->prettycore.c_str()));
+				g_pFullFileSystem->WriteFile(VarArgs("%s\\%s\\%s.sav", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str()), "", buf);
+				buf.Purge();
+
+				info->runninglibretrocores->last_msg = "State Saved";
+			}
+
+			if (info->memorymap->saveramsize > 0 && info->settings && info->settings->GetBool("cartsaves"))
+			{
+				CUtlBuffer buf;
+				buf.Put(info->memorymap->saveramdata, info->memorymap->saveramsize);
+				g_pFullFileSystem->CreateDirHierarchy(VarArgs("%s\\%s", info->savepath.c_str(), info->prettycore.c_str()));
+				g_pFullFileSystem->WriteFile(VarArgs("%s\\%s\\%s.srm", info->savepath.c_str(), info->prettycore.c_str(), info->prettygame.c_str()), "", buf);
+				buf.Purge();
+			}
+		}
+
+		if (info->statesize > 0 && info->statedata)
+			free(info->statedata);
+
+		RunningLibretroCores_t* pRunningLibretroCores = info->runninglibretrocores;
+
+		info->statesize = 0;
+
+		// clean up the memory
+		if (bDidLoadDll)//info->module)
+		{
+			Sys_UnloadModule(pModule);
 			DevMsg("Unloaded Libretro core.\n");
 		}
 
@@ -1009,20 +1367,15 @@ unsigned MyThread(void *params)
 		info->inputstate->deleteThis();
 		info->coreCoreOptions->deleteThis();
 		info->gameCoreOptions->deleteThis();
+
+		delete info->memorymap;
 		delete info;
+
+		pRunningLibretroCores->count--;
 	}
 
 	return 0;
 }
-
-//int C_LibretroInstance::GetOptionCurrentValue(unsigned int index)
-//std::string C_LibretroInstance::GetOptionCurrentValue(std::string name_internal)
-//{
-//	if (m_info && index < m_info->optionscurrentvalues.size())
-	//	return m_info->optionscurrentvalues[index];
-	//else
-		//return 0;
-//}
 
 bool C_LibretroInstance::IsSelected()
 {
@@ -1062,6 +1415,16 @@ void C_LibretroInstance::Close()
 	g_pAnarchyManager->GetLibretroManager()->DestroyLibretroInstance(this);
 }
 
+void C_LibretroInstance::GetFullscreenInfo(float& fPositionX, float& fPositionY, float& fSizeX, float& fSizeY, std::string& overlayId)
+{
+	fPositionX = m_pOverlayKV->GetFloat("current/x", 0);// m_fPositionX;
+	fPositionY = m_pOverlayKV->GetFloat("current/y", 0);// m_fPositionY;
+	fSizeX = m_pOverlayKV->GetFloat("current/width", 1);// m_fSizeX;
+	fSizeY = m_pOverlayKV->GetFloat("current/height", 1);// m_fSizeY;
+	//file = m_pOverlayKV->GetString("file", "");// m_file;
+	overlayId = m_overlayId;// m_pOverlayKV->GetString("current/overlayId", "");// m_overlayId;
+}
+
 bool C_LibretroInstance::CreateWorkerThread(std::string core)
 {
 	/*
@@ -1086,10 +1449,18 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	std::string corePath = core.substr(0, core.find_last_of("/\\") + 1);
 
 	m_info = new LibretroInstanceInfo_t;
+	m_info->runninglibretrocores = g_pAnarchyManager->GetLibretroManager()->GetLibretroRunningCores();
 	m_info->state = 0;
+	m_info->paused = false;
+	m_info->reset = false;
 	m_info->close = false;
 	m_info->id = "";
 	m_info->ready = false;
+
+	float volume = cvar->FindVar("libretro_volume")->GetFloat();
+	if (volume > 1.0)
+		volume = 1.0;
+	m_info->volume = volume;
 	m_info->readyfornextframe = true;
 	m_info->copyingframe = false;
 	m_info->readytocopyframe = false;
@@ -1097,9 +1468,9 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->gameloaded = false;
 	m_info->raw = m_raw;
 	m_info->corepath = corePath;// m_corePath;
-	m_info->assetspath = m_assetsPath;
-	m_info->systempath = m_systemPath;
-	m_info->savepath = m_savePath;
+	m_info->assetspath = g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_ASSETS_PATH);
+	m_info->systempath = g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_SYSTEM_PATH);
+	m_info->savepath = g_pAnarchyManager->GetLibretroManager()->GetLibretroPath(RETRO_SAVE_PATH);
 	m_info->module = null;// pModule;
 	m_info->threadid = 0;
 	m_info->libretroinstance = this;
@@ -1149,6 +1520,20 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	m_info->need_fullpath = true;
 	m_info->block_extract = false;
 
+	// state stuff
+	m_info->statesize = 0;
+	m_info->statedata = null;
+
+	m_info->memorymap = new memory_map_t;
+	m_info->memorymap->rtcsize = 0;
+	m_info->memorymap->rtcdata = null;
+	m_info->memorymap->saveramsize = 0;
+	m_info->memorymap->saveramdata = null;
+	m_info->memorymap->systemramsize = 0;
+	m_info->memorymap->systemramdata = null;
+	m_info->memorymap->videoramsize = 0;
+	m_info->memorymap->videoramdata = null;
+
 	// LIBRETRO-WIDE KEYBINDS
 	KeyValues* kv = new KeyValues("keybinds");
 	if (kv->LoadFromFile(g_pFullFileSystem, "libretro\\user\\keybinds.key", "MOD"))
@@ -1161,9 +1546,10 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	if ( found != std::string::npos )
 		prettyCore = prettyCore.substr(found + 1);
 
-	found = prettyCore.find(".");
+	found = prettyCore.find_last_of(".");
 	if (found != std::string::npos)
 		prettyCore = prettyCore.substr(0, found);
+	prettyCore.erase(std::remove(prettyCore.begin(), prettyCore.end(), '.'), prettyCore.end());
 
 	std::string kvPath = VarArgs("libretro\\user\\%s", prettyCore.c_str());
 	//g_pFullFileSystem->CreateDirHierarchy(kvPath.c_str(), "DEFAULT_WRITE_PATH");
@@ -1178,9 +1564,13 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(found + 1);
 
-	found = prettyGame.find(".");
+	found = prettyGame.find_last_of(".");
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(0, found);
+	prettyGame.erase(std::remove(prettyGame.begin(), prettyGame.end(), '.'), prettyGame.end());
+
+	m_info->prettygame = prettyGame;
+	m_info->prettycore = prettyCore;
 	
 	kvPath = VarArgs("libretro\\user\\%s\\%s", prettyCore.c_str(), prettyGame.c_str());
 	//g_pFullFileSystem->CreateDirHierarchy(kvPath.c_str(), "DEFAULT_WRITE_PATH");
@@ -1207,7 +1597,31 @@ bool C_LibretroInstance::CreateWorkerThread(std::string core)
 	kv->LoadFromFile(g_pFullFileSystem, kvPath.c_str(), "MOD");
 	m_info->gameCoreOptions = kv;
 
-	
+	// we are null settings by default
+	m_info->settings = null;
+
+	// but try to find us
+	KeyValues* pCoreSettingsKV = g_pAnarchyManager->GetLibretroManager()->GetCoreSettingsKV();
+	std::string compareCore = prettyCore + ".dll";
+	std::string testerCore;
+	for (KeyValues *sub = pCoreSettingsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		testerCore = sub->GetString("file");
+		if (testerCore == compareCore)
+		{
+			m_info->settings = sub;
+			break;
+		}
+	}
+
+	//std::string prettyCore = m_info->prettycore;
+	//std::string prettyGame = m_info->prettygame;
+	std::string overlayId = g_pAnarchyManager->GetLibretroManager()->DetermineOverlay(prettyCore, prettyGame);
+	this->SetOverlay(overlayId);
+	g_pAnarchyManager->HudStateNotify();
+
+	m_info->runninglibretrocores->count++;
+	g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Opened (%i running)", m_info->runninglibretrocores->count));
 	CreateSimpleThread(MyThread, m_info);
 
 	//ThreadId_t pThreadId = 420L;
@@ -1396,8 +1810,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 bool set_rumble_state(unsigned port, enum retro_rumble_effect effect, uint16_t strength)
 {
-	DevMsg("libretro: Ignoring %s rumble effect on port %u w/ strength %u\n", (effect == 0) ? "STRONG" : "WEAK", port, strength);
-	return false;
+	//DevMsg("libretro: Ignoring %s rumble effect on port %u w/ strength %u\n", (effect == 0) ? "STRONG" : "WEAK", port, strength);
+	return true;
 }
 
 bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
@@ -1417,14 +1831,14 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	if (cmd == RETRO_ENVIRONMENT_GET_OVERSCAN) //2
 	{
 		DevMsg("libretro: Asking frontend if overscan should be included or cropped.\n");
-		*(bool*)data = true;
+		*(bool*)data = false;
 		return true;
 	}
 
 	if (cmd == RETRO_ENVIRONMENT_GET_CAN_DUPE) //3
 	{
 		DevMsg("libretro: Asking frontend if CAN_DUPE.\n");
-		*(bool*)data = false;
+		*(bool*)data = true;
 		return true;
 	}
 
@@ -1450,13 +1864,13 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 		std::string folder;
 
 		if (cmd == RETRO_ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY || cmd == RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY)
-			folder = info->assetspath;
+			folder = info->assetspath + "\\" + info->prettycore;// +"\\assets";
 		else if (cmd == RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY)
-			folder = info->systempath;
+			folder = info->systempath + "\\" + info->prettycore;// +"\\system";
 		else if (cmd == RETRO_ENVIRONMENT_GET_LIBRETRO_PATH)
 			folder = info->corepath + "\\" + info->core;	// this is a full file location w/ extension
 		else if (cmd == RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY)
-			folder = info->savepath;
+			folder = info->savepath + "\\" + info->prettycore;// +"\\save";
 
 		if (cmd != RETRO_ENVIRONMENT_GET_LIBRETRO_PATH)
 			g_pFullFileSystem->CreateDirHierarchy(folder.c_str());
@@ -2045,7 +2459,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	}
 
 	if (cmd == RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS)
-{
+	{
 		DevMsg("libretro: RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS\n");
 
 		unsigned controller, typeIndex;
@@ -2060,6 +2474,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 			DevMsg("\tDevice: %u\n", controllerData[controller].device);
 			DevMsg("\tIndex: %u\n", controllerData[controller].index);
 			DevMsg("\tID: %u\n", controllerData[controller].id);
+			DevMsg("\tDescription: %u\n", controllerData[controller].description);
 
 			//info->currentPortTypes.push_back(1);	// set every joystick to use the 1st entry (should always be RetroPad w/ id 1).
 			// NOTE: 0 must ALWAYS gets inserted to the front when the current ports are gotten, which would mean Unplugged.
@@ -2147,6 +2562,7 @@ bool C_LibretroInstance::cbEnvironment(unsigned cmd, void* data)
 	if (cmd == RETRO_ENVIRONMENT_SHUTDOWN)
 	{
 		//info->close = true;
+		info->runninglibretrocores->last_error = "Core Shutdown";
 		info->state = 6;
 		// should probably show some kind of related items screen when a video ends.
 		return true;
@@ -2362,7 +2778,52 @@ size_t C_LibretroInstance::cbAudioSampleBatch(const int16_t * data, size_t frame
 	
 	//DevMsg("Writing %u frames: %i\n", frames, data);
 
-	PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
+	//if ( info->volume > 0.0f )
+
+	/*
+	//float buffer[SAMPLES_PER_BUFFER];
+	//volume in dB 0db = unity gain, no attenuation, full amplitude signal
+	//           -20db = 10x attenuation, significantly more quiet
+	float volumeLevelDb = -6.f; //cut amplitude in half; same as 0.5 above
+	const float VOLUME_REFERENCE = 1.f;
+	const float volumeMultiplier = (VOLUME_REFERENCE * pow(10, (volumeLevelDb / 20.f);
+	for (int i = 0; i < SAMPLES_PER_BUFFER; ++i)
+	{
+		data[i] *= volumeMultiplier;
+	}
+	*/
+
+	//PaError err = Pa_WriteStream(info->audiostream, data, frames);// paFramesPerBufferUnspecified);
+
+	// AMPLIFY THE AUDIO HERE!
+	float volume = info->volume;
+	int16_t sample[2];
+	double leftRegular, rightRegular;
+	int16_t left, right;
+
+	for (int i = 0; i < frames * 2; i = i + 2)
+	{
+		left = data[i];
+		right = data[i + 1];
+
+		leftRegular = (double)left * volume;
+		if (left > 32767)
+			leftRegular = 32767.0;
+		if (left < -32768.0)
+			leftRegular = -32768.0;
+
+		rightRegular = (double)right * volume;
+		if (right > 32767)
+			rightRegular = 32767.0;
+		if (right < -32768.0)
+			rightRegular = -32768.0;
+
+		sample[0] = (int16_t)leftRegular;
+		sample[1] = (int16_t)rightRegular;
+
+		PaError err = Pa_WriteStream(info->audiostream, sample, 1);
+	}
+
 	return frames;
 	/*
 	int16_t* buffer = info->audiobuffer;
@@ -2397,13 +2858,13 @@ int16_t C_LibretroInstance::cbInputState(unsigned port, unsigned device, unsigne
 	C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->FindLibretroInstance(uId);
 
 	if (!pLibretroInstance)
-		return false;
+		return (int16_t)0;
 
 	LibretroInstanceInfo_t* info = pLibretroInstance->GetInfo();
 	//DevMsg("Check for: port%u/device%u/index%u/key%u\n", port, device, index, id);
 
 	// only accept input from port0 device1 index0
-	if (port != 0 || device != 1 || index != 0 )
+	if (!info->inputstate || port != 0 || device != 1 || index != 0)
 		return (int16_t)0;
 
 	//int intVal = info->inputstate->GetInt(VarArgs("port%u/device%u/index%u/key%u", port, device, index, id), 0);
@@ -2880,9 +3341,10 @@ void C_LibretroInstance::SaveLibretroKeybind(std::string type, unsigned int retr
 	if (found != std::string::npos)
 		prettyCore = prettyCore.substr(found + 1);
 
-	found = prettyCore.find(".");
+	found = prettyCore.find_last_of(".");
 	if (found != std::string::npos)
 		prettyCore = prettyCore.substr(0, found);
+	prettyCore.erase(std::remove(prettyCore.begin(), prettyCore.end(), '.'), prettyCore.end());
 	
 	// pretty GAME
 	std::string prettyGame = m_info->game;
@@ -2890,9 +3352,12 @@ void C_LibretroInstance::SaveLibretroKeybind(std::string type, unsigned int retr
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(found + 1);
 
-	found = prettyGame.find(".");
+	found = prettyGame.find_last_of(".");
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(0, found);
+	prettyGame.erase(std::remove(prettyGame.begin(), prettyGame.end(), '.'), prettyGame.end());
+
+	//std::replace(prettyGame.begin(), prettyGame.end(), '.', '-');
 
 	// now do keybind stuff
 	KeyValues* kv;
@@ -2918,8 +3383,15 @@ void C_LibretroInstance::SaveLibretroKeybind(std::string type, unsigned int retr
 
 	// save the KV out
 	// (load up a fresh version and write ONLY this value to it to avoid saving other shit that we don't really want to save at this time.)
-	KeyValues* fresh = new KeyValues("keybinds");
-	fresh->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	KeyValues* fresh;
+	if (type != "libretro")
+	{
+		fresh = new KeyValues("keybinds");
+		fresh->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
+	}
+	else
+		fresh = kv;
+
 	if (steamkey != "default")
 		fresh->SetString(VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retrokey), steamkey.c_str());
 	else
@@ -2927,7 +3399,9 @@ void C_LibretroInstance::SaveLibretroKeybind(std::string type, unsigned int retr
 
 	g_pFullFileSystem->CreateDirHierarchy(savePath.c_str(), "DEFAULT_WRITE_PATH");
 	fresh->SaveToFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
-	fresh->deleteThis();
+	if (type != "libretro")
+		fresh->deleteThis();
+
 	//g_pFullFileSystem->CreateDirHierarchy(savePath.c_str(), "DEFAULT_WRITE_PATH");
 	//kv->SaveToFile(g_pFullFileSystem, VarArgs("%s\\keybinds.key", savePath.c_str()), "DEFAULT_WRITE_PATH");
 
@@ -2945,9 +3419,10 @@ void C_LibretroInstance::SaveLibretroOption(std::string type, std::string name_i
 	if (found != std::string::npos)
 		prettyCore = prettyCore.substr(found + 1);
 
-	found = prettyCore.find(".");
+	found = prettyCore.find_last_of(".");
 	if (found != std::string::npos)
 		prettyCore = prettyCore.substr(0, found);
+	prettyCore.erase(std::remove(prettyCore.begin(), prettyCore.end(), '.'), prettyCore.end());
 
 	// pretty GAME
 	std::string prettyGame = m_info->game;
@@ -2955,9 +3430,10 @@ void C_LibretroInstance::SaveLibretroOption(std::string type, std::string name_i
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(found + 1);
 
-	found = prettyGame.find(".");
+	found = prettyGame.find_last_of(".");
 	if (found != std::string::npos)
 		prettyGame = prettyGame.substr(0, found);
+	prettyGame.erase(std::remove(prettyGame.begin(), prettyGame.end(), '.'), prettyGame.end());
 
 	// now do keybind stuff
 	KeyValues* kv;

@@ -2,6 +2,49 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script>
+			// if auto_load_map is 1, then auto-load what we want.
+			var autoLoadMapVal = aaapi.system.getConVarValue("auto_load_map");
+			//console.log("Test val: " + (autoLoadMapVal == "1"));
+			if( autoLoadMapVal == "1" )
+			{
+				// get the current mapHistory (or create an empty mapHistory)
+				var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+				// find the most recently loaded map / instance / spawn position
+				var bestHistoryTimestamp;
+				var bestHistoryEntry;
+				var potentialMapHistoryEntry;
+				var mapHistoryKeys = Object.keys(mapHistory);
+				for( var i = 0; i < mapHistoryKeys.length; i++ )
+				{
+					potentialMapHistoryEntry = mapHistory[mapHistoryKeys[i]];
+					if( !!!potentialMapHistoryEntry.timestamp || !!!bestHistoryTimestamp || potentialMapHistoryEntry.timestamp > bestHistoryTimestamp )
+					{
+						bestHistoryTimestamp = potentialMapHistoryEntry.timestamp;
+						bestHistoryEntry = potentialMapHistoryEntry;
+					}
+				}
+
+				if( !!bestHistoryEntry )
+				{
+					bestHistoryEntry.timestamp = new Date().getTime();
+
+					if( bestHistoryEntry.instanceId === "" )
+					{
+						var mapInstances = aaapi.system.getMapInstances(bestHistoryEntry.mapId);
+						
+						if( mapInstances.length > 0 )
+							bestHistoryEntry.instanceId = mapInstances[0].id;
+					}
+
+					// save the mapHistory out
+					localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+					window.location = "asset://ui/loading.html?map=" + bestHistoryEntry.mapId + "&instance=" + bestHistoryEntry.instanceId + "&pos=" + bestHistoryEntry.position + "&rot=" + bestHistoryEntry.rotation + "&screenshot=" + bestHistoryEntry.screenshotId;
+				}
+			}
+		</script>
 		<style>
 			#briefing
 			{
@@ -12,7 +55,7 @@
 				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
 				border-radius: 10px;
 			}
-
+/*
 			#briefing::-webkit-scrollbar
 			{
 				width: 15px;
@@ -37,6 +80,7 @@
 			{
 				background-color: transparent;
 			}
+			*/
 		</style>
 	</head>
 	<body>
@@ -47,11 +91,22 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Redux Beta Briefing", "width: 600px;", false, true, "", "window.location='asset://ui/welcome.html';");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Early Access", "width: 600px;", false, true, "", "window.location='asset://ui/welcome.html';");
 			document.write(windowHeaderHTML);
 		</script>
 
-		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+			<table style="margin-left: 0; margin-right: 0;">
+				<tr>
+					<td>
+						<img src="wip.png" style="width: 150px;" />
+					</td>
+					<td>
+						<div class="aaTextSizeFontSize aaTitleText aaThemeColorOneColor" style="white-space: normal;">Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>
+					</td>
+				</tr>
+			</table>
+			<hr size="0" style="border-top: 1px dashed #8c8b8b;" />
 			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Display Resolution</div>
 			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify;'>
 				Internal resolution is locked to 16:9 for now & will SCALE to what ever your AArcade resolution is.  You should only change your resolution from AArcade's launcher.

@@ -49,13 +49,16 @@ public:
 	//void ImportSteamGame(std::string name, std::string appid);
 	void ImportSteamGames(KeyValues* kv);
 
+	void ModelFileChanged(std::string id);
 	void AddModel(KeyValues* pModel);
 	void AddItem(KeyValues* pItem);
 	void AddType(KeyValues* pType);
 	void SaveItem(KeyValues* pItem, sqlite3* pDb = null);
 	void SaveModel(KeyValues* pItem, sqlite3* pDb = null);
 	void SaveType(KeyValues* pType, sqlite3* pDb = null);
+	//void SaveMap(KeyValues* pMap, sqlite3* pDb = null);
 	void SaveSQL(sqlite3** pDb, const char* tableName, const char* id, KeyValues* kv);
+	void DeleteSQL(sqlite3** pDb, const char* tableName, const char* id);
 	//KeyValues* CreateItem(KeyValues* pInfo);
 	bool CreateItem(int iLegacy, std::string itemId, KeyValues* pItemKV, std::string title, std::string description, std::string file, std::string type, std::string app, std::string reference, std::string preview, std::string download, std::string stream, std::string screen, std::string marquee, std::string model);
 
@@ -66,6 +69,9 @@ public:
 	void UpdateScrapersJS();
 
 	std::vector<std::string>* GetDefaultFields();
+
+	void SaveInstanceTitle(instance_t* pInstance);
+	void DeleteInstance(instance_t* pInstance);
 
 	// local legacy
 	KeyValues* LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlreadyLoaded, std::string file, std::string filePath = "", std::string workshopIds = "", std::string mountIds = "", C_Backpack* pBackpack = null, std::string searchPath = "", bool bShouldAddToActiveLibrary = true);
@@ -127,6 +133,8 @@ public:
 	KeyValues* GetFirstLibraryType();
 	KeyValues* GetNextLibraryType();
 	KeyValues* GetLibraryType(std::string id);
+	std::string GetSpecialTypeId(std::string typeTitle);
+	std::string GetSpecialModelId(std::string modelType);
 
 	KeyValues* GetFirstLibraryApp();
 	KeyValues* GetNextLibraryApp();

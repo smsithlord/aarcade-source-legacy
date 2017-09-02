@@ -6,8 +6,14 @@
 #include <cctype>
 #include <algorithm>
 #include "c_browseslate.h"
+
+#include "vgui/IInput.h"
+#include "ienginevgui.h"
+#include "c_toast.h"
+
 //#include <regex>
 #include "../../sqlite/include/sqlite/sqlite3.h"
+#include "../public/sourcevr//isourcevirtualreality.h"
 //#include "mathlib/mathlib.h"
 //#include <math.h>
 #include <time.h>
@@ -22,6 +28,13 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 {
 	DevMsg("AnarchyManager: Constructor\n");
 
+	m_pToastMessagesKV = new KeyValues("toast");
+	m_fNextToastExpiration = 0;
+	m_pHoverLabel = null;
+	m_iHoverEntityIndex = -1;
+	m_hoverTitle = "";
+
+	//m_bIgnoreNextFire = false;
 	m_tabMenuFile = "taskMenu.html";	// OBSOLETE!!
 	m_bIsShuttingDown = false;
 	m_bIsHoldingPrimaryFire = false;
@@ -72,6 +85,27 @@ C_AnarchyManager::~C_AnarchyManager()
 bool C_AnarchyManager::Init()
 {
 	DevMsg("AnarchyManager: Init\n");
+
+	ToastSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
+	//ToastSlate->GetPanel()->MoveToFront();
+
+	/*
+	CSysModule* pModule = Sys_LoadModule(info->core.c_str());
+	if (!pModule)
+	{
+		DevMsg("Failed to load %s\n", info->core.c_str());
+		// FIXME FIX ME Probably need to clean up!
+		return 0;
+	}
+
+	HMODULE	hModule = reinterpret_cast<HMODULE>(pModule);
+	if (!C_LibretroInstance::BuildInterface(info->raw, &hModule))
+	{
+		DevMsg("libretro: Failed to build interface!\n");
+		return 0;
+	}
+	*/
+
 
 	KeyValues* legacyLog = new KeyValues("legacy");
 	if (legacyLog->LoadFromFile(g_pFullFileSystem, "legacy_log.key", "MOD"))
@@ -196,7 +230,8 @@ void C_AnarchyManager::OnUpdateLibraryVersionCallback()
 	if (iLibraryVersion < AA_LIBRARY_VERSION)
 	{
 		DevMsg("Making a backup then converting your library from version %i to %i\n", iLibraryVersion, (iLibraryVersion + 1));
-		if (m_pMetaverseManager->ConvertLibraryVersion(0, 1))
+		//unsigned int uSafeLibraryVersion = (iLibraryVersion < 0) ? 0 : iLibraryVersion;
+		if (m_pMetaverseManager->ConvertLibraryVersion(iLibraryVersion, iLibraryVersion + 1))
 		{
 			DevMsg("Done updating library.  Backup copy placed in the backups folder just in case.\n");
 			//this->OnReadyToLoadUserLibrary();
@@ -535,6 +570,9 @@ void C_AnarchyManager::Shutdown()
 		m_pInputManager = null;
 	}
 
+	m_pToastMessagesKV->deleteThis();
+	m_pToastMessagesKV = null;
+
 	DevMsg("AnarchyManager: Finished Shutdown\n");
 
 	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
@@ -543,6 +581,8 @@ void C_AnarchyManager::Shutdown()
 void C_AnarchyManager::LevelInitPreEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPreEntity\n");
+	g_pHLVR.LevelShutdownPreEntity();
+
 	m_bIsDisconnecting = false;
 
 	m_instanceId = m_pNextLoadInfo->instanceId;// m_nextInstanceId;
@@ -553,16 +593,19 @@ void C_AnarchyManager::LevelInitPreEntity()
 	this->SetTabMenuFile("taskMenu.html");
 
 	DevMsg("Finished resetting image session.\n");
+
+	//g_pAnarchyManager->GetLibretroManager()->DetectAllOverlaysPNGs();
 }
 
 void C_AnarchyManager::LevelInitPostEntity()
 {
 	DevMsg("AnarchyManager: LevelInitPostEntity\n");
+	g_pHLVR.LevelInitPostEntity();
 
 	//if (m_instanceId != "")
 		//g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_instanceId);
 	if (m_pNextLoadInfo->instanceId != "")
-		g_pAnarchyManager->GetInstanceManager()->LoadInstance(m_pNextLoadInfo->instanceId, m_pNextLoadInfo->position, m_pNextLoadInfo->rotation);
+		g_pAnarchyManager->GetInstanceManager()->LoadInstance(null, m_pNextLoadInfo->instanceId, m_pNextLoadInfo->position, m_pNextLoadInfo->rotation);
 	else
 		DevMsg("Map loaded with no instance chosen yet.  FIXME: Display a menu to choose an instance.\n");
 
@@ -585,6 +628,8 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 	//engine->ClientCmd("r_drawothermodels 0;");	// FIXME: obsolete??
 
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
+	m_pLibretroManager->LevelShutdownPreEntity();
+
 	m_bSuspendEmbedded = true;
 	
 	C_BaseEntity* pEntity = this->GetSelectedEntity();
@@ -659,6 +704,8 @@ void C_AnarchyManager::IncrementState()
 
 void C_AnarchyManager::Update(float frametime)
 {
+	g_pHLVR.Update(frametime);
+
 	if (m_bIncrementState)
 	{
 		m_bIncrementState = false;
@@ -742,7 +789,12 @@ void C_AnarchyManager::Update(float frametime)
 			//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
 
 			if (m_pCanvasManager)
+			{
+				if (m_pCanvasManager && !m_pCanvasManager->GetDisplayInstance())
+					m_pCanvasManager->SetDifferentDisplayInstance(null);
+
 				m_pCanvasManager->Update();
+			}
 
 			if (m_pLibretroManager)
 				m_pLibretroManager->Update();
@@ -770,6 +822,11 @@ void C_AnarchyManager::Update(float frametime)
 			if (m_pWebManager)
 				m_pWebManager->Update();
 			*/
+
+			if (m_fNextToastExpiration > 0 && m_fNextToastExpiration <= engine->Time())
+				this->PopToast();
+
+			ManageHoverLabel();
 
 			//DevMsg("AnarchyManager: Update\n");
 			break;
@@ -856,6 +913,210 @@ void C_AnarchyManager::Update(float frametime)
 	}
 }
 
+void C_AnarchyManager::ManageHoverLabel()
+{
+	if (!m_pHoverLabel)
+		return;
+
+	// get the entity under the player's crosshair
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (!pPlayer)
+		return;
+
+	if (pPlayer->GetHealth() <= 0)
+		return;
+
+	C_BaseEntity* pEntity = null;
+	// fire a trace line
+	trace_t tr;
+	Vector forward;
+	pPlayer->EyeVectors(&forward);
+	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+	int iEntityIndex;
+	if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+	{
+		pEntity = tr.m_pEnt;
+		iEntityIndex = pEntity->entindex();
+	}
+
+	bool bChanged = false;
+	int iHoverEntityIndex = -1;
+	std::string hoverTitle = "";
+	if (pEntity)
+	{
+		//if (m_iHoverEntityIndex == iEntityIndex)
+			//hoverTitle = m_hoverTitle;
+		if ( m_iHoverEntityIndex != iEntityIndex)
+		{
+			bChanged = true;
+
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+			if (pShortcut)
+			{
+				std::string itemId = pShortcut->GetItemId();
+
+				C_EmbeddedInstance* pDisplayInstance = m_pCanvasManager->GetDisplayInstance();
+				std::string displayItemId = (pDisplayInstance) ? pDisplayInstance->GetOriginalItemId() : "";
+
+				object_t* pObject = m_pInstanceManager->GetInstanceObject(pShortcut->GetObjectId());
+				if (itemId != "" && (displayItemId == "" || !pObject->slave || itemId == displayItemId))
+				{
+					// an item.
+					KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(itemId));
+					if (pItemKV)
+						hoverTitle = pItemKV->GetString("title");
+				}
+				else if (displayItemId != "")
+				{
+					KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(displayItemId));
+					if (pItemKV)
+						hoverTitle = pItemKV->GetString("title");// std::string(pItemKV->GetString("title")) + " (slave)";
+				}
+			}
+
+			iHoverEntityIndex = iEntityIndex;
+		}
+	}
+	else if ( m_iHoverEntityIndex != -1 )
+		bChanged = true;
+
+	if (bChanged)
+	{
+		m_hoverTitle = hoverTitle;
+		m_iHoverEntityIndex = iHoverEntityIndex;
+		this->UpdateHoverLabel();
+	}
+}
+
+void C_AnarchyManager::UpdateHoverLabel()
+{
+	if (!m_pHoverLabel)
+		return;
+
+	const size_t cSize = m_hoverTitle.length() + 1;
+	wchar_t* wc = new wchar_t[cSize];
+	mbstowcs(wc, m_hoverTitle.c_str(), cSize);
+
+	int contentWidth = -1;
+	int contentHeight = -1;
+
+	m_pHoverLabel->SetText(wc);
+
+	if (contentWidth == -1 || contentHeight == -1)
+		m_pHoverLabel->GetContentSize(contentWidth, contentHeight);
+
+	m_pHoverLabel->SetSize(contentWidth + 20, contentHeight + 20);
+	m_pHoverLabel->SetPos((ScreenWidth() / 2) - ((contentWidth + 20) / 2.0), ((ScreenHeight() / 2) - ((contentHeight + 20) / 2.0)) + (ScreenHeight() / 6));
+
+	delete[] wc;
+}
+
+void C_AnarchyManager::PopToast()
+{
+	std::vector<KeyValues*> deadMessages;
+
+	float fCurrentTime = engine->Time();
+	float fTesterTime = 0;
+	float fNextBestExpirationTime = 0;
+
+	// A toast message is ready to pop.  Find it, pop it, update toat text.
+	for (KeyValues *pMessageKV = m_pToastMessagesKV->GetFirstSubKey(); pMessageKV; pMessageKV = pMessageKV->GetNextKey())
+	{
+		fTesterTime = pMessageKV->GetFloat("end");
+		if (fTesterTime <= fCurrentTime)
+			deadMessages.push_back(pMessageKV);
+		else if (fNextBestExpirationTime == 0 || fTesterTime < fNextBestExpirationTime)
+			fNextBestExpirationTime = fTesterTime;
+	}
+
+	unsigned int max = deadMessages.size();
+	for (unsigned int i = 0; i < max; i++)
+		m_pToastMessagesKV->RemoveSubKey(deadMessages[i]);
+
+	m_fNextToastExpiration = fNextBestExpirationTime;
+
+	this->UpdateToastText();
+}
+
+void C_AnarchyManager::AddToastMessage(std::string text)
+{
+	float fToastDuration = 7.0;
+
+	float fEndTime = engine->Time() + fToastDuration;
+	KeyValues* pMessageKV = m_pToastMessagesKV->CreateNewKey();
+	pMessageKV->SetName("message");
+	pMessageKV->SetString("text", text.c_str());
+	pMessageKV->SetFloat("end", fEndTime);
+
+	if (this->GetNextToastExpiration() == 0)
+		this->SetNextToastExpiration(fEndTime);
+
+	// update toast text
+	this->UpdateToastText();
+}
+
+void C_AnarchyManager::UpdateToastText()
+{
+	std::string text;
+
+	// Any msg that exists gets added. (Expired msgs get removed prior to this method being called.)
+	for (KeyValues *pMessageKV = m_pToastMessagesKV->GetFirstSubKey(); pMessageKV; pMessageKV = pMessageKV->GetNextKey())
+	{
+		//if (text != "")
+			//text = "\n" + text;
+		//text = pMessageKV->GetString("text") + text;
+
+		if (text != "")
+			text += "\n";
+		text += pMessageKV->GetString("text");
+	}
+
+	m_toastText = text;
+	this->SetToastText(m_toastText);
+}
+
+void C_AnarchyManager::AddToastLabel(vgui::Label* pLabel)
+{
+	m_toastLabels.push_back(pLabel);
+}
+
+void C_AnarchyManager::RemoveToastLabel(vgui::Label* pLabel)
+{
+	unsigned int max = m_toastLabels.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_toastLabels[i] == pLabel)
+		{
+			m_toastLabels.erase(m_toastLabels.begin() + i);
+			return;
+		}
+	}
+}
+
+void C_AnarchyManager::SetToastText(std::string text)
+{
+	const size_t cSize = text.length() + 1;
+	wchar_t* wc = new wchar_t[cSize];
+	mbstowcs(wc, text.c_str(), cSize);
+
+	int contentWidth = -1;
+	int contentHeight = -1;
+
+	unsigned int max = m_toastLabels.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		m_toastLabels[i]->SetText(wc);
+
+		if (contentWidth == -1 || contentHeight == -1)
+			m_toastLabels[i]->GetContentSize(contentWidth, contentHeight);
+
+		m_toastLabels[i]->SetSize(contentWidth + 20, contentHeight + 20);
+	}
+
+	delete[] wc;
+}
+
 void C_AnarchyManager::CheckPicMip()
 {
 	int multiplyer = this->GetDynamicMultiplyer();
@@ -939,8 +1200,6 @@ void C_AnarchyManager::SpecialReady(C_AwesomiumBrowserInstance* pInstance)
 		g_pAnarchyManager->IncrementState();
 }
 
-#include "vgui/IInput.h"
-#include "ienginevgui.h"
 bool C_AnarchyManager::HandleUiToggle()
 {
 	// ignore the start button on the gamepad if we are NOT the focused window
@@ -1134,6 +1393,19 @@ bool C_AnarchyManager::HandleCycleToPrevWeapon()
 	return false;
 }
 
+void C_AnarchyManager::DoPause()
+{
+	//if (g_pAnarchyManager->GetInputManager()->GetInputMode())
+	//	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+	//if (g_pAnarchyManager->GetSelectedEntity())
+	//	g_pAnarchyManager->DeselectEntity("none");
+
+	// Only makes sense if done from the main menu via ESCAPE (not tab)
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, null);
+	g_pAnarchyManager->Pause();
+}
+
 void C_AnarchyManager::Pause()
 {
 	m_bPaused = true;
@@ -1256,17 +1528,34 @@ void C_AnarchyManager::AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV)
 	}
 }
 
-void C_AnarchyManager::LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId)
+bool C_AnarchyManager::LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId)
 {
-	m_pMetaverseManager->SetLoadingScreenshotId(screenshotId);
+	if (instanceId != "" && !m_pInstanceManager->FindInstance(instanceId))
+	{
+		DevMsg("ERROR: Could not load. Instance not found.\n");
+		return false;
+	}
 
 	KeyValues* map = g_pAnarchyManager->GetMetaverseManager()->GetMap(mapId);
 	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(map);
+	if (!active)
+	{
+		DevMsg("ERROR: Could not load. Map not found.\n");
+		return false;
+	}
 
 	std::string mapName = active->GetString("platforms/-KJvcne3IKMZQTaG7lPo/file");
-	mapName = mapName.substr(0, mapName.length() - 4);
 
+	if (!g_pFullFileSystem->FileExists(VarArgs("maps/%s", mapName.c_str()), "GAME"))
+	{
+		DevMsg("ERROR: Could not load. BSP not found.\n");
+		return false;
+	}
+
+	mapName = mapName.substr(0, mapName.length() - 4);
 	std::string title = "Unnamed (" + mapName + ")";
+
+	m_pMetaverseManager->SetLoadingScreenshotId(screenshotId);
 
 	if (instanceId == "")
 		instanceId = g_pAnarchyManager->GetInstanceManager()->CreateBlankInstance(0, null, "", mapId, title);
@@ -1280,6 +1569,7 @@ void C_AnarchyManager::LoadMapCommand(std::string mapId, std::string instanceId,
 	//pHudInstance->SetUrl(url);
 
 	engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
+	return true;
 }
 
 bool C_AnarchyManager::WeaponsEnabled()
@@ -1339,7 +1629,7 @@ C_SteamBrowserInstance* C_AnarchyManager::AutoInspect(KeyValues* pItemKV, std::s
 	std::string uri = "file://";
 	uri += engine->GetGameDirectory();
 	uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
-
+	//uri = "http://smsithlord.com/";
 	// FIXME: Need to allow HTTP redirection (302).
 	//DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.
 
@@ -1352,6 +1642,190 @@ C_SteamBrowserInstance* C_AnarchyManager::AutoInspect(KeyValues* pItemKV, std::s
 
 	return pSteamBrowserInstance;
 	//pEmbeddedInstance = pSteamBrowserInstance;
+}
+
+bool C_AnarchyManager::DetermineStreamCompatible(KeyValues* pItemKV)
+{
+	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItemKV);
+	bool bStreamIsUri = (std::string(active->GetString("stream")).find("http") == 0) ? true : false;
+	//bool bFileIsUri = (std::string(active->GetString("file")).find("http") == 0) ? true : false;
+	//bool bPreviewIsUri = (std::string(active->GetString("preview")).find("http") == 0) ? true : false;
+	return bStreamIsUri;
+}
+
+bool C_AnarchyManager::DeterminePreviewCompatible(KeyValues* pItemKV)
+{
+	KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pItemKV);
+	bool bPreviewIsUri = (std::string(active->GetString("preview")).find("http") == 0) ? true : false;
+	//bool bFileIsUri = (std::string(active->GetString("file")).find("http") == 0) ? true : false;
+	//bool bPreviewIsUri = (std::string(active->GetString("preview")).find("http") == 0) ? true : false;
+	return bPreviewIsUri;
+}
+
+bool C_AnarchyManager::DetermineLibretroCompatible(KeyValues* pItemKV, std::string& gameFile, std::string& coreFile)
+{
+	bool bShouldLibretroLaunch = false;
+	//if (m_pLibretroManager->GetInstanceCount() == 0)
+	//{
+		KeyValues* active = m_pMetaverseManager->GetActiveKeyValues(pItemKV);
+		// 1. resolve the file
+		// 2. check if the file is of correct path & extension of a core
+		// 3. confirm file exists
+		// 4. run in libretro (or bDoAutoInspect if fail)
+
+		std::string testCoreFile = "";
+		std::string file = active->GetString("file");
+
+		bool bFileIsGood = false;
+		// is the path relative to the app?
+		size_t found = file.find(":");
+		if (found == 1 && g_pFullFileSystem->FileExists(file.c_str()))
+		{
+			bFileIsGood = true;
+		}
+		else
+		{
+			// does it have an app?
+			if (Q_strcmp(active->GetString("app"), ""))
+			{
+				bool bHasApp = true;
+				KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(active->GetString("app"));
+				KeyValues* appActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(app);
+				if (appActive)
+				{
+					bool bHasAppFilepath = false;
+					bool bAtLeastOneAppFilepathExists = false;
+
+					// just grab the FIRST filepath for now.
+					// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+					// Note: Apps are not required to have a filepath specified.
+					std::string testFile;
+					std::string testPath;
+					KeyValues* filepaths = appActive->FindKey("filepaths", true);
+					for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+					{
+						// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+						// (because in that case the local user probably needs to specify a correct location for it.)
+						bHasAppFilepath = true;
+
+						testPath = sub->GetString("path");
+
+						// test if this path exists
+						// FIXME: always assume it exists for now
+						if (true)
+						{
+							bAtLeastOneAppFilepathExists = true;
+
+							// test if the file exists inside of this filepath
+							testFile = testPath + file;
+
+							// FIXME: always assume the file exists in this path for now.
+							if (true)
+							{
+								file = testFile;
+								bFileIsGood = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (bFileIsGood && file[1] == ':')
+		{
+			std::string fileExtension = file;
+			std::transform(fileExtension.begin(), fileExtension.end(), fileExtension.begin(), ::tolower);
+
+			size_t extensionFound = fileExtension.find_last_of(".");
+			if (extensionFound != std::string::npos)
+				fileExtension = fileExtension.substr(extensionFound + 1);
+			else
+				fileExtension = "";
+
+			if (fileExtension != "")
+			{
+				bool bExtensionMatch;
+				std::string extensions;
+				std::vector<std::string> extensionTokens;
+
+				std::string testPath = file;
+				std::transform(testPath.begin(), testPath.end(), testPath.begin(), ::tolower);
+				std::replace(testPath.begin(), testPath.end(), '\\', '/');
+
+				size_t foundTestPathSlash = testPath.find_last_of("/");
+				if (foundTestPathSlash != std::string::npos)
+				{
+					testPath = testPath.substr(0, foundTestPathSlash);
+
+					size_t foundContentPathSlash;
+					std::string contentPath;
+					KeyValues* pCoreSettingsKV = m_pLibretroManager->GetCoreSettingsKV();
+					for (KeyValues* pCoreKV = pCoreSettingsKV->GetFirstSubKey(); pCoreKV; pCoreKV = pCoreKV->GetNextKey())
+					{
+						if (!pCoreKV->GetBool("enabled") || !pCoreKV->GetBool("exists"))
+							continue;
+
+						for (KeyValues* pPathKV = pCoreKV->FindKey("paths", true)->GetFirstSubKey(); pPathKV; pPathKV = pPathKV->GetNextKey())
+						{
+							bExtensionMatch = false;
+							extensions = pPathKV->GetString("extensions");
+							extensionTokens.clear();
+
+							if (extensions != "")
+							{
+								this->Tokenize(extensions, extensionTokens, ", ");
+
+								// Check if the extension is found
+								for (unsigned int i = 0; i < extensionTokens.size(); i++)
+								{
+									//DevMsg("Testing %s vs %s\n", extensionTokens[i].c_str(), fileExtension.c_str());
+									if (extensionTokens[i] == fileExtension)
+									{
+										bExtensionMatch = true;
+										break;
+									}
+								}
+							}
+
+							if (bExtensionMatch || extensionTokens.empty())
+							{
+								// Check if the path matches
+								contentPath = pPathKV->GetString("path");
+								std::transform(contentPath.begin(), contentPath.end(), contentPath.begin(), ::tolower);
+								std::replace(contentPath.begin(), contentPath.end(), '\\', '/');
+
+								foundContentPathSlash = contentPath.find_last_of("/");
+								if (foundContentPathSlash == contentPath.length() - 1)
+									contentPath = contentPath.substr(0, foundContentPathSlash);
+
+								if (contentPath == "" || testPath == contentPath)
+								{
+									bShouldLibretroLaunch = true;
+									break;
+								}
+							}
+						}
+
+						if (bShouldLibretroLaunch)
+						{
+							testCoreFile = pCoreKV->GetString("file");
+							break;
+						}
+					}
+
+					if (bShouldLibretroLaunch)
+					{
+						gameFile = file;
+						coreFile = testCoreFile;
+					}
+					//return true;
+				}
+			}
+		}
+	//}
+
+	return bShouldLibretroLaunch;
 }
 
 void C_AnarchyManager::WriteBroadcastGame(std::string gameTitle)
@@ -1482,94 +1956,98 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 
 				app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(itemActive->GetString("app"));
 				appActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(app);
-				bAppGood = true;
 
 				// if there is an app, attempt to get its executable
-				appExecutable = appActive->GetString("file");
-				if (appExecutable != "")
+				if (appActive)
 				{
-					bAppExecutableGood = true;
+					bAppGood = true;
 
-					// just grab the FIRST filepath for now.
-					// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
-					// Note: Apps are not required to have a filepath specified.
-					std::string testFile;
-					std::string testPath;
-					KeyValues* filepaths = appActive->FindKey("filepaths", true);
-					for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+					appExecutable = appActive->GetString("file");
+					if (appExecutable != "")
 					{
-						// true if even 1 filepath exists for the app, even if it is not found on the local PC.
-						// (because in that case the local user probably needs to specify a correct location for it.)
-						bHasAppFilepath = true;
+						bAppExecutableGood = true;
 
-						testPath = sub->GetString("path");
-
-						// test if this path exists
-						// FIXME: always assume it exists for now
-						//if (true)
-						if (g_pFullFileSystem->FileExists(testPath.c_str()))
+						// just grab the FIRST filepath for now.
+						// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
+						// Note: Apps are not required to have a filepath specified.
+						std::string testFile;
+						std::string testPath;
+						KeyValues* filepaths = appActive->FindKey("filepaths", true);
+						for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 						{
-							bAtLeastOneAppFilepathExists = true;
+							// true if even 1 filepath exists for the app, even if it is not found on the local PC.
+							// (because in that case the local user probably needs to specify a correct location for it.)
+							bHasAppFilepath = true;
 
-							// test if the file exists inside of this filepath
-							testFile = testPath + file;
+							testPath = sub->GetString("path");
 
-							// FIXME: always assume the file exists in this path for now.
-							if (g_pFullFileSystem->FileExists(testFile.c_str()))
+							// test if this path exists
+							// FIXME: always assume it exists for now
+							//if (true)
+							if (g_pFullFileSystem->FileExists(testPath.c_str()))
 							{
-								composedFile = testFile;
-								appFilepath = testPath;
-								bAppFilepathGood = true;
-								bItemFileGood = true;
-								break;
-							}
-						}
-					}
+								bAtLeastOneAppFilepathExists = true;
 
-					// resolve the composedFile now
-					if (!bAppFilepathGood)
-						composedFile = file;
+								// test if the file exists inside of this filepath
+								testFile = testPath + file;
 
-					// generate the commands
-					// try to apply a command format
-					appCommands = appActive->GetString("commandformat");
-					if (appCommands != "")
-					{
-						// if the app has a command syntax, replace item variables with their values.
-
-						// replace $FILE with active->GetString("file")
-						// replace $QUOTE with a double quote
-						// replace $SHORTFILE with active->GetString("file")'s filename only
-						// replace etc.
-
-						size_t found;
-
-						found = appCommands.find("$FILE");
-						if (found != std::string::npos)
-						{
-							if (this->AlphabetSafe(composedFile) && this->DirectorySafe(composedFile))
-							{
-								while (found != std::string::npos)
+								// FIXME: always assume the file exists in this path for now.
+								if (g_pFullFileSystem->FileExists(testFile.c_str()))
 								{
-									appCommands.replace(found, 5, composedFile);
-									found = appCommands.find("$FILE");
+									composedFile = testFile;
+									appFilepath = testPath;
+									bAppFilepathGood = true;
+									bItemFileGood = true;
+									break;
 								}
 							}
-							else
-								errorType = UNKNOWN_ERROR;
 						}
 
-						found = appCommands.find("$QUOTE");
-						while (found != std::string::npos)
+						// resolve the composedFile now
+						if (!bAppFilepathGood)
+							composedFile = file;
+
+						// generate the commands
+						// try to apply a command format
+						appCommands = appActive->GetString("commandformat");
+						if (appCommands != "")
 						{
-							appCommands.replace(found, 6, "\"");
+							// if the app has a command syntax, replace item variables with their values.
+
+							// replace $FILE with active->GetString("file")
+							// replace $QUOTE with a double quote
+							// replace $SHORTFILE with active->GetString("file")'s filename only
+							// replace etc.
+
+							size_t found;
+
+							found = appCommands.find("$FILE");
+							if (found != std::string::npos)
+							{
+								if (this->AlphabetSafe(composedFile) && this->DirectorySafe(composedFile))
+								{
+									while (found != std::string::npos)
+									{
+										appCommands.replace(found, 5, composedFile);
+										found = appCommands.find("$FILE");
+									}
+								}
+								else
+									errorType = UNKNOWN_ERROR;
+							}
+
 							found = appCommands.find("$QUOTE");
+							while (found != std::string::npos)
+							{
+								appCommands.replace(found, 6, "\"");
+								found = appCommands.find("$QUOTE");
+							}
 						}
-					}
-					else
-					{
-						// otherwise, apply the default Windows command syntax for "open with"
-						appCommands = "\"" + composedFile + "\"";
+						else
+						{
+							// otherwise, apply the default Windows command syntax for "open with"
+							appCommands = "\"" + composedFile + "\"";
+						}
 					}
 				}
 			}
@@ -2071,6 +2549,7 @@ void C_AnarchyManager::HudStateNotify()
 	params.push_back(VarArgs("%i", (g_pAnarchyManager->GetSelectedEntity() != null)));
 
 	// isItemSelected (any item)
+	std::string itemId;
 	int entIndex = -1;
 	int isItemSelected = 0;
 	C_PropShortcutEntity* pShortcut = null;
@@ -2078,8 +2557,13 @@ void C_AnarchyManager::HudStateNotify()
 	if (pEntity)
 	{
 		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
-		if (pShortcut && pShortcut->GetItemId() != "")
-			isItemSelected = 1;
+		if (pShortcut )// && pShortcut->GetItemId() != "")
+		{
+			itemId = pShortcut->GetItemId();
+
+			if (itemId != "")
+				isItemSelected = 1;
+		}
 	}
 	params.push_back(VarArgs("%i", isItemSelected));
 
@@ -2105,17 +2589,38 @@ void C_AnarchyManager::HudStateNotify()
 	else
 		params.push_back("0");
 
+	float fPositionX = 0;
+	float fPositionY = 0;
+	float fSizeX = 1;
+	float fSizeY = 1;
+	//std::string file = "";
+	std::string overlayId = "";
+
 	// embeddedInstanceType
+	bool bCanGoForward = false;
+	bool bCanGoBack = false;
+	std::string libretroCore = "";
+	std::string libretroFile = "";
 	std::string embeddedType = "Unknown";
 	if (pEmbeddedInstance)
 	{
+		pEmbeddedInstance->GetFullscreenInfo(fPositionX, fPositionY, fSizeX, fSizeY, overlayId);
+
 		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(pEmbeddedInstance);
 		if (pLibretroInstance)
+		{
 			embeddedType = "Libretro";
+			libretroCore = pLibretroInstance->GetLibretroCore();
+			libretroFile = pLibretroInstance->GetLibretroFile();
+		}
 
 		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 		if (pSteamBrowserInstance)
+		{
 			embeddedType = "SteamworksBrowser";
+			bCanGoForward = pSteamBrowserInstance->GetCanGoForward();
+			bCanGoBack = pSteamBrowserInstance->GetCanGoBack();
+		}
 
 		C_AwesomiumBrowserInstance* pAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(pEmbeddedInstance);
 		if (pAwesomiumBrowserInstance)
@@ -2123,6 +2628,36 @@ void C_AnarchyManager::HudStateNotify()
 	}
 
 	params.push_back(embeddedType);
+
+	KeyValues* pItemKV = null;
+	if (itemId != "")
+		pItemKV = m_pMetaverseManager->GetLibraryItem(itemId);
+
+	int iCanLibretroRun = 0;
+	int iCanStream = 0;
+	int iCanPreview = 0;
+	if (pItemKV)
+	{
+		std::string gameFile = "";
+		std::string coreFile = "";
+		iCanLibretroRun = (this->DetermineLibretroCompatible(pItemKV, gameFile, coreFile)) ? 1 : 0;
+		iCanStream = (this->DetermineStreamCompatible(pItemKV)) ? 1 : 0;
+		iCanPreview = (this->DeterminePreviewCompatible(pItemKV)) ? 1 : 0;
+	}
+
+	// canGoForward
+	params.push_back(VarArgs("%i", iCanStream));
+	params.push_back(VarArgs("%i", iCanPreview));
+	params.push_back((bCanGoForward) ? "1" : "0");
+	params.push_back((bCanGoBack) ? "1" : "0");
+	params.push_back(libretroCore);
+	params.push_back(libretroFile);
+	params.push_back(VarArgs("%i", iCanLibretroRun));	// just ASSUME that Libretro can open stuff always, for now.
+	params.push_back(VarArgs("%f", fPositionX));
+	params.push_back(VarArgs("%f", fPositionY));
+	params.push_back(VarArgs("%f", fSizeX));
+	params.push_back(VarArgs("%f", fSizeY));
+	params.push_back(overlayId);
 	
 	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
 }
@@ -2306,7 +2841,7 @@ void C_AnarchyManager::ShowScreenshotMenu()
 		g_pAnarchyManager->TaskRemember();
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-	pHudBrowserInstance->SetUrl("asset://ui/screenshotMenu.html");
+	pHudBrowserInstance->SetUrl("asset://ui/welcome.html?tab=screenshots");
 	m_pInputManager->ActivateInputMode(true, true);
 }
 
@@ -2403,6 +2938,8 @@ void C_AnarchyManager::Feedback(std::string type)
 	std::string suggestionsUrl = "http://steamcommunity.com/app/266430/discussions/6/";
 	std::string bugsUrl = "http://steamcommunity.com/app/266430/discussions/4/";
 	std::string trelloUrl = "https://trello.com/b/PLcyQaio";
+	std::string discordUrl = "https://discord.gg/8cxtuKY";
+	std::string twitchUrl = "http://www.twitch.tv/AnarchyArcade";
 
 	std::string goodUrl = "";
 	if (type == "discussions")
@@ -2413,6 +2950,10 @@ void C_AnarchyManager::Feedback(std::string type)
 		goodUrl = bugsUrl;
 	else if (type == "trello")
 		goodUrl = trelloUrl;
+	else if (type == "discord")
+		goodUrl = discordUrl;
+	else if (type == "twitch")
+		goodUrl = twitchUrl;
 
 	if (goodUrl != "")
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage(goodUrl.c_str());
@@ -2471,10 +3012,16 @@ void C_AnarchyManager::TaskRemember()
 	}
 }
 
-void C_AnarchyManager::SetSlaveScreen(bool bVal)
+void C_AnarchyManager::SetSlaveScreen(std::string objectId, bool bVal)
 {
 	C_PropShortcutEntity* pShortcut = null;
-	C_BaseEntity* pEntity = this->GetSelectedEntity();
+	C_BaseEntity* pEntity = null;
+	
+	if (objectId == "")
+		pEntity = this->GetSelectedEntity();
+	else
+		pEntity = m_pInstanceManager->GetObjectEntity(objectId);
+
 	if (pEntity)
 		pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
 
@@ -2956,6 +3503,38 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 		if (pEntity)
 			pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
 
+		bool bSwitched = false;
+		if (pShortcut)
+		{
+			// if this is a slave screen & there is a slave video playing, select THAT entity instead.
+			std::string itemId = pShortcut->GetItemId();
+			if (itemId != "")
+			{
+				object_t* pObject = m_pInstanceManager->GetInstanceObject(pShortcut->GetObjectId());
+				if (pObject->slave)
+				{
+					C_EmbeddedInstance* pDisplayInstance = m_pCanvasManager->GetDisplayInstance();
+					std::string displayItemId = (pDisplayInstance) ? pDisplayInstance->GetOriginalItemId() : "";
+
+					if (displayItemId != "" && displayItemId != itemId)
+					{
+						C_BaseEntity* pDisplayBaseEntity = C_BaseEntity::Instance(pDisplayInstance->GetOriginalEntIndex());
+						if (pDisplayBaseEntity)
+						{
+							C_PropShortcutEntity* pDisplayShortcut = dynamic_cast<C_PropShortcutEntity*>(pDisplayBaseEntity);
+							if (pDisplayShortcut)
+							{
+								// switcharoo
+								pEntity = pDisplayBaseEntity;
+								pShortcut = pDisplayShortcut;
+								bSwitched = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if (pShortcut)
 		{
 			if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
@@ -2963,9 +3542,16 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 				//m_pInputManager->SetFullscreenMode(true);
 				C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
 				m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
+				//g_pAnarchyManager->HudStateNotify();
 			}
 			else
-				return SelectEntity(pEntity);
+			{
+				bool bSuccess = SelectEntity(pEntity);
+				if (bSuccess && bSwitched)
+					g_pAnarchyManager->AddToastMessage("Master Object Selected");
+
+				return bSuccess;
+			}
 		}
 		else
 		{
@@ -3077,150 +3663,23 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 
 						// If this is a video file, play it in libretro instead of the browser
 						bool bDoAutoInspect = true;
-						if (m_pLibretroManager->GetInstanceCount() == 0)
+
+						std::string gameFile = "";
+						std::string coreFile = "";
+						bool bShouldLibretroLaunch = (this->DetermineLibretroCompatible(item, gameFile, coreFile) && m_pLibretroManager->GetInstanceCount() == 0);
+
+						// auto-libretro
+						if (cvar->FindVar("auto_libretro")->GetBool() && bShouldLibretroLaunch && g_pFullFileSystem->FileExists(gameFile.c_str()))
 						{
-							std::string coreFile = "";
-							std::string file = "";
-
-							// check for compatible files for ffmpeg
-							if (coreFile == "")
-							{
-								std::string exts = "::mpg::mpeg::avi::mp4::mkv::";
-								std::string fileExt = active->GetString("file");
-
-								size_t found = fileExt.find_last_of(".");
-								if (found != std::string::npos)
-									fileExt = fileExt.substr(found + 1);
-
-								found = exts.find("::" + fileExt + "::");
-								if (found != std::string::npos )
-									coreFile = "ffmpeg_libretro.dll";
-							}
-							/* DISABLED UNTIL EVERYTHING IS READY TO GO WITH LIBRETRO SUPPORT
-							// check for compatible types for libretro cores.
-							if (coreFile == "")
-							{
-								std::map<std::string, std::string> typeToLibretroCore;
-								typeToLibretroCore["snes"] = "snes9x_libretro.dll";
-								//typeToLibretroCore["nes"] = "bsnes_performance_libretro.dll";
-								typeToLibretroCore["nes"] = "fceumm_libretro.dll";
-								typeToLibretroCore["arcade"] = "mame_libretro.dll";
-								typeToLibretroCore["gameboy advance"] = "vba_next_libretro.dll";
-								typeToLibretroCore["gameboy color"] = "vba_next_libretro.dll";
-								typeToLibretroCore["gameboy"] = "vba_next_libretro.dll";
-								typeToLibretroCore["gba"] = "vba_next_libretro.dll";
-								typeToLibretroCore["gbc"] = "vba_next_libretro.dll";
-								typeToLibretroCore["gb"] = "vba_next_libretro.dll";
-
-								KeyValues* type = m_pMetaverseManager->GetLibraryType(active->GetString("type"));
-								if (type)
-								{
-									KeyValues* activeType = type->FindKey("current");
-									if (!activeType)
-										activeType = type->FindKey("local", true);
-
-									std::string typeTitle = activeType->GetString("title");
-									if (typeTitle != "")
-									{
-										// convert to lowercase
-										int len = typeTitle.length() + 1;
-										char* pTemp = (char*)stackalloc(len);
-										Q_strncpy(pTemp, typeTitle.c_str(), len);
-										Q_strnlwr(pTemp, len);
-										typeTitle = pTemp;
-										stackfree(pTemp);
-
-										// loop through the user's types looking for literal title matches (because type ID's could be different for every user)
-										auto it = typeToLibretroCore.begin();
-										//size_t foundTypeTitle;
-										while (it != typeToLibretroCore.end())
-										{
-											//foundTypeTitle = typeTitle.find(it->first);
-											//if (foundTypeTitle != std::string::npos)
-											if ( typeTitle == it->first )
-											{
-												coreFile = it->second;
-												break;
-											}
-
-											it++;
-										}
-									}
-								}
-							}
-							*/
-
-							// use the core, if one is found
-							if (coreFile != "" )//&& g_pFullFileSystem->FileExists(active->GetString("file")))
-							{
-								file = active->GetString("file");
-
-								bool bFileIsGood = false;
-								// is the path relative to the app?
-								size_t found = file.find(":");
-								if (found == 1 && g_pFullFileSystem->FileExists(file.c_str()))
-								{
-									bFileIsGood = true;
-								}
-								else
-								{
-									// does it have an app?
-									if (Q_strcmp(active->GetString("app"), ""))
-									{
-										bool bHasApp = true;
-										KeyValues* app = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(active->GetString("app"));
-										KeyValues* appActive = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(app);
-										bool bHasAppFilepath = false;
-										bool bAtLeastOneAppFilepathExists = false;
-
-										// just grab the FIRST filepath for now.
-										// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
-										// Note: Apps are not required to have a filepath specified.
-										std::string testFile;
-										std::string testPath;
-										KeyValues* filepaths = appActive->FindKey("filepaths", true);
-										for (KeyValues *sub = filepaths->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-										{
-											// true if even 1 filepath exists for the app, even if it is not found on the local PC.
-											// (because in that case the local user probably needs to specify a correct location for it.)
-											bHasAppFilepath = true;
-
-											testPath = sub->GetString("path");
-
-											// test if this path exists
-											// FIXME: always assume it exists for now
-											if (true)
-											{
-												bAtLeastOneAppFilepathExists = true;
-
-												// test if the file exists inside of this filepath
-												testFile = testPath + file;
-
-												// FIXME: always assume the file exists in this path for now.
-												if (true)
-												{
-													file = testFile;
-													bFileIsGood = true;
-													break;
-												}
-											}
-										}
-									}
-								}
-
-								if (bFileIsGood)
-								{
-									C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
-									pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")), pShortcut->entindex());
-									DevMsg("Setting game to: %s\n", file.c_str());
-									pLibretroInstance->SetOriginalGame(file);
-									pLibretroInstance->SetOriginalItemId(itemId);
-									if (!pLibretroInstance->LoadCore(coreFile))	// FIXME: elegantly revert back to autoInspect if loading the core failed!
-										DevMsg("ERROR: Failed to load core: %s\n", coreFile.c_str());
-									pEmbeddedInstance = pLibretroInstance;
-									bDoAutoInspect = false;
-								}
-							}
+							C_LibretroInstance* pLibretroInstance = m_pLibretroManager->CreateLibretroInstance();
+							pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")), pShortcut->entindex());
+							DevMsg("Setting game to: %s\n", gameFile.c_str());
+							pLibretroInstance->SetOriginalGame(gameFile);
+							pLibretroInstance->SetOriginalItemId(itemId);
+							if (!pLibretroInstance->LoadCore(coreFile))	// FIXME: elegantly revert back to autoInspect if loading the core failed!
+								DevMsg("ERROR: Failed to load core: %s\n", coreFile.c_str());
+							pEmbeddedInstance = pLibretroInstance;
+							bDoAutoInspect = false;
 						}
 
 						if ( bDoAutoInspect)
@@ -3228,7 +3687,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 							std::string uri = "file://";
 							uri += engine->GetGameDirectory();
 							uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(active->GetString("title")) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
-
+							//uri = "http://smsithlord.com/";
 							// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
 							//DevMsg("Test URI is: %s\n", uri.c_str());
 
@@ -3306,6 +3765,9 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 
 bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 {
+	if (!m_pSelectedEntity)
+		return false;
+
 	C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 	//C_WebTab* pWebTab = m_pWebManager->GetSelectedWebTab();
@@ -3329,6 +3791,7 @@ bool C_AnarchyManager::DeselectEntity(std::string nextUrl, bool bCloseInstance)
 
 	RemoveGlowEffect(m_pSelectedEntity);
 	m_pSelectedEntity = null;
+
 	return true;
 }
 
@@ -3426,7 +3889,10 @@ void C_AnarchyManager::ScanForLegacySave(std::string path, std::string searchPat
 			continue;
 		}
 
-		std::string instanceId = g_pAnarchyManager->GenerateLegacyHash(pFilename);
+		// NOTE: Nodes (which are the only kind of .set file names that are even able to have a legacy ID extracted from them) should
+		// have their legacy ID extracted.  Only generate a hash using the whole name if the legacy ID *cannot* be extracted.
+		std::string legacyId = g_pAnarchyManager->ExtractLegacyId(std::string(VarArgs("maps/%s", pFilename)));
+		std::string instanceId = (legacyId != "") ? legacyId : g_pAnarchyManager->GenerateLegacyHash(pFilename);
 		std::string filename = pFilename;
 		std::string file = path + filename;
 
@@ -3454,6 +3920,185 @@ void C_AnarchyManager::ScanForLegacySaveRecursive(std::string path, std::string 
 	std::string legacyPathB = path + "saves\\maps\\";
 	this->ScanForLegacySave(legacyPathA, searchPath, workshopIds, mountIds, pBackpack);
 	this->ScanForLegacySave(legacyPathB, searchPath, workshopIds, mountIds, pBackpack);
+}
+
+// Purpose:
+// 1 - Mark all affected entities as child objects in the currently loaded instance, & save it out.
+// 2 - Create (or update) the instance associated with this pInfoItemKV.
+void C_AnarchyManager::ShowHubSaveMenuClient(C_PropShortcutEntity* pInfoShortcut)
+{
+	// NOTE: All affected entities are properly parented at this point.
+
+	// Get the item of the given info shortcut
+	KeyValues* pInfoItemKV = m_pMetaverseManager->GetActiveKeyValues(m_pMetaverseManager->GetLibraryItem(pInfoShortcut->GetItemId()));
+	if (!pInfoItemKV)
+		return;
+
+	// load up the nodevolume.txt
+	KeyValues* pNodeInfoKV = new KeyValues("node");
+	if (!pNodeInfoKV->LoadFromFile(g_pFullFileSystem, "nodevolume.txt", "DEFAULT_WRITE_PATH"))
+	{
+		DevMsg("ERROR: Could not load nodevolume.txt.\n");
+		return;
+	}
+
+	// create (or reset) this node's instance KV
+	KeyValues* pNodeInstanceKV = new KeyValues("instance");
+	std::string nodeInstanceId = pInfoItemKV->GetString("file");
+
+	std::string title = pInfoItemKV->GetString("title");
+	std::string style = "node_" + std::string(pNodeInfoKV->GetString("setup/style"));
+	g_pAnarchyManager->GetInstanceManager()->CreateBlankInstance(0, pNodeInstanceKV, nodeInstanceId, "", title, "", "", "", style);
+
+	instance_t* pNodeInstance = m_pInstanceManager->GetInstance(nodeInstanceId);
+	if (!pNodeInstance)
+	{
+		DevMsg("ERROR: Failed to create new instance for this node!\n");
+		return;
+	}
+
+	// the blank KV for this node's instance is already loaded into pNodeInstanceKV
+
+	// FIRST TASK: Create (or update) the KV of this node's instance.
+	// ==============================================================
+	// NOTE: Since this node instance is NOT the actively loaded instance, we can bulk-update it.
+	// Just modify it's KV, and save them out directly.
+	// 1. loop through all affected entities.
+	// 2. add each one to the KV.
+	// 3. save the KV to the DB.
+
+	// work for task 1
+	float scale;
+	int slave;
+	int child;
+	C_BaseEntity* pBaseEntity;
+	C_PropShortcutEntity* pPropShortcutEntity;
+	object_t* pObject;
+	KeyValues* pObjectKV;
+	for (KeyValues *sub = pNodeInfoKV->FindKey("setup/objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		// loop through it adding all the info to the response object.
+		pBaseEntity = C_BaseEntity::Instance(sub->GetInt());
+		if (!pBaseEntity)
+			continue;
+
+		pPropShortcutEntity = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
+		if (!pPropShortcutEntity)
+			continue;
+
+		if (pPropShortcutEntity == pInfoShortcut)
+			continue;
+
+		pObject = m_pInstanceManager->GetInstanceObject(pPropShortcutEntity->GetObjectId());
+
+		char buf[AA_MAX_STRING];
+
+		// position
+		Vector localPosition = pPropShortcutEntity->GetLocalOrigin();
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", localPosition.x, localPosition.y, localPosition.z);
+		std::string position = buf;
+
+		// rotation
+		QAngle localAngles = pPropShortcutEntity->GetLocalAngles();
+		Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", localAngles.x, localAngles.y, localAngles.z);
+		std::string rotation = buf;
+
+		scale = pPropShortcutEntity->GetModelScale();
+		slave = (pObject->slave) ? 1 : 0;
+		child = 0;	// Objects inside of nodes themselves cannot have children.
+
+		pObjectKV = pNodeInstanceKV->FindKey(VarArgs("objects/%s", pPropShortcutEntity->GetObjectId().c_str()), true);
+		g_pAnarchyManager->GetInstanceManager()->CreateObject(pObjectKV, pPropShortcutEntity->GetObjectId(), pPropShortcutEntity->GetItemId(), pPropShortcutEntity->GetModelId(), position, rotation, scale, slave, child);
+
+		// This entity has an entry in the node instance's KV.  Continue.
+	}
+
+	// This node's instance has been completed.  Save it out & clean-up.
+	g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", nodeInstanceId.c_str(), pNodeInstanceKV);
+	pNodeInstanceKV->deleteThis();
+	pNodeInstanceKV = null;
+
+	// SECOND TASK: Update the actively loaded instance with the new state of the existing objects.
+	// ============================================================================================
+	// All entities will exist, so just need to grab their object_t's and update their child / parentEntIndex values, then apply the changes so they get saved to the map's instance.
+	// Note that this will cause the instance to be saved to the DB once-PER-object.
+	// FIXME: There *should* really be a bulk save operation for doing this to the active map instance. (However, considerations for multiplayer mode must be kept in mind.)
+	// 1. loop through all affected entities
+	// 2. update their object_t
+	// 3. apply changes to the entity
+
+	// work for task 2
+	for (KeyValues *sub = pNodeInfoKV->FindKey("setup/objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		// loop through it adding all the info to the response object.
+		pBaseEntity = C_BaseEntity::Instance(sub->GetInt());
+		if (!pBaseEntity)
+			continue;
+
+		pPropShortcutEntity = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
+		if (!pPropShortcutEntity)
+			continue;
+
+		if (pPropShortcutEntity == pInfoShortcut)
+			continue;
+
+		pObject = m_pInstanceManager->GetInstanceObject(pPropShortcutEntity->GetObjectId());
+		if (!pObject)
+			continue;
+
+		if (!pObject->child || pObject->parentEntityIndex != pInfoShortcut->entindex())
+		{
+			pObject->child = true;
+			pObject->parentEntityIndex = pInfoShortcut->entindex();
+			m_pInstanceManager->ApplyChanges(pPropShortcutEntity, false);	// NOTE: Remember, multiplayer stuff will likely want 1 object synced at a time!!
+		}
+	}
+
+	// save the bulk write to the DB (remember this might conflict with what multiplayer wants to do for syncing purposes.)
+	m_pInstanceManager->SaveActiveInstance();
+	pNodeInfoKV->deleteThis();
+
+	// The node is now finished being processed.
+	DevMsg("Finished creating/updating node.\n");
+}
+
+void C_AnarchyManager::ShowNodeManagerMenu()
+{
+	if (!m_pInputManager->GetInputMode() && engine->IsInGame())
+	{
+		if (!enginevgui->IsGameUIVisible())
+		{
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+			if (m_pSelectedEntity)
+				this->DeselectEntity("asset://ui/nodeManager.html");
+			else
+				pHudBrowserInstance->SetUrl("asset://ui/nodeManager.html");
+
+			m_pInputManager->ActivateInputMode(true, true);
+		}
+	}
+}
+
+std::string C_AnarchyManager::GetSteamGamesCode(std::string requestId)
+{
+	DevMsg("Injecting Steam Games importing code...\n");
+	std::string code;//
+	//code += "function aaGetSteamGames(){";
+	//code += "if( !!!window.rgGames ) { setTimeout(aaGetSteamGames, 1000); return; }";
+	code += "var aagames = [];";
+	code += "for(var aagamesi = 0; aagamesi < window.rgGames.length; aagamesi++)";
+	code += "aagames.push({\"name\": window.rgGames[aagamesi][\"name\"], \"appid\": window.rgGames[aagamesi][\"appid\"]});";
+	code += "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
+	code += requestId;
+	code += "AAAPICALL' + encodeURIComponent(JSON.stringify(aagames));";
+	//code += "AAAPICALL' + encodeURIComponent(JSON.stringify(aagames)).replace(/['()]/g, escape).replace(/\*/g, '%2A').replace(/%(?:7C|60|5E)/g, unescape);";
+	//code += "AAAPICALL' + encodeURIComponent(JSON.stringify({'tester': window.aagames.length}));";
+	return code;
+	//code += "}";
+	//code += "AAAPICALL' + encodeURIComponent(JSON.stringify(aagames));";
+
+	//code += "aaGetSteamGames();";
+	//code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=AAAPICALL' + encodeURIComponent(JSON.stringify({'tester': window.rgGames.length}));";
 }
 
 void C_AnarchyManager::ShowEngineOptionsMenu()
@@ -3652,6 +4297,8 @@ void C_AnarchyManager::OnRebuildSoundCacheCallback()
 	//pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
 	pHudBrowserInstance->SetUrl("asset://ui/betasplash.html");
 	g_pAnarchyManager->SetInitialized(true);
+
+	//ToastSlate->Create(enginevgui->GetPanel(PANEL_ROOT));
 }
 
 void C_AnarchyManager::OnDetectAllMapsComplete()
@@ -3660,9 +4307,8 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	//return;
 	///*
 
-	DevMsg("Starting Libretro...\n");
-
-	m_pLibretroManager = new C_LibretroManager();
+	//DevMsg("Starting Libretro...\n");
+	//m_pLibretroManager = new C_LibretroManager();
 
 	if (m_iState < 1)
 	{
@@ -4001,6 +4647,15 @@ void C_AnarchyManager::SetNextLoadInfo(std::string instanceId, std::string posit
 	m_pNextLoadInfo->instanceId = instanceId;
 	m_pNextLoadInfo->position = position;
 	m_pNextLoadInfo->rotation = rotation;
+}
+
+std::string C_AnarchyManager::GetHomeURL()
+{
+	std::string uri = "file://";
+	uri += engine->GetGameDirectory();
+	//uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
+	uri += "/resource/ui/html/anarchyPortal.html";
+	return uri;
 }
 
 void C_AnarchyManager::TestSQLite()

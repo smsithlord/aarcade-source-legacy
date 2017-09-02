@@ -5,7 +5,7 @@
 #include "c_steambrowserlistener.h"
 #include "c_inputlistenersteambrowser.h"
 //#include "c_libretrosurfaceregen.h"
-#include <map>
+//#include <map>
 #include <vector>
 
 class C_SteamBrowserManager
@@ -24,14 +24,16 @@ public:
 	void AddFreshSteamBrowserInstance(C_SteamBrowserInstance* pSteamBrowserInstance);
 	void OnSteamBrowserInstanceCreated(C_SteamBrowserInstance* pSteamBrowserInstance);
 	bool IsAlreadyInInstances(C_SteamBrowserInstance* pSteamBrowserInstance);
-	C_SteamBrowserInstance* FindSteamBrowserInstance(unsigned int unHandle);
+	C_SteamBrowserInstance* FindSteamBrowserInstanceByEntityIndex(int iEntityIndex);
 	C_SteamBrowserInstance* FindSteamBrowserInstance(std::string id);
+	C_SteamBrowserInstance* FindSteamBrowserInstance(unsigned int unHandle);
 	C_SteamBrowserInstance* GetPendingSteamBrowserInstance();
 
 	void RunEmbeddedSteamBrowser();
 	void DestroySteamBrowserInstance(C_SteamBrowserInstance* pInstance);
 
 	void GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances);
+	unsigned int GetInstanceCount();
 
 	//void AddDefunctInstance(C_SteamBrowserInstance* pInstance);
 	//bool DestroyDefunctInstance(C_SteamBrowserInstance* pInstance);

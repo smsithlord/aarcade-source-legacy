@@ -5,7 +5,7 @@
 #include <Awesomium/STLHelpers.h>
 #include <string>
 #include <vector>
-#include <map>
+//#include <map>
 //#include "vgui_controls/Controls.h"
 
 using namespace Awesomium;

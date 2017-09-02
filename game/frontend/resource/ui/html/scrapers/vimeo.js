@@ -71,18 +71,24 @@ arcadeHud.addScraper({
 		return response;
 	},
 	"test": function(url, doc, callback)
-	{
+	{		
+		var testerLocation = document.createElement("a");
+		testerLocation.href = url;
+
 		//callback({"validForScrape": true, "redirect": false});
 		var validForScrape = false;
 		var redirect = false;
 
-		var metaURL = doc.querySelector("meta[property='og:video:url']");//.getAttribute("content");
-		if( !!metaURL )
+		if( testerLocation.hostname.indexOf("vimeo") >= 0 )
 		{
-			metaURL = metaURL.getAttribute("content");
+			var metaURL = doc.querySelector("meta[property='og:video:url']");//.getAttribute("content");
+			if( !!metaURL )
+			{
+				metaURL = metaURL.getAttribute("content");
 
-			if( metaURL !== "" )
-				validForScrape = true;
+				if( metaURL !== "" )
+					validForScrape = true;
+			}
 		}
 
 		callback({"validForScrape": validForScrape, "redirect": redirect});

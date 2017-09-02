@@ -39,8 +39,13 @@ struct SteamWorkshopDetails_t
 	float score;
 	uint32 numChildren;
 	std::string previewURL;
+	// Changed for Steamworks update
+	//uint64 numSubscriptions;
+	//uint64 numFavorites;
 	uint32 numSubscriptions;
 	uint32 numFavorites;
+
+
 	//uint32 numAdditionalPreviews;
 	std::vector<std::string> additionalPreviewURLs;
 	std::vector<SteamWorkshopKeyValueTag_t*> keyValueTags;

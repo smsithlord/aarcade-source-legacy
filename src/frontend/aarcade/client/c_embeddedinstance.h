@@ -28,6 +28,7 @@ public:
 	virtual void CleanUpTexture() {};
 
 	std::string GetOutput(vgui::KeyCode code, bool bShift = false, bool bCtrl = false, bool bAlt = false, bool bWin = false, bool bAutorepeat = false);
+	virtual void GetFullscreenInfo(float& fPositionX, float& fPositionY, float& fSizeX, float& fSizeY, std::string& overlayId);
 
 	// accessors
 	virtual std::string GetId();

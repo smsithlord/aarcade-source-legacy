@@ -59,6 +59,9 @@ public:
 	void Close();
 
 	void SetUrl(std::string url);
+	void GoForward();
+	void GoBack();
+	void Reload();
 
 	std::string GetId() { return m_id; }
 	void Update();
@@ -98,6 +101,8 @@ public:
 	int GetKeyModifiersAlt();
 
 	// accessors
+	bool GetCanGoForward() { return m_bCanGoForward; }
+	bool GetCanGoBack() { return m_bCanGoBack; }
 	std::string GetTitle() { return m_title; }
 	std::string GetURL() { return m_URL; }
 	ITexture* GetTexture() { return m_pTexture; }
@@ -122,6 +127,7 @@ public:
 		m_scraperField = field;
 	}
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
+	void SetOriginalEntIndex(int val) { m_iOriginalEntIndex = val; }
 
 private:
 	/*
@@ -150,6 +156,8 @@ private:
 	*/
 
 	bool m_bSteamworksCopying;
+	bool m_bCanGoBack;
+	bool m_bCanGoForward;
 	//bool m_bDying;
 	//bool m_bDefunct;
 	std::string m_scraperId;

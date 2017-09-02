@@ -68,6 +68,8 @@ C_SteamBrowserInstance::C_SteamBrowserInstance()
 {
 	m_bSteamworksCopying = false;
 	DevMsg("SteamBrowserInstance: Constructor\n");
+	m_bCanGoBack = false;
+	m_bCanGoForward = false;
 	m_pTexture = null;
 	m_iLastRenderedFrame = -1;
 	m_pLastFrameData = null;
@@ -83,6 +85,9 @@ C_SteamBrowserInstance::C_SteamBrowserInstance()
 	m_title = "";
 	m_id = "";
 	m_iOriginalEntIndex = -1;
+
+//	if (!steamapicontext->SteamHTMLSurface()->Init())
+	//	DevMsg("CRITICAL ERROR: Failed to initialize the Steamworks browser!\n");
 }
 
 C_SteamBrowserInstance::~C_SteamBrowserInstance()
@@ -152,10 +157,10 @@ void C_SteamBrowserInstance::SelfDestruct()
 	DevMsg("\tIs Input Manager's EmbeddedInstance: %i\n", (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this));
 	DevMsg("\tIs Input Slate's CanvasTexture: %i\n", (g_pAnarchyManager->GetInputManager()->GetInputSlateCanvasTexture() == m_pTexture));
 
-	/*
+	///*
 	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == this)
 		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(this);
-	*/
+	//*/
 
 
 
@@ -189,6 +194,7 @@ void C_SteamBrowserInstance::SelfDestruct()
 	// tell the canvas manager we're on our way out
 	this->CleanUpTexture();	// m_pTexture will be NULL after this.
 
+	DevMsg("Closing browser w/ handle %u\n", m_unHandle);
 	steamapicontext->SteamHTMLSurface()->RemoveBrowser(m_unHandle);
 
 	m_bReadyForNextFrame = false;
@@ -209,6 +215,8 @@ void C_SteamBrowserInstance::SelfDestruct()
 		m_pPostData = null;
 	}
 	*/
+
+	g_pAnarchyManager->AddToastMessage(VarArgs("Web Browser Closed (%i running)", g_pAnarchyManager->GetSteamBrowserManager()->GetInstanceCount()));
 
 	delete this;
 }
@@ -262,11 +270,15 @@ void C_SteamBrowserInstance::OnBrowserInstanceReady(unsigned int unHandle)
 
 	m_unHandle = unHandle;
 
+	DevMsg("C_SteamBrowserInstance::OnBrowserInstanceReady w/ instanceID %s and handle %u\n", m_id.c_str(), unHandle);
+
 	int iWidth = (m_id == "hud") ? AA_HUD_INSTANCE_WIDTH : AA_EMBEDDED_INSTANCE_WIDTH;
 	int iHeight = (m_id == "hud") ? AA_HUD_INSTANCE_HEIGHT : AA_EMBEDDED_INSTANCE_HEIGHT;
 	steamapicontext->SteamHTMLSurface()->SetSize(m_unHandle, iWidth, iHeight);
 
 	g_pAnarchyManager->GetSteamBrowserManager()->OnSteamBrowserInstanceCreated(this);
+	g_pAnarchyManager->AddToastMessage(VarArgs("Web Browser Opened (%i running)", g_pAnarchyManager->GetSteamBrowserManager()->GetInstanceCount()));
+
 	steamapicontext->SteamHTMLSurface()->LoadURL(m_unHandle, m_initialURL.c_str(), "");
 }
 
@@ -323,8 +335,35 @@ void C_SteamBrowserInstance::SetUrl(std::string url)
 	steamapicontext->SteamHTMLSurface()->LoadURL(m_unHandle, url.c_str(), "");
 }
 
+void C_SteamBrowserInstance::GoForward()
+{
+	if (!m_unHandle)
+		return;
+
+	if ( m_bCanGoForward )
+		steamapicontext->SteamHTMLSurface()->GoForward(m_unHandle);
+}
+
+void C_SteamBrowserInstance::GoBack()
+{
+	if (!m_unHandle)
+		return;
+
+	if (m_bCanGoBack)
+		steamapicontext->SteamHTMLSurface()->GoBack(m_unHandle);
+}
+
+void C_SteamBrowserInstance::Reload()
+{
+	if (!m_unHandle)
+		return;
+
+	steamapicontext->SteamHTMLSurface()->Reload(m_unHandle);
+}
+
 void C_SteamBrowserInstance::OnBrowserInstanceStartRequest(const char* pchURL, const char* pchTarget, const char* pchPostData, bool IsRedirect)
 {
+	DevMsg("Start request URL: %s\n", pchURL);
 	std::string urlBuf = pchURL;
 	if (urlBuf.find("http://www.aarcadeapicall.com.net.org/?doc=") == 0)
 	{
@@ -348,11 +387,16 @@ void C_SteamBrowserInstance::OnBrowserInstanceStartRequest(const char* pchURL, c
 	}
 	else
 	{
+		if (!m_unHandle)
+			DevMsg("What he hell?  No handle here.\n");
+
+		DevMsg("Start request allowed on handle %u\n", m_unHandle);
 		//	if (!url || !Q_stricmp(url, "about:blank"))
 		//		return true; // this is just webkit loading a new frames contents inside an existing page
 
 		// TODO: This is where URL filtering would be applied.
 		steamapicontext->SteamHTMLSurface()->AllowStartRequest(m_unHandle, true);
+		//steamapicontext->SteamHTMLSurface()->Reload(m_unHandle);
 	}
 }
 
@@ -431,17 +475,21 @@ void C_SteamBrowserInstance::OnBrowserInstanceURLChanged(const char* pchURL, con
 {
 	m_URL = pchURL;
 
-	// notify the HUD
-	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	if (pHudBrowserInstance)
+	// HUD notifications should ONLY happen if THIS is the instance that the HUD is displaying right now!
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this)
 	{
-		std::vector<std::string> params;
-		params.push_back(m_URL);
-		params.push_back(m_scraperId);
-		params.push_back(m_scraperItemId);
-		params.push_back(m_scraperField);
+		// notify the HUD
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		if (pHudBrowserInstance)
+		{
+			std::vector<std::string> params;
+			params.push_back(m_URL);
+			params.push_back(m_scraperId);
+			params.push_back(m_scraperItemId);
+			params.push_back(m_scraperField);
 
-		pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onURLChanged", params);
+			pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onURLChanged", params);
+		}
 	}
 }
 
@@ -449,7 +497,19 @@ void C_SteamBrowserInstance::OnBrowserInstanceChangedTitle(const char* pchTitle)
 {
 	m_title = (pchTitle == "") ? "Untitled" : pchTitle;
 
-	//pHudInstance->DispatchJavaScriptMethod("arcadeHud", "onTitleChanged", params);	// FIXME: OBSOLETE!  Get rid of that arcadeHud message (probably) and pack titles in with general status updates.
+	// HUD notifications should ONLY happen if THIS is the instance that the HUD is displaying right now!
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this)
+	{
+		// notify the HUD
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+		if (pHudBrowserInstance)
+		{
+			std::vector<std::string> params;
+			params.push_back(m_title);
+
+			pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onTitleChanged", params);	// FIXME: OBSOLETE!  Get rid of that arcadeHud message (probably) and pack titles in with general status updates.
+		}
+	}
 }
 
 void C_SteamBrowserInstance::OnBrowserInstanceSearchResults(unsigned int unResults, unsigned int unCurrentMatch)
@@ -458,6 +518,19 @@ void C_SteamBrowserInstance::OnBrowserInstanceSearchResults(unsigned int unResul
 
 void C_SteamBrowserInstance::OnBrowserInstanceCanGoBackAndForward(bool bCanGoBack, bool bCanGoForward)
 {
+	bool bNeedsNotify = false;
+	if (m_bCanGoBack != bCanGoBack || m_bCanGoForward != bCanGoForward)
+		bNeedsNotify = true;
+
+	m_bCanGoBack = bCanGoBack;
+	m_bCanGoForward = bCanGoForward;
+
+	// HUD notifications should ONLY happen if THIS is the instance that the HUD is displaying right now!
+	if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == this)
+	{
+		if (bNeedsNotify)	// FIXME: This probably gets called more often than it needs to, ESPECIALLY during initial page load.
+			g_pAnarchyManager->HudStateNotify();
+	}
 }
 
 void C_SteamBrowserInstance::OnBrowserInstanceHorizontalScroll(unsigned int unScrollMax, unsigned int unScrollCurrent, float flPageScale, bool bVisible, unsigned int unPageSize)
@@ -487,10 +560,16 @@ void C_SteamBrowserInstance::OnBrowserInstanceFileOpenDialog(const char* pchTitl
 
 void C_SteamBrowserInstance::OnBrowserInstanceNewWindow(const char* pchURL, unsigned int unX, unsigned int unY, unsigned int unWide, unsigned int unTall, unsigned int unNewWindow_BrowserHandle)
 {
+	// TODO:
+	//	- Popup blocking for non-whitelisted source or destination URLs.
+
 	DevMsg("Replacing Steamworks web tab with a pop-up that it opened.\n");
+	g_pAnarchyManager->AddToastMessage("Web Browser Allowed Popup");
 
 	std::string uri = pchURL;
 	this->SetUrl(uri);
+
+	DevMsg("Closing browser w/ handle %u\n", unNewWindow_BrowserHandle);
 	steamapicontext->SteamHTMLSurface()->RemoveBrowser(unNewWindow_BrowserHandle);
 }
 

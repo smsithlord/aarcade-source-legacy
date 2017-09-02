@@ -25,6 +25,7 @@ public:
 	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", std::string title = "", bool alpha = false);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(std::string id);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(Awesomium::WebView* pWebView);
+	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstanceByEntityIndex(int iEntityIndex);
 	//C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(IMaterial* pMaterial);
 
 	void RunEmbeddedAwesomiumBrowser();

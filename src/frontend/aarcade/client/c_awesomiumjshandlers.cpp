@@ -2,6 +2,7 @@
 
 #include "c_awesomiumjshandlers.h"
 #include "c_anarchymanager.h"
+#include <algorithm>
 //#include "aa_globals.h"
 //#include "Filesystem.h"
 
@@ -56,6 +57,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 		//C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+		g_pAnarchyManager->DeselectEntity("", true);
 
 		//if (pSteamBrowserInstance && pSteamBrowserInstance->GetId().find("scrape") == 0)
 			//g_pAnarchyManager->GetSteamBrowserManager()->DestroySteamBrowserInstance(pSteamBrowserInstance);
@@ -376,7 +378,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string rotation = (args.size() > 3) ? WebStringToCharString(args[3].ToString()) : "";
 		std::string screenshotId = (args.size() > 4) ? WebStringToCharString(args[4].ToString()) : "";
 
-		g_pAnarchyManager->LoadMapCommand(mapId, instanceId, position, rotation, screenshotId);
+		if (!g_pAnarchyManager->LoadMapCommand(mapId, instanceId, position, rotation, screenshotId))
+		{
+			C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudInstance->SetUrl("asset://ui/welcome.html");
+		}
 	}
 	else if (method_name == WSLit("deactivateInputMode"))
 	{
@@ -573,6 +579,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		g_pAnarchyManager->Disconnect();
 	}
+	/*
 	else if (method_name == WSLit("autoInspect"))
 	{
 		// FIXME: THIS SHOULD JUST CALL A SUBROUTINE OF THE METAVERSE MANAGER!!
@@ -599,6 +606,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			}
 		}
 	}
+	*/
 	else if (method_name == WSLit("cabinetSelected"))
 	{
 		C_BaseEntity* pEntity = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
@@ -737,8 +745,9 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
-		bool val = args[0].ToBoolean();
-		g_pAnarchyManager->SetSlaveScreen(val);
+		std::string objectId = WebStringToCharString(args[0].ToString());
+		bool val = args[1].ToBoolean();
+		g_pAnarchyManager->SetSlaveScreen(objectId, val);
 	}
 	else if (method_name == WSLit("navigateToURI"))
 	{
@@ -815,6 +824,160 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		g_pAnarchyManager->GetInstanceManager()->AdjustObjectScale((float)args[0].ToDouble());
 	}
+	else if (method_name == WSLit("goForward"))
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pSteamBrowserInstance )
+		{
+			pSteamBrowserInstance->GoForward();
+		}
+	}
+	else if (method_name == WSLit("goBack"))
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pSteamBrowserInstance)
+		{
+			pSteamBrowserInstance->GoBack();
+		}
+	}
+	else if (method_name == WSLit("reload"))
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pSteamBrowserInstance)
+		{
+			pSteamBrowserInstance->Reload();
+		}
+	}
+	else if (method_name == WSLit("goHome"))
+	{
+		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pSteamBrowserInstance)
+		{
+			pSteamBrowserInstance->SetUrl(g_pAnarchyManager->GetHomeURL());
+		}
+	}
+	else if (method_name == WSLit("libretroPause"))
+	{
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+		{
+			bool bValue;
+
+			unsigned int numArgs = args.size();
+			if (numArgs > 0 && args[0].IsBoolean())
+				bValue = args[0].ToBoolean();
+			else
+				bValue = !pLibretroInstance->GetPause();
+
+			pLibretroInstance->SetPause(bValue);
+		}
+	}
+	else if (method_name == WSLit("libretroSaveOverlay"))
+	{
+		std::string type;
+		if (args.size() > 0)
+			type = WebStringToCharString(args[0].ToString());
+
+		std::string overlayId;
+		if (args.size() > 1)
+			overlayId = WebStringToCharString(args[1].ToString());
+
+		float x = 0;
+		if (args.size() > 2)
+			x = (float)args[2].ToDouble();
+
+		float y = 0;
+		if (args.size() > 3)
+			y = (float)args[3].ToDouble();
+
+		float width = 1;
+		if (args.size() > 4)
+			width = (float)args[4].ToDouble();
+
+		float height = 1;
+		if (args.size() > 5)
+			height = (float)args[5].ToDouble();
+
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+		{
+			pLibretroInstance->SaveOverlay(type, overlayId, x, y, width, height);
+			//pLibretroInstance->SetOverlay(overlayId);
+		}
+	}
+	else if (method_name == WSLit("libretroClearOverlay"))
+	{
+		std::string type;
+		if (args.size() > 0)
+			type = WebStringToCharString(args[0].ToString());
+
+		std::string overlayId;
+		if (args.size() > 1)
+			overlayId = WebStringToCharString(args[1].ToString());
+
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+		{
+			pLibretroInstance->ClearOverlay(type, overlayId);
+			//pLibretroInstance->SetOverlay(overlayId);
+		}
+	}
+	else if (method_name == WSLit("libretroSetOverlay"))
+	{
+		std::string type;
+		if (args.size() > 0)
+			type = WebStringToCharString(args[0].ToString());
+		else
+			type = "core";
+
+		std::string overlayId;
+		if (args.size() > 1)
+			overlayId = WebStringToCharString(args[1].ToString());
+
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+		{
+			g_pAnarchyManager->GetLibretroManager()->SaveOverlaysKV(type, overlayId, pLibretroInstance->GetInfo()->prettycore, pLibretroInstance->GetInfo()->prettygame);
+			pLibretroInstance->SetOverlay(overlayId);
+		}
+	}
+	else if (method_name == WSLit("libretroReset"))
+	{
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+		{
+			pLibretroInstance->SetReset(true);
+		}
+	}
+	else if (method_name == WSLit("setLibretroGUIGamepadEnabled"))
+	{
+		if (g_pAnarchyManager->GetLibretroManager())
+		{
+			bool bValue;
+			if (args.size() > 0 && args[0].IsBoolean())
+				bValue = args[0].ToBoolean();
+			else
+				bValue = !g_pAnarchyManager->GetLibretroManager()->GetGUIGamepadEnabled();
+			
+			g_pAnarchyManager->GetLibretroManager()->ClearGUIGamepadInputState();
+			g_pAnarchyManager->GetLibretroManager()->SetGUIGamepadEnabled(bValue);
+		}
+	}
+	else if (method_name == WSLit("setLibretroGUIGamepadButtonState"))
+	{
+		if (args.size() > 1 && args[0].IsNumber() && args[1].IsNumber() && g_pAnarchyManager->GetLibretroManager())
+		{
+			int iButton = args[0].ToInteger();
+			int iValue = args[1].ToInteger();
+			//float fValue = (float)args[1].ToDouble();
+			g_pAnarchyManager->GetLibretroManager()->SetGUIGamepadInputState(0, 1, 0, iButton, iValue);
+		}
+	}
+	else if (method_name == WSLit("clearLibretroGUIGamepadButtonStates"))
+	{
+		if (g_pAnarchyManager->GetLibretroManager())
+			g_pAnarchyManager->GetLibretroManager()->ClearGUIGamepadInputState();
+	}
 	else if (method_name == WSLit("taskClear"))
 	{
 		g_pAnarchyManager->TaskClear();
@@ -888,6 +1051,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			//	g_pAnarchyManager->IncrementState();
 		}
 	}
+	else if (method_name == WSLit("doPause"))
+	{
+		g_pAnarchyManager->DoPause();
+	}
 	else if (method_name == WSLit("feedback"))
 	{
 		std::string type = WebStringToCharString(args[0].ToString());
@@ -906,6 +1073,15 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string id = WebStringToCharString(args[0].ToString());
 		bool bDeactivateInputMode = (args.size() > 1) ? args[1].ToBoolean() : true;
 		g_pAnarchyManager->TeleportToScreenshot(id, bDeactivateInputMode);
+	}
+	else if (method_name == WSLit("saveNewNode"))
+	{
+		std::string nodeName = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->GetInstanceManager()->CreateNewNode(nodeName);
+	}
+	else if (method_name == WSLit("clearNodeSpace"))
+	{
+		g_pAnarchyManager->GetInstanceManager()->ClearNodeSpace();
 	}
 	else if (method_name == WSLit("takeScreenshot"))
 	{
@@ -1028,6 +1204,79 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		if (pEntity)
 			g_pAnarchyManager->AttemptSelectEntity(pEntity);
 	}
+	else if (method_name == WSLit("runLibretro"))
+	{
+		bool bLaunched = false;
+
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(pEmbeddedInstance);
+		std::string itemId = pEmbeddedInstance->GetOriginalItemId();
+		KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+		if (item)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
+
+			std::string gameFile = "";
+			std::string coreFile = "";
+			bool bShouldLibretroLaunch = (g_pAnarchyManager->DetermineLibretroCompatible(item, gameFile, coreFile) && (g_pAnarchyManager->GetLibretroManager()->GetInstanceCount() == 0 || pLibretroInstance));
+
+			// auto-libretro
+			bool bFileExists = g_pFullFileSystem->FileExists(gameFile.c_str());
+			if (!bFileExists)
+				g_pAnarchyManager->AddToastMessage("Libretro Aborted - File Not Found");
+			else if (bShouldLibretroLaunch)
+			{
+				if (pLibretroInstance)
+				{
+					//pLibretroInstance->SetOriginalGame(gameFile);	// We cannot actually change the game this way if we are just doing a retro_reset because that does not re-trigger game loading.
+					//pLibretroInstance->SetGame(gameFile);
+					pLibretroInstance->SetReset(true);
+				}
+				else
+				{
+					std::string oldId = pEmbeddedInstance->GetId();
+					//std::string oldTitle = pEmbeddedInstance->GetTitle();
+					int iOldEntIndex = pEmbeddedInstance->GetOriginalEntIndex();
+
+					pEmbeddedInstance->Blur();
+					pEmbeddedInstance->Deselect();
+					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+					pEmbeddedInstance->Close();
+
+					pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();
+					pLibretroInstance->Init(oldId, VarArgs("%s - Libretro", active->GetString("title", "Untitled")), iOldEntIndex);
+					DevMsg("Setting game to: %s\n", gameFile.c_str());
+					pLibretroInstance->SetOriginalGame(gameFile);
+					pLibretroInstance->SetOriginalItemId(itemId);
+					if (!pLibretroInstance->LoadCore(coreFile))	// FIXME: elegantly revert back to autoInspect if loading the core failed!
+						DevMsg("ERROR: Failed to load core: %s\n", coreFile.c_str());
+
+					//pLibretroInstance->SetActiveScraper("", "", "");
+					pLibretroInstance->Select();
+					pLibretroInstance->Focus();
+
+					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pLibretroInstance);
+				}
+
+				bLaunched = true;
+			}
+		}
+
+		if (bLaunched)
+		{
+			KeyValues* pOverlayKV = pLibretroInstance->GetOverlayKV();
+			vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+			if (pInputSlate)
+			{
+				if (pOverlayKV)
+					pInputSlate->AdjustOverlay(pOverlayKV->GetFloat("current/x", 0), pOverlayKV->GetFloat("current/y", 0), pOverlayKV->GetFloat("current/width", 1), pOverlayKV->GetFloat("current/height", 1), pLibretroInstance->GetOverlayId());
+				else
+					pInputSlate->AdjustOverlay(0, 0, 1, 1, "");
+			}
+		}
+		else
+			DevMsg("Failed to open with Libretro.\n");
+	}
 	else if (method_name == WSLit("viewStream"))
 	{
 		std::string itemId = WebStringToCharString(args[0].ToString());
@@ -1052,9 +1301,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			if (!pBrowserInstance)
 			{
 				std::string oldId;
+				int iOldEntityIndex = -1;
+				std::string oldItemId;
 				if (pEmbeddedInstance)
 				{
 					oldId = pEmbeddedInstance->GetId();
+					iOldEntityIndex = pEmbeddedInstance->GetOriginalEntIndex();
+					oldItemId = pEmbeddedInstance->GetOriginalItemId();
 
 					// close this instance
 					//DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
@@ -1063,10 +1316,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					pEmbeddedInstance->Deselect();
 					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
 					pEmbeddedInstance->Close();
-				}
 
-				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
-				pBrowserInstance->Init(oldId, streamUri.c_str(), "View Stream", null);
+					pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+					pBrowserInstance->Init(oldId, streamUri.c_str(), VarArgs("%s - Stream", active->GetString("title", "Untitled")), null, iOldEntityIndex);
+					pBrowserInstance->SetOriginalItemId(oldItemId);
+				}
 			}
 			else
 				pBrowserInstance->SetUrl(streamUri);	// reuse the current focused steam browser if it exists
@@ -1076,7 +1330,111 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pBrowserInstance->Focus();
 
 			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+
+			vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+			if (pInputSlate)
+				pInputSlate->AdjustOverlay(0, 0, 1, 1, "");
 		}
+	}
+	else if (method_name == WSLit("autoInspect"))
+	{
+		std::string itemId = WebStringToCharString(args[0].ToString());
+		KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+		if (item)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
+
+			std::string uri = "file://";
+			uri += engine->GetGameDirectory();
+			uri += "/resource/ui/html/autoInspectItem.html?id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
+
+			// the active embeded instance might not be the right type, so get rdy to re-make it if needed...
+			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+			if (!pBrowserInstance)
+			{
+				std::string oldId;
+				int iOldEntityIndex = -1;
+				std::string oldItemId;
+				if (pEmbeddedInstance)
+				{
+					oldId = pEmbeddedInstance->GetId();
+					iOldEntityIndex = pEmbeddedInstance->GetOriginalEntIndex();
+					oldItemId = pEmbeddedInstance->GetOriginalItemId();
+
+					// close this instance
+					//DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
+
+					pEmbeddedInstance->Blur();
+					pEmbeddedInstance->Deselect();
+					g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+					pEmbeddedInstance->Close();
+
+					pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+					pBrowserInstance->Init(oldId, uri, VarArgs("%s - Stream", active->GetString("title", "Untitled")), null, iOldEntityIndex);
+					pBrowserInstance->SetOriginalItemId(oldItemId);
+				}
+			}
+			else
+				pBrowserInstance->SetUrl(uri);	// reuse the current focused steam browser if it exists
+
+			pBrowserInstance->SetActiveScraper("", "", "");
+			pBrowserInstance->Select();
+			pBrowserInstance->Focus();
+
+			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+
+			vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+			if (pInputSlate)
+				pInputSlate->AdjustOverlay(0, 0, 1, 1, "");
+		}
+	}
+	else if (method_name == WSLit("viewPreview"))
+	{
+		std::string itemId = WebStringToCharString(args[0].ToString());
+		std::string previewURL = WebStringToCharString(args[1].ToString());
+
+		// the active embeded instance might not be the right type, so get rdy to re-make it if needed...
+		C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+		C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+		if (!pBrowserInstance)
+		{
+			std::string oldId;
+			int iOldEntityIndex = -1;
+			std::string oldItemId;
+			std::string oldTitle;
+			if (pEmbeddedInstance)
+			{
+				oldId = pEmbeddedInstance->GetId();
+				iOldEntityIndex = pEmbeddedInstance->GetOriginalEntIndex();
+				oldItemId = pEmbeddedInstance->GetOriginalItemId();
+				oldTitle = pEmbeddedInstance->GetTitle();
+
+				// close this instance
+				//DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
+
+				pEmbeddedInstance->Blur();
+				pEmbeddedInstance->Deselect();
+				g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+				pEmbeddedInstance->Close();
+
+				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+				pBrowserInstance->Init(oldId, previewURL, oldTitle, null, iOldEntityIndex);
+				pBrowserInstance->SetOriginalItemId(oldItemId);
+			}
+		}
+		else
+			pBrowserInstance->SetUrl(previewURL);	// reuse the current focused steam browser if it exists
+
+		pBrowserInstance->SetActiveScraper("", "", "");
+		pBrowserInstance->Select();
+		pBrowserInstance->Focus();
+
+		g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+
+		vgui::CInputSlate* pInputSlate = g_pAnarchyManager->GetInputManager()->GetInputSlate();
+		if (pInputSlate)
+			pInputSlate->AdjustOverlay(0, 0, 1, 1,"");
 	}
 	else if (method_name == WSLit("getDOM"))
 	{
@@ -1108,18 +1466,16 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		//std::string code = "var aaapicallform = document.createElement('form'); aaapicallform.method = 'post'; aaapicallform.action = 'http://www.aarcadeapicall.com.net.org/'; var aaapicallinput = document.createElement('input'); aaapicallinput.name = 'doc'; aaapicallinput.type = 'text'; aaapicallinput.value = 'tester joint'; aaapicallform.appendChild(aaapicallinput); document.body.appendChild(aaapicallform); aaapicallform.submit();";
 		//pSteamBrowserInstance->InjectJavaScript(code.c_str());
 
+		std::string mainCode;
 		std::string code;
 		std::string requestId = WebStringToCharString(args[0].ToString());
 		std::string scraperId = WebStringToCharString(args[1].ToString());
 		if (scraperId == "importSteamGames")
 		{
-			DevMsg("Injecting Steam Games importing code...\n");
-			code = "var aagames = [];";
-			code += "for(var i = 0; i < rgGames.length; i++)";
-			code += "aagames.push({\"name\": rgGames[i][\"name\"], \"appid\": rgGames[i][\"appid\"]});";
-			code += "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
-			code += requestId;
-			code += "AAAPICALL' + encodeURIComponent(JSON.stringify(aagames));";
+			code = g_pAnarchyManager->GetSteamGamesCode(requestId);
+
+			mainCode = code;
+
 			//rgGames
 			//code = "document.location = 'http://www.smsithlord.com/';";
 		}
@@ -1129,16 +1485,13 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=";
 			code += requestId;
 			code += "AAAPICALL' + encodeURIComponent(document.documentElement.outerHTML);";
-		}
 
-		//std::string code = "setTimeout(function(){ document.location = 'http://www.smsithlord.com/?rando=' + encodeURIComponent(document.documentElement.innerHTML); }, 500);";
-	///*
-		std::string mainCode = "if (document.readyState === 'complete'){";
-		mainCode += code;
-		mainCode += "}else{document.addEventListener('DOMContentLoaded', function() {";
-		mainCode += code;
-		mainCode += "});}";
-		//*/
+			mainCode = "if (document.readyState === 'complete'){";
+			mainCode += code;
+			mainCode += "}else{document.addEventListener('DOMContentLoaded', function() {";
+			mainCode += code;
+			mainCode += "});}";
+		}
 
 		DevMsg("Main code is: %s\n", mainCode.c_str());
 		pSteamBrowserInstance->InjectJavaScript(mainCode);
@@ -1166,6 +1519,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		//{
 			//bool bIsEntityInstance = false;
 
+
+			int oldOriginalEntIndex = -1;
+			std::string oldOriginalItemId;
+
 			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 			C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 			if (!pBrowserInstance)
@@ -1174,6 +1531,8 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				if (pEmbeddedInstance && pEmbeddedInstance->GetId() != "hud")
 				{
 					oldId = pEmbeddedInstance->GetId();
+					oldOriginalEntIndex = pEmbeddedInstance->GetOriginalEntIndex();
+					oldOriginalItemId = pEmbeddedInstance->GetOriginalItemId();
 
 					// close this instance
 					DevMsg("Removing embedded Instance ID: %s\n", oldId.c_str());
@@ -1196,6 +1555,12 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				
 			pBrowserInstance->Select();
 			pBrowserInstance->Focus();
+
+			if (oldOriginalEntIndex >= 0 )
+				pBrowserInstance->SetOriginalEntIndex(oldOriginalEntIndex);
+
+			if (oldOriginalItemId != "")
+				pBrowserInstance->SetOriginalItemId(oldOriginalItemId);
 
 			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
 
@@ -1360,21 +1725,40 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	}
 }
 
-void AddSubKeys(KeyValues* kv, JSObject& object)
+void AddSubKeys(KeyValues* kv, JSObject& object, bool bConvertPropertyNamesToLowercase = false)
 {
 	if (!kv)
 		return;
 
+	std::string lowerBuf;
+	//bConvertPropertyNamesToLowercase
 	for (KeyValues *sub = kv->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 	{
 		if (sub->GetFirstSubKey())
 		{
 			JSObject subObject;
-			AddSubKeys(sub, subObject);
-			object.SetProperty(WSLit(sub->GetName()), subObject);
+			AddSubKeys(sub, subObject, bConvertPropertyNamesToLowercase);
+
+			if (bConvertPropertyNamesToLowercase && Q_strcmp(sub->GetName(), AA_PLATFORM_ID) )	// don't lower-case the platform ID node!
+			{
+				lowerBuf = sub->GetName();
+				std::transform(lowerBuf.begin(), lowerBuf.end(), lowerBuf.begin(), ::tolower);
+				object.SetProperty(WSLit(lowerBuf.c_str()), subObject);
+			}
+			else
+				object.SetProperty(WSLit(sub->GetName()), subObject);
 		}
 		else
-			object.SetProperty(WSLit(sub->GetName()), WSLit(sub->GetString()));
+		{
+			if (bConvertPropertyNamesToLowercase)
+			{
+				lowerBuf = sub->GetName();
+				std::transform(lowerBuf.begin(), lowerBuf.end(), lowerBuf.begin(), ::tolower);
+				object.SetProperty(WSLit(lowerBuf.c_str()), WSLit(sub->GetString()));
+			}
+			else
+				object.SetProperty(WSLit(sub->GetName()), WSLit(sub->GetString()));
+		}
 	}
 }
 
@@ -1642,6 +2026,141 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return response;
 	}
+	else if (method_name == WSLit("getNodeSetupInfo"))
+	{
+		JSObject response;
+
+		JSObject nodeInfo;
+		KeyValues* pNodeInfoKV = new KeyValues("node");
+		if (!pNodeInfoKV->LoadFromFile(g_pFullFileSystem, "nodevolume.txt", "DEFAULT_WRITE_PATH"))
+		{
+			DevMsg("ERROR: Could not load nodevolume.txt!\n");
+			response.SetProperty(WSLit("success"), JSValue(false));
+		}
+		else
+		{
+			// Find the info shortcut for the node.
+			KeyValues* pInstanceKV = null;
+			C_PropShortcutEntity* pInfoShortcut = null;
+			C_BaseEntity* pBaseEntity;
+			C_PropShortcutEntity* pPropShortcutEntity;
+			for (KeyValues *sub = pNodeInfoKV->FindKey("setup/objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				// loop through it adding all the info to the response object.
+				pBaseEntity = C_BaseEntity::Instance(sub->GetInt());
+				if (!pBaseEntity)
+					continue;
+
+				pPropShortcutEntity = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
+				if (!pPropShortcutEntity)
+					continue;
+
+				// First, determine if this is an item with the node's info by:
+				//	a. check its model
+				//	b. check its item
+				// If it is, set pInfoShortcut to pPropShortcutEntity.
+
+				KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pPropShortcutEntity->GetItemId()));
+				if (pItemKV)
+				{
+					KeyValues* pTypeKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryType(pItemKV->GetString("type")));
+					if (pTypeKV)
+					{
+						if (!Q_strcmp(pTypeKV->GetString("info/id"), g_pAnarchyManager->GetMetaverseManager()->GetSpecialTypeId("node").c_str()))
+						{
+							pInfoShortcut = pPropShortcutEntity;
+							break;
+						}
+					}
+				}
+			}
+
+			// Next, if there is a pInfoShortcut, get the node item assigned to this shortcut.
+			// TODO: work
+
+			// Then get the instance KV of the node and save it to pInstanceKV so it can be used to detect changes.
+			// TODO: work
+
+			KeyValues* pNodeInfoSetupKV = pNodeInfoKV->FindKey("setup", true);
+			nodeInfo.SetProperty(WSLit("style"), WSLit(pNodeInfoSetupKV->GetString("style")));
+
+			bool bHasChanged = false;
+			JSArray objects;
+			object_t* pObject;
+			KeyValues* pObjectInfo;
+			KeyValues* pItemInfo;
+			KeyValues* pModelInfo;
+			KeyValues* pNodeObjectsKV = pNodeInfoSetupKV->FindKey("objects", true);
+			int arrayIndex = 0;
+			for (KeyValues *sub = pNodeObjectsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				// loop through it adding all the info to the response object.
+				pBaseEntity = C_BaseEntity::Instance(sub->GetInt());
+				if (!pBaseEntity)
+					continue;
+
+				pPropShortcutEntity = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
+				if (!pPropShortcutEntity)
+					continue;
+
+				JSObject entry;
+				if (pPropShortcutEntity == pInfoShortcut)
+					nodeInfo.SetProperty(WSLit("infoObjectIndex"), JSValue(arrayIndex));
+
+				pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pPropShortcutEntity->GetObjectId());
+				pObjectInfo = null;
+				pItemInfo = null;
+				pModelInfo = null;
+
+				g_pAnarchyManager->GetMetaverseManager()->GetObjectInfo(pObject, pObjectInfo, pItemInfo, pModelInfo);
+
+				if (!bHasChanged)
+				{
+					// Then, using the info just obtained, search through pInstanceKV & find this objects match within it.
+					// If it does not have a match, set bHasChanged = true
+					// TODO: work
+				}
+
+				if (pObjectInfo)
+				{
+					JSObject object;
+					AddSubKeys(pObjectInfo, object);
+					entry.SetProperty(WSLit("object"), object);
+
+					pObjectInfo->deleteThis();
+				}
+
+				if (pItemInfo)
+				{
+					JSObject item;
+					AddSubKeys(pItemInfo, item);
+					entry.SetProperty(WSLit("item"), item);
+
+					pItemInfo->deleteThis();
+				}
+
+				if (pModelInfo)
+				{
+					JSObject model;
+					AddSubKeys(pModelInfo, model);
+					entry.SetProperty(WSLit("model"), model);
+
+					pModelInfo->deleteThis();
+				}
+
+				objects.Push(entry);
+				arrayIndex++;
+			}
+
+			nodeInfo.SetProperty(WSLit("hasChanged"), JSValue(bHasChanged));
+			nodeInfo.SetProperty(WSLit("objects"), objects);
+			response.SetProperty(WSLit("success"), JSValue(true));
+		}
+		pNodeInfoKV->deleteThis();
+
+		response.SetProperty(WSLit("nodeInfo"), nodeInfo);
+		return response;
+	}
 	else if (method_name == WSLit("getFirstLibraryEntry"))
 	{
 		//const char* 
@@ -1827,6 +2346,20 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return JSValue(0);
 	}
+	else if (method_name == WSLit("getLibraryModel"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pModelKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(id));
+		if (pModelKV)
+		{
+			JSObject model;
+			AddSubKeys(pModelKV, model, true);
+			return model;
+		}
+		else
+			return JSValue(0);
+	}
 	else if (method_name == WSLit("getLibraryItem"))
 	{
 		std::string id = WebStringToCharString(args[0].ToString());
@@ -1972,9 +2505,10 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		unsigned int max = update.size();
 		for (unsigned int i = 0; i < max; i += 2)
 		{
-			DevMsg("Updating %s with %s\n", update.At(i).ToString(), update.At(i + 1).ToString());
 			field = WebStringToCharString(update.At(i).ToString());
 			value = WebStringToCharString(update.At(i + 1).ToString());
+
+			//DevMsg("Updating %s with %s\n", field.c_str(), value.c_str());
 
 			// update field with value
 			pInfoKV->SetString(field.c_str(), value.c_str());
@@ -2013,6 +2547,125 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return WSLit(id.c_str());
 	}
+	else if (method_name == WSLit("updateModel"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pModelKV = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(id);
+		KeyValues* pActiveKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pModelKV);
+		if (pActiveKV)
+		{
+			// now loop through our updated fields
+			bool bNeedsModelUpdate = false;
+			std::string field;
+			std::string value;
+			JSArray update = args[1].ToArray();
+			unsigned int max = update.size();
+			for (unsigned int i = 0; i < max; i += 2)
+			{
+				//JSObject object = update.At(i).ToObject();
+				//field = WebStringToCharString(object.GetProperty(WSLit("field")).ToString());
+				//value = WebStringToCharString(object.GetProperty(WSLit("value")).ToString());
+				field = WebStringToCharString(update.At(i).ToString());
+				value = WebStringToCharString(update.At(i + 1).ToString());
+
+				// update field with value
+				pActiveKV->SetString(field.c_str(), value.c_str());
+
+				// if any of the following fields were changed, the images on the item should be refreshed:
+				if (field == std::string(VarArgs("platforms/%s/file", AA_PLATFORM_ID)))
+					bNeedsModelUpdate = true;
+			}
+
+			// now save the item's changes
+			g_pAnarchyManager->GetMetaverseManager()->SaveModel(pModelKV);
+
+			if (bNeedsModelUpdate)
+			{
+				g_pAnarchyManager->GetInstanceManager()->ModelFileChanged(id);
+				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "ALL");
+				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "screen");
+				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "marquee");
+			}
+
+			return JSValue(true);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("libretroUpdateDLL"))
+	{
+		//libretroUpdateDLL(payload.coreFile, payload.enabled, payload.priority, payload.paths)
+		unsigned int numArgs = args.size();
+		if (numArgs < 6 || !args[0].IsString() || !args[1].IsInteger() || !args[2].IsInteger() || !args[3].IsInteger() || !args[4].IsInteger() || !args[5].IsArray())
+		{
+			DevMsg("ERROR: My hair is a bird.  Your argument is invalid. (%u)\n", numArgs);
+			return JSValue(false);
+		}
+		else
+		{
+			KeyValues* pCoreSettingsKV = g_pAnarchyManager->GetLibretroManager()->GetCoreSettingsKV();
+
+			// Find this coreFile's KV
+			std::string coreFile = WebStringToCharString(args[0].ToString());
+
+			KeyValues* pCoreEntryKV = null;
+			for (KeyValues *sub = pCoreSettingsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				if (!Q_stricmp(sub->GetString("file"), coreFile.c_str()))
+				{
+					pCoreEntryKV = sub;
+					break;
+				}
+			}
+
+			if (!pCoreEntryKV)
+			{
+				DevMsg("ERROR: Could not find core settings for %s\n", coreFile.c_str());
+				return JSValue(false);
+			}
+			else
+			{
+				bool enabled = (args[1].ToInteger()) ? true : false;
+				bool cartsaves = (args[2].ToInteger()) ? true : false;
+				bool statesaves = (args[3].ToInteger()) ? true : false;
+				int priority = args[4].ToInteger();
+
+				pCoreEntryKV->SetBool("enabled", enabled);
+				pCoreEntryKV->SetBool("cartsaves", cartsaves);
+				pCoreEntryKV->SetBool("statesaves", statesaves);
+				pCoreEntryKV->SetInt("priority", priority);
+
+				// Now update the CONTENT FOLDERS
+				KeyValues* pCoreEntryPathsKV = pCoreEntryKV->FindKey("paths", true);
+				pCoreEntryPathsKV->Clear();
+
+				KeyValues* pPathKV;
+				std::string path;
+				std::string extensions;
+				JSArray paths = args[5].ToArray();
+				unsigned int max = paths.size();
+				for (unsigned int i = 0; i < max; i += 2)
+				{
+					path = WebStringToCharString(paths.At(i).ToString());
+					extensions = WebStringToCharString(paths.At(i + 1).ToString());
+
+					if (path != "" || extensions != "")
+					{
+						pPathKV = pCoreEntryPathsKV->CreateNewKey();
+						pPathKV->SetName("path");
+
+						pPathKV->SetString("path", path.c_str());
+						pPathKV->SetString("extensions", extensions.c_str());
+					}
+				}
+
+				g_pAnarchyManager->GetLibretroManager()->SaveCoreSettings();
+			}
+		}
+
+		return JSValue(true);
+	}
 	else if (method_name == WSLit("updateItem"))
 	{
 		std::string id = WebStringToCharString(args[0].ToString());
@@ -2048,11 +2701,83 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 				
 			if (bNeedsTextureUpdate)
 			{
+				/*
+				C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->GetFocusedLibretroInstance();
+				if (pLibretroInstance)
+				{
+					if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == (C_EmbeddedInstance*)pLibretroInstance)
+						g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+
+					g_pAnarchyManager->GetLibretroManager()->DestroyLibretroInstance(pLibretroInstance);
+				}
+				*/
+				/*
+				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+				if (pEmbeddedInstance)
+				{
+					if (pEmbeddedInstance && pEmbeddedInstance->GetId() != "hud")
+					{
+						pEmbeddedInstance->Blur();
+						pEmbeddedInstance->Deselect();
+						g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(null);
+						pEmbeddedInstance->Close();
+					}
+				}
+				*/
+
+				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 				g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "ALL");
 				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "screen");
 				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "marquee");
+				g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 			}
 
+			return JSValue(true);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("updateInstance"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		instance_t* pInstance = g_pAnarchyManager->GetInstanceManager()->GetInstance(id);
+		if (pInstance)
+		{
+			// now loop through our updated fields
+			bool bNeedsTextureUpdate = false;
+			std::string field;
+			std::string value;
+			JSArray update = args[1].ToArray();
+			unsigned int max = update.size();
+			for (unsigned int i = 0; i < max; i += 2)
+			{
+				//JSObject object = update.At(i).ToObject();
+				//field = WebStringToCharString(object.GetProperty(WSLit("field")).ToString());
+				//value = WebStringToCharString(object.GetProperty(WSLit("value")).ToString());
+				field = WebStringToCharString(update.At(i).ToString());
+				value = WebStringToCharString(update.At(i + 1).ToString());
+
+				// update field with value
+				if (field == "title")
+					pInstance->title = std::string(value);
+			}
+
+			// now save the instance's changes
+			g_pAnarchyManager->GetMetaverseManager()->SaveInstanceTitle(pInstance);
+			return JSValue(true);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("deleteInstance"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		instance_t* pInstance = g_pAnarchyManager->GetInstanceManager()->GetInstance(id);
+		if (pInstance)
+		{
+			g_pAnarchyManager->GetMetaverseManager()->DeleteInstance(pInstance);
 			return JSValue(true);
 		}
 		else
@@ -2162,6 +2887,58 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return response;
 	}
+	else if (method_name == WSLit("getEntityInfo"))
+	{
+		C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(args[0].ToInteger()));
+
+		std::string id;
+		if (pShortcut)
+			id = pShortcut->GetObjectId();
+
+		JSObject response;
+		if (id != "")
+		{
+			response.SetProperty(WSLit("success"), JSValue(true));
+
+			object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(id);
+			KeyValues* pObjectInfo = null;
+			KeyValues* pItemInfo = null;
+			KeyValues* pModelInfo = null;
+
+			g_pAnarchyManager->GetMetaverseManager()->GetObjectInfo(pObject, pObjectInfo, pItemInfo, pModelInfo);
+
+			if (pObjectInfo)
+			{
+				JSObject object;
+				AddSubKeys(pObjectInfo, object);
+				response.SetProperty(WSLit("object"), object);
+
+				pObjectInfo->deleteThis();
+			}
+
+			if (pItemInfo)
+			{
+				JSObject item;
+				AddSubKeys(pItemInfo, item);
+				response.SetProperty(WSLit("item"), item);
+
+				pItemInfo->deleteThis();
+			}
+
+			if (pModelInfo)
+			{
+				JSObject model;
+				AddSubKeys(pModelInfo, model);
+				response.SetProperty(WSLit("model"), model);
+
+				pModelInfo->deleteThis();
+			}
+		}
+		else
+			response.SetProperty(WSLit("success"), JSValue(false));
+
+		return response;
+	}
 	else if (method_name == WSLit("getObjectInfo"))
 	{
 		std::string id = WebStringToCharString(args[0].ToString());
@@ -2174,17 +2951,6 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		KeyValues* pModelInfo = null;
 
 		g_pAnarchyManager->GetMetaverseManager()->GetObjectInfo(pObject, pObjectInfo, pItemInfo, pModelInfo);
-
-		/*
-		KeyValues* rawModelKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(pObject->modelId));
-		if (rawModelKV)
-		{
-			JSObject rawModel;
-			AddSubKeys(rawModelKV, rawModel);
-			response.SetProperty(WSLit("rawItem"), rawModel);
-		}
-		*/
-
 		if (pObjectInfo)
 		{
 			JSObject object;
@@ -2205,16 +2971,6 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		if (pModelInfo)
 		{
-			/*
-			KeyValues* rawModelKV = g_pAnarchyManager->GetMetaverseManager()->DetectRequiredWorkshopForModelFile(pModelInfo->GetString("file"));
-			if (rawModelKV)
-			{
-				JSObject rawModel;
-				AddSubKeys(rawModelKV, rawModel);
-				response.SetProperty(WSLit("rawItem"), rawModel);
-			}
-			*/
-
 			JSObject model;
 			AddSubKeys(pModelInfo, model);
 			response.SetProperty(WSLit("model"), model);
@@ -2285,6 +3041,141 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		response.SetProperty(WSLit("success"), JSValue(true));
 		response.SetProperty(WSLit("backpacks"), backpacks);
 		return response;
+	}
+	else if (method_name == WSLit("getLibretroActiveOverlay"))
+	{
+		JSObject response;
+		float fPositionX = 0;
+		float fPositionY = 0;
+		float fSizeX = 1;
+		float fSizeY = 1;
+		std::string overlayId = "";
+
+		C_LibretroInstance* pLibretroInstance = dynamic_cast<C_LibretroInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		if (pLibretroInstance)
+			pLibretroInstance->GetFullscreenInfo(fPositionX, fPositionY, fSizeX, fSizeY, overlayId);
+
+		response.SetProperty(WSLit("x"), JSValue(fPositionX));
+		response.SetProperty(WSLit("y"), JSValue(fPositionX));
+		response.SetProperty(WSLit("width"), JSValue(fSizeX));
+		response.SetProperty(WSLit("height"), JSValue(fSizeY));
+		//response.SetProperty(WSLit("file"), WSLit(file.c_str()));
+		response.SetProperty(WSLit("overlayId"), WSLit(overlayId.c_str()));
+
+		// ALSO figure out the CORE overlayId
+		std::string coreOverlayId;
+		std::string gameOverlayId;
+
+		if (pLibretroInstance)
+		{
+			KeyValues* pOverlaysKV = g_pAnarchyManager->GetLibretroManager()->GetOverlaysKV();
+			KeyValues* pOverlayEntryKV = null;
+			std::string prettyCore = pLibretroInstance->GetInfo()->prettycore;
+			std::string prettyGame = pLibretroInstance->GetInfo()->prettygame;
+			std::string testerCore;
+			std::string testerGame;
+			for (KeyValues *sub = pOverlaysKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				testerCore = sub->GetString("core");
+				testerGame = sub->GetString("game");
+
+				if (testerCore != prettyCore)
+					continue;
+
+				if (testerGame == "")
+					coreOverlayId = sub->GetString("overlayId");
+				else if (testerGame == prettyGame)
+					gameOverlayId = sub->GetString("overlayId");
+			}
+		}
+		response.SetProperty(WSLit("coreOverlayId"), WSLit(coreOverlayId.c_str()));
+		response.SetProperty(WSLit("gameOverlayId"), WSLit(gameOverlayId.c_str()));
+
+		return response;
+	}
+	else if (method_name == WSLit("getLibretroOverlays"))
+	{
+		g_pAnarchyManager->GetLibretroManager()->DetectAllOverlaysPNGs();
+
+		JSArray overlays;
+		std::vector<std::string> overlayFiles;
+		g_pAnarchyManager->GetLibretroManager()->DetectAllOverlays(overlayFiles);
+		for (unsigned int i = 0; i < overlayFiles.size(); i++)
+			overlays.Push(WSLit(overlayFiles[i].c_str()));
+		return overlays;
+	}
+	else if (method_name == WSLit("libretroGetAllDLLs"))
+	{
+		JSObject response;
+		C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
+		if (pLibretroManager)
+		{
+			JSArray cores;
+			response.SetProperty(WSLit("success"), JSValue(true));
+
+			KeyValues* pBlacklistedDLLsKV = g_pAnarchyManager->GetLibretroManager()->GetBlacklistedDLLsKV();
+			KeyValues* pCoreSettingsKV = g_pAnarchyManager->GetLibretroManager()->GetCoreSettingsKV();
+
+			bool bBlacklisted;
+			std::string coreFile;
+			for (KeyValues *pCoreSub = pCoreSettingsKV->GetFirstSubKey(); pCoreSub; pCoreSub = pCoreSub->GetNextKey())
+			{
+				coreFile = pCoreSub->GetString("file");
+				bBlacklisted = false;
+				for (KeyValues *pDLLSub = pBlacklistedDLLsKV->GetFirstSubKey(); pDLLSub; pDLLSub = pDLLSub->GetNextKey())
+				{
+					if (!Q_stricmp(coreFile.c_str(), pDLLSub->GetString("file")))
+					{
+						bBlacklisted = true;
+						break;
+					}
+				}
+
+				if (!bBlacklisted && pCoreSub->GetBool("exists"))
+				{
+					JSObject core;
+					core.SetProperty(WSLit("file"), WSLit(coreFile.c_str()));
+					core.SetProperty(WSLit("enabled"), JSValue(pCoreSub->GetInt("enabled")));
+					core.SetProperty(WSLit("cartsaves"), JSValue(pCoreSub->GetInt("cartsaves")));
+					core.SetProperty(WSLit("statesaves"), JSValue(pCoreSub->GetInt("statesaves")));
+					core.SetProperty(WSLit("priority"), JSValue(pCoreSub->GetInt("priority")));
+
+					std::string pathText;
+					std::string extensions;
+					JSArray paths;
+					for (KeyValues *sub = pCoreSub->FindKey("paths", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+					{
+						pathText = sub->GetString("path");
+						extensions = sub->GetString("extensions");
+
+						if (pathText == "" && extensions == "")
+							continue;
+
+						JSObject path;
+						path.SetProperty(WSLit("path"), WSLit(pathText.c_str()));
+						path.SetProperty(WSLit("extensions"), WSLit(extensions.c_str()));
+						paths.Push(path);
+					}
+					core.SetProperty(WSLit("paths"), paths);
+					cores.Push(core);
+				}
+			}
+
+			response.SetProperty(WSLit("cores"), cores);
+		}
+		else
+			response.SetProperty(WSLit("success"), JSValue(false));
+
+		return response;
+	}
+	else if (method_name == WSLit("getLibretroGUIGamepadEnabled"))
+	{
+		bool bValue = false;
+		C_LibretroManager* pLibretroManager = g_pAnarchyManager->GetLibretroManager();
+		if (pLibretroManager)
+			bValue = pLibretroManager->GetGUIGamepadEnabled();
+
+		return JSValue(bValue);
 	}
 	else if (method_name == WSLit("getAllWorkshopSubscriptions"))
 	{
@@ -3018,6 +3909,8 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		joypad.SetProperty(WSLit("buttons"), joypadButtons);
 		devices.SetProperty(WSLit("RETRO_DEVICE_JOYPAD"), joypad);
+
+		/*
 
 		// MOUSE
 		JSObject mouse;
@@ -4003,6 +4896,8 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		pointer.SetProperty(WSLit("buttons"), pointerButtons);
 		devices.SetProperty(WSLit("RETRO_DEVICE_POINTER"), pointer);
+
+		*/
 		
 		response.SetProperty(WSLit("devices"), devices);
 
@@ -4851,6 +5746,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	else if (method_name == WSLit("getLibretroKeybinds"))
 	{
 		std::string type = WebStringToCharString(args[0].ToString());
+		int portNumber = (args.size() > 1) ? args[1].ToInteger() : -1;
+		int deviceNumber = (args.size() > 2) ? args[2].ToInteger() : -1;
+		int indexNumber = (args.size() > 3) ? args[3].ToInteger() : -1;
 
 		JSObject response;
 
@@ -4870,14 +5768,23 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			JSObject keybinds;
 			for (unsigned int i = 0; i < numPorts; i++)
 			{
+				if (portNumber >= 0 && i != portNumber)
+					continue;
+
 				JSObject port;
 				unsigned int numDevices = 7;
 				for (unsigned int j = 0; j < numDevices; j++)
 				{
+					if (deviceNumber >= 0 && j != deviceNumber)
+						continue;
+
 					JSObject device;
 					unsigned int maxIndex = 1;
 					for (unsigned int k = 0; k < maxIndex; k++)
 					{
+						if (indexNumber >= 0 && k != indexNumber)
+							continue;
+
 						JSObject index;
 
 						// cycle through ACTIVE keybinds

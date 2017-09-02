@@ -15,6 +15,8 @@ function ArcadeHud()
 	this.cursorPreviewImageElem;
 	this.cursorImageElem;
 	this.helpElem;
+	this.overlayId = "";
+	this.coreOverlayId = "";
 	//this.metaScrapeElem;
 	//this.hudMetaScrapeContainer;
 	this.startupLoadingMessagesContainer;
@@ -27,8 +29,10 @@ function ArcadeHud()
 	this.fileBrowseHandles = {};
 	this.metaScrapeHandles = {};
 	this.activeScraper = null;
+	this.libretroOverlay = null
 	this.activeScraperItemId = "";
 	this.activeScraperField = "";
+	this.embeddedInstanceType = "";
 	this.scrapers = {
 		"importSteamGames":
 		{
@@ -162,7 +166,7 @@ function ArcadeHud()
 			for( var i = 0; i < aaTabContents.length; i++ )
 			{
 				aaTabContent = aaTabContents[i];
-				aaTabContent.style.display = "none";
+				//aaTabContent.style.display = "none";
 			}
 
 			var activeTab;
@@ -196,63 +200,12 @@ function ArcadeHud()
 		//var browserMenuElem = document.createElement("div");
 		//browserMenuElem.className = "hudHeaderContainer";
 
+		var iconSize = arcadeHud.themeSizes.IconSize;
 		var browserMenuElem = document.querySelector(".hudHeaderContainer");
 		if( browserMenuElem )
 		{
-			// navigation container
-			var navigationElem = document.createElement("div");
-			navigationElem.className = "hudHeaderNavigationContainer";
-			navigationElem.style.cssText = "text-align: center; font-size: 20px; font-family: Arial;";
+			// TABS
 
-			// address form
-			var addressFormElem = document.createElement("form");
-			addressFormElem.style.cssText = "display: inline-block;";
-
-			addressFormElem.addEventListener("submit", function(e)
-			{
-				e.preventDefault();
-				arcadeHud.navigateToURI(arcadeHud.addressElem.value);
-				//return false;
-			}, true);
-
-			// address label
-			var addressLabelElem = document.createElement("div");//createTextNode("Internet Address:");
-			addressLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
-			addressLabelElem.innerText = "Internet Address";
-			addressFormElem.appendChild(addressLabelElem);
-			//navigationElem.appendChild(addressLabelElem);
-
-			// address
-			this.addressElem = document.createElement("input");
-			this.addressElem.style.cssText= "width: 600px; font-size: 20px; font-family: Arial;";
-			this.addressElem.addEventListener("focus", function()
-			{
-				arcadeHud.addressElem.select();
-				//arcadeHud.addressElem.setSelectionRange(0, arcadeHud.addressElem.value.length);
-			}, true);
-			
-			addressFormElem.appendChild(this.addressElem);
-			navigationElem.appendChild(addressFormElem);
-			//navigationElem.appendChild(this.addressElem);
-			//navigationElem.innerHTML = "helloo world";
-
-			// back label
-			var backLabelElem = document.createElement("div");//createTextNode("Internet Address:");
-			backLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
-			backLabelElem.innerHTML = "&#x25c0;";
-			navigationElem.appendChild(backLabelElem);
-
-			// home label
-			var homeLabelElem = document.createElement("div");//createTextNode("Internet Address:");
-			homeLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
-			homeLabelElem.innerHTML = "&#10070;";
-			navigationElem.appendChild(homeLabelElem);
-
-			// fav label
-			var favLabelElem = document.createElement("div");//createTextNode("Internet Address:");
-			favLabelElem.style.cssText = "display: inline-block; border: 2px solid rgba(50, 0, 0, 0.7); background-color: rgba(100, 0, 0, 0.7); border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
-			favLabelElem.innerHTML = "&#9733;";
-			navigationElem.appendChild(favLabelElem);
 
 			// browser tabs container table
 			var topTabsTableElem = document.createElement("div");
@@ -276,7 +229,7 @@ function ArcadeHud()
 
 			// aarcade tab label
 			var aarcadeTabLabelElem = document.createElement("div");
-			aarcadeTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
+			aarcadeTabLabelElem.className = "topLabel hudHeaderButton hudHeaderButtonOn helpNote aaThemeColorOneLowHoverBackgroundColor";
 			aarcadeTabLabelElem.setAttribute("help", "Expand the address bar.");
 			aarcadeTabLabelElem.innerHTML = "AArcade";
 			aarcadeTabLabelElem.addEventListener("click", function()
@@ -287,10 +240,6 @@ function ArcadeHud()
 			// other browser tab container cell
 			var otherBrowserTabsCell = document.createElement("div");
 			otherBrowserTabsCell.className = "hudHeaderContainerCell";
-
-			// pin browser tab container cell
-			//var pinBrowserTabsCell = document.createElement("div");
-			//pinBrowserTabsCell.className = "hudHeaderContainerCell";
 
 			// unpin browser tab
 			var unpinBrowserTabElem = document.createElement("div");
@@ -311,13 +260,12 @@ function ArcadeHud()
 			// libretro browser tab
 			var libretroBrowserTabElem = document.createElement("div");
 			libretroBrowserTabElem.className = "hudHeaderButtonContainer";
-			//libretroBrowserTabElem.style.right = "20%";
 			libretroBrowserTabElem.id = "libretroHudButton";
 
 			// libretro tab label
-			//console.log("shiiit");
 			var libretroTabLabelElem = document.createElement("div");
-			libretroTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote";
+			libretroTabLabelElem.style.cssText = "display: none;";
+			libretroTabLabelElem.className = "hudHeaderButton hudHeaderButtonOn helpNote aaThemeColorOneLowHoverBackgroundColor";
 			libretroTabLabelElem.setAttribute("help", "Libretro Menu");
 			libretroTabLabelElem.innerHTML = "&nbsp;<img src=\"asset://ui/runicon.png\" />&nbsp;";
 			libretroTabLabelElem.addEventListener("click", function()
@@ -343,7 +291,140 @@ function ArcadeHud()
 				this.returnHudButtonElem.style.display = 'inline-block';
 			}.bind(this), true);
 
+			// STEAMWORKSBROWSER navigation container
+			var navigationElem = document.createElement("div");
+			navigationElem.setAttribute("frameworkName", "SteamworksBrowser");
+			navigationElem.className = "hudHeaderNavigationContainer aaThemeColorOneShadedBackground";
+			navigationElem.style.cssText = "display: none; text-align: center; font-size: 20px; font-family: Arial;";
+
+			// address form
+			var addressFormElem = document.createElement("form");
+			addressFormElem.style.cssText = "display: inline-block;";
+
+			addressFormElem.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				arcadeHud.navigateToURI(arcadeHud.addressElem.value);
+				//return false;
+			}, true);
+
+			// adressLabel
+			var adressLabelElem = document.createElement("div");
+			adressLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHighShadedBackground aaThemeColorOneShadedBorderColor";
+			adressLabelElem.setAttribute("help", "The URL of the website you are currently viewing.");
+			this.assignHelp(adressLabelElem);
+			adressLabelElem.style.cssText = "margin: 2px; margin-left: 20px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			adressLabelElem.innerHTML = "Address:";
+			navigationElem.appendChild(adressLabelElem);
+
+			// address
+			this.addressElem = document.createElement("input");
+			this.addressElem.className = "helpNote aaTitleTextSizeFontSize";
+			this.addressElem.setAttribute("help", "The URL of the website you are currently viewing.");
+			this.assignHelp(this.addressElem);
+			this.addressElem.style.cssText= "margin: 2px; width: 600px; font-family: Arial;";
+			this.addressElem.addEventListener("focus", function()
+			{
+				arcadeHud.addressElem.select();
+			}, true);
+			
+			addressFormElem.appendChild(this.addressElem);
+			navigationElem.appendChild(addressFormElem);
+
+			// back label
+			var backLabelElem = document.createElement("div");
+			backLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.goBack();
+			}.bind(backLabelElem), true);
+			backLabelElem.className = "helpNote navArrowButton navArrowButtonBack aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			backLabelElem.setAttribute("help", "Go back.");
+			this.assignHelp(backLabelElem);
+			backLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			backLabelElem.innerHTML = "&#x25C4;";
+			navigationElem.appendChild(backLabelElem);
+
+			// reload label
+			var reloadLabelElem = document.createElement("div");
+			reloadLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.reload();
+			}.bind(reloadLabelElem), true);
+			reloadLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			reloadLabelElem.setAttribute("help", "Reload this web page.");
+			this.assignHelp(reloadLabelElem);
+			reloadLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			reloadLabelElem.innerHTML = "&#x21bb;";
+			navigationElem.appendChild(reloadLabelElem);
+
+			// foward label
+			var fowardLabelElem = document.createElement("div");
+			fowardLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.goForward();
+			}.bind(fowardLabelElem), true);
+			fowardLabelElem.className = "helpNote navArrowButton navArrowButtonForward aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			fowardLabelElem.setAttribute("help", "Go forward.");
+			this.assignHelp(fowardLabelElem);
+			fowardLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			fowardLabelElem.innerHTML = "&#x25BA;";
+			navigationElem.appendChild(fowardLabelElem);
+
+			var homeIconHTML = arcadeHud.generateIconHTML("homeicon.png", iconSize, iconSize, "aaTextColorOneColor");
+
+			// home label
+			var homeLabelElem = document.createElement("div");
+			homeLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.goHome();
+				arcadeHud.expandAddressMenu();
+			}.bind(homeLabelElem), true);
+			homeLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			homeLabelElem.setAttribute("help", "Go to your home page URL.");
+			this.assignHelp(homeLabelElem);
+			homeLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			homeLabelElem.innerHTML = homeIconHTML + "<div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(homeLabelElem);
+
+			var newIconHTML = arcadeHud.generateIconHTML("newicon.png", iconSize, iconSize, "aaTextColorOneColor");
+
+			// new label
+			var newLabelElem = document.createElement("div");
+			newLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			newLabelElem.setAttribute("help", "Spawn the current page as a NEW item.");
+			this.assignHelp(newLabelElem);
+			newLabelElem.style.cssText = "margin: 2px; margin-right: 20px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			newLabelElem.innerHTML = newIconHTML + "<div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			newLabelElem.addEventListener("click", function(e)
+			{
+				//console.log("yaaaaaaaaaar");
+
+				/*
+					1. DOM gets fetched
+					2. DOM gets returned
+					3. ALL scrapers attempt TEST logic.
+					4. Highest priority match gets used!
+					5. Scrape & victory bowl.
+				*/
+				arcadeHud.fetchDOM();
+			}, true);
+			navigationElem.appendChild(newLabelElem);
+
+			/*
+			var scrapeIconHTML = arcadeHud.generateIconHTML("scrapeicon.png", iconSize, iconSize, "aaTextColorOneColor");
+
+			// scrape label
+			var scrapeLabelElem = document.createElement("div");
+			scrapeLabelElem.className = "helpNote aaTitleTextSizeFontSize aaDisabled aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			scrapeLabelElem.setAttribute("help", "Scrape info off of the current page and apply it to the selected item.");
+			this.assignHelp(scrapeLabelElem);
+			scrapeLabelElem.style.cssText = "margin: 2px; margin-right: 20px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			scrapeLabelElem.innerHTML = scrapeIconHTML + "<div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(scrapeLabelElem);
+			*/
+
 			// compose
+			/*
 			aarcadeBrowserTabsCell.appendChild(aarcadeBrowserTabElem);
 			aarcadeBrowserTabElem.appendChild(aarcadeTabLabelElem);
 
@@ -359,15 +440,375 @@ function ArcadeHud()
 			topTabsRowElem.appendChild(otherBrowserTabsCell);
 
 			topTabsTableElem.appendChild(topTabsRowElem);
-
+*/
 			browserMenuElem.appendChild(navigationElem);
+			//browserMenuElem.appendChild(topTabsTableElem);
+
+
+			// LIBRETRO navigation container
+			var navigationElem = document.createElement("div");
+			navigationElem.setAttribute("frameworkName", "Libretro");//SteamworksBrowser");
+			navigationElem.className = "hudHeaderNavigationContainer aaThemeColorOneShadedBackground";
+			navigationElem.style.cssText = "display: none; text-align: center; font-size: 20px; font-family: Arial;";
+/*
+			// address form
+			var addressFormElem = document.createElement("form");
+			addressFormElem.style.cssText = "display: inline-block;";
+
+			addressFormElem.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				arcadeHud.navigateToURI(arcadeHud.addressElem.value);
+				//return false;
+			}, true);
+*/
+/*
+			// back label
+			var backLabelElem = document.createElement("div");
+			backLabelElem.className = "aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+			backLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			backLabelElem.innerHTML = "&#x25C4;";
+			navigationElem.appendChild(backLabelElem);
+
+			// foward label
+			var fowardLabelElem = document.createElement("div");
+			fowardLabelElem.className = "aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+			fowardLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			fowardLabelElem.innerHTML = "&#x25BA;";
+			navigationElem.appendChild(fowardLabelElem);
+*/
+/*
+			// address
+			this.addressElem = document.createElement("input");
+			this.addressElem.className = "aaTitleTextSizeFontSize";
+			this.addressElem.style.cssText= "margin: 2px; width: 600px; font-family: Arial;";
+			this.addressElem.addEventListener("focus", function()
+			{
+				arcadeHud.addressElem.select();
+			}, true);
+			
+			addressFormElem.appendChild(this.addressElem);
+			navigationElem.appendChild(addressFormElem);
+*/
+
+			//var iconSize = arcadeHud.themeSizes.IconSize;
+
+			// fileLabel
+			var fileLabelElem = document.createElement("div");
+			fileLabelElem.setAttribute("help", "The file that is currently being ran by the Libretro core.");
+			fileLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHighShadedBackground aaThemeColorOneShadedBorderColor";
+			fileLabelElem.style.cssText = "margin: 2px; margin-left: 20px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			fileLabelElem.innerHTML = "File:";
+			navigationElem.appendChild(fileLabelElem);
+
+			// file
+			//var pauseIconHTML = arcadeHud.generateIconHTML("scrapeicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var fileInputElem = document.createElement("input");
+			fileInputElem.setAttribute("help", "The file that is currently being ran by the Libretro core.");
+			fileInputElem.className = "helpNote aaLibretroTopInput aaLibretroTopInputFile aaTitleTextSizeFontSize";
+			fileInputElem.size = 40;
+			//fileInputElem.placeholder = "video_file.avi";
+			fileInputElem.style.cssText= "margin: 2px; font-family: Arial; margin-right: 20px;";// margin-right: 20px;
+			navigationElem.appendChild(fileInputElem);
+
+
+			// coreLabel
+			var coreLabelElem = document.createElement("div");
+			coreLabelElem.setAttribute("help", "The currently running Libretro core.");
+			coreLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHighShadedBackground aaThemeColorOneShadedBorderColor";
+			coreLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			coreLabelElem.innerHTML = "Core:";
+			navigationElem.appendChild(coreLabelElem);
+
+			// core
+			var coreInputElem = document.createElement("input");
+			coreInputElem.setAttribute("help", "The currently running Libretro core.");
+			coreInputElem.className = "helpNote aaLibretroTopInput aaLibretroTopInputCore aaTitleTextSizeFontSize";
+			coreInputElem.size = 20;
+			//coreInputElem.placeholder = "ffmpeg.dll";
+			coreInputElem.style.cssText= "margin: 2px; font-family: Arial;";
+			navigationElem.appendChild(coreInputElem);
+
+			// pause label
+			var pauseIconHTML = arcadeHud.generateIconHTML("pauseicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var pauseLabelElem = document.createElement("div");
+			pauseLabelElem.setAttribute("help", "PAUSE the Libretro core.");
+			pauseLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.libretroPause();
+
+				if( !this.classList.contains("aaDepressed") )
+					this.classList.add("aaDepressed");
+				else
+					this.classList.remove("aaDepressed");
+			}.bind(pauseLabelElem), true);
+			pauseLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			pauseLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			pauseLabelElem.innerHTML = "<div style='display: inline; position: relative; top: -3px;'>" + pauseIconHTML + "</div><div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(pauseLabelElem);
+
+			// reset label
+			var resetLabelElem = document.createElement("div");
+			resetLabelElem.setAttribute("help", "RESET the Libretro core.");
+			resetLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.libretroReset();
+			}.bind(resetLabelElem), true);
+			resetLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			resetLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			resetLabelElem.innerHTML = "&#x21bb;";
+			navigationElem.appendChild(resetLabelElem);
+/*
+			// guigamepad label
+			var guiGamepadIconHTML = arcadeHud.generateIconHTML("runicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var guiGamepadLabelElem = document.createElement("div");
+			guiGamepadLabelElem.addEventListener("click", function(e)
+			{
+				//aaapi.system.setLibretroGUIGamepadEnabled();	// no param means "toggle"
+
+				var elem;
+				var elems = document.querySelectorAll(".libretroGUIGamepad");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					elem = elems[i];
+					if( elem.style.display !== "block" )
+						elem.style.display = "block";
+					else
+						elem.style.display = "none";
+				}
+
+				if( !this.classList.contains("aaDepressed") )
+				{
+					this.classList.add("aaDepressed");
+					aaapi.system.setLibretroGUIGamepadEnabled(true);
+				}
+				else
+				{
+					this.classList.remove("aaDepressed");
+					aaapi.system.setLibretroGUIGamepadEnabled(false);
+				}
+			}.bind(guiGamepadLabelElem), true);
+			guiGamepadLabelElem.className = "aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			guiGamepadLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			guiGamepadLabelElem.innerHTML = guiGamepadIconHTML + "<div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(guiGamepadLabelElem);
+			*/
+
+
+			// input settings label
+			var inputSettingsIconHTML = arcadeHud.generateIconHTML("runicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var inputSettingsLabelElem = document.createElement("div");
+			inputSettingsLabelElem.setAttribute("help", "INPUT settings for Libretro.");
+			inputSettingsLabelElem.addEventListener("click", function(e)
+			{
+				window.location = 'asset://ui/libretroInputMenu.html';
+				/*
+				aaapi.system.libretroPause();
+
+				if( !this.classList.contains("aaDepressed") )
+					this.classList.add("aaDepressed");
+				else
+					this.classList.remove("aaDepressed");
+				*/
+			}.bind(inputSettingsLabelElem), true);
+			inputSettingsLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			inputSettingsLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			inputSettingsLabelElem.innerHTML = "<div style='display: inline; position: relative; top: -3px;'>" + inputSettingsIconHTML + "</div><div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(inputSettingsLabelElem);
+
+
+			// core settings label
+			var coreSettingsIconHTML = arcadeHud.generateIconHTML("cogicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var coreSettingsLabelElem = document.createElement("div");
+			coreSettingsLabelElem.setAttribute("help", "CORE & GAME settings for Libretro.");
+			coreSettingsLabelElem.addEventListener("click", function(e)
+			{
+				window.location = 'asset://ui/libretroCoreMenu.html';
+				/*
+				aaapi.system.libretroPause();
+
+				if( !this.classList.contains("aaDepressed") )
+					this.classList.add("aaDepressed");
+				else
+					this.classList.remove("aaDepressed");
+				*/
+			}.bind(coreSettingsLabelElem), true);
+			coreSettingsLabelElem.className = "helpNote aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			coreSettingsLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			coreSettingsLabelElem.innerHTML = "<div style='display: inline; position: relative; top: -3px;'>" + coreSettingsIconHTML + "</div><div style='display: inline; letter-spacing: -1.0em;'>&nbsp;</div>";
+			navigationElem.appendChild(coreSettingsLabelElem);
+
+
+			// volumeContainer
+			var volumeIconHTML = arcadeHud.generateIconHTML("volumeicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var muteIconHTML = arcadeHud.generateIconHTML("muteicon.png", iconSize, iconSize, "aaTextColorOneColor");
+
+			var volumeContainerElem = document.createElement("div");
+			volumeContainerElem.className = "aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHighShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			volumeContainerElem.style.cssText = "margin: 2px; margin-left: 20px; margin-right: 20px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 24px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+
+/*
+			var volumeIconContainer = document.createElement("div");
+			volumeIconContainer.innerHTML = volumeIconHTML;
+			volumeIconContainer.style.cssText = "display: inline-block;";
+			volumeContainerElem.appendChild(volumeIconContainer);
+			*/
+
+			var volumeIconContainerElem = document.createElement("div");
+			volumeIconContainerElem.className = "helpNote";
+			volumeIconContainerElem.setAttribute("help", "Mute Libretro's volume. (toggle)");
+			volumeIconContainerElem.style.cssText = "display: inline-block; vertical-align: middle; position: relative; top: -2px;";
+			var oldVol = parseFloat(aaapi.system.getConVarValue("libretro_volume"));
+			if( oldVol > 0 )
+			{
+				volumeIconContainerElem.innerHTML = volumeIconHTML;
+				volumeIconContainerElem.isMuted = false;
+				volumeIconContainerElem.oldVolume = oldVol;
+			}
+			else
+			{
+				volumeIconContainerElem.innerHTML = muteIconHTML;
+				volumeIconContainerElem.isMuted = true;
+				volumeIconContainerElem.oldVolume = parseFloat(aaapi.system.getConVarValue("old_libretro_volume"));;
+			}
+			volumeContainerElem.appendChild(volumeIconContainerElem);
+
+			var blankSpaceNode = document.createTextNode(" ");
+			volumeContainerElem.appendChild(blankSpaceNode);
+
+
+			//volumeContainerElem.innerHTML = "<div style=''>" + volumeIconHTML + "</div> <div class='' style=''></div>";
+
+			volumeIconContainerElem.addEventListener("click", function(e)
+			{
+				var inputElem = this.parentNode.querySelector("input[type='range']");
+
+				if( !this.isMuted )
+				{
+					this.oldVolume = inputElem.value;
+					aaapi.system.consoleCommand("set_libretro_volume 0; old_libretro_volume " + this.oldVolume + ";");
+					inputElem.value = 0.0;
+					this.innerHTML = muteIconHTML;
+					this.isMuted = true;
+				}
+				else
+				{
+					aaapi.system.consoleCommand("set_libretro_volume " + this.oldVolume + ";");
+					inputElem.value = this.oldVolume;
+					this.innerHTML = volumeIconHTML;
+					this.isMuted = false;
+				}
+			}.bind(volumeIconContainerElem), true);
+
+			var volumeInputElem = document.createElement("input");
+			volumeInputElem.setAttribute("help", "Adjust Libretro's volume level.");
+
+			volumeInputElem.type = "range";
+			volumeInputElem.min = 0.0;
+
+			var volumeMultiplyerLabelElem = document.createElement("div");	// not added until later tho
+			volumeMultiplyerLabelElem.className = "volMulti helpNote";
+			volumeMultiplyerLabelElem.setAttribute("help", "Amplify the volume slider's range by x3. (toggle)");
+			volumeMultiplyerLabelElem.style.cssText = "display: inline-block; margin-right: 10px;";
+
+			var ampOffIconHTML = arcadeHud.generateIconHTML("ampofficon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var ampOnIconHTML = arcadeHud.generateIconHTML("amponicon.png", iconSize, iconSize, "aaTextColorOneColor");
+			var curVolume = parseFloat(aaapi.system.getConVarValue("libretro_volume"));
+			var maxVolume = 1.0;
+			volumeMultiplyerLabelElem.isAmped = false;
+			if( curVolume > maxVolume )
+			{
+				maxVolume = 3.0;
+				volumeMultiplyerLabelElem.isAmped = true;
+				volumeMultiplyerLabelElem.innerHTML = ampOnIconHTML;
+			}
+			else
+			{
+				volumeMultiplyerLabelElem.innerHTML = ampOffIconHTML;
+			}
+
+			volumeMultiplyerLabelElem.addEventListener("click", function(e)
+			{
+				var inputElem = this.parentNode.querySelector("input[type='range']");
+
+				var elem = this.parentNode.querySelector(".volMulti");
+				if( !this.isAmped )
+				{
+					elem.innerHTML = ampOnIconHTML;
+					inputElem.max = 3.0;
+					this.isAmped = true;
+				}
+				else
+				{
+					elem.innerHTML = ampOffIconHTML;
+
+					if( inputElem.value > 1.0 )
+					{
+						aaapi.system.consoleCommand("set_libretro_volume 1.0");
+						inputElem.value = 1.0;
+					}
+
+					inputElem.max = 1.0;
+					this.isAmped = false;
+				}
+			}.bind(volumeMultiplyerLabelElem), true);
+
+			volumeInputElem.max = maxVolume;
+			volumeInputElem.step = 0.1;
+			volumeInputElem.value = curVolume;
+			volumeInputElem.style.cssText = "width: 150px; margin-right: 10px; position: relative; top: -2px;";
+			volumeInputElem.className = "aaRangeSlider helpNote";
+			volumeInputElem.addEventListener("change", function(e)
+			{
+				aaapi.system.consoleCommand("set_libretro_volume " + this.value);
+			}.bind(volumeInputElem), true);
+
+			volumeContainerElem.appendChild(volumeInputElem);
+
+			//volumeContainerElem.innerHTML = volumeIconHTML + " <input type='range' width='20' class='aaRangeSlider' style='margin-right: 10px; position: relative; top: -2px;' />";
+			navigationElem.appendChild(volumeContainerElem);
+
+			volumeContainerElem.appendChild(volumeMultiplyerLabelElem);
+
+/*
+			// x2volume label
+			var x2volumeLabelElem = document.createElement("div");
+			x2volumeLabelElem.addEventListener("click", function(e)
+			{
+				aaapi.system.libretroPause();
+			}.bind(x2volumeLabelElem), true);
+			x2volumeLabelElem.className = "aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverShadedBackground aaThemeColorOneHoverShadedBorderColor";
+			x2volumeLabelElem.style.cssText = "margin: 2px; display: inline-block; border-width: 2px; border-style: solid; border-radius: 2px; padding: 1px; padding-left: 5px; padding-right: 5px; text-shadow: 2px 2px 2px #000; font-weight: bold;";
+			x2volumeLabelElem.innerHTML = "<div style='display: inline-block; vertical-align: middle; position: relative; top: -2px;'>" + volumeIconHTML + "</div> x2";
+			navigationElem.appendChild(x2volumeLabelElem);
+*/
+
+
+
+			// compose
+			browserMenuElem.appendChild(navigationElem);
+
+
+
+			// Now compose the tabs...
+			aarcadeBrowserTabsCell.appendChild(aarcadeBrowserTabElem);
+			aarcadeBrowserTabElem.appendChild(aarcadeTabLabelElem);
+
+			unpinBrowserTabElem.appendChild(unpinTabLabelElem);
+			pinBrowserTabElem.appendChild(pinTabLabelElem);
+			libretroBrowserTabElem.appendChild(libretroTabLabelElem);
+			otherBrowserTabsCell.appendChild(unpinBrowserTabElem);
+			otherBrowserTabsCell.appendChild(pinBrowserTabElem);
+			otherBrowserTabsCell.appendChild(libretroBrowserTabElem);
+
+			topTabsRowElem.appendChild(blankBrowserTabsCell);
+			topTabsRowElem.appendChild(aarcadeBrowserTabsCell);
+			topTabsRowElem.appendChild(otherBrowserTabsCell);
+
+			topTabsTableElem.appendChild(topTabsRowElem);
 			browserMenuElem.appendChild(topTabsTableElem);
 		}
 
-		////bodyElem.appendChild(browserMenuElem);
-		//bodyElem.insertBefore(browserMenuElem, bodyElem.firstChild);
-
-		//var startupLoadingContainer = 
 		this.startupLoadingMessagesContainer = document.body.querySelector("#startupLoadingMessagesContainer");	// usually undefined
 
 		this.pinHudButtonElem = document.body.querySelector("#pinHudButton");
@@ -808,6 +1249,45 @@ function ArcadeHud()
 	this.addCSSRules.call(this);
 }
 
+ArcadeHud.prototype.displayLibretroOverlay = function(overlay)
+{
+	this.libretroOverlay = document.querySelector("#aaLibretroOverlayImage");
+	if( overlay.overlayId !== "none" )
+	{
+		if( overlay.overlayId === "" )
+			overlay.overlayId = this.coreOverlayId;
+
+		if( !!!this.libretroOverlay )
+		{
+			this.libretroOverlay = document.createElement("img");
+			this.libretroOverlay.id = "aaLibretroOverlayImage";
+			this.libretroOverlay.style.cssText = "position: fixed; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none; width: 100%; height: 100%;";
+			document.body.insertBefore(this.libretroOverlay, document.body.firstChild);
+		}
+
+		//if( this.overlayId !== overlay.overlayId )
+			this.libretroOverlay.src = "overlays/" + overlay.overlayId + ".png";
+
+		this.libretroOverlay.style.display = "block";
+	}
+	else
+	{
+		this.hideLibretroOverlay();
+	}
+};
+
+ArcadeHud.prototype.hideLibretroOverlay = function()
+{
+	//this.libretroOverlay = document.querySelector("#aaLibretroOverlayImage");
+	if( !!this.libretroOverlay )
+	{
+		//this.libretroOverlay.style.display = "none";
+		this.libretroOverlay.parentNode.removeChild(this.libretroOverlay);
+		this.libretroOverlay = null;
+		this.overlayId = "";
+	}
+};
+
 ArcadeHud.prototype.navigateToURI = function(uri)
 {
 	if( uri !== "" )
@@ -877,7 +1357,29 @@ ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 	}
 };
 
-ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, isMapLoaded, isObjectSelected, isItemSelected, isMainMenu, url, isSelectedObject, embeddedInstanceType)
+ArcadeHud.prototype.onActivateInputMode = function(
+		isFullscreen,
+		isHudPinned,
+		isMapLoaded,
+		isObjectSelected,
+		isItemSelected,
+		isMainMenu,
+		url,
+		isSelectedObject,
+		embeddedInstanceType,
+		canStream,
+		canPreview,
+		canGoForward,
+		canGoBack,
+		libretroCore,
+		libretroFile,
+		libretroCanRun,
+		libretroOverlayX,
+		libretroOverlayY,
+		libretroOverlayWidth,
+		libretroOverlayHeight,
+		libretroOverlayId
+	)
 {
 	console.log("onActivateInputMode received.");
 	isFullscreen = parseInt(isFullscreen);
@@ -887,6 +1389,9 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	isItemSelected = parseInt(isItemSelected);
 	isMainMenu = parseInt(isMainMenu);
 	isSelectedObject = parseInt(isSelectedObject);	// it is THE selected object
+	canStream = (canStream == "1") ? true : false;
+	canPreview = (canPreview == "1") ? true : false;
+	libretroCanRun = (libretroCanRun == "1") ? true : false;
 
 	// handle all aaOnlyIfMapLoaded elems
 	var elems = document.querySelectorAll(".aaOnlyIfMapLoaded");
@@ -980,18 +1485,42 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 	}
 
 	if( isFullscreen )
+	{
 		this.cursorImageElem.style.display = "none";
+		this.displayLibretroOverlay({
+			"x": Number(libretroOverlayX),
+			"y": Number(libretroOverlayY),
+			"width": Number(libretroOverlayWidth),
+			"height": Number(libretroOverlayHeight),
+			"overlayId": libretroOverlayId
+		});
+		this.overlayId = libretroOverlayId;
+	}
 	else
+	{
 		this.cursorImageElem.style.display = "block";
+		this.hideLibretroOverlay();
+	}
 
 	var elem = document.querySelector("#objectMenu");
-	console.log("Is selected object: " + isSelectedObject + " and " + (isSelectedObject === 1));
+	//console.log("Is selected object: " + isSelectedObject + " and " + (isSelectedObject === 1));
 	if( isSelectedObject === 1 && !!elem )
 		elem.style.display = "block";
-	//else
-	//	elem.style.display = "none";
-		
+	
+	var elems = document.body.querySelectorAll(".aaOnlyIfCanStream");
+	var i;
+	for( i = 0; i < elems.length; i++ )
+		elems[i].style.display = (canStream) ? "inline-block" : "none";
 
+	var elems = document.body.querySelectorAll(".aaOnlyIfLibretroCanRun");
+	var i;
+	for( i = 0; i < elems.length; i++ )
+		elems[i].style.display = (libretroCanRun) ? "inline-block" : "none";
+
+	var elems = document.body.querySelectorAll(".aaOnlyIfCanPreview");
+	var i;
+	for( i = 0; i < elems.length; i++ )
+		elems[i].style.display = (canPreview) ? "inline-block" : "none";
 
 /*
 	var selectedWebTab = aaapi.system.getSelectedWebTab();
@@ -1050,6 +1579,91 @@ ArcadeHud.prototype.onActivateInputMode = function(isFullscreen, isHudPinned, is
 			"selectedObject": isSelectedObject,
 			"embeddedInstanceType": embeddedInstanceType
 		});
+
+	var embeddedLabel = "AArcade";
+	if( embeddedInstanceType === "SteamworksBrowser" )
+		embeddedLabel = "Web Browser";
+	else if( embeddedInstanceType === "AwesomiumBrowser" )
+		embeddedLabel = "Awesomium";
+	else if( embeddedInstanceType === "Libretro" )
+		embeddedLabel = "Libretro";
+	
+	//document.querySelector("#topLabel").innerHTML = embeddedLabel;
+	var titleElems = document.querySelectorAll(".topLabel");
+	for( var i = 0; i < titleElems.length; i++ )
+	{
+		titleElems[i].innerHTML = embeddedLabel;
+		if( embeddedInstanceType === "Libretro" )
+			titleElems[i].setAttribute("help", "Expand the Libretro top menu.");
+		else if( embeddedInstanceType === "SteamworksBrowser" )
+			titleElems[i].setAttribute("help", "Expand the web browser top menu.");
+	}
+
+	var navElems = document.querySelectorAll(".hudHeaderNavigationContainer");
+	for( var i = 0; i < navElems.length; i++ )
+	{
+		if( navElems[i].getAttribute("frameworkName") === embeddedInstanceType )
+			navElems[i].style.display = "table";
+		else
+			navElems[i].style.display = "none";
+	}
+
+	this.embeddedInstanceType = embeddedInstanceType;
+	if( embeddedInstanceType === "Libretro" )
+	{
+		// unhide the GUI Gamepad, if needed
+		var GUIGamepadElem = document.querySelector("#GUIGamepad");
+		if( !!GUIGamepadElem && aaapi.system.getLibretroGUIGamepadEnabled() )
+			GUIGamepadElem.style.display = "block";
+	}
+
+	// steamworks back/forward buttons
+	var navButtons = document.querySelectorAll(".navArrowButton");
+	for( var i = 0; i < navButtons.length; i++ )
+	{
+		if( navButtons[i].classList.contains("navArrowButtonBack") )
+		{
+			if( canGoBack == "1" )
+				navButtons[i].classList.remove("aaDisabled");
+			else
+				navButtons[i].classList.add("aaDisabled");
+		}
+		else if( navButtons[i].classList.contains("navArrowButtonForward") )
+		{
+			if( canGoForward == "1" )
+				navButtons[i].classList.remove("aaDisabled");
+			else
+				navButtons[i].classList.add("aaDisabled");
+		}
+	}
+
+	var libretroCoreElem = document.querySelector(".aaLibretroTopInputCore");
+	if( !!libretroCoreElem )
+	{
+		var coreValue = libretroCore;
+		var foundAt = coreValue.lastIndexOf("\\");
+		if( foundAt < 0 )
+			foundAt = coreValue.lastIndexOf("/");
+
+		if( foundAt >= 0 )
+			coreValue = coreValue.substring(foundAt+1);
+
+		libretroCoreElem.value = coreValue;
+	}
+
+	var libretroFileElem = document.querySelector(".aaLibretroTopInputFile");
+	if( !!libretroFileElem )
+	{
+		var fileValue = libretroFile;
+		var foundAt = fileValue.lastIndexOf("\\");
+		if( foundAt < 0 )
+			foundAt = fileValue.lastIndexOf("/");
+
+		if( foundAt >= 0 )
+			fileValue = fileValue.substring(foundAt+1);
+
+		libretroFileElem.value = fileValue;
+	}
 
 	this.onURLChanged(url);
 };
@@ -1892,7 +2506,7 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 					console.log("Item updated!");
 
 					aaapi.system.autoInspect(this.activeScraperItemId);
-					aaapi.system.deactivateInputMode();
+					//aaapi.system.deactivateInputMode();
 				}
 				else
 					console.log("Item update rejected!");
@@ -1901,8 +2515,8 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 			{
 				// first, check if an item that matches this one already exists...
 	 			var item = aaapi.library.findLibraryItem("file", scrapedData.file);
-	 			if( !item && !!scrapedData.refrence && scrapedData.refrence !== "" )
-	 				item = aaapi.library.findLibraryItem("refrence", scrapedData.refrence);
+	 			if( !item && !!scrapedData.reference && scrapedData.reference !== "" )
+	 				item = aaapi.library.findLibraryItem("reference", scrapedData.reference);
 
 	 			if( item )
 	 			{
@@ -2092,6 +2706,12 @@ ArcadeHud.prototype.onBrowseFileSelected = function(browseId, response)
 	callback(response);
 };
 
+ArcadeHud.prototype.fetchDOM = function()
+{
+	var id = "metatest" + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString() + Math.round(Math.random() * 10.0).toString();
+	aaapi.system.getDOM(id, "");	// catch the "metatest[...]" ID in the onDOMGot method.
+};
+
 ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, field)
 {
 	console.log("Finished a request " + scraperId + ": " + url);
@@ -2250,7 +2870,7 @@ ArcadeHud.prototype.loadItemBestImage = function(imageElem, item, callback)
 			potential = keys[i];//this.potentials[keys[i]];
 			//console.log(potential);
 
-			if( this.item[potential].match(this.re) )
+			if( !!this.item[potential] && this.item[potential].match(this.re) )
 				return potential;
 			else
 				delete this.potentials[potential];
@@ -2260,7 +2880,7 @@ ArcadeHud.prototype.loadItemBestImage = function(imageElem, item, callback)
 	function tryPotential()
 	{
 		var potential = getNextPotential.call(this);
-		console.log("Potential is: " + potential);
+		//console.log("Potential is: " + potential);
 		if( !!potential )
 			this.imageElem.src = item[potential];
 			//tryPotential.call(this);		
@@ -2309,8 +2929,71 @@ ArcadeHud.prototype.viewStream = function()
 		aaapi.system.viewStream(item.info.id);
 };
 
+ArcadeHud.prototype.autoInspect = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	if( item )
+	{
+		aaapi.system.autoInspect(item.info.id);
+	}
+};
+
+ArcadeHud.prototype.viewPreview = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	var previewURL = item.preview;
+
+	var youTubeId = this.extractYouTubeId(previewURL)
+	var youTubePlaylistId = this.extractYouTubePlaylistId(previewURL);
+	if( !!youTubePlaylistId )
+		previewURL = "http://www.anarchyarcade.com/youtube_player.php?id=" + youTubeId + "&list=" + youTubePlaylistId + "&autoplay=0";
+	else if( !!youTubeId )
+		previewURL = "http://www.anarchyarcade.com/youtube_player.php?id=" + youTubeId + "&autoplay=0";
+
+	if( item )
+		aaapi.system.viewPreview(item.info.id, previewURL);
+};
+
+ArcadeHud.prototype.runLibretro = function()
+{
+	var item = aaapi.library.getSelectedLibraryItem();	// FIXME: This is probably overkill if all we want is the ID!
+	if( item )
+		aaapi.system.runLibretro(item.info.id);
+};
+
+function AArcadeFakeEvent(options)
+{
+	this.allowed = options.allowed;
+	this.pseudo = false;
+	this.target = options.target;
+	this.targetTabId = options.targetTabId;
+};
+
+AArcadeFakeEvent.prototype.preventDefault = function()
+{
+	this.allowed = false;
+};
+
+AArcadeFakeEvent.prototype.setPseudo = function()
+{
+	this.pseudo = true;
+};
+
 ArcadeHud.prototype.activateMenuTab = function(activeTab)
 {
+	var isPseudo = false;
+	if( typeof window[activeTab.getAttribute("onchangehandlername")] === "function" )
+	{
+
+		var fakeEvent = new AArcadeFakeEvent({"allowed": true, "target": activeTab, "targetTabId": activeTab.getAttribute("tabid")});
+
+		window[activeTab.getAttribute("onchangehandlername")](fakeEvent);
+		if( !fakeEvent.allowed )
+			return;
+
+		isPseudo = fakeEvent.pseudo;
+	}
+
 	var aaTabs = document.querySelectorAll(".aaTab");
 
 	var aaTab;
@@ -2318,7 +3001,6 @@ ArcadeHud.prototype.activateMenuTab = function(activeTab)
 	for( var i = 0; i < aaTabs.length; i++ )
 	{
 		aaTab = aaTabs[i];
-		//aaTab.style.zIndex = aaTabs.length;
 		if( aaTab === activeTab )
 		{
 			if( !aaTab.classList.contains("aaTabActive") )
@@ -2330,14 +3012,15 @@ ArcadeHud.prototype.activateMenuTab = function(activeTab)
 			if( !aaTab.classList.contains("aaThemeColorTwoHighBackgroundColor") )
 				aaTab.classList.add("aaThemeColorTwoHighBackgroundColor");
 
-			aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
-			if( !!aaTabContent )
-				aaTabContent.style.display = "block";
+			if( !isPseudo )
+			{
+				aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
+				if( !!aaTabContent )
+					aaTabContent.style.display = "block";
+			}
 		}
 		else
 		{
-			//aaTab.style.zIndex = aaTabs.length - i;
-
 			if( aaTab.classList.contains("aaTabActive") )
 				aaTab.classList.remove("aaTabActive");
 
@@ -2347,29 +3030,16 @@ ArcadeHud.prototype.activateMenuTab = function(activeTab)
 			if( aaTab.classList.contains("aaThemeColorTwoHighBackgroundColor") )
 				aaTab.classList.remove("aaThemeColorTwoHighBackgroundColor");
 
-			aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
-
-			if( !!aaTabContent )			
-				aaTabContent.style.display = "none";
+			if( !isPseudo )
+			{
+				aaTabContent = document.querySelector(".aaTabContent[tabid='" + aaTab.getAttribute("tabid") + "']");
+				if( !!aaTabContent )			
+					aaTabContent.style.display = "none";
+			}
 		}
 	}
 
-	//var firstTab = aaTabs[0];
-	//lastTab.parentNode.appendChild(activeTab);
-
-	//var firstTab = aaTabs[0];
-	//firstTab.parentNOde.instertBefore(activeTab, firstTab);
-
-	// update z-indexes
-	/*
-	aaTabs = document.querySelectorAll(".aaTab");
-	for( var i = 0; i < aaTabs.length; i++ )
-	{
-		aaTab = aaTabs[i];
-		aaTab.style.zIndex = aaTabs.length - i;
-	}
-	*/
-
+	// TODO: This should return the fake event, so the callback can know if it was pseudo or not, etc.
 	if( typeof window[activeTab.getAttribute("onChangeCallbackName")] === "function" )
 		window[activeTab.getAttribute("onChangeCallbackName")](activeTab.getAttribute("tabid"));
 };
@@ -2406,6 +3076,10 @@ ArcadeHud.prototype.generateWindowTabsHeaderHTML = function(options)
 	if( !!!options.onChangeCallbackName )
 		options.onChangeCallbackName = "";
 
+
+	if( !!!options.onChangeHandlerName )
+		options.onChangeHandlerName = "";
+
 	var html = '\
 		<table class="aaTabs aaThemeColorTwoDarkBackgroundColor" cellspacing="0" style="width: 100%;">\
 			<tr><td style="-webkit-transform: scale(1, -1); padding-left: 5px; padding-right: 8px;">\
@@ -2419,7 +3093,7 @@ ArcadeHud.prototype.generateWindowTabsHeaderHTML = function(options)
 		tab = tabs[i];
 		activeTabValue = (options.activeTabId === tab.id) ? "1" : "0";
 		html += '\
-			<div class="aaTab aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="-webkit-transform: scale(1, -1);" tabid="' + tab.id + '" onchangecallbackname="' + options.onChangeCallbackName + '" activetab="' + activeTabValue + '">\
+			<div class="aaTab aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="-webkit-transform: scale(1, -1);" tabid="' + tab.id + '" onchangehandlername="' + options.onChangeHandlerName + '" onchangecallbackname="' + options.onChangeCallbackName + '" activetab="' + activeTabValue + '">\
 				' + tab.title + '\
 			</div>\
 		';
@@ -2562,7 +3236,12 @@ ArcadeHud.prototype.gripListener = function(titleBarElem)
 
 
 		if( !noResizeY )
+		{
 			windowElem.style.height = oldY + delta.y + "px";
+
+			if( windowElem.style.position !== "absolute" )
+				windowElem.style.top = parseInt(parseInt(windowElem.style.top) - (delta.y / 2)) + "px";
+		}
 
 		if( !noResizeX )
 			windowElem.style.width = oldX + delta.x + "px";
@@ -2600,6 +3279,7 @@ ArcadeHud.prototype.addCSSRules = function()
 		stylesheet.insertRule(".aa" + className + "Height { height: " + themeSizes[className] + "; }");
 	}
 
+	var alphaColor;
 	var defaultValue, highValue, lowValue;
 	for( var className in themeColors )
 	{
@@ -2610,13 +3290,23 @@ ArcadeHud.prototype.addCSSRules = function()
 		/* Defaults */
 		stylesheet.insertRule(".aa" + className + "Color, .aa" + className + "HoverColor { color: " + defaultValue + "; }");
 		stylesheet.insertRule(".aa" + className + "BackgroundColor, .aa" + className + "HoverBackgroundColor { background-color: " + defaultValue + "; }");
-		stylesheet.insertRule(".aa" + className + "BorderColor { border-color: " + defaultValue + "; }");
+		stylesheet.insertRule(".aa" + className + "BorderColor, .aa" + className + "HoverBorderColor { border-color: " + defaultValue + "; }");
 		stylesheet.insertRule(".aa" + className + "ShadedBorderColor { border-top-color: " + highValue + "; border-left-color: " + highValue + "; border-bottom-color: " + lowValue + "; border-right-color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBorderColor { border-top-color: " + lowValue + "; border-left-color: " + lowValue + "; border-bottom-color: " + lowValue + "; border-right-color: " + lowValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBorderColor.aaDepressed { border-top-color: " + lowValue + "; border-left-color: " + lowValue + "; border-bottom-color: " + highValue + "; border-right-color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBorderColor:not(.aaDisabled) { border-top-color: " + highValue + "; border-left-color: " + highValue + "; border-bottom-color: " + lowValue + "; border-right-color: " + lowValue + "; }");
 		stylesheet.insertRule(".aa" + className + "InverseShadedBorderColor { border-top-color: " + lowValue + "; border-left-color: " + lowValue + "; border-bottom-color: " + highValue + "; border-right-color: " + highValue + "; }");
-		stylesheet.insertRule(".aa" + className + "ShadedBackground, .aa" + className + "HoverShadedBackground { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + lowValue + "); }");
+		//stylesheet.insertRule(".aa" + className + "ShadedBackground, .aa" + className + "HoverShadedBackground { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "ShadedBackground { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground { pointer-events: none; background: -webkit-linear-gradient(-70deg, " + lowValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground.aaDepressed { background: -webkit-linear-gradient(-70deg, " + lowValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground:not(.aaDisabled) { pointer-events: all; background: -webkit-linear-gradient(-70deg, " + highValue + ", " + lowValue + "); }");
 		stylesheet.insertRule(".aa" + className + "HoverColor:hover { color: " + highValue + "; }");
+		stylesheet.insertRule(".aa" + className + "HoverBorderColor:hover { border-color: " + highValue + "; }");
 		stylesheet.insertRule(".aa" + className + "HoverBackgroundColor:hover { background-color: " + highValue + "; }");
-		stylesheet.insertRule(".aa" + className + "HoverShadedBackground:hover { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + defaultValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground:hover:not(.aaDisabled) { background: -webkit-linear-gradient(-70deg, " + highValue + ", " + defaultValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBackground:hover:active:not(.aaDisabled) { background: -webkit-linear-gradient(-70deg, " + defaultValue + ", " + lowValue + "); }");
+		stylesheet.insertRule(".aa" + className + "HoverShadedBorderColor:hover:active:not(.aaDisabled) { border-top-color: " + lowValue + "; border-left-color: " + lowValue + "; border-bottom-color: " + highValue + "; border-right-color: " + highValue + "; }");
 
 		/* Highs */
 		stylesheet.insertRule(".aa" + className + "HighColor, .aa" + className + "HighHoverColor { color: " + highValue + "; }");
@@ -2631,6 +3321,19 @@ ArcadeHud.prototype.addCSSRules = function()
 		stylesheet.insertRule(".aa" + className + "LowBackgroundColor, .aa" + className + "LowHoverBackgroundColor { background-color: " + lowValue + "; }");
 		stylesheet.insertRule(".aa" + className + "LowHoverColor:hover { color: " + defaultValue + "; }");
 		stylesheet.insertRule(".aa" + className + "LowHoverBackgroundColor:hover { background-color: " + defaultValue + "; }");
+
+		/* scrollbars that use theme colors */
+		stylesheet.insertRule(".aa" + className + "ScrollBars::-webkit-scrollbar { width: 15px; height: 15px; }");
+		stylesheet.insertRule(".aa" + className + "ScrollBars::-webkit-scrollbar-track { background-color: " + lowValue + "; border-radius: 10px; -webkit-box-shadow: inset 0 0 10px rgba(0,0,0,0.7); }");
+		stylesheet.insertRule(".aa" + className + "ScrollBars::-webkit-scrollbar-thumb { background-color: " + highValue + "; border-radius: 10px; border-color: " + lowValue + "; border-style: solid; border-width: 2px; }");
+
+		alphaColor = defaultValue;	// NOTE: alphaColor assumes the color is given in rgb() format and ends with a ")"
+		alphaColor = alphaColor.substring(alphaColor.indexOf("(") + 1);
+		alphaColor = alphaColor.substring(0, alphaColor.indexOf(")"));
+
+		stylesheet.insertRule(".aa" + className + "FadeBackground { background: -webkit-linear-gradient(left,  rgba(" + alphaColor + ", 0) 0%,rgba(" + alphaColor + ", 0.5) 25%,rgba("+ alphaColor + ", 0.9) 75%,rgba("+ alphaColor + ", 0.9) 100%); }");
+		//stylesheet.insertRule(".aa" + className + "FadedBackgroundColor { background-color: rgba(" + alphaColor + ", 0.9); }");
+		stylesheet.insertRule(".aa" + className + "FadedBorderColor { border-color: rgba(" + alphaColor + ", 0.9); }");
 	}
 };
 
@@ -2659,7 +3362,7 @@ ArcadeHud.prototype.generateIconHTML = function(iconImage, width, height, cssCla
 
 	var html = "";
 	html += '\
-		<svg width="' + width + '" height="' + height + '">\
+		<svg width="' + width + '" height="' + height + '" style="vertical-align: middle;">\
 		<filter id="' + filterId + '">\
 			<feColorMatrix type="matrix" values="' + bgColors[0] + ' 0 0 0 0\
 			0 ' + bgColors[1] + ' 0 0 0\
@@ -2760,34 +3463,52 @@ ArcadeHud.prototype.generateYouTubeImageURL = function(youtubeid)
 	return url;
 };
 
-ArcadeHud.prototype.extractYouTubeId = function(url)
+ArcadeHud.prototype.extractYouTubePlaylistId = function(trailerURL)
 {
+	if( typeof trailerURL === "undefined" )
+		return trailerURL;
+
+	var playlist = this.getParameterByName("list", trailerURL);
+	return playlist;
+};
+
+ArcadeHud.prototype.extractYouTubeId = function(trailerURL)
+{
+	if( typeof trailerURL === "undefined" )
+		return trailerURL;
+//console.log("extracting YT ID from URL " + trailerURL.indexOf("http://www.anarchyarcade.com/youtube_player.php"));
 	var youtubeid;
-	if( url.indexOf("youtube") != -1 && url.indexOf("v=") != -1 )
+	if( trailerURL.indexOf("http://www.anarchyarcade.com/youtube_player.php") === 0 )
 	{
-		youtubeid = url.substr(url.indexOf("v=")+2);
+		//console.log("here.");
+		//http://www.anarchyarcade.com/youtube_player.php?id=j3sPW0uIgs8&autoplay=0
+		var testerId = this.getParameterByName("id", trailerURL);
+		if( !!testerId )
+			testerId = decodeURIComponent(testerId);
+		
+		youtubeid = testerId;
+	}
+	else if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+	{
+		youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
 
 		var found = youtubeid.indexOf("&");
-		if(found == -1)
-			found = youtubeid.indexOf("?");
-
 		if( found > -1 )
-			youtubeid = youtubeid.substr(0, found);
+		{
+			youtubeid = youtubeid.substring(0, found);
+		}
 	}
 	else
 	{
-		var found = url.indexOf("youtu.be/");
+		var found = trailerURL.indexOf("youtu.be/");
 		if( found != -1 )
 		{
-			youtubeid = url.substr(found+9);
+			youtubeid = trailerURL.substring(found+9);
 
 			found = youtubeid.indexOf("&");
-			if(found == -1)
-				found = youtubeid.indexOf("?");
-
 			if( found != -1 )
 			{
-				youtubeid = youtubeid.substr(0, found);
+				youtubeid = youtubeid.substring(0, found);
 			}
 		}
 	}
@@ -2816,6 +3537,225 @@ ArcadeHud.prototype.onDOMGot = function(url, response)
 	//console.log("onDOMGot");
 	var index = response.indexOf("AAAPICALL");
 	var callId = response.substring(0, index);
+	if( callId.indexOf("metatest") === 0 )
+	{
+		var content = response.substring(index + 9);
+		content = "<html>" + decodeURIComponent(content) + "</html>";
+
+		var doc = arcadeHud.DOMParser.parseFromString(content, "text/html");
+
+		console.log("BOLLOX!");
+
+		// 1. Loop through ALL scrapers
+		// 2. Apply test logic
+		// 3. Remember highest certainty hits
+
+		//scraper.test(url, doc, callback)	// note that callback is passed a response that should have response.validForScrape set to TRUE
+		//we can treat any "redirect" responses as FAIL, because we are not searching, just scraping.
+
+		var bestScraper = null;
+		var bestCertainty = 1;
+
+		var scraper;
+		var scraperKeys = Object.keys(this.scrapers);
+		for( var i = 0; i < scraperKeys.length; i++ )
+		{
+			scraper = this.scrapers[scraperKeys[i]];
+
+			// NOTE: The callback gets called synchronously
+			scraper.test(url, doc, function(response)
+			{
+				if( response.validForScrape && (!!!response.redirect || response.redirect === "") )
+				{
+
+					if( scraper.fields.all >= bestCertainty )
+					{
+						console.log("Valid scraper found: " + scraper.title + " w/ certainty " + scraper.fields.all);
+						bestScraper = scraper;
+						bestCertainty = scraper.fields.all;
+					}
+				}
+			}.bind(this));
+		}
+
+		if( !bestScraper )
+		{
+			// no scraper could be found.
+			// just spawn this as a generic item.
+			
+			// createNewItemWizard
+			// now's the time to swap out the AArcade YouTube player URLs with real YT URLs
+			var ytid = this.extractYouTubeId(this.url);
+			var ytplaylist = this.extractYouTubePlaylistId(this.url);
+
+			var goodTitle = this.pageTitle;
+			var goodTypeText = "websites";
+			var goodUrl = this.url;
+			if( !!ytid )
+			{
+				// if this is a YT ID, then these get determined on the other side
+				goodTitle = "";
+				goodTypeText = "";
+
+				if( !!ytplaylist )
+					goodUrl = "http://www.youtube.com/watch?v=" + ytid + "&index=1&list=" + ytplaylist;
+				else
+					goodUrl = "http://www.youtube.com/watch?v=" + ytid;
+			}
+
+			var item = aaapi.library.findLibraryItem("file", goodUrl);
+ 			if( !item )
+ 				item = aaapi.library.findLibraryItem("reference", goodUrl);
+
+ 			if( item )
+ 			{
+ 				console.log("Found item already in library for this URL!");
+				aaapi.system.setLibraryBrowserContext("items", item.info.id, "", "");
+		 		aaapi.system.spawnItem(item.info.id);
+ 			}
+ 			else
+				document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(goodUrl) + "&title=" + encodeURIComponent(goodTitle) + "&typetext=" + encodeURIComponent(goodTypeText);
+		}
+		else
+		{
+			// use the scraper
+			// x1. Trim the fat from the scrapped results (ie. duplicate fields)
+			// x2. Build the args array for the update/create item API call.
+			// x3. Check if an item already exists for this URL.
+			// x4. If an item already exists, update it WHILE respecting certainties.
+			// x5. Otherwise, create a NEW item.
+			// x6. Spawn the item.
+
+			var results = bestScraper.run(url, "all", doc);//this.field
+
+			if( !Array.isArray(results) )	// importing SteamGames returns an array here, so lets NOT handle that bug right now. (going through the Import menu is the RIGHT way to import Steam games, after all.)
+			{
+				// eliminate duplicates intellegently
+				// FIXME: THIS IS USED IN 2 PLACES NOW, SHOULD BE A METHOD!
+
+				if( !!results.file && results.file !== "" )
+				{
+					// if there is a file, do not use duplicates on anything else
+					if( results.file === results.reference )
+						results.reference = "";
+
+					if( results.file === results.preview )
+						results.preview = "";
+
+					if( results.file === results.download )
+						results.download = "";
+				}
+
+				if( !!results.stream && results.stream !== "" )
+				{
+					// if there is a stream, do not use duplicates on anything
+					if( results.stream === results.preview )
+						results.preview = "";
+
+					if( results.stream === results.download )
+						results.download = "";
+				}
+
+				if( !!results.preview && results.preview !== "" )
+				{
+					// if there is a preview, do not use duplicates on anything
+					if( results.preview === results.download )
+						results.download = "";
+
+					if( results.file === results.screen )
+						results.screen = "";
+
+					if( results.file === results.marquee )
+						results.marquee = "";
+				}
+
+				if( !!results.download && results.download !== "" )
+				{
+					// if there is a download, do not use duplicates on anything
+					if( results.download === results.screen )
+						results.screen = "";
+
+					if( results.download === results.marquee )
+						results.marquee = "";
+				}
+
+				if( !!results.screen && results.screen !== "" )
+				{
+					// if there is a screen, do not use duplicates on anything
+					if( results.screen === results.marquee )
+						results.marquee = "";
+				}
+			}
+
+			var usedFields = [];
+			var args = [];
+			var x, field;
+			for( x in results)
+			{
+				field = results[x];
+
+				if( x === "type" )
+				{
+					var allTypes = aaapi.library.getAllLibraryTypes();
+					var y;
+					for( y in allTypes )
+					{
+						if( allTypes[y].title === field )
+						{
+							field = allTypes[y].info.id;
+							break;
+						}
+					}
+				}
+
+				args.push(x);
+				args.push(field);
+				usedFields.push(x);
+			}
+
+			// does an item already exist?
+ 			var item = aaapi.library.findLibraryItem("file", results.file);
+ 			if( !item && !!results.reference && results.reference !== "" )
+ 				item = aaapi.library.findLibraryItem("reference", results.reference);
+
+ 			if( item )
+ 			{
+ 				console.log("Item found within user library for this URL!");
+
+				var success = aaapi.library.updateItem(item.info.id, args);
+				if( success )
+				{
+					console.log("Item updated!");
+
+					aaapi.system.setLibraryBrowserContext("items", item.info.id, "", "");
+		 			aaapi.system.spawnItem(item.info.id);
+		 			//aaapi.system.goHome();
+					//aaapi.system.deactivateInputMode();
+					//aaapi.system.autoInspect(this.activeScraperItemId);
+				}
+				else
+					console.log("Item update rejected!");
+ 			}
+ 			else
+ 			{
+ 				console.log("This is a brand-new item we need to create!");
+				var createdItemId = aaapi.library.saveItem("", args);	// the response is actually the item ID or FALSE
+				if( createdItemId )
+				{
+					console.log("Item created!");
+
+					aaapi.system.setLibraryBrowserContext("items", createdItemId, "", "");
+					aaapi.system.spawnItem(createdItemId);
+					//aaapi.system.goHome();
+					//aaapi.system.deactivateInputMode();
+					//arcadeHud.expandAddressMenu();
+				}
+ 			}
+		}
+
+		return;
+	}
+
 	if( !!this.metaScrapeHandles[callId] )
 	{
 		var scraper = this.metaScrapeHandles[callId].scraper;

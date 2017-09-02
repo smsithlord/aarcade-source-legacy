@@ -2,7 +2,7 @@
 #define C_INSTANCE_MANAGER_H
 
 #include "KeyValues.h"
-#include <map>
+//#include <map>
 #include <vector>
 #include <string>
 #include "c_prop_shortcut.h"
@@ -26,6 +26,7 @@ struct object_t
 	float scale;
 	bool slave;
 	int entityIndex;
+	int parentEntityIndex;
 	//C_BaseEntity* entity;
 };
 
@@ -63,11 +64,14 @@ public:
 
 	void Update();
 
-	void LoadInstance(std::string instanceId, std::string position = "", std::string rotation = "");
+	void LoadInstance(C_PropShortcutEntity* pParentNodeEntity, std::string instanceId, std::string position = "", std::string rotation = "");
 	void LoadLegacyInstance(std::string instanceId, KeyValues* instanceKV);
 
-	void ApplyChanges(C_PropShortcutEntity* pShortcut);
+	void ApplyChanges(C_PropShortcutEntity* pShortcut, bool bShouldSave = true);
+	void SaveActiveInstance(KeyValues* pInstanceKV = null);	// most useful to call this after applying bulk changes, but also gets called after individual changes.
 	void ResetObjectChanges(C_PropShortcutEntity* pShortcut);
+
+	void ModelFileChanged(std::string modelId);
 
 	transform_t* GetTransform() { return m_pTransform; }
 	void ResetTransform();
@@ -84,10 +88,10 @@ public:
 	void CreateObject(KeyValues* pObjectKV, std::string objectId, std::string itemId, std::string modelId, std::string position, std::string rotation, float scale, int slave, int child);
 
 	void SpawnObject(object_t* object, bool bShouldGhost = false);
-	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string owner = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false);
+	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string owner = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false, int entindex = -1);
 	object_t* GetInstanceObject(std::string objectId);
 	unsigned int GetInstanceObjectCount();
-	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity);
+	void RemoveEntity(C_PropShortcutEntity* pShortcutEntity, bool bBulkRemove = false);
 	bool SpawnNearestObject();
 	//void SetNearestSpawnDist(double maxDist) { m_fNearestSpawnDist = (float)m_fNearestSpawnDist = maxDist; }
 	int SetNearestSpawnDist(double maxDist);	// returns how many unspawned objects are within that dist
@@ -101,16 +105,23 @@ public:
 
 	bool ConsumeLegacyInstance(std::string instanceId, std::string filename, std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
+	void CreateNewNode(std::string nodeName);
+	void ClearNodeSpace();
 	void SpawnActionPressed();
-	void ChangeModel(C_BaseEntity* pEntity, std::string modelId, std::string in_modelFile);
+	void ChangeModel(C_BaseEntity* pEntity, std::string modelId, std::string in_modelFile, bool bMakeGhost = true);
 	//void SpawnItem(std::string id);
+
+	void RemoveInstance(instance_t* pInstance);
 
 	// accessors
 	int GetUnspawnedWithinRangeEstimate() { return m_iUnspawnedWithinRangeEstimate; }
+	std::string GetIncomingNodeId() { return m_incomingNodeId; }
 
 	// mutators
+	void SetIncomingNodeId(std::string nodeId) { m_incomingNodeId = nodeId; }
 	
 private:
+	std::string m_incomingNodeId;
 	int m_iUnspawnedWithinRangeEstimate;
 	transform_t* m_pTransform;
 	KeyValues* m_pInstanceKV;
@@ -119,8 +130,8 @@ private:
 	float m_fNearestSpawnDist;
 	std::map<std::string, object_t*> m_objects;
 	std::vector<object_t*> m_unspawnedObjects;
-
-	std::map<std::string, instance_t*> m_instances;
+	CUtlMap<std::string, instance_t*> m_instances;
+	//std::map<std::string, instance_t*> m_instances;
 };
 
 #endif

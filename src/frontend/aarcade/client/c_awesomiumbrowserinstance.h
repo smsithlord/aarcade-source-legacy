@@ -95,6 +95,7 @@ public:
 	void SetState(int state) { m_iState = state; }
 	void SetWebView(Awesomium::WebView* pWebView) { m_pWebView = pWebView; }
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
+	void SetOriginalEntIndex(int val) { m_iOriginalEntIndex = val; }
 
 private:
 	std::string m_URL;
@@ -116,6 +117,7 @@ private:
 	std::string m_title;
 	std::string m_id;
 	std::string m_originalItemId;
+	int m_iOriginalEntIndex;
 	std::string m_initialURL;
 	bool m_bAlpha;
 	void* m_pPostData;

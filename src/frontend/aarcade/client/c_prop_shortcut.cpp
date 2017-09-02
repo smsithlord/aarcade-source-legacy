@@ -142,8 +142,98 @@ void C_PropShortcutEntity::OnDataChanged(DataUpdateType_t updateType)
 
 	if (!m_bAlreadySetObjectEntity && Q_strcmp(m_objectId, ""))
 	{
+		// associated this entity with this object
 		g_pAnarchyManager->GetInstanceManager()->SetObjectEntity(std::string(m_objectId), this);
 		m_bAlreadySetObjectEntity = true;
+
+		// handle nodes
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(m_objectId);
+		if (pObject)
+		{
+			KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pObject->itemId));
+			if (pItemKV)
+			{
+				if (!Q_strcmp(pItemKV->GetString("info/id"), ""))
+				{
+					DevMsg("Skipping item with no ID.\n");
+				}
+				else
+				{
+					//DevMsg("tester file field: %s\n", pItemKV->GetString("file"));
+					std::string fileValue = pItemKV->GetString("file");
+					if (fileValue.find_first_of("/\\") == std::string::npos && fileValue.find(".") == std::string::npos)
+					{
+						// is this the node item we're expecting?
+						std::string incomingNodeId = g_pAnarchyManager->GetInstanceManager()->GetIncomingNodeId();
+						if (incomingNodeId != "" && !Q_strcmp(incomingNodeId.c_str(), pItemKV->GetString("info/id")))
+						{
+							// we are CREATING a node instance
+							// ================================
+
+							// (this should actually all be done on the SERVER side. for correct parenting.)
+							// TODO: work
+
+							// attach all entities listed in the nodevolume to us.
+							// TODO: work
+
+							/*
+								EntityMatrix matrix, childMatrix;
+								matrix.InitFromEntity( const_cast<CBaseEntity *>(pParentEntity), m_iParentAttachment ); // parent->world
+								childMatrix.InitFromEntityLocal( this ); // child->world
+								Vector localOrigin = (useLocalSpace) ? matrix.WorldToLocal(GetLocalOrigin()) : GetLocalOrigin();
+		
+								// I have the axes of local space in world space. (childMatrix)
+								// I want to compute those world space axes in the parent's local space
+								// and set that transform (as angles) on the child's object so the net
+								// result is that the child is now in parent space, but still oriented the same way
+								VMatrix tmp = matrix.Transpose(); // world->parent
+								tmp.MatrixMul( childMatrix, matrix ); // child->parent
+								QAngle angles;
+								if (useLocalSpace)
+								{
+									MatrixToAngles(matrix, angles);
+									SetLocalAngles(angles);
+								}
+								UTIL_SetOrigin( this, localOrigin );
+							*/
+
+							// create a node instance using the RELATIVE origin & angles of all children
+							// TODO: work
+
+							// give it the correct nodestyle too!
+							// TODO: work
+
+							// save it with out w/ the correct Id
+							// TODO: work
+
+							// now continue loading it & adding all children objects like normal
+							// TODO: work
+
+							// finally, make sure they all spawn right away.
+							// TODO: work
+
+							// reset the incoming node id
+							g_pAnarchyManager->GetInstanceManager()->SetIncomingNodeId("");
+							//engine->ServerCmd(VarArgs("showhubsavemenu %i;", this->entindex()));	// DISABLED FOR NOW
+						}
+						else
+						{
+							// potentially a node instance ID
+							instance_t* pNodeInstance = g_pAnarchyManager->GetInstanceManager()->FindInstance(fileValue);
+							if (pNodeInstance)
+							{
+								DevMsg("Bengo! (However, node spawning is disabled for right now.)\n");	// From here, all the objects get added (knowing their parent entity index), but still use the regular arse object spawning system...
+								//g_pAnarchyManager->GetInstanceManager()->LoadInstance(this, fileValue); // DISABLED FOR NOW, as stated above.
+
+								// spawn all the objects too, if needed...
+								// FIXME: do it.
+								// TODO: work
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	BaseClass::OnDataChanged(updateType);

@@ -1,0 +1,811 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			.categoryContainer
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-radius: 10px;
+			}
+
+			.categoryTitle
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.optionContainer
+			{
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				height: 25px;
+				border-radius: 10px;
+				background-color: rgba(10, 10, 10, 0.5);
+			}
+
+			.optionContainer:nth-child(even)
+			{
+				background-color: rgba(30, 30, 30, 0.3);
+			}
+
+			.optionTitle
+			{
+				float: left;
+				margin-left: 5px;
+			}
+
+			.optionsContainer
+			{
+				margin-left: 15px;
+				margin-right: 15px;
+				margin-bottom: 15px;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+				/*background-color: #ddd;*/
+	    		border-radius: 3px;
+	    		/*border: 1px solid #bbb;*/
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+	    		/*
+	    		border-top-color: #bbb;
+	    		border-left-color: #bbb;
+	    		border-bottom-color: #bbb;
+	    		border-right-color: #bbb;
+	    		*/
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+/*
+			input[type=range]:focus::-webkit-slider-thumb
+			{
+				background-color: rgb(250, 50, 50);
+			}
+
+			input[type=range]:focus
+			{
+			    outline: none;
+			}
+
+			input[type=range]:focus::-webkit-slider-runnable-track
+			{
+
+			}
+*/
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			//var masterType = arcadeHud.getParameterByName("type");
+			var masterType = "libretro";
+			var masterPort = arcadeHud.getParameterByName("port");
+			if( !!masterPort )
+				masterPort = parseInt(masterPort);
+			else
+				masterPort = -1;
+
+			var masterDevice = arcadeHud.getParameterByName("device");
+			if( !!masterDevice )
+				masterDevice = parseInt(masterDevice);
+			else
+				masterDevice = -1;
+
+			var masterIndex = arcadeHud.getParameterByName("index");
+			if( !!masterIndex )
+				masterIndex = parseInt(masterIndex);
+			else
+				masterIndex = -1;
+
+		//"window.location='asset://ui/overlay.html';"
+		//"aaapi.system.deactivateInputMode();"
+			var windowTitle = "Libretro Input: Port " + (parseInt(masterPort)+1);
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML(windowTitle, "", false, true, "window.location='asset://ui/libretroInputMenu.html';", "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+
+			// otherwise, use session storage (disabled here)
+			//if( !!!tabId )
+			//	tabId = sessionStorage.getItem("aaMainTab", tabId);
+
+			// otherwise, let arcadeHud decide
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "settings",
+						"title": "Settings"
+					},
+					{
+						"id": "coreOverride",
+						"title": "Core Override"
+					},
+					{
+						"id": "gameOverride",
+						"title": "Game Override"
+					}
+				],
+				"onChangeHandlerName": "tabChangeHandler",
+				"activeTabId": tabId
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaWindowPaneContentScrollable aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="settings">
+			<!--<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>-->
+			<div class="devicesContainer" style="overflow-x: hidden;"></div>
+		</div>
+<!--
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="gameOverride">
+			game override
+		</div>
+	-->
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<style>
+			.hudContentBody
+			{
+				text-align: center;
+			}
+
+			.hudContentBody table
+			{
+				display: inline-block;
+			}
+
+			.hudContentBody table td
+			{
+				font-size: 20px;
+				font-family: Arial;
+				/*font-style: italic;*/
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 2px;
+			}
+/*
+			.optionSelect
+			{
+				width: 100%;
+				padding: 4px;
+				font-size: 16px;
+				font-family: Arial;
+				color: rgba(255, 255, 255, 0.7);
+				background-color: #000;
+				font-weight: bold;
+			}
+			*/
+
+			.enabledSelect
+			{
+				color: rgba(20, 150, 20, 0.7);
+			}
+
+			.disabledSelect
+			{
+				color: rgba(200, 20, 20, 0.7);
+			}
+
+			.hudContentBody table td:nth-of-type(1)
+			{
+				width: 50%;
+				text-align: right;
+				padding-right: 8px;
+			}
+
+			.hudContentBody table td:nth-of-type(2)
+			{
+				width: 50%;
+				text-align: left;
+			}
+		</style>
+
+		<script>
+			var initialTabSwitch = true;
+			function tabChangeHandler(e)
+			{
+				if( tabId === e.targetTabId && !initialTabSwitch )
+				{
+					e.preventDefault();
+					return;
+				}
+
+				// if this is the initial logic, then prefer the initial category value.
+				if( initialTabSwitch )
+				{
+					//generateCoreOptions(masterType);
+				}
+				else
+				{
+					if (e.targetTabId === "gameOverride")
+						masterType = "game";
+					else if (e.targetTabId === "coreOverride")
+						masterType = "core";
+					else
+						masterType = "libretro";
+				}
+
+				//generateCoreOptions(masterType);
+				generateKeyBindTable(masterType, masterPort, masterDevice, masterIndex);
+
+				e.setPseudo();
+				initialTabSwitch = false;
+			}
+		</script>
+
+		<style>
+			.hudContentBody
+			{
+				text-align: center;
+				max-height: 600px;
+				overflow-y: auto;
+			}
+
+			.hudContentBody::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.hudContentBody::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(50, 50, 50, 0.7);
+				border-radius: 10px;
+				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
+			}
+
+			.hudContentBody::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
+				background-color: rgba(50, 50, 50, 0.7);
+			}
+
+			.hudContentBody::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.hudContentBody table
+			{
+				display: inline-block;
+			}
+
+			.hudContentBody table td
+			{
+				font-size: 20px;
+				font-family: Arial;
+				/*font-style: italic;*/
+				text-shadow: 2px 2px 2px #000;
+				font-weight: bold;
+				padding: 2px;
+			}
+
+			.optionSelect
+			{
+				display: inline-block;
+				width: 100%;
+				padding: 4px;
+				font-size: 16px;
+				font-family: Arial;
+				/*font-style: italic;
+				text-shadow: 2px 2px 2px #000;*/
+				/*color: rgba(255, 255, 255, 0.7);*/
+				/*background-color: #000;*/
+				font-weight: bold;
+			}
+
+			.enabledSelect
+			{
+				color: rgba(150, 255, 150, 0.7);
+			}
+
+			.disabledSelect
+			{
+				color: rgba(255, 150, 150, 0.7);
+			}
+
+			.hudContentBody table td:nth-of-type(1)
+			{
+				width: 50%;
+				text-align: right;
+				padding-right: 8px;
+			}
+
+			.hudContentBody table td:nth-of-type(2)
+			{
+				width: 50%;
+				text-align: left;
+			}
+		</style>
+
+		<script>
+			function keyCatcher(e)
+			{
+				console.log("Key catcher: " + e.keyCode);
+
+				var catcherElem = document.querySelector("#keyCatcher");
+				var timerElem = document.querySelector("#countdownTimer");
+				var selectElem = catcherElem.optionSelectElem;
+
+				// translate this web keycode into a Source keycode
+				var webCode = e.keyCode;
+				var sourceCode;
+
+				var i;
+				for( i = 0; i < sourceButtons.length; i++ )
+				{
+					if( sourceButtons[i].keyCodeDown === webCode )
+					{
+						sourceCode = sourceButtons[i].id;
+						break;
+					}
+				}
+
+				if( !!sourceCode )
+				{
+					console.log("Found source key: " + sourceCode);
+					clearInterval(timerElem.countdownHandle);
+					document.removeEventListener("keydown", keyCatcher, true);
+					catcherElem.parentNode.removeChild(catcherElem);
+
+					// find this option in the select list
+					var max = selectElem.length;
+					var i, option;
+					for( i = 0; i < max; i++ )
+					{
+						option = selectElem.options[i];
+						if( option.value === sourceCode )
+						{
+							console.log("Selecting value " + sourceCode);
+							//selectElem.selectedIndex = i;
+							selectElem.value = sourceCode;
+
+							aaapi.system.saveLibretroKeybind(masterType, selectElem.portid, selectElem.deviceid, selectElem.indexid, selectElem.retrokeyid, selectElem.value);
+							break;
+						}
+					}
+				}
+
+				e.preventDefault();
+				return false;
+			}
+
+			function decreasingSort(a, b)
+			{
+				if( a.enumValue > b.enumValue )
+					return 1;
+				else if( a.enumValue < b.enumValue)
+					return -1;
+				else
+					return 0;
+			}
+
+			// build the content body
+			//var hudContentBodyElem = document.querySelector(".hudContentBody");
+			var devicesContainerElem = document.querySelector(".devicesContainer");
+
+			var response = aaapi.system.getDefaultLibretroInputDevices();
+			var sourceButtons = response.sourceButtons;
+			
+			var x, device;//, buttons, y, i, button;
+			var devices = [];
+			for( x in response.devices )
+				devices.push(response.devices[x]);
+
+			devices.sort(decreasingSort);
+
+
+			function generateKeyBindTable(type, port, device, index)
+			{
+				var goodPort = (port >= 0) ? port : 0;
+				var goodDevice = (device >= 1) ? device : 1;
+				var goodIndex = (index >= 0) ? index : 0;
+
+				// clear out the options container
+				while (devicesContainerElem.firstChild)
+					devicesContainerElem.removeChild(devicesContainerElem.firstChild);
+
+				var binds = aaapi.system.getLibretroKeybinds(masterType, masterPort, masterDevice, masterIndex);
+
+				var libretroBinds;
+				var coreBinds;
+
+				if( masterType === "core" )
+				{
+					libretroBinds = aaapi.system.getLibretroKeybinds("libretro", masterPort, masterDevice, masterIndex);
+					//console.log(JSON.stringify(libretroBinds));
+				}
+				else if( masterType === "game" )
+				{
+					libretroBinds = aaapi.system.getLibretroKeybinds("libretro", masterPort, masterDevice, masterIndex);
+					coreBinds = aaapi.system.getLibretroKeybinds("core", masterPort, masterDevice, masterIndex);
+				}
+
+				var buttons, y, i, button;			
+				for( x = 0; x < devices.length; x++ )
+				{
+					device = devices[x];
+
+					var optionsTableElem = document.createElement("table");
+					optionsTableElem.style.cssText = "padding-bottom: 25px; width: 90%;";
+
+					var headerRowElem = document.createElement("tr");
+					var headerCellElem = document.createElement("th");
+					headerCellElem.style.cssText = "font-family: Arial; font-style: italic; font-weight: bold;";
+					headerCellElem.className = "aaTitleTextSizeFontSize aaThemeColorOneColor aaTitleText";
+					headerCellElem.colSpan = 2;
+					headerCellElem.innerHTML += device.name;
+					headerRowElem.appendChild(headerCellElem);
+					optionsTableElem.appendChild(headerRowElem);
+
+					buttons = devices[x].buttons;
+
+					console.log(buttons.length);
+
+					var numOptions = buttons.length;
+					var i, option, optionRowElem, optionNameCellElem, optionValueCellElem, numValues, j, optionSelectElem, optionOptionElem, testText;
+					for( i = 0; i < numOptions; i++ )
+					{
+						option = buttons[i]; //(button)
+						console.log(option.id);
+
+						optionRowElem = document.createElement("tr");
+						optionNameCellElem = document.createElement("td");
+						optionNameCellElem.style.cssText = "width: 200px; font-family: Arial; padding-right: 6px;";
+						optionNameCellElem.className = "aaTextSizeFontSize aaTextColorTwoColor";
+						optionNameCellElem.align = "right";
+						optionNameCellElem.innerHTML = option.name;
+
+						optionValueCellElem = document.createElement("td");
+						optionValueCellElem.style.cssText = "white-space: nowrap;";
+						optionSelectElem = document.createElement("select");
+						optionSelectElem.portid = masterPort;
+						optionSelectElem.deviceid = devices[x].enumValue;
+						optionSelectElem.indexid = 0;	// always 0 except for multi-touch
+						optionSelectElem.retrokeyid = option.enumValue;
+						optionSelectElem.addEventListener("change", function(e)
+						{
+							//console.log("Value is now " + this.options[this.selectedIndex].value);
+							aaapi.system.saveLibretroKeybind(masterType, this.portid, this.deviceid, this.indexid, this.retrokeyid, this.options[this.selectedIndex].value);
+						}.bind(optionSelectElem), true);
+						optionSelectElem.className = "optionSelect";
+						numValues = sourceButtons.length;
+
+						var currentBind = binds.keybinds;
+						if( !!currentBind )
+							currentBind = currentBind["port" + masterPort];
+
+						if( !!currentBind )
+						{
+							//console.log("Fetching device " + devices[x].enumValue);
+							currentBind = currentBind["device" + devices[x].enumValue];
+						}
+
+						if( !!currentBind )
+						{
+							//console.log("Fetching index");
+							currentBind = currentBind["index0"];
+						}
+
+						if( !!currentBind )
+						{
+							//console.log("ACTUALLY FETCHING A KEY!!");
+							currentBind = currentBind["key" + i];
+						}
+						else
+							currentBind = "unbound";
+
+						//console.log("Current bind: " + currentBind);
+
+						for( j = 0; j < numValues; j++ )
+						{
+							optionOptionElem = document.createElement("option");
+							optionOptionElem.value = sourceButtons[j].id;
+							//optionOptionElem.text = sourceButtons[j].name;
+							var text = sourceButtons[j].name;
+							if( text.toLowerCase() === "unbound" )
+							{
+								if( masterType === "core" )
+								{
+									// core overrides can only over-power libretro binds
+
+									text = "default";
+
+									// find this Source button
+									var libretroButtonId = libretroBinds.keybinds["port" + goodPort]["device" + goodDevice]["index" + goodIndex]["key" + i];
+
+									var bindText = "unbound";
+									for( var k = 0; k < sourceButtons.length; k++ )
+									{
+										if( sourceButtons[k].id === libretroButtonId )
+										{
+											bindText = sourceButtons[k].name;
+											break;
+										}
+									}
+
+									text += " (" + bindText + ")";
+								}
+								else if( masterType === "game" )
+								{
+									// core overrides can only over-power libretro binds
+
+									text = "default";
+
+									// find this Source button
+									var libretroButtonId = libretroBinds.keybinds["port" + goodPort]["device" + goodDevice]["index" + goodIndex]["key" + i];
+
+									var coreButtonId = coreBinds.keybinds["port" + goodPort]["device" + goodDevice]["index" + goodIndex]["key" + i];
+
+									var goodButtonId = (!!coreButtonId && coreButtonId !== "unbound") ? coreButtonId : libretroButtonId;
+
+									var bindText = "unbound";
+									for( var k = 0; k < sourceButtons.length; k++ )
+									{
+										if( sourceButtons[k].id === goodButtonId )
+										{
+											bindText = sourceButtons[k].name;
+											break;
+										}
+									}
+
+									text += " (" + bindText + ")";
+								}
+							}
+							optionOptionElem.text = text;
+
+							// determine the currently bound key from keybindsResponse.ports[0]
+							//buttons = devices[x].buttons
+							// assume port 0 
+
+							if( sourceButtons[j].id === currentBind )
+								optionOptionElem.selected = true;
+							/*
+							if( option.current == j )
+							{
+								optionOptionElem.selected = true;
+								testText = option.values[j].toLowerCase();
+								if( testText === "enabled" || testText === "yes" )
+									optionSelectElem.className += " enabledSelect";
+								else if( testText === "disabled" || testText === "no" )
+									optionSelectElem.className += " disabledSelect";
+							}
+							*/
+
+							optionSelectElem.appendChild(optionOptionElem);
+						}
+						optionValueCellElem.appendChild(optionSelectElem);
+
+						var detectButtonElem = document.createElement("input");
+						detectButtonElem.style.cssText = "display: inline-block; padding: 6px;";
+						detectButtonElem.type = "button";
+						detectButtonElem.value = "...";
+
+						detectButtonElem.addEventListener("click", function(e)
+						{
+							var catcherElem = document.createElement("div");
+							catcherElem.optionSelectElem = this;
+							catcherElem.id = "keyCatcher";
+							catcherElem.style.cssText = "position: fixed; top: 0; bottom: 0; left: 0; right: 0; background-color: rgba(0, 0, 0, 0.9); z-index: 9999999; text-align: center;";
+
+							var textElem = document.createElement("div");
+							var windowHeight = window.innerHeight;
+							console.log(windowHeight);
+							//background-color: rgba(250, 50, 50, 0.95);
+							textElem.className = "aaThemeColorOneShadedBackground aaTextColorOneColor";
+							textElem.style.cssText = "border-radius: 20px; padding: 20px; display: inline-block; text-align: center; margin-top: " + windowHeight / 2 + "px; font-size: 20px; font-family: Arial; font-style: italic; text-shadow: 2px 2px 2px #000; font-weight: bold; border: 3px solid #000;";
+							textElem.innerHTML = "PRESS ANY KEY / BUTTON";
+
+							var timerElem = document.createElement("div");
+							timerElem.id = "countdownTimer";
+							timerElem.style.cssText = "font-size: 30px; font-weight: 900;";
+							timerElem.catcherElem = catcherElem;
+							timerElem.timeLeft = 5;
+							timerElem.innerHTML = "5";
+							textElem.appendChild(timerElem);
+							catcherElem.appendChild(textElem);
+
+							timerElem.countdownHandle = setInterval(function(e)
+							{
+								this.timeLeft--;
+								this.innerHTML = this.timeLeft;
+
+								if( this.timeLeft === 0 )
+								{
+									clearInterval(this.countdownHandle);
+									this.catcherElem.parentNode.removeChild(this.catcherElem);
+								}
+							}.bind(timerElem), 1000);
+
+							document.addEventListener("keydown", keyCatcher, true);
+
+							/*
+							catcherElem.addEventListener("click", function(e)
+							{
+								this.parentNode.removeChild(this);
+							}.bind(catcherElem), true);
+							*/
+
+							document.body.appendChild(catcherElem);
+						}.bind(optionSelectElem), true);
+
+						optionValueCellElem.appendChild(detectButtonElem);
+
+						//optionValueCellElem.innerHTML = option.current;
+
+						optionRowElem.appendChild(optionNameCellElem);
+						optionRowElem.appendChild(optionValueCellElem);
+						optionsTableElem.appendChild(optionRowElem);
+					}
+
+					devicesContainerElem.appendChild(optionsTableElem);
+				}
+			}
+		</script>
+
+	</body>
+</html>

@@ -35,6 +35,16 @@
 				else
 					return 0;
 			});
+
+			function goToLibrary()
+			{
+				window.location='asset://ui/libraryBrowser.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");//?category=items
+			}
+
+			function doPause()
+			{
+				window.location='asset://ui/pause.html';
+			}
 		</script>
 		
 		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
@@ -55,24 +65,30 @@
 					<td valign="top" style="width: 1px;">
 
 			<!-- World Info, Leave -->
-			<div class="aaOnlyIfMapLoaded">
-				<!--
-				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
-				-->
-				<!--
-				<table style="width: 100%;" cellspacing="0" cellpadding="0">
-					<tr><td>
-						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="World Info" onclick="window.location='asset://ui/worldInfo.html';" help="View mount & workshop info about this world." />
-					</td><td>
-						<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
-					</td></tr>
-				</table>
-				-->
-			</div>
+			<!--
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+			-->
+			<table style="width: 100%;" cellspacing="0" cellpadding="0">
+				<tr><td>
+					<!--
+						<iframe src="http://192.168.0.188:8888/" style="width: 100%; height: 100px;"></iframe>
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Node Manager (TEST)" onclick="window.location='asset://ui/nodeManager.html';" help="Testing menu stuff." />
+					-->
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Play" onclick="window.location='asset://ui/play.html';" help="Load a different world map." />
+					<!--
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+					-->
+					<!--
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="World Info" onclick="window.location='asset://ui/worldInfo.html';" help="View mount & workshop info about this world." />
+					-->
+				</td><td class="aaOnlyIfMapLoadedx" style="display: none;">
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
+				</td></tr>
+			</table>
 
 			<!-- Library -->
 			<div class="aaOnlyIfMapLoaded">
-				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse & manage your personal library." /><br />
+				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Library" onclick="goToLibrary();" help="Browse & manage your personal library." /><br />
 			</div>
 
 			<!-- Multiplayer
@@ -87,6 +103,10 @@
 
 			<!-- Feedback -->
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Feedback" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade." /><br />
+
+			<div class="aaOnlyIfMapLoaded">
+				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Pause" onclick="doPause();" help="Pause AArcade so it doesn't hurt your performance in other games." /><br />
+			</div>
 
 			<!-- Quit -->
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Quit" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows." />
@@ -116,10 +136,10 @@
 
 							var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
 								"tabs": [
-									{
+									/*{
 										"id": "worlds",
 										"title": "Worlds"
-									},
+									},*/
 									{
 										"id": "tasks",
 										"title": "Tasks"
@@ -142,28 +162,172 @@
 							{
 								sessionStorage.setItem("aaMainTab", tabId);
 							}
+
+							var aaModalMenu;
+							//var aaModalFlashInterval;
+							function createModalConfirm(title, text, noAction, yesAction)
+							{
+								if( !!aaModalMenu )
+								{
+									console.log("ERROR: A modal menu is already being displayed!");
+									return;
+								}
+
+								// Lets be modal.
+								var modalContainer = document.createElement("div");
+								modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+								modalContainer.addEventListener("click", function(e)
+								{
+									/*
+									var isChild = false;
+									var childNode = e.target;
+									while(!!childNode)
+									{
+										childNode = childNode.parentNode;
+										if( childNode === e.currentTarget )
+										{
+											isChild = true;
+											break;
+										}
+									}
+									*/
+
+									if( e.currentTarget !== e.target )
+									{
+										// the modal window itself is clicked
+										/*
+										if( !isChild )
+										{
+											console.log("propo stopped");
+											e.preventDefault();
+											e.stopImmediatePropagation();//Immediate
+										}
+										*/
+										return;
+									}
+									else
+									{
+										if( !!!aaModalMenu.flashInterval )
+										{
+											aaModalMenu.flashInterval = setInterval(function()
+											{
+												var titleRow = this.querySelector("tr");
+												var titleBarElems = titleRow.querySelectorAll("td");
+												var titleBarElem;
+
+												if( !!!this.flashCount )
+												{
+													for( var i = 0; i < titleBarElems.length; i++ )
+													{
+														titleBarElem = titleBarElems[i];
+														if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+														{
+															titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+															titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+														}
+													}
+
+													clearInterval(this.flashInterval);
+													delete this.flashInterval;
+												}
+												else
+												{
+													for( var i = 0; i < titleBarElems.length; i++ )
+													{
+														titleBarElem = titleBarElems[i];
+														if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+														{
+															titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+															titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+														}
+														else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+														{
+															titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+															titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+														}
+													}
+
+													this.flashCount--;
+												}
+											}.bind(aaModalMenu), 100);
+
+											aaModalMenu.flashCount = 6;
+										}
+									}
+								}.bind(modalContainer), true);
+
+								var modalHTML = "";
+
+								// header
+								var modalYPos = (window.innerHeight / 3) + "px";
+								var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+								modalHTML += modalWindowHeaderHTML;
+
+								// body
+								modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+								modalHTML += text;//"Are you sure?";
+								modalHTML += "</div>";
+
+								modalHTML += '\
+									<table class="aaWindowActions">\
+										<tr>\
+											<td>\
+											</td>\
+											<td style="width: 1%; white-space: nowrap;">\
+												<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Yes" />\
+												<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="No" />\
+											</td>\
+										</tr>\
+									</table>\
+								';
+
+								// footer
+								var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+								modalHTML += modalWindowFooterHTML;
+
+								modalContainer.innerHTML = modalHTML;
+								aaModalMenu = modalContainer.querySelector(".aaWindow");
+								document.body.appendChild(modalContainer);
+
+								var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+								buttons[0].addEventListener("click", function(e)
+								{
+									aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+									aaModalMenu = undefined;
+
+									eval(yesAction);
+								}, true);
+
+								buttons[1].addEventListener("click", function(e)
+								{
+									aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+									aaModalMenu = undefined;
+
+									eval(noAction);
+								}, true);
+							}
+
+							function confirmedDeleteScreenshot(shotId)
+							{
+								aaapi.system.deleteScreenshot(shotId);
+								window.location='asset://ui/welcome.html?tab=screenshots';
+							}
+
+							function canceledDeleteScreenshot()
+							{
+							}
 						</script>
 
+						<!--
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="worlds" style="">
-							<!--<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Your World</div>-->
 							<div class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor" style="border-style: solid; border-width: 2px; padding: 10px; border-radius: 6px; display: inline-block; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);" onclick="window.location='asset://ui/play.html';">
 								<div class="mapImage aaThemeColorOneInverseShadedBorderColor" style="width: 240px; height: 135px; border-width: 2px; border-style: solid; border-radius: 4px;"></div>
 								<div class="mapTitle aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor"></div>
 							</div>
 							<br /><br />
-							<!-- <div class="instanceTitle aaTitleTextSizeFontSize"></div> -->
 							<div id="worldsContainer" style="display: none;"></div>
-							<!--
-							<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Other Worlds</div>
-							<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify;'>
-								Yadda yadda.
-							</div>
-							-->
-							<!-- Play & Leave
-							<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="View Old Play Menu" onclick="window.location='asset://ui/play.html';" help="Load a map." /><br />
-							<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
-							-->
 						</div>
+						-->
 
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="tasks">
 
@@ -206,11 +370,11 @@
 						</div>
 
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="screenshots">
-							<div id="screenshotList" style="padding: 10px;"></div>
+							<div id="screenshotList" class="aaOnlyIfMapLoaded" style="padding: 10px;"></div>
 						</div>
 
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="commands" style="border-radius: 4px; height: 100%; display: block; height: 416px;">
-							<div id="commands" style="padding: 4px; text-align: center;"></div>
+							<div id="commands" class="aaOnlyIfMapLoaded" style="padding: 4px; text-align: center;"></div>
 						</div>
 
 						<script>
@@ -524,11 +688,9 @@
 				display: inline-block;
 				border-style: solid;
 				border-width: 0;
-				/*border: 2px solid black;*/
 				vertical-align: top;
 				padding: 3px;
 				border-radius: 5px;
-				/*background-color: rgba(150, 150, 150, 0.5);*/
 			}
 
 			.displayed .taskButton.displayIcon
@@ -934,14 +1096,13 @@
 					e.preventDefault();
 				}.bind(taskElem), true);
 
-				if( task.isDisplayTask )
-				{
+				//if( task.isDisplayTask )
+				//{
 					arcadeHud.loadItemBestImage(taskImage, taskImage.item, function()
 					{
 						this.ready = true;
 
 						var imageContainer = this.parentNode;
-						console.log(imageContainer.tagName);
 						imageContainer.style.background = "transparent url('" + this.src + "') center";
 						imageContainer.style.backgroundSize = "cover";
 						//console.log(imageContainer.style.background);
@@ -955,24 +1116,24 @@
 						}
 						*/
 					});
-				}
-				else
-				{
-					arcadeHud.loadItemBestImage(taskImage, taskImage.item, function()
-					{
-						this.ready = true;
+				//}
+				//else
+				//{
+				//	arcadeHud.loadItemBestImage(taskImage, taskImage.item, function()
+				//	{
+				//		this.ready = true;
 
-						var imageContainer = this.parentNode;
-						imageContainer.style.background = "transparent url('" + this.src + "') center";
-						imageContainer.style.backgroundSize = "cover";
-					});
-				}
+				//		var imageContainer = this.parentNode;
+				//		imageContainer.style.background = "transparent url('" + this.src + "') center";
+				//		imageContainer.style.backgroundSize = "cover";
+				//	});
+				//}
 
 				if( task.isDisplayTask )
 					taskElem.className = "taskTitle aaTextColorOneColor";
 				else
 				{
-					taskElem.className = "taskTitle aaTextColorTowColor";
+					taskElem.className = "taskTitle aaTextColorTwoColor";
 					taskElem.style.cssText += " text-shadow: none;";
 				}
 
@@ -1128,18 +1289,42 @@
 				trashButton.addEventListener("click", function(e)
 				{
 					e.stopImmediatePropagation();
-
-					aaapi.system.deleteScreenshot(this.shotId);
-					window.location='asset://ui/welcome.html?tab=screenshots';
+					createModalConfirm('Delete Screenshot', 'Are you sure?', 'canceledDeleteScreenshot();', 'confirmedDeleteScreenshot("' + this.shotId + '");');
 				}.bind(trashButton), true);
 
 				trashButtonContainer.appendChild(trashButton);
 				screenshotElem.appendChild(trashButtonContainer);
 
+				screenshotElem.screenshot = screenshot;
 				screenshotElem.screenshotId = screenshot.id;
 				screenshotElem.setAttribute("help", "Teleport to this location.");
 				screenshotElem.addEventListener("click", function()
 				{
+					// update our spawn location (but not our map last loaded timestamp) in mapHistory
+					var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+					// update our entry in the mapHistory
+					var mapHistoryEntry = mapHistory[worldInfo.map.info.id];
+					if( !!mapHistoryEntry )
+					{
+						mapHistoryEntry.position = this.screenshot.body.position;
+						mapHistoryEntry.rotation = this.screenshot.body.rotation;
+						mapHistoryEntry.screenshotId = this.screenshot.id;
+
+						/*
+						var mapHistoryEntry = {
+							"mapId": mapId,
+							"instanceId": instanceId,
+							"position": position,
+							"rotation": rotation,
+							"screenshotId": screenshotId,
+							"timestamp": new Date().getTime()
+						};
+						*/
+					}
+
+					// save the mapHistory out
+					localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
 					aaapi.system.teleportScreenshot(this.screenshotId, true);
 				}.bind(screenshotElem));
 

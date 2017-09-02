@@ -2,21 +2,160 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
-		<script>
-		// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-			function getParameterByName(name, url) {
-			    if (!url) url = window.location.href;
-			    name = name.replace(/[\[\]]/g, "\\$&");
-			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-			        results = regex.exec(url);
-			    if (!results) return null;
-			    if (!results[2]) return '';
-			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
 			}
-		</script>
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var givenTitle = arcadeHud.getParameterByName("title");
+			if( !!givenTitle )
+				givenTitle = decodeURIComponent(givenTitle);
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("New Shortcut", "", true, true, "window.location='asset://ui/libraryBrowser.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+			//var fields = ["title", "file", "type", "app", "screen"];
+		</script>
+
+		<!--<form id="entryForm" style="margin: 0;">-->
+
+		<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<div id="fetchingStuff" style="display: none; font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize">
+				<center>
+					<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+					<br />
+					PLEASE WAIT
+				</center>
+			</div>
+			<div id="itemStuff">
+				<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+					<tr>
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Title:
+						</td>
+						<td class="aaKeyValueTableValue">
+							<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+						</td>
+					</tr>
+					<tr>
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							File Target:
+						</td>
+						<td class="aaKeyvalueTableValue">
+							<input fieldname="file" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+							<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('file');">
+								<script>
+									document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+							<!--
+							<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('file');">
+								<script>
+									document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+							-->
+						</td>
+					</tr>
+					<tr>
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Type:
+						</td>
+						<td class="aaKeyvalueTableValue">
+							<select fieldname="type" class="aaTextSizeFontSize" style="width: 100%;">
+								<option value="">Other</option>
+							</select>
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+						</td>
+					</tr>
+					<tr>
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Open With:
+						</td>
+						<td class="aaKeyvalueTableValue">
+							<select fieldname="app" class="aaTextSizeFontSize" style="width: 100%;">
+								<option>Windows (default)</option>
+							</select>
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+						</td>
+					</tr>
+					<tr style="display: none;">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Screen Image:
+						</td>
+						<td class="aaKeyValueTableValue">
+							<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+							<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
+								<script>
+									document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+								</script>
+							</div>
+						</td>
+					</tr>
+					<tr style="display: none;">
+						<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+							Preview:
+						</td>
+						<td class="aaKeyValueTableValue">
+							<input fieldname="preview" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						</td>
+						<td style="width: 1%; white-space: nowrap;">
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+		<table class="aaWindowActions">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" id="saveButton" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Add to Library & Spawn" />
+				</td>
+			</tr>
+		</table>
+		<!--</form>-->
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<div class="hudContent" style="display: none; width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
 			<div class="hudContentHeader">
 				<div class="hudContentHeaderRow">
 					<div class="hudContentHeaderCell">
@@ -36,19 +175,211 @@
 			</div>
 
 			<br />
-			<div id="itemContainer"></div>
+			<!--<div id="itemContainer"></div>-->
 			<br />
-			<div id="saveButton" class="mainButton">Save to Library</div>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		
 		<script>
- 			var fileLocation = decodeURIComponent(getParameterByName("fileLocation"));
+			var badyt = (arcadeHud.getParameterByName("badyt"));
+			var titleInput = document.querySelector("input[fieldname='title']");
+			var typeInput = document.querySelector("select[fieldname='type']");
+			var fileInput = document.querySelector("input[fieldname='file']");
+			var previewInput = document.querySelector("input[fieldname='preview']");
+			var screenInput = document.querySelector("input[fieldname='screen']");
+
+ 			var fileLocation = decodeURIComponent(arcadeHud.getParameterByName("fileLocation"));
+ 			fileLocation = fileLocation.trim();
+ 			var fileInput = document.querySelector("input[fieldname='file']");
+ 			fileInput.value = fileLocation;
+
  			var item = aaapi.library.findLibraryItem("file", fileLocation);
- 			var itemSlateElem = document.querySelector("#itemContainer");
+ 			//var itemSlateElem = document.querySelector("#itemContainer");
 			
 			var isYouTubePlaylist = false;
+			var itemStuff = document.querySelector("#itemStuff");
+			var aaWindowActionsPanel = document.querySelector(".aaWindowActions");
+			var fetchingStuff = document.querySelector("#fetchingStuff");
+
+			// PREPARE TYPES
+			var allTypes = aaapi.library.getAllLibraryTypes();
+			var allTypesSorted = [];
+
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE APPS
+			var allApps = aaapi.library.getAllLibraryApps();
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				if( fieldName === "type" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						/*
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						var success = aaapi.library.updateItem(id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							item[fieldName] = fieldValue;
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+						*/
+					}, true);
+
+					// populate any TYPE lists
+					for( var j = 0; j < allTypesSorted.length; j++ )
+					{
+						var optionElem = document.createElement("option");
+						optionElem.text = allTypesSorted[j].title;
+						optionElem.value = allTypesSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else if( fieldName === "app" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						/*
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						var success = aaapi.library.updateItem(id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							item[fieldName] = fieldValue;
+							console.log("Item updated!");
+						}
+						else
+							console.log("Item update rejected!");
+						*/
+					}, true);
+
+					// populate any APP lists
+					for( var j = 0; j < allAppsSorted.length; j++ )
+					{
+						var optionElem = document.createElement("option");
+						optionElem.text = allAppsSorted[j].title;
+						optionElem.value = allAppsSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				/*
+				else
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != item[fieldName] )
+							elem.value = (!!item[fieldName]) ? item[fieldName] : "";
+					}, true);
+				}
+				*/
+
+				//if( item.hasOwnProperty(fieldName) )
+				//	dummyElem.value = item[fieldName];
+			}
+
+			function generateTitle(inTitle, url)
+			{
+				var title = inTitle;
+				if( title === "" )
+				{
+					// create a title
+					/*
+					var regEx = /(?=[^\\/]*$).+$/i;
+					var matches = regEx.exec(url);
+					if( matches )
+					{
+						var titleVal = matches[matches.length-1];
+						var foundDot = titleVal.lastIndexOf(".");
+						if( foundDot >= titleVal.length - 4)
+							titleVal = titleVal.substring(0, foundDot);
+
+						title = titleVal;
+					}
+					*/
+
+					if( true || title === "" )
+					{
+						var shortStuff = url;
+						if( shortStuff.indexOf("http://") === 0 )
+							shortStuff = shortStuff.substring(7);
+
+						if( shortStuff.indexOf("https://") === 0 )
+							shortStuff = shortStuff.substring(8);
+
+						if( shortStuff.indexOf("www.") === 0 )
+							shortStuff = shortStuff.substring(4);
+
+						var foundDot = shortStuff.indexOf(".");
+						if( foundDot >= 0 )
+							shortStuff = shortStuff.substring(0, foundDot);
+
+						if( shortStuff !== "" )
+							title = shortStuff;
+					}
+
+					if( title === "" )
+						title = url;
+				}
+
+				return title;
+			}
 
 			function ExtractTwitchId(trailerURL)
 			{
@@ -79,281 +410,156 @@
 	 			// item is created but NOT saved yet, time for last-minute changes!!
 				if( item )
 				{
-					var fields = ["title", "file", "type", "app", "screen"];
-					var i;
-					var max = fields.length;
-					for( i = 0; i < max; i++ )
+					// try to automate some more of this stuff
+					var ytId;
+					if( !badyt )
+						ytId = arcadeHud.extractYouTubeId(fileLocation);
+					else
 					{
-						var x = fields[i];
-						var val = (item.hasOwnProperty(x)) ? item[x] : "";
-
-						fieldContainer = document.createElement("div");
-						fieldContainer.className = "fieldContainer";
-
-						fieldKey = document.createElement("div");
-
-						fieldKeyNode = document.createTextNode(x);
-						fieldKey.appendChild(fieldKeyNode);
-						fieldContainer.appendChild(fieldKey);
-
-						fieldValue = document.createElement("form");
-						fieldValue.addEventListener('submit', function(e)
+						// first auto-set the type to youtube
+						var typeSelect = document.querySelector("select[fieldname='type']");
+						var altMax = typeSelect.options.length;
+						var j;
+						for( j = 0; j < altMax; j++ )
 						{
-							var elem = document.activeElement;
-							e.preventDefault();
-
-							item[elem.field] = elem.value;
-							elem.blur();
-						}, true);
-
-						if( x === "type" )
-						{
-							// auto-set type for images, pc, and other
-							// also local images aren't having themselves used as their screen.
-							var fieldValueSelect = document.createElement("select");
-							var types = aaapi.library.getAllLibraryTypes();
-							var y;
-							var standaloneFieldValueOption;
-							var needsStandaloneType = true;
-							for( y in types )
+							if( typeSelect.options[j].text.toLowerCase().indexOf("videos") >= 0 )
 							{
-								var type = types[y];
-								var fieldValueOption = document.createElement("option");
-								fieldValueOption.value = type.info.id;
-								fieldValueOption.text = type.title;
+								typeSelect.selectedIndex = j;
+								break;
+							}
+						}
 
-								if( type.title === "Standalone" )
-									standaloneFieldValueOption = fieldValueOption;
+						var badYtId = arcadeHud.extractYouTubeId(fileLocation);
+						if( badYtId )
+						{
+							//screenInput.value = "http://img.youtube.com/vi/" + badYtId + "/maxresdefault.jpg";
 
-								var fileVal = (item.hasOwnProperty("file")) ? item["file"] : "";
-								if( type.title === "images" )
+							screenInput.value = "http://i.ytimg.com/vi/" + badYtId + "/maxresdefault.jpg";
+						}
+					}
+
+					if( ytId )
+					{
+						itemStuff.style.display = "none";
+						aaWindowActionsPanel.style.display = "none";
+						fetchingStuff.style.display = "block";
+						fetchYouTubeInfo(ytId);
+					}
+
+					var typeText = typeInput.options[typeInput.selectedIndex].text.toLowerCase();
+					// make sure we are not a YT video
+					if( !!givenTitle && givenTitle !== "" && givenTitle.toLowerCase() !== "untitled")
+					{
+						titleInput.value = givenTitle;
+					}
+					else if( !!!ytId )
+					{
+						// create a title
+						var regEx = /(?=[^\\/]*$).+$/i;
+						var matches = regEx.exec(fileInput.value);
+						if( matches )
+						{
+							var titleVal = matches[matches.length-1];
+							var foundDot = titleVal.lastIndexOf(".");
+							if( foundDot >= titleVal.length - 4)
+								titleVal = titleVal.substring(0, foundDot);
+
+							titleInput.value = titleVal;
+						}
+
+						var regEx = /(twitch\.tv)/i;
+						var matches = regEx.exec(fileInput.value);
+						if( matches )
+						{
+							if( !badyt )
+							{
+								var altMax = typeInput.options.length;
+								var j;
+								for( j = 0; j < altMax; j++ )
 								{
-									var regEx = /(.jpg|.jpeg|.gif|.png|.tga)$/i;
-									var matches = regEx.exec(fileVal);
-									if( matches )
+									if( typeInput.options[j].text.toLowerCase() === "twitch" )
 									{
-										fieldValueOption.selected = true;
-										needsStandaloneType = false;
+										typeInput.selectedIndex = j;
+										break;
 									}
 								}
-								else if( type.title === "movies" )
-								{
-									var regEx = /(.mkv|.avi|.mpg|.mp4|.mpeg|.vob)$/i;
-									var matches = regEx.exec(fileVal);
-									if( matches )
-									{
-										fieldValueOption.selected = true;
-										needsStandaloneType = false;
-									}
-								}
-								else if( type.title === "websites" )
-								{
-									var regEx = /((http|https):\/\/|(www\.|www\d\.))([^\-][a-zA-Z0-9\-]+)?(\.\w+)(\/\w+){0,}(\.\w+){0,}(\?\w+\=\w+){0,}(\&\w+\=\w+)?/i;
-									var matches = regEx.exec(fileVal);
-									if( matches )
-									{
-										fieldValueOption.selected = true;
-										needsStandaloneType = false;
-									}
-								}
-								else if( type.title === "twitch" )
-								{
-									if( fileVal.indexOf("twitch.tv/") >= 0 )
-									{
-										fieldValueOption.selected = true;
-										needsStandaloneType = false;
+							}
 
-										var twitchid = ExtractTwitchId(item.file);
-										if( !!twitchid )
+							var twitchid = ExtractTwitchId(fileInput.value);
+							if( !!twitchid )
+							{
+								var twitchScreenUrl = "http://static-cdn.jtvnw.net/previews-ttv/live_user_" + twitchid + "-1280x720.jpg";
+								screenInput.value = twitchScreenUrl;
+
+								var twitchPreviewUrl = "http://www.twitch.tv/" + twitchid + "/popout";
+								previewInput.value = twitchPreviewUrl;
+
+								titleInput.value =  "Twitch: " + twitchid;
+							}
+						}
+						else
+						{
+							regEx = /(\.jpg|\.jpeg|\.gif|\.png|\.tga)$/i;
+							matches = regEx.exec(fileInput.value);
+							if( matches )
+							{
+								if( !badyt )
+								{
+									var altMax = typeInput.options.length;
+									var j;
+									for( j = 0; j < altMax; j++ )
+									{
+										if( typeInput.options[j].text.toLowerCase() === "images" )
 										{
-											var twitchPreviewUrl = "http://static-cdn.jtvnw.net/previews-ttv/live_user_" + twitchid + "-1280x720.jpg";
-											item.screen = twitchPreviewUrl;
-
-											var el = document.querySelectorAll("input");
-											for( var c = 0; c < el.length; c++ )
+											typeInput.selectedIndex = j;
+											break;
+										}
+									}
+								}
+							}
+							else
+							{
+								regEx = /(\.mkv|\.avi|\.mpg|\.mp4|\.mpeg|\.vob)$/i;
+								matches = regEx.exec(fileInput.value);
+								if( matches )
+								{
+									if( !badyt )
+									{
+										var altMax = typeInput.options.length;
+										var j;
+										for( j = 0; j < altMax; j++ )
+										{
+											if( typeInput.options[j].text.toLowerCase() === "movies" )
 											{
-												if( el[c].field === "screen" )
-													el[c].value = twitchPreviewUrl;
+												typeInput.selectedIndex = j;
+												break;
 											}
 										}
 									}
 								}
-
-								fieldValueSelect.appendChild(fieldValueOption);
-							}
-
-							// select Standalone if no val
-							if( needsStandaloneType && !!standaloneFieldValueOption )
-								standaloneFieldValueOption.selected = true;
-
-							fieldValueSelect.value = val;
-							fieldValueSelect.field = x;
-							fieldValueSelect.addEventListener("change", function(e)
-							{
-								var elem = e.target;
-								item[elem.field] = elem.value;
-							}, true);
-
-							fieldValue.appendChild(fieldValueSelect);
-						}
-						else if( x === "app" )
-						{
-							var fieldValueSelect = document.createElement("select");
-							var fieldValueOption = document.createElement("option");
-							fieldValueOption.value = "";
-							fieldValueOption.text = "Windows";
-							fieldValueSelect.appendChild(fieldValueOption);
-
-							var apps = aaapi.library.getAllLibraryApps();
-							var app;
-							var y;
-							for( y in apps )
-							{
-								app = apps[y];
-								fieldValueOption = document.createElement("option");
-								fieldValueOption.value = app.info.id;
-								fieldValueOption.text = app.title;
-								fieldValueSelect.appendChild(fieldValueOption);
-							}
-
-							fieldValueSelect.value = val;
-							fieldValueSelect.field = x;
-							fieldValueSelect.addEventListener("change", function(e)
-							{
-								var elem = e.target;
-								item[elem.field] = elem.value;
-							}, true);
-
-							fieldValue.appendChild(fieldValueSelect);
-						}
-						else
-						{
-							fieldValueInput = document.createElement("input");
-							fieldValueInput.type = "text";
-							fieldValueInput.value = val;//item[x];
-							fieldValueInput.field = x;
-							fieldValueInput.addEventListener('blur', function(e)
-							{
-								var elem = e.target;
-								item[elem.field] = elem.value;
-								//if( elem.value != item[elem.field] )
-								//	elem.value = item[elem.field];
-							}, true);
-							fieldValue.appendChild(fieldValueInput);
-						}
-
-						fieldContainer.appendChild(fieldValue);
-
-						if( x == "file" )
-						{
-							fieldValue.style.width = "72%";
-
-							var buttonBrowseContainer = document.createElement("div");
-							buttonBrowseContainer.className = "button";
-							buttonBrowseContainer.style.cssText = "font-style: normal; margin: 1px; border-radius: 6px; padding: 2px; text-align: center; vertical-align: top; margin-top: 3px;";
-							buttonBrowseContainer.addEventListener("click", function(e)
-							{
-								arcadeHud.browseForFile(function(chosenFile)
+								else
 								{
-									if(chosenFile !== "")
+									regEx = /((http|https):\/\/|(www\.|www\d\.))([^\-][a-zA-Z0-9\-]+)?(\.\w+)(\/\w+){0,}(\.\w+){0,}(\?\w+\=\w+){0,}(\&\w+\=\w+)?/i;
+									matches = regEx.exec(fileInput.value);
+									if( matches )
 									{
-										if( item.app !== "" )
+										titleInput.value = generateTitle(titleInput.value, fileInput.value);
+
+										if( !badyt )
 										{
-											var app = aaapi.library.getLibraryApp(item.app);
-											var x;
-											for( x in app.filepaths )
+											var altMax = typeInput.options.length;
+											var j;
+											for( j = 0; j < altMax; j++ )
 											{
-												if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+												if( typeInput.options[j].text.toLowerCase() === "websites" )
 												{
-													chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+													typeInput.selectedIndex = j;
 													break;
 												}
 											}
 										}
-
-										var myInput = this.parentNode.querySelector("input");
-										myInput.value = chosenFile;
 									}
-								}.bind(this));
-							}.bind(buttonBrowseContainer), true);
-							buttonBrowseContainer.innerHTML = "<img src='browseicon.png' style='width: 20px;' />";
-							fieldContainer.appendChild(buttonBrowseContainer);
-						}
-						else
-						{
-							fieldValue.style.width = "76%";
-						}
-
-						itemSlateElem.appendChild(fieldContainer);
-
-						//// try to automate some more of this stuff
-						//if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
-						//	fetchYouTubeInfo();
-						/*
-						else if( isImageExtension(fileLocation) )
-						{
-							// auto-set to an images format
-						}
-						else if( isVideoExtension(fileLocation) )
-						{
-							// auto-set to a movies format
-						}
-						*/
-					}
-
-					// try to automate some more of this stuff
-					var isAYouTube = false;
-					if( fileLocation.indexOf("youtu.be") >= 0 || fileLocation.indexOf("youtube.") >= 0 )
-					{
-						isAYouTube = true;
-						fetchYouTubeInfo();
-					}
-
-					// give auto-title if type is not youtube
-					var allInputs = document.querySelectorAll("input, select");
-					var titleInput;
-					var typeInput;
-					var fileInput;
-					var testInput;
-					var testIndex;
-					for( testIndex = 0; testIndex < allInputs.length; testIndex++)
-					{
-						testInput = allInputs[testIndex];
-						if( testInput.hasOwnProperty("field") )
-						{
-							if( testInput.field === "title" )
-								titleInput = testInput;
-							else if( testInput.field === "type" )
-								typeInput = testInput;
-							else if( testInput.field === "file" )
-								fileInput = testInput;
-						}
-					}
-
-					if( !!titleInput && !!typeInput && !!fileInput )
-					{
-						var typeText = typeInput.options[typeInput.selectedIndex].text.toLowerCase();
-						// make sure we are not a YT video
-						//if( titleInput.value === "" && typeText.indexOf("youtube") === -1 )
-						if( !isAYouTube )
-						{
-							// create a title
-							var regEx = /(?=[^\\/]*$).+$/i;
-							var matches = regEx.exec(fileInput.value);
-							if( matches )
-							{
-								var titleVal = matches[matches.length-1];
-								var foundDot = titleVal.lastIndexOf(".");
-								if( foundDot >= titleVal.length - 4)
-									titleVal = titleVal.substring(0, foundDot);
-
-								titleInput.value = titleVal;
-							}
-
-							// update the title if twitch
-							if( typeText.toLowerCase().indexOf("twitch") >= 0 )
-							{
-								titleInput.value = "Twitch Stream: " + titleInput.value;
+								}
 							}
 						}
 					}
@@ -364,54 +570,44 @@
 	 		mainButtonElem.addEventListener("click", function()
 	 		{
 	 			// add the params in the form to the item
-	 			var elems = itemSlateElem.querySelectorAll("input, select");
-	 			var i;
-	 			for( i = 0; i < elems.length; i++)
+	 			var elems = itemStuff.querySelectorAll("input, select");
+	 			for( var i = 0; i < elems.length; i++)
 	 			{
-	 				console.log(elems[i].field);
-	 				item[elems[i].field] = elems[i].value;
+	 				item[elems[i].getAttribute("fieldname")] = elems[i].value;
 	 			}
 
 	 			// save it then spawn it
 	 			var params = [];
 
-				var x;
-				for( x in item )
+				var itemKeys = Object.keys(item);
+				for( var i = 0; i < itemKeys.length; i++ )
 				{
+					var x = itemKeys[i];
+
 					if( x === "info" )
 						continue;
 
 					params.push(x);
 					params.push(item[x]);
 				}
-//console.log(JSON.stringify(params));
+
 				if( aaapi.library.saveItem(item.info.id, params) )
 					aaapi.system.spawnItem(item.info.id);
 			});
 
 			function fetchYouTubeInfo()
 			{
-				isYouTubePlaylist =!!(getParameterByName("list", fileLocation));
+				isYouTubePlaylist = !!(arcadeHud.getParameterByName("list", fileLocation));
 
 				// first auto-set the type to youtube
-				var elems = document.querySelectorAll("select");
-				var max = elems.length;
-				var i;
-				for( i = 0; i < max; i++ )
+				var typeSelect = document.querySelector("select[fieldname='type']");
+				var altMax = typeSelect.options.length;
+				var j;
+				for( j = 0; j < altMax; j++ )
 				{
-					if( elems[i].field === "type" )
+					if( typeSelect.options[j].text.toLowerCase().indexOf("videos") >= 0 )
 					{
-						var altMax = elems[i].options.length;
-						var j;
-						for( j = 0; j < altMax; j++ )
-						{
-							if( elems[i].options[j].text.toLowerCase().indexOf("videos") >= 0 )
-							{
-								elems[i].selectedIndex = j;
-								break;
-							}
-						}
-
+						typeSelect.selectedIndex = j;
 						break;
 					}
 				}
@@ -426,7 +622,11 @@
 					if( request.readyState === 4 && request.status === 200 )
 					{
 						if( request.responseText === "")
+						{
 							console.log("ERROR: Unable to retrieve YouTube info about that video ID.");
+
+							window.location = window.location.href + "&badyt=1"
+						}
 						else
 						{
 							var response = JSON.parse(request.responseText);
@@ -435,12 +635,12 @@
 							var x;
 							for( x in data )
 							{
-								var inputElems = document.querySelectorAll("input");
+								var inputElems = document.querySelectorAll("input, select");
 								var max = inputElems.length;
 								var i;
 								for( i = 0; i < max; i ++ )
 								{
-									if( inputElems[i].field === x )
+									if( inputElems[i].getAttribute("fieldname") === x )
 									{
 										if( x === "title" && isYouTubePlaylist )
 											inputElems[i].value = "Playlist: " + data[x];
@@ -451,14 +651,12 @@
 
 								item[x] = data[x];
 							}
+
+							fetchingStuff.style.display = "none";
+							itemStuff.style.display = "initial";
+							aaWindowActionsPanel.style.display = "initial";
 						}
 					}
-					/*
-					else if( request.status >= 500 )
-					{
-						console.log("request status >= 500");
-					}
-					*/
 				};
 
 				request.open("GET", requestURL, true);

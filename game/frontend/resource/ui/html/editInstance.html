@@ -1,0 +1,259 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "window.location='asset://ui/play.html';"
+			//window.location='asset://ui/libraryBrowser.html?category=items';
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Instance Properties", "width: 600px;", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					}/*,
+					{
+						"id": "visual",
+						"title": "Visual"
+					},
+					{
+						"id": "other",
+						"title": "Other"
+					}*/
+				]
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Title:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var id = arcadeHud.getParameterByName("id");
+			if( !!!uiBack )
+				uiBack = "";
+
+			//var item = aaapi.library.getLibraryItem(id);
+			var item = aaapi.system.getInstance(id).instance;
+			var entryForm = document.querySelector("#entryForm");
+
+			function metaSearch(filedName)
+			{
+				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(filedName);
+				return;
+			}
+
+			function fileBrowse(fieldName)
+			{
+				var fieldElem = document.querySelector(".aaKeyValueTableValue > input[fieldname='" + fieldName + "'], .aaKeyValueTableValue > select[fieldname='" + fieldName + "']");
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					if(chosenFile !== "")
+					{
+						if( item.app !== "" )
+						{
+							var app = aaapi.library.getLibraryApp(item.app);
+							var x;
+							for( x in app.filepaths )
+							{
+								if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+								{
+									chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+									break;
+								}
+							}
+						}
+
+						this.value = chosenFile;
+						this.focus();
+						entryForm.querySelector("input[type='submit']").click();//submit();
+
+						/*
+						// update the item
+						var args = [myInput.field, chosenFile];
+						var success = aaapi.library.updateItem(item.info.id, args);
+						if( success )
+						{
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
+							{
+								if( myInput.field == "all" || args[i] === myInput.field )
+									item[args[i]] = args[i+1];
+							}
+
+							console.log("Item updated!");
+
+							//aaapi.system.autoInspect(this.itemId);
+						}
+						else
+							console.log("Item update rejected!");
+						*/
+					}
+				}.bind(fieldElem));
+			}
+
+			// PREPARE FORM
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				var focusedFieldName = focusedElem.getAttribute("fieldname");
+				var focusedFieldValue = focusedElem.value;
+				if( !focusedFieldName )
+					focusedElem = null;
+
+				// DO WORK
+				if( !!focusedElem )
+				{
+					console.log("Entry form submitted with field " + focusedFieldName + " focused.");
+
+					var success = aaapi.library.updateInstance(id, [focusedFieldName, focusedFieldValue]);
+					if( success )
+					{
+						focusedElem.style.webkitTransition = "initial";
+						focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+						focusedElem.offsetTop;
+						focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+						item[focusedFieldName] = focusedFieldValue;
+						console.log("Instance updated!");
+					}
+					else
+						console.log("Instance update rejected!");
+				}
+				else
+					console.log("Entry form submitted via button click.");
+
+				// done doing work
+				if( !!focusedElem )
+					focusedElem.blur();
+			}, true);
+
+			// PREPARE TYPES
+			var allTypes = aaapi.library.getAllLibraryTypes();
+			var allTypesSorted = [];
+
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE APPS
+			var allApps = aaapi.library.getAllLibraryApps();
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE THE ITEM
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				if( fieldName === "title" )
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != item[fieldName] )
+							elem.value = (!!item[fieldName]) ? item[fieldName] : "";
+					}, true);
+				}
+
+				if( item.hasOwnProperty(fieldName) )
+				{
+					dummyElem.value = item[fieldName];
+				}
+			}
+		</script>
+	</body>
+</html>

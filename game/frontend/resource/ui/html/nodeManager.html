@@ -1,0 +1,802 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			.nodeContentTable
+			{
+
+			}
+
+			.nodeContentTable td:nth-of-type(1)
+			{
+				padding-right: 10px;
+			}
+		</style>
+
+		<script>
+			var nodeInfo;
+			var types = aaapi.library.getAllLibraryTypes();
+			var response = aaapi.system.getNodeSetupInfo();
+			if( !response.success )
+				console.log("ERROR: Could not get node setup info.");
+			else
+				nodeInfo = response.nodeInfo;
+
+
+
+			var worldInfo = aaapi.system.getWorldInfo();
+			if( !worldInfo )
+				console.log("ERROR: Could not get world info.");
+
+			function loadNode()
+			{
+				// FIXME: This only needs to happen if there are unsaved changes in the node space.
+				if( nodeInfo.objects.length && nodeInfo.hasChanged )
+				{
+					createModalConfirm('Load Node', 'The node space currently has unsaved changes.<br /><br />Are you sure?', 'canceledLoadNode();', 'confirmedLoadNode();');
+				}
+				else
+					confirmedLoadNode();
+			}
+
+			function confirmedLoadNode()
+			{
+				window.location = "asset://ui/libraryBrowser.html?nodestyle=node_" + nodeInfo.style + '&uiback=' + encodeURIComponent("window.location='asset://ui/nodeManager.html';");
+			}
+
+			function canceledLoadNode()
+			{
+				console.log("Cancled load node.");
+			}
+
+			function clearNode()
+			{
+				// FIXME: This only needs to happen if there are unsaved changes in the node space.
+				if( nodeInfo.objects.length && nodeInfo.hasChanged )
+				{
+					createModalConfirm('Clear Node Space', 'The node space currently has unsaved changes.<br /><br />Are you sure?', 'canceledClearNode();', 'confirmedClearNode();');
+				}
+				else
+					confirmedClearNode();
+			}
+
+			function saveClicked()
+			{
+				if( existingNodeTitle === "" )
+					createModalPrompt('Save New Node', 'Node Name:', 'canceledSaveNewNode();');
+				else
+					confirmedSaveNewNode(existingNodeTitle);
+			}
+		</script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Node Manager", "", false, true, "", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div>
+			<div id="nodeTitle" class="aaThemeColorOneColor aaTextSizeFontSize aaTitleText">Unsaved Node</div>
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 300px; padding: 0;">
+				<table id="nodeContentsTable" class="aaTextSizeFontSize aaTextColorTwoColor nodeContentTable" style="width: 100%; margin-right: 50px;">
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="aaWindowPaneContent aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="margin-top: 8px; padding-top: 0; padding-bottom: 0;">
+			<div class="aaThemeColorOneColor aaTextSizeFontSize aaTitleText">
+				<div style="float: left; margin-right: 40px;">Style: <div id="nodeStyle" style="display: inline;"></div></div><div style="float: right;">Map: <div id="mapName" style="display: inline;"></div></div><br />
+			</div>
+		</div>
+
+		<div class="aaWindowPaneContent aaThemeColorOneShadedBackground aaTextSizeFontSize aaTextColorTwoColor aaThemeColorOneShadedBorderColor" style="margin-top: 8px;">
+			<table class="aaWindowActions">
+				<tr>
+					<td>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" onclick="clearNode();" id="clearButton" value="Clear" />
+						<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Load" id="loadButton" onclick="loadNode();" />
+						<!--
+						<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Workshop" />
+						<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Share" />
+						-->
+						<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Save" id="saveButton" onclick="saveClicked();" />
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div id="unsavedChanges" class="aaTextSizeFontSize aaTextColorTwoColor">
+			<hr />
+			* This node contains unsaved changes.
+		</div>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<style>
+			.detailsButton
+			{
+				padding: 1px;
+				padding-left: 20px;
+				padding-right: 20px;
+			}
+
+			.selectedEntry
+			{
+				
+			}
+
+			.resultsTable
+			{
+				/*border-collapse: separate;*/
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			.resultsTable td
+			{
+				border-top-style: solid;
+				border-top-width: 2px;
+				padding: 3px;
+				height: 60px;
+			}
+
+			.resultsTable tr
+			{
+				box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+			}
+
+			.resultsTable tr td:first-child
+			{
+				border-top-left-radius: 8px;
+				border-bottom-left-radius: 8px;
+				width: 1%;
+				white-space: nowrap;
+				padding-left: 12px;
+				padding-right: 20px;
+				opacity: 0.5;
+			}
+
+			.resultsTable tr td:last-child
+			{
+				border-top-right-radius: 8px;
+				border-bottom-right-radius: 8px;
+				padding-left: 20px;
+				padding-right: 20px;
+			}
+
+			.editButton
+			{
+				background: none;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.buttonsContainer
+			{
+				display: none;
+				float: right;
+			}
+
+			tr:hover > td > .buttonsContainer
+			{
+				display: inline-block;
+			}
+
+			.resultsTableContainer
+			{
+				padding: 2px;
+				height: 400px;
+				max-height: 400px;
+				overflow-y: auto;
+			}
+
+			.entryTitleContainer
+			{
+				float: left;
+				display: inline-block;
+			}
+
+			.entryTitleContainer
+			{
+				margin-right: 8px;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+			}
+
+			.entryTitle
+			{
+				display: inline-block;
+				max-width: 750px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.resultsTable tr:not(.selectedEntry) .entryTitle
+			{
+				text-shadow: none;
+			}
+
+			.entryFilter
+			{
+				display: inline-block;
+				width: 100px;
+				max-width: 100px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.hasSelectedEntry #browseInput
+			{
+				/*background-color: red;*/
+			}
+
+			#libraryTable[category='models'] #filterSelectCell, #libraryTable[category='models'] #auxButton, #libraryTable[category='models'] #browseButton #libraryTable[isNodes='yes'] #filterSelectCell, #libraryTable[isNodes='yes'] #auxButton, #libraryTable[isNodes='yes'] #browseButton, #libraryTable[isNodes='yes'] #browseInput
+			{
+				display: none;
+			}
+		</style>
+
+		<script>
+			var aaModalMenu;
+			function createModalConfirm(title, text, noAction, yesAction)
+			{
+				if( !!aaModalMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalMenu.flashInterval )
+						{
+							aaModalMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalMenu), 100);
+
+							aaModalMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Yes" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="No" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+					aaModalMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+					aaModalMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			function confirmedClearNode()
+			{
+				console.log("Confirmed CLEAR NODE.");
+				aaapi.system.clearNodeSpace();
+				aaapi.system.deactivateInputMode();
+			}
+
+			function canceledClearNode()
+			{
+				console.log("Canceled CLEAR NODE.");
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				modalHTML += text + "<br />";
+				modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="submit" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				/*
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+				*/
+
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			function confirmedSaveNewNode(nodeName)
+			{
+				console.log("Save node with: " + nodeName);
+				aaapi.system.saveNewNode(nodeName);
+				aaapi.system.deactivateInputMode();
+			}
+
+			function canceledSaveNewNode()
+			{
+			}
+
+			var existingNodeTitle = "";
+			var nodeTitleElem = document.querySelector("#nodeTitle");
+			var nodeStyleElem = document.querySelector("#nodeStyle");
+			nodeStyleElem.innerHTML = nodeInfo.style;
+
+			if( typeof nodeInfo.infoObjectIndex === "number" && !!nodeInfo.objects[nodeInfo.infoObjectIndex] && !!nodeInfo.objects[nodeInfo.infoObjectIndex].item )
+			{
+				existingNodeTitle = nodeInfo.objects[nodeInfo.infoObjectIndex].item.title;
+				nodeTitleElem.innerHTML = existingNodeTitle;
+			}
+
+			if( existingNodeTitle === "" )
+				nodeInfo.hasChanged = true;
+
+			if( !nodeInfo.objects.length )
+			{
+				document.querySelector("#clearButton").style.display = "none";
+				document.querySelector("#nodeContentsTable").parentNode.parentNode.style.display = "none";
+			}
+			if( !nodeInfo.objects.length || !nodeInfo.hasChanged )
+			{
+				document.querySelector("#saveButton").style.display = "none";
+				document.querySelector("#unsavedChanges").style.display = "none";
+			}
+
+			var mapNameElem = document.querySelector("#mapName");
+			mapNameElem.innerHTML = worldInfo.map.platforms[arcadeHud.platformId].file;
+
+			var nodeContentsTable = document.querySelector("#nodeContentsTable");
+			var nodeContentsTBody = nodeContentsTable.querySelector("tbody");
+			var entryRow, entryLabelCell, entryTitleCell;
+			var entries = nodeInfo.objects;
+			var entry;
+			for( var i = 0; i < entries.length; i++ )
+			{
+				if( i === nodeInfo.infoObjectIndex )
+				{
+					continue;
+				}
+
+				entry = entries[i];
+				if( !!entry.item )
+					appendEntry(entry.item, true);
+				else
+					appendEntry(entry.model, false);
+				/*
+				entryRow = document.createElement("tr");
+				entryLabelCell = document.createElement("td");
+				entryLabelCell.innerHTML = (!!!entry.item && !!entry.model) ? "prop" : "shortcut";
+
+				entryTitleCell = document.createElement("td");
+				if( !!entry.item )
+					entryTitleCell.innerHTML = entry.item.title;
+				else if( !!entry.model )
+					entryTitleCell.innerHTML = entry.model.title;
+				entryRow.appendChild(entryLabelCell);
+				entryRow.appendChild(entryTitleCell);
+				nodeContentsTBody.appendChild(entryRow);
+				*/
+			}
+
+			function appendEntry(entry, isItem)
+			{
+				if( !!!entry )
+				{
+					console.log("Warning: Attempted to append an entry with no entry given.");
+					return;
+				}
+
+				if( !!types[entry.type] && types[entry.type].title === "node" && activeTabId !== "nodes" )
+					return;
+
+				// add this row to the table
+				var entryRow = document.createElement("tr");
+				entryRow.className = "aaThemeColorTwoHoverShadedBackground";
+				entryRow.entry = entry;
+				/*
+				entryRow.addEventListener("click", function(e)
+				{
+					var selectedEntry = document.querySelector(".selectedEntry");
+					if( !!selectedEntry )
+						deselectLibraryEntry(selectedEntry);
+
+					selectLibraryEntry(this);
+				}.bind(entryRow), true);
+
+				//dblclick
+				// issue: double click is firing even if it wasn't the SAME item you clicked twice
+				// solution: what ever.
+				entryRow.addEventListener("dblclick", function(e)
+				{
+					chooseSelected(this);
+				}.bind(entryRow), true);
+				*/
+
+				var entryFilterCell = document.createElement("td");
+				entryFilterCell.className = "aaThemeColorTwoHighBorderColor aaTextSizeFontSize aaTextColorTwoColor aaTitleText";
+
+				var entryFilterContainer = document.createElement("div");
+				entryFilterContainer.className = "entryFilterContainer";
+
+				var entryFilter = document.createElement("div");
+				//entryFilter.className = "aaTextSizeFontSize aaTextColorTwoColor aaTitleText";
+				entryFilter.className = "entryFilter aaTextColorTwoHighColor";
+				entryFilter.style.cssText = "text-shadow: none;";
+				entryFilter.innerHTML = (isItem) ? "shortcut" : "prop";//( !!types[entry.type] ) ? types[entry.type].title : "";
+
+				var entryTitleCell = document.createElement("td");
+				entryTitleCell.className = "aaThemeColorTwoHighBorderColor aaTextColorTwoColor aaTitleTextSizeFontSize aaTitleText";
+				entryTitleCell.style.cssText = "text-shadow: none;";
+
+				var useImages = false;
+				if( useImages )
+				{
+					var taskImageContainer = document.createElement("div");
+					taskImageContainer.style.cssText = "display: inline-block; margin-right: 10px; vertical-align: top; width: 90px; height: 38px; text-align: center; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);";
+
+					var taskImage = document.createElement("img");
+					taskImage.style.display = "none";
+					//taskImage.entry = task.entry;
+					taskImageContainer.appendChild(taskImage);
+
+					arcadeHud.loadItemBestImage(taskImage, entry, function()
+					{
+						this.ready = true;
+
+						var imageContainer = this.parentNode;
+						imageContainer.style.background = "transparent url('" + this.src + "') center";
+						imageContainer.style.backgroundSize = "cover";
+						//console.log(imageContainer.style.background);
+						/*
+						if( false && extraPanel.style.display !== "none" )
+						{
+							var table = document.querySelector("#dummyMarker").parentNode.parentNode.parentNode.parentNode;
+							console.log(table.tagName);
+							table.style.background = "transparent url('" + this.src + "')";
+							table.style.backgroundSize = "cover";
+						}
+						*/
+					});
+				}
+
+				var entryTitleContainer = document.createElement("div");
+				entryTitleContainer.className = "entryTitleContainer";
+
+				var entryTitle = document.createElement("div");
+				entryTitle.className = "entryTitle";
+				entryTitle.innerHTML = entry.title;
+
+				var buttonsContainer = document.createElement("div");
+				buttonsContainer.className = "buttonsContainer";
+/*
+				var editButton = document.createElement("div");
+				editButton.className = "editButton aaThemeColorOneHoverShadedBackground helpNote";
+				editButton.setAttribute("help", "Edit this item's details.");
+				editButton.entry = entry;
+				editButton.addEventListener("click", function(e)
+				{
+					if( category === "items" )
+					{
+						if( !!nodestyle )
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?nodestyle=" + nodestyle + "&activeTabId=" + activeTabId + "';");
+						}
+						else
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=" + activeTabId + "';");
+						}
+					}
+					else if( category === "models" )
+					{
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+				}.bind(editButton), true);
+
+				var editButtonImage = document.createElement("img");
+				editButtonImage.src = "editicon.png";
+*/
+				// compose
+				// 1st cell
+				entryFilterContainer.appendChild(entryFilter);
+				entryFilterCell.appendChild(entryFilterContainer);
+
+				// 2nd cell
+				if( useImages )
+					entryTitleContainer.appendChild(taskImageContainer);
+
+				entryTitleContainer.appendChild(entryTitle);
+				//editButton.appendChild(editButtonImage);
+				//buttonsContainer.appendChild(editButton);
+				entryTitleCell.appendChild(entryTitleContainer);
+				entryTitleCell.appendChild(buttonsContainer);
+
+				// row
+				entryRow.appendChild(entryFilterCell);
+				entryRow.appendChild(entryTitleCell);
+				nodeContentsTBody.appendChild(entryRow);
+				return;
+			}
+		</script>
+
+	</body>
+</html>

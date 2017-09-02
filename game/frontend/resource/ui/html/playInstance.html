@@ -6,14 +6,15 @@
 		<style>
 			#instanceList
 			{
-				overflow-y: auto;
-				max-height: 500px;
-				width: 100%;
+				/*overflow-y: auto;*/
+				/*max-height: 500px;*/
+				/*width: 100%;*/
 				text-align: left;
 				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
 				border-radius: 10px;
+				margin-bottom: 4px;
 			}
-
+/*
 			#instanceList::-webkit-scrollbar
 			{
 				width: 15px;
@@ -38,26 +39,27 @@
 			{
 				background-color: transparent;
 			}
-
+*/
 			.instanceBar
 			{
 				width: 100%;
-				background-color: rgba(50, 50, 50, 0.5);
+				/*background-color: rgba(50, 50, 50, 0.5);*/
 				font-weight: bold;
 				font-family: Arial;
-				border-bottom: 4px solid #000;
+				border-bottom-size: 4px;
+				border-bottom-style: solid;/*#000;*/
 				width: 100%;
-				text-shadow: 2px 2px 2px #000;
+				/*text-shadow: 2px 2px 2px #000;*/
 			}
-
+/*
 			.instanceBar:hover
 			{
 				background-color: rgba(250, 50, 50, 0.9) !important;
 			}
-
+*/
 			.instanceBarText
 			{
-				padding: 10px;
+				/*padding: 10px;*/
 				letter-spacing: 0.2em;
 				font-style: italic;
 			}
@@ -65,51 +67,232 @@
 			.hotshot
 			{
 				display: inline-block;
-				padding: 4px;
-				background-color: rgba(0, 0, 0, 0.9);
-				border: 3px solid transparent;
-				border-color: transparent;
+				border-style: solid;
+				border-width: 6px;
+				border-radius: 4px;
+				margin: 4px;
 			}
 
-			.hotshot:hover
+			.buttonsContainer
 			{
-				border-color: white;
-				background-color: rgba(192, 35, 35, 0.8);
+				white-space: nowrap;
+				/*display: none;*/
+				visibility: hidden;
+				/*float: right;*/
+			}
+
+			tr:hover > td > .buttonsContainer
+			{
+				/*display: inline-block;*/
+				visibility: visible;
+			}
+
+			.editButton
+			{
+				background: none;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
+			.screenshotList
+			{
+				/*width: 90%;*/
 			}
 		</style>
 	</head>
-	<body>		
-		<div class="hudContent" style="width: 60%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/play.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Map Instances
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/welcome.html';" help="Go to the Main Menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
-					</div>
-				</div>
-			</div>
+	<body>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
 
-			<center>
-			<div id="instanceList">
-				<!--<div style='font-weight: bold; font-family: Arial; padding: 15px;'>
-					yadda yadda yadda<br /><br />
-				</div>-->
-			</div>
-			</center>
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Map Instances", "", true, true, "window.location='asset://ui/play.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+			<div id="instanceList"></div>
 		</div>
 
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
 
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<script>
+			var aaModalMenu;
+			//var aaModalFlashInterval;
+			function createModalConfirm(title, text, noAction, yesAction)
+			{
+				if( !!aaModalMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalMenu.flashInterval )
+						{
+							aaModalMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalMenu), 100);
+
+							aaModalMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Yes" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="No" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+					aaModalMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
+					aaModalMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			function confirmedDeleteInstance(instanceId)
+			{
+				aaapi.library.deleteInstance(instanceId);
+				window.location = 'asset://ui/playInstance.html?id=' + mapId;
+				//aaapi.system.deleteScreenshot(shotId);
+				//window.location='asset://ui/welcome.html?tab=screenshots';
+			}
+
+			function canceledDeleteInstance()
+			{
+			}
+		</script>
 
 <!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		<script>
+			// get the current mapHistory (or create an empty mapHistory)
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
 			var tga = new TGA();
 
 			var titleElem = document.body.querySelector("#mapTitle");
@@ -180,9 +363,9 @@
 			{
 				// Add the "take new screenshot" button to the front of the list.
 				var screenshotElem = document.createElement("div");
-				screenshotElem.className = "hotshot helpNote";
+				screenshotElem.className = "hotshot aaThemeColorOneHoverBorderColor helpNote";
 				//screenshotElem.style.cssText = "width: 41px; height: 135px; margin: auto;";
-				screenshotElem.style.cssText = "width: 240; height: 135px; margin: auto;";
+				screenshotElem.style.cssText = "width: 240; height: 135px;";
 				screenshotElem.setAttribute("help", "Load this instance & spawn at the default location for this map.");
 				screenshotElem.instanceId = instanceId;
 				screenshotElem.addEventListener("click", function()
@@ -203,16 +386,26 @@
 			var instances = aaapi.system.getMapInstances(mapId);
 			var instanceListElem = document.querySelector("#instanceList");
 			var instance, instanceBar, instanceBarText, instanceScreenshotListElem, instanceScreenshots, k;
+			var table, tr, td;
 			for( var i = 0; i < instances.length; i++)
 			{
 				instance = instances[i];
 
+				table = document.createElement("table");
+				table.style.cssText = "width: 100%; max-width: 700px;";
+				//table.border = 2;
+				table.cellSpacing = 0;
+				table.cellPadding = 0;
+				tr = document.createElement("tr");
+				tr.className = "aaThemeColorOneHoverBackgroundColor aaThemeColorOneBorderColor";
+				table.appendChild(tr);
+
+				td = document.createElement("td");
+				tr.appendChild(td);
+
+
 				instanceBar = document.createElement("div");
-				instanceBar.className = "instanceBar helpNote";
-				if( i === 0 )
-					instanceBar.style.backgroundColor = "rgba(200, 70, 70, 0.8)";
-				else
-					instanceBar.style.backgroundColor = "rgba(50, 50, 50, 0.5)";
+				instanceBar.className = " helpNote";
 
 				instanceBar.setAttribute("help", "Choose a spawn location for this instance.");
 				instanceBar.instanceId = instance.id;
@@ -222,14 +415,88 @@
 				}.bind(instanceBar), true);
 
 				instanceBarText = document.createElement("div");
-				instanceBarText.className = "instanceBarText";
-				instanceBarText.innerHTML = instance.title;
+				instanceBarText.className = "instanceBarText aaTitleText aaTextSizeFontSize aaTextColorOneColor";
+				instanceBarText.innerHTML = '<div style="display: inline;">' + instance.title + "</div>";
 				instanceBar.appendChild(instanceBarText);
-				instanceListElem.appendChild(instanceBar);
+
+				td.appendChild(instanceBar);
+
+				td = document.createElement("td");
+				td.style.cssText = "width: 1px;";
+				tr.appendChild(td);
+
+				var buttonsContainer = document.createElement("div");
+				buttonsContainer.className = "buttonsContainer";
+
+				var editButton = document.createElement("div");
+				editButton.className = "editButton aaThemeColorOneHoverShadedBackground helpNote";
+				editButton.setAttribute("help", "Edit this instance's details.");
+				//editButton.entry = entry;
+				editButton.instanceId = instance.id;
+				editButton.addEventListener("click", function(e)
+				{
+					console.log("Edit instance w/ ID " + this.instanceId);
+					window.location = "asset://ui/editInstance.html?id=" + encodeURIComponent(this.instanceId) + "&uiback=" + encodeURIComponent("window.location='asset://ui/playInstance.html?id=" + mapId + "';");
+					/*
+					if( category === "items" )
+					{
+						if( nodestyle != "" )
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?nodestyle=" + nodestyle + "&activeTabId=" + activeTabId + "';");
+						}
+						else
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=" + activeTabId + "';");
+						}
+					}
+					else if( category === "models" )
+					{
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+					*/
+				}.bind(editButton), true);
+
+				var editButtonImage = document.createElement("img");
+				editButtonImage.src = "editicon.png";
+				editButton.appendChild(editButtonImage);
+				buttonsContainer.appendChild(editButton);
+				//td.appendChild(buttonsContainer);
+
+				var deleteButton = document.createElement("div");
+				deleteButton.className = "editButton aaThemeColorOneHoverShadedBackground helpNote";
+				deleteButton.setAttribute("help", "Delete this instance.");
+				//deleteButton.entry = entry;
+				deleteButton.instanceId = instance.id;
+				deleteButton.addEventListener("click", function(e)
+				{
+					//e.stopImmediatePropagation();
+					console.log("Delete instance w/ ID " + this.instanceId);
+					createModalConfirm('Delete Instance', 'All objects placed into this instance will be lost.<br />Are you sure?', 'canceledDeleteInstance();', 'confirmedDeleteInstance("' + this.instanceId + '");');
+				}.bind(deleteButton), true);
+/*
+				var deleteButtonImage = document.createElement("img");
+				deleteButtonImage.src = "deleteicon.png";
+				deleteButton.appendChild(deleteButtonImage);
+				*/
+				var iconSize = 32;
+				var deleteButtonHTML = arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
+				deleteButton.innerHTML = deleteButtonHTML;
+				buttonsContainer.appendChild(deleteButton);
+				td.appendChild(buttonsContainer);
+
+				//instanceListElem.appendChild(instanceBar);
+
+				tr = document.createElement("tr");
+				table.appendChild(tr);
+
+				td = document.createElement("td");
+				td.colSpan = "3";
+				td.style.cssText = "max-width: 1600px;"
+				tr.appendChild(td);
 
 				instanceScreenshotListElem = document.createElement("div");
 				instanceScreenshotListElem.instanceId = instance.id;
-				instanceScreenshotListElem.className = "screenshotList";
+				instanceScreenshotListElem.className = "screenshotList aaThemeColorTwoHighBackgroundColor";
 				if( i === 0)
 					instanceScreenshotListElem.style.cssText = "padding: 10px; display: block;";
 				else
@@ -245,7 +512,7 @@
 				{
 					screenshot = instanceScreenshots[k];
 					screenshotElem = document.createElement("div");
-					screenshotElem.className = "hotshot helpNote";
+					screenshotElem.className = "hotshot aaThemeColorOneHoverBorderColor helpNote";
 
 					screenshotElem.screenshotId = screenshot.id;
 					screenshotElem.setAttribute("help", "Load this instance & spawn at this location.");
@@ -256,7 +523,7 @@
 						play(this.instanceId, this.screenshot.body.position, this.screenshot.body.rotation, this.screenshot.id);
 					}.bind(screenshotElem));
 
-					screenshotElem.style.cssText = "width: 240px; height: 135px; margin: auto;";
+					screenshotElem.style.cssText = "width: 240px; height: 135px;";
 					tga.open( "shots/" + screenshot.id + ".tga", function()
 					{
 						var elem = tga.getCanvas();
@@ -269,11 +536,12 @@
 
 				if( instanceScreenshots.length === 0 )
 				{
+					//instanceScreenshotListElem.style.border = "3px solid yellow";
 					var screenshotElem = document.createElement("div");
-					screenshotElem.className = "hotshot helpNote";
-					screenshotElem.style.cssText = "width: 99%; height: 135px;";
+					screenshotElem.className = "hotshot aaThemeColorTwoShadedBackground aaThemeColorOneHoverBorderColor helpNote";
+					screenshotElem.style.cssText = "display: block; padding: 8px; height: 135px;";
 					screenshotElem.setAttribute("help", "Spawn at the default location for this map.");
-					screenshotElem.innerHTML = "<table style='height: 100%; width: 100%;'><tr><td align='center' style='font-size: 20px; font-family: Arial; font-weight: 900;'><font style='font-size: 80px;'>LOAD</font><br />(No F5 screenshots exist for this instance yet.)</td></tr></table>";
+					screenshotElem.innerHTML = "<center><table style='height: 100%; width: 100%;'><tr><td align='center' style='font-size: 20px; font-family: Arial; font-weight: 900;' class='aaTextColorTwoColor'><font style='font-size: 80px;'>LOAD</font><br />(No F5 screenshots exist for this instance yet.)</td></tr></table></center>";
 					screenshotElem.instanceId = instance.id;
 					screenshotElem.addEventListener("click", function()
 					{
@@ -284,10 +552,13 @@
 				}
 
 				instanceListElem.appendChild(instanceScreenshotListElem);
+
+				td.appendChild(instanceScreenshotListElem);
+				instanceListElem.appendChild(table);
 			}
 
 			instanceBar = document.createElement("div");
-			instanceBar.className = "instanceBar helpNote";
+			instanceBar.className = "instanceBar aaThemeColorOneHoverShadedBackground aaThemeColorOneBorderColor helpNote";
 			instanceBar.style.cssText = "border-bottom: 0;";
 			instanceBar.setAttribute("help", "Create a new, blank instance on this map.");
 			instanceBar.addEventListener("click", function()
@@ -296,7 +567,7 @@
 			});
 
 			instanceBarText = document.createElement("div");
-			instanceBarText.className = "instanceBarText";
+			instanceBarText.className = "instanceBarText aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor";
 			instanceBarText.innerHTML = "+ Create New Instance";
 			instanceBar.appendChild(instanceBarText);
 			instanceListElem.appendChild(instanceBar);
@@ -312,6 +583,22 @@
 
 				 if( !!!screenshotId )
 				 	screenshotId = "";
+
+				// create our mapHistory entry
+				var mapHistoryEntry = {
+					"mapId": mapId,
+					"instanceId": instanceId,
+					"position": position,
+					"rotation": rotation,
+					"screenshotId": screenshotId,
+					"timestamp": new Date().getTime()
+				};
+
+				// add our entry to the mapHistory
+				mapHistory[mapId] = mapHistoryEntry;
+
+				// save the mapHistory out
+				localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
 
 				window.location = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId + "&pos=" + position + "&rot=" + rotation + "&screenshot=" + screenshotId;
 			}

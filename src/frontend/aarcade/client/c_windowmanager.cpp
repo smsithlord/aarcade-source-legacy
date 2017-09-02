@@ -161,7 +161,7 @@ BOOL CALLBACK C_WindowManager::EnumWindowsProc(HWND hwnd, LPARAM lParam)
 
 	char class_name[AA_MAX_STRING -1];
 	char title[AA_MAX_STRING -1];
-	GetClassName(hwnd, class_name, sizeof(class_name));
+	//GetClassName(hwnd, class_name, sizeof(class_name));	<-- exposing the input slate broke this method definition.
 	GetWindowText(hwnd, title, sizeof(title));
 
 	std::string windowTitle = title;

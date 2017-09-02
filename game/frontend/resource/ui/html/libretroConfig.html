@@ -2,6 +2,73 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script>
+			var cores;
+			var response = aaapi.system.libretroGetAllDLLs();
+			cores = response.cores;
+		</script>
+		<style>
+			.coreFolderEntry:hover
+			{
+				background-color: rgba(200, 200, 200, 0.5);
+			}
+
+			.coreFolderActions
+			{
+				visibility: hidden;
+				pointer-events: none;
+			}
+
+			.coreFolderEntry:hover .coreFolderActions
+			{
+				visibility: visible;
+				pointer-events: all;
+			}
+
+			.onlyIfCoreSelected
+			{
+				display: none;
+			}
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+		</style>
 	</head>
 	<body>
 
@@ -11,23 +78,17 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Libretro Framework", "", true, true, "window.location='asset://ui/embeddedApps.html';", "aaapi.system.deactivateInputMode();");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Libretro Properties", "", true, true, "window.location='asset://ui/embeddedApps.html';", "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
-
-		<form id="entryForm" style="margin: 0;">
 
 		<script>
 			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
 				"tabs": [
 					{
-						"id": "options",
-						"title": "General"
+						"id": "cores",
+						"title": "Cores"
 					},
-					/*{
-						"id": "advanced",
-						"title": "Advanced"
-					},*/
 					{
 						"id": "about",
 						"title": "About"
@@ -37,32 +98,305 @@
 			document.write(windowTabsHeaderHTML);
 		</script>
 
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="options">
-			<div class="aaTextSizeFontSize aaTextColorTwoColor">
-				This tab will have basic OPTIONS for the user to configure.
-			</div>
-		</div>
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="advanced">
-			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
-				<tr>
-					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
-						Cores DLL Path:
-					</td>
-					<td class="aaKeyValueTableValue">
-						<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" placeholder="libretro/cores/" />
-					</td>
-					<td style="width: 1%; white-space: nowrap;">
-						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
-							<script>
-								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
-							</script>
-						</div>
-					</td>
-				</tr>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="cores">
+			<table cellspacing="0" cellpadding="0">
+				<tr><td>
+					<div class="aaTextColorTwoColor aaTitleTextSizeFontSize">
+						All Detected DLLs
+					</div>
+				</td><td align="center">
+					<div id="coreTitle" class="aaThemeColorOneColor aaTitleTextSizeFontSize aaTitleText">
+						- no core selected -
+					</div>
+				</td></tr>
+				<tr><td align="center">
+					<div class="aaTextSizeFontSize aaTextColorTwoColor">
+						<select id="dllList" size="20" class="aaTextSizeFontSize aaScrollBars helpNote" help="Remember, you only need to configure the core you want to enable & use!" style="width: 300px; height: 500px; border-radius: 10px;">
+						</select>
+					</div>
+				</td><td valign="top" class="aaTextColorTwoColor" style="padding-left: 20px; min-width: 400px;" align="center">
+					<div class="onlyIfCoreSelected aaTextSizeFontSize aaScrollBars" style="font-family: Arial; height: 500px; overflow-y: auto; overflow-x: hidden; padding-right: 10px;">
+						<form id="entryForm" style="margin: 0; padding: 0;" corefile="">
+					 		<table class="aaTextColorTwoColor" cellspacing="0" cellpadding="3" style="width: 100%;">
+					 			<tr style="display: none;"><td colspan="2" style="padding-top: 20px;">
+									<div style="text-align: center; padding: 10px;" class="aaTextSizeFontSize aaThemeColorOneShadedBackground aaTextColorOneColor aaTitleText">
+										Core Options
+									</div>
+								</td></tr>
+					 			<tr>
+					 				<td valign="middle" style="font-weight: 900; padding-top: 30px; text-align: right;">
+					 					Enabled:
+					 				</td>
+					 				<td valign="middle" style="padding-top: 30px; text-align: left;">
+					 					<div id="enabledToggle" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground" onclick="onEnabledClicked(this);">
+					 						<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor">
+					 						</div>
+					 					</div>
+					 				</td>
+					 			</tr>
+					 			<tr>
+					 				<td valign="middle" style="font-weight: 900; text-align: right;">
+					 					Auto Cart Saves:
+					 				</td>
+					 				<td valign="middle" style="text-align: left;">
+					 					<div id="cartToggle" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground" onclick="onCartClicked(this);">
+					 						<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor">
+					 						</div>
+					 					</div>
+					 				</td>
+					 			</tr>
+					 			<tr>
+					 				<td valign="middle" style="font-weight: 900; padding-bottom: 30px; text-align: right;">
+					 					Auto State Saves:
+					 				</td>
+					 				<td valign="middle" style="padding-bottom: 30px; text-align: left;">
+					 					<div id="stateToggle" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground" onclick="onStateClicked(this);">
+					 						<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor">
+					 						</div>
+					 					</div>
+					 				</td>
+					 			</tr>
+					 			<tr style="display: none;"><td style="font-weight: 900;" valign="top">
+				 					Priority:
+				 				</td><td style="padding-bottom: 20px;">
+				 					<select style="width: 100%;" id="priorityBox">
+				 						<option value=0>0 (default)</option>
+				 						<option value=1>1</option>
+				 						<option value=2>2</option>
+				 						<option value=3>3</option>
+				 						<option value=4>4</option>
+				 						<option value=5>5</option>
+				 						<option value=6>6</option>
+				 						<option value=7>7</option>
+				 						<option value=8>8</option>
+				 						<option value=9>9</option>
+				 						<option value=10>10 (max)</option>
+				 					</select>
+					 			</td></tr>
+					 			<tbody class="aaThemeColorOneShadedBackground" id="coreFoldersHeader">
+						 			<tr><td colspan="2">
+										<div style="text-align: center; padding: 10px;" class="aaTextSizeFontSize aaTextColorOneColor aaTitleText">
+											Associated Content Folders
+										</div>
+									</td></tr>
+								</tbody>
+					 			<tr id="noCoreFolders"><td colspan="2">
+									<div style="text-align: center; padding: 10px;" class="aaTextSizeFontSize aaTextColorTwoColor">
+										<div style="display: inline-block; width: 300px;">
+											No content folders or file extensions specified yet.<br /><br />
+											You must add at least 1 content folder that this core is allowed to run files from for it to work.
+										</div>
+									</div>
+								</td></tr>
+								<tbody class="coreFolderEntry">
+								<!--
+						 			<tr><td style="font-weight: 900; padding-left: 10px;">
+					 					Content Folder:
+					 				</td><td style="padding-right: 10px;">
+					 					<input type="text" size="40" style="width: 100%;" placeholder="Any (all folders accepted)" />
+					 				</td></tr>
+						 			<tr><td style="font-weight: 900; padding-left: 10px;">
+					 					File Extensions:
+					 				</td><td style="padding-right: 10px;">
+					 					<input type="text" size="40" style="width: 100%;" placeholder="Any (all extensions accepted)" />
+					 				</td></tr>
+					 				<tr><td colspan="2" align="right">
+					 					<div class="coreFolderActions">
+					 						<input type="button" class="aaButton aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Remove Folder" />
+					 					</div>
+					 				</td></tr>
+					 			</tbody>
+					 			<tbody class="coreFolderEntry">
+						 			<tr><td style="font-weight: 900; padding-left: 10px;">
+					 					Content Folder:
+					 				</td><td style="padding-right: 10px;">
+					 					<input type="text" size="40" style="width: 100%;" placeholder="Any (all folders accepted)" />
+					 				</td></tr>
+						 			<tr><td style="font-weight: 900; padding-left: 10px;">
+					 					File Extensions:
+					 				</td><td style="padding-right: 10px;">
+					 					<input type="text" size="40" style="width: 100%;" placeholder="Any (all extensions accepted)" />
+					 				</td></tr>
+					 				<tr><td colspan="2" align="right">
+					 					<div class="coreFolderActions">
+					 						<input type="button" class="aaButton aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Remove Folder" />
+					 					</div>
+					 				</td></tr>
+					 			-->
+					 			</tbody>
+					 			<tr><td colspan="2">
+					 				<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Add Another Content Folder" style="width: 100%;" onclick="addNewContentFolder();" />
+					 			</td></tr>
+					 		</table>
+					 		<input type="submit" value="Submit" style="position: absolute; pointer-events: none; visibility: hidden;" />
+					 	</form>
+				 	</div>
+				 	<div id="noCoreSelected" class="aaTextSizeFontSize aaTextColorTwoColor aaThemeColorTwoBorderColor aaThemeColorTwoLowBackgroundColor" style="margin-top: 20px; border-style: solid; border-width: 1px; padding: 20px;">
+				 		<div style="display: inline-block; width: 220px; font-family: Arial;">
+				 			Select a core from the list to configure its options.<br /><br />
+				 			Cores highlighted in <font class="aaThemeColorOneBackgroundColor" style="font-weight: 900; padding-left: 4px; padding-right: 4px;">BLUE</font> are currently <b>ENABLED</b>.
+				 		</div>
+				 	</div>
+				</td></tr>
 			</table>
 		</div>
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" tabid="about">
-			This tab will have basic info about Libretro and a link to their site.
+
+		<!--<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">-->
+		<div class="aaScrollBars aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="about">
+			<div style="max-width: 700px;">
+				<img src="libretrologo.png" style="width: 350px;" /><br />
+				<br />
+				Libretro is a library programming interface. Programs get ported to this library and can then be run with any libretro-compatible frontend.<br />
+				<br />
+				Libretro programs are called cores.  They are DLL files (instead of EXE files) that can be embedded into frontends, such as Anarchy Arcade, and run directly on in-game screens.<br />
+				<br />
+				<b>FFMPEG</b> is the <b>only</b> core that comes bundled with AArcade by default. It allows you to play your local video files on the in-game screens.<br />
+				<br />
+				AArcade is also compatible with many other Libretro cores.  You just have to setup them up as addons first.<br />
+				<br /><br />
+				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Addon Cores</font><br /><br />
+				<font style="font-weight: bold;">NOTE:</font> Addon cores are 3rd party apps so you might have to look up their websites to find help or further instructions on how to use or configure them.<br />
+				<ol>
+					<li style="margin-bottom: 10px;">
+						<div>
+							<b>Download Cores From:</b><br />
+							<input type="text" size="57" value="https://buildbot.libretro.com/nightly/windows/x86/latest/" style="border: 0; background-color: inherit;" class="aaTextSizeFontSize aaTextColorTwoColor" readonly=true onclick="this.select();" />
+						</div>
+					</li>
+					<li style="margin-bottom: 10px;">
+						<div>
+							<b>Unzip Cores To:</b><br />
+							Anarchy Arcade/aarcade_user/libretro/cores
+						</div>
+					</li>
+					<li style="margin-bottom: 10px;">
+						<div>
+							<b>Enable Cores At Menu:</b><br />
+							Main Menu > Addons > Embedded > Libretro
+						</div>
+					</li>
+					<li style="margin-bottom: 10px;">
+						<div>
+							<b>Add Content Folders:</b><br />
+							You need to specify which folders contain files that a core is able to run at that same menu.
+						</div>
+					</li>
+				</ol>
+				<br />
+
+				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Cores That Work</font><br /><br />
+				<font style="font-weight: bold;">NOTE:</font> For unknown reasons, addon cores only work AFTER you've used FFMPEG at least once in-game.<br /><br />
+
+				<font style="font-weight: bold;">(ARCADE)</font><br />
+				<ul style="margin: 0;">
+					<li>mame2003_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(SNES)</font><br />
+				<ul style="margin: 0;">
+					<li>bsnes_accuracy_libretro</li>
+					<li>bsnes_balanced_libretro</li>
+					<li>bsnes_cplusplus98_libretro</li>
+					<li>bsnes_mercury_accuracy_libretro</li>
+					<li>bsnes_mercury_balanced_libretro</li>
+					<li>bsnes_mercury_performance_libretro</li>
+					<li>bsnes_performance_libretro</li>
+					<li>snes9x_libretro</li>
+					<li>snes9x_next_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(NES)</font><br />
+				<ul style="margin: 0;">
+					<li>nestopia_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(VIDEO FILES)</font><br />
+				<ul style="margin: 0;">
+					<li>ffmpeg_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(GAMEBOY)</font><br />
+				<ul style="margin: 0;">
+					<li>gamebattle_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(GBA)</font><br />
+				<ul style="margin: 0;">
+					<li>vba_next_libretro</li>
+					<li>vbam_libretro</li>
+				</ul>
+				<br />
+				<font style="font-weight: bold;">(PSX)</font><br />
+				<ul style="margin: 0;">
+					<li>medfan_psx_libretro</li>
+				</ul>
+				<br />
+				<br />
+				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Cores That DO NOT Work</font><br /><br />
+
+				<ul style="margin: 0;">
+					<li>mame_libretro</li>
+					<li>mame2010_libretro</li>
+					<li>mame2014_libretro</li>
+					<li>desume_libretro</li><!-- (RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS) -->
+					<li>mupen64plus_libretro</li><!-- (UNKNOWN ISSUES) -->
+				</ul>
+				<br />
+				<br />
+				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Untested & Assumed NOT Working</font><br /><br />
+
+				<ul style="margin: 0;">
+					<li>2048_libretro</li>
+					<li>3dengine_libretro</li>
+					<li>4do_libretro</li>
+					<li>bluemsx_libretro</li>
+					<li>dinothawr_libretro</li>
+					<li>dosbox_libretro</li>
+					<li>fba_cores_cps1_libretro</li>
+					<li>fba_cores_cps2_libretro</li>
+					<li>fba_cores_neo_libretro</li>
+					<li>fb_alpha_libretro</li>
+					<li>fceumm_libretro</li>
+					<li>fmsx_libretro</li>
+					<li>genesis_plus_gx_libretro</li>
+					<li>handy_libretro</li>
+					<li>mame2000_libretro</li>
+					<li>mednafen_gba_libretro</li>
+					<li>mednafen_lynx_libretro</li>
+					<li>mednafen_ngp_libretro</li>
+					<li>mednafen_pce_fast_libretro</li>
+					<li>mednafen_pcfx_libretro</li>
+					<li>mednafen_snes_libretro</li>
+					<li>mednafen_supergrafx_libretro</li>
+					<li>mednafen_vb_libretro</li>
+					<li>mednafen_wswan_libretro</li>
+					<li>mess_libretro</li>
+					<li>meteor_libretro</li>
+					<li>nxengine_libretro</li>
+					<li>o2em_libretro</li>
+					<li>picodrive_libretro</li>
+					<li>prboom_libretro</li>
+					<li>prosystem_libretro</li>
+					<li>quicknes_libretro</li>
+					<li>remotejoy_libretro</li>
+					<li>scummvm_libretro</li>
+					<li>stella_libretro</li>
+					<li>tgbdual_libretro</li>
+					<li>tryquake_libretro</li>
+					<li>ume_libretro</li>
+					<li>vecx_libretro</li>
+					<li>virtualjaguar_libretro</li>
+					<li>yabause_libretro</li>
+				</ul>
+				<br /><br />
+				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Technical Notes</font><br />
+				<ul>
+					<li>AArcade supports 32bit Libretro DLLs only.</li>
+					<li>AArcade always does automatic state saving/loading.</li>
+					<li>Cores that require Libretro 3D acceleration will fail.</li>
+					<li>All compatibility lists last updated August 2017.</li>
+				</ul>
+			</div>
 		</div>
 
 		<script>
@@ -81,7 +415,6 @@
 				</td>
 			</tr>
 		</table>
-		</form>
 
 		<script>
 			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
@@ -94,6 +427,339 @@
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var dllListElem = document.querySelector("#dllList");
+			var coreTitleElem = document.querySelector("#coreTitle");
+			var entryFormElem = document.querySelector("#entryForm");
+			var enabledBoxElem = document.querySelector("#enabledBox");
+			var enabledToggleElem = document.querySelector("#enabledToggle");
+			var cartToggleElem = document.querySelector("#cartToggle");
+			var stateToggleElem = document.querySelector("#stateToggle");
+			var priorityBoxElem = document.querySelector("#priorityBox");
+			var coreFoldersHeader = document.querySelector("#coreFoldersHeader");
+			var noCoreFoldersElem = document.querySelector("#noCoreFolders");
+
+			var option;
+			for( var i = 0; i < cores.length; i++ )
+			{
+				core = cores[i];
+				option = document.createElement("option");
+				option.value = core.file;
+				option.text = core.file;
+				if( core.enabled )
+				{
+					option.classList.add("aaThemeColorOneBackgroundColor");
+					//option.classList.add("aaTextColorOneColor");
+				}
+
+				option.core = core;
+				dllListElem.appendChild(option);
+			}
+
+			function addNewContentFolder()
+			{
+				var option = dllListElem.options[dllListElem.selectedIndex];
+				var core = option.core;
+				if( !!!core.paths )
+					core.paths = [];
+
+				core.paths.push({"path": "", "extensions": ""});
+
+				if( core.paths.length === 1 )
+					noCoreFoldersElem.style.display = "none";
+
+				appendFolderEntryElem(core, core.paths[core.paths.length - 1]);
+				updateDLL();
+			}
+
+			function updateDLL()
+			{
+				payloadCoreFile = entryFormElem.getAttribute("corefile");
+				payloadEnabled = parseInt(enabledToggleElem.curvalue);
+				payloadCart = parseInt(cartToggleElem.curvalue);
+				payloadState = parseInt(stateToggleElem.curvalue);
+				payloadPriority = parseInt(priorityBoxElem.value);
+				payloadPaths = [];
+
+				var option = dllListElem.options[dllListElem.selectedIndex];
+				var core = option.core;
+				enabledToggleElem.core = core;
+				cartToggleElem.core = core;
+				stateToggleElem.core = core;
+				core.file = payloadCoreFile;
+				core.enabled = payloadEnabled;
+				core.cartsaves = payloadCart;
+				core.statesaves = payloadState;
+				core.priority = payloadPriority;
+				core.paths = [];
+
+				// paths = [path0_path, path0_extensions, path1_path, path1_extensions, etc.]
+				var pathEntry;
+				var folderInputs;
+				var coreFolderEntries = document.querySelectorAll(".coreFolderEntry");
+				for( var i = 0; i < coreFolderEntries.length; i++ )
+				{
+					folderInputs = coreFolderEntries[i].querySelectorAll("input[type='text']");
+					for( var j = 0; j < folderInputs.length; j += 2 )
+					{
+						payloadPaths.push(folderInputs[j].value);
+						payloadPaths.push(folderInputs[j+1].value);
+
+						pathEntry = {
+							"path": folderInputs[j].value,
+							"extensions": folderInputs[j+1].value
+						};
+
+						core.paths.push(pathEntry);
+					}
+				}
+//console.log(typeof payloadCoreFile + " " + typeof payloadEnabled + " " + typeof payloadCart + " " + typeof payloadState + " " + typeof payloadPriority + " " + typeof payloadPaths );
+//console.log(payloadCoreFile + " " + payloadEnabled + " " + payloadCart + " " + payloadState + " " + payloadPriority + " " + payloadPaths );
+				var success = aaapi.system.libretroUpdateDLL(payloadCoreFile, payloadEnabled, payloadCart, payloadState, payloadPriority, payloadPaths);
+			}
+
+			function appendFolderEntryElem(core, corePath)
+			{
+				var tbody, tr, tdLabel, tdValue, input, td, folderActions, removeFolderButton;
+				tbody = document.createElement("tbody");
+				tbody.className = "coreFolderEntry";
+
+				var focusElem, helpText;
+				for( var j = 0; j < 2; j++ )
+				{
+					tr = document.createElement("tr");
+					tr.className = "helpNote";
+					helpText = (j === 0) ? "Any files with a correct extension inside of this folder will be considered runnable by this core." : "Any files with these extensions within a content folder will be considered runnable by this core.<br /><br />Separate extensions with a comma, for example: avi, mpg, mpeg";
+					tr.setAttribute("help", helpText);
+					arcadeHud.assignHelp(tr);
+
+					tdLabel = document.createElement("td");
+					tdLabel.style.cssText = "font-weight: 900; padding-left: 10px;";
+					tdLabel.innerHTML = (j === 0) ? "Content Folder:" : "File Extensions:";
+					tr.appendChild(tdLabel);
+
+					tdValue = document.createElement("td");
+					tdValue.style.cssText = "padding-right: 10px;";
+
+					input = document.createElement("input");
+					input.type = "text";
+					input.size = "40";
+					input.placeholder = (j === 0) ? "Any (all folders accepted)" : "Any (all extensions accepted)";
+					input.style.cssText = "width: 100%;";
+					input.value = (j === 0) ? corePath.path : corePath.extensions;
+					input.originalValue = input.value;
+					input.addEventListener("blur", function()
+					{
+						if( this.originalValue !== this.value )
+							this.value = this.originalValue;
+					}.bind(input), true);
+
+					tdValue.appendChild(input);
+					tr.appendChild(tdValue);
+
+					tbody.appendChild(tr);
+
+					if( j === 0 )
+						focusElem = input;
+				}
+
+				tr = document.createElement("tr");
+
+				td = document.createElement("td");
+				td.colSpan = 2;
+				td.align = "right";
+
+				folderActions = document.createElement("div");
+				folderActions.className = "coreFolderActions";
+
+				removeFolderButton = document.createElement("input");
+				removeFolderButton.type = "button";
+				removeFolderButton.className = "aaButton aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				removeFolderButton.value = "Remove Folder";
+				removeFolderButton.addEventListener("click", function(e)
+				{
+					var parent = this;
+					while( parent.tagName !== "TBODY" )
+						parent = parent.parentNode;
+
+					parent.parentNode.removeChild(parent);
+					updateDLL();
+
+					var option = dllListElem.options[dllListElem.selectedIndex];
+					var core = option.core;
+					if( core.paths.length === 0 )
+						noCoreFoldersElem.style.display = "block";
+
+				}.bind(tr), true);
+				folderActions.appendChild(removeFolderButton);
+				td.appendChild(folderActions);
+
+				tr.appendChild(td);
+				tbody.appendChild(tr);
+
+				var bottomFolder = document.querySelectorAll(".coreFolderEntry");
+				if( bottomFolder.length > 0 )
+					bottomFolder = bottomFolder[bottomFolder.length-1];
+				else
+					bottomFolder = coreFoldersHeader;
+
+				bottomFolder.parentNode.insertBefore(tbody, bottomFolder.nextSibling);
+				if( !!focusElem )
+					focusElem.focus();
+			}
+
+			dllListElem.addEventListener("change", function(e)
+			{
+				var option = this.options[this.selectedIndex];
+				var core = option.core;
+				coreTitleElem.innerHTML = core.file;
+				entryFormElem.setAttribute("corefile", core.file);
+
+				enabledToggleElem.curvalue = core.enabled;
+				var nextval = (enabledToggleElem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+				if( (core.enabled && nextval !== 0) || (!core.enabled && nextval !== 1))
+					toggleSwitch(enabledToggleElem);
+
+				cartToggleElem.curvalue = core.cartsaves;
+				nextval = (cartToggleElem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+				if( (core.cartsaves && nextval !== 0) || (!core.cartsaves && nextval !== 1))
+					toggleSwitch(cartToggleElem);
+
+				stateToggleElem.curvalue = core.statesaves;
+				nextval = (stateToggleElem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+				if( (core.statesaves && nextval !== 0) || (!core.statesaves && nextval !== 1))
+					toggleSwitch(stateToggleElem);
+
+				priorityBoxElem.value = core.priority;
+
+				// clear out all core folder entries
+				var coreFolderEntries = document.querySelectorAll(".coreFolderEntry");
+				for( var i = 0; i < coreFolderEntries.length; i++ )
+					coreFolderEntries[i].parentNode.removeChild(coreFolderEntries[i]);
+
+				if( !!core.paths && core.paths.length === 0 )
+					noCoreFoldersElem.style.display = "table-row";
+				else
+				{
+					noCoreFoldersElem.style.display = "none";
+
+					// build the path entries
+					var corePath;
+					for( var i = core.paths.length-1; i >= 0; i-- )
+					{
+						corePath = core.paths[i];
+						appendFolderEntryElem(core, corePath);
+					}
+				}
+
+				var noCoreSelectedElem = document.querySelector("#noCoreSelected");
+				noCoreSelectedElem.style.display = "none";
+
+				var elem;
+				var elems = document.querySelectorAll(".onlyIfCoreSelected");
+				for( var i = 0; i < elems.length; i++ )
+					elem = elems[i].style.display = "block";
+			}.bind(dllListElem), true);
+
+			entryFormElem.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+				var focusedElem = document.activeElement;
+
+				if( !!focusedElem && focusedElem.tagName === "INPUT" && focusedElem.type === "text" )
+				{
+					//var option = focusedElem.inputOption;
+					focusedElem.style.webkitTransition = "initial";
+					focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+					focusedElem.offsetTop;
+					focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+					focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+					//onInputOptionTextFormSubmit(option, focusedElem.value);
+					focusedElem.originalValue = focusedElem.value;
+					focusedElem.blur();
+
+					updateDLL();
+				}
+			}.bind(entryFormElem), true);
+
+			function onEnabledClicked()
+			{
+				var elem = enabledToggleElem;
+				var nextvalue = (elem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+
+				var opt = dllListElem.options[dllListElem.selectedIndex];
+				if( nextvalue === 1 )
+					opt.classList.add("aaThemeColorOneBackgroundColor");
+				else
+					opt.classList.remove("aaThemeColorOneBackgroundColor");
+
+				elem.curvalue = nextvalue;
+				toggleSwitch(elem);
+				updateDLL();
+			}
+
+			function onCartClicked()
+			{
+				var elem = cartToggleElem;
+				var nextvalue = (elem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+
+				elem.curvalue = nextvalue;
+				toggleSwitch(elem);
+				updateDLL();
+			}
+
+			function onStateClicked()
+			{
+				var elem = stateToggleElem;
+				var nextvalue = (elem.querySelector("div").classList.contains("toggleSwitchOn")) ? 0 : 1;
+
+				elem.curvalue = nextvalue;
+				toggleSwitch(elem);
+				updateDLL();
+			}
+
+			//enabledBoxElem.addEventListener("change", onSelectChange.bind(enabledBoxElem), true);
+			//priorityBoxElem.addEventListener("change", onSelectChange.bind(priorityBoxElem), true);
+
+			//enabledToggleElem.addEventListener("click", onEnabledClicked.bind(enabledToggleElem), true);
+
+			function toggleSwitch(toggleButton)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+				//toggleButton.blur();
+				//aaTextColorTwoShadedBorderColor aaThemeColorTwoHoverShadedBackground
+			}
+		</script>
 
 	</body>
 </html>

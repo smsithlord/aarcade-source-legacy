@@ -251,6 +251,7 @@
 		{
 			"path" "."
 			"path" "fof_dir.vpk"
+			"path" "fof2_dir.vpk"
 		}
 	}
 	"mount"

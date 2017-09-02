@@ -14,7 +14,7 @@ C_InputListenerSteamBrowser::C_InputListenerSteamBrowser()
 
 C_InputListenerSteamBrowser::~C_InputListenerSteamBrowser()
 {
-	DevMsg("InputListenerSteamBrowser: Destructor\n");
+	//DevMsg("InputListenerSteamBrowser: Destructor\n");
 }
 
 void C_InputListenerSteamBrowser::OnMouseMove(float x, float y)

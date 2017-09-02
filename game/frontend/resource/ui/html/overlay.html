@@ -164,6 +164,9 @@
 		</style>
 	</head>
 	<body style="background-color: transparent;">
+
+		<!--<img src="PANASONIC.DARK.png" style="position: fixed; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none;" />-->
+		
 		<div class="hudHeaderContainer"></div>
 
 		<div class="hudSideContainer">
@@ -186,7 +189,7 @@
 						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
 							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
 								<script>
-									document.write(arcadeHud.generateIconHTML("moveicon.png", 24, 24, "aaTextColorOneColor"));
+									document.write(arcadeHud.generateIconHTML("moveicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
 								</script>
 							</div>
 
@@ -198,7 +201,7 @@
 						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
 							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
 								<script>
-									document.write(arcadeHud.generateIconHTML("eraseicon.png", 24, 24, "aaTextColorOneColor"));
+									document.write(arcadeHud.generateIconHTML("eraseicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
 								</script>
 							</div>
 
@@ -231,7 +234,7 @@
 								</script>
 							</div>
 
-							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Meta Search</div>
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="font-size: 26px;">Meta Search</div>
 						</td></tr>
 					</table>
 				</div><div style="display: none;"><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.metaSearchEasy();" help="Apply images & videos from the current page to this item.">
@@ -263,7 +266,7 @@
 							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="padding-left: 4px;">Launch</div>
 						</td></tr>
 					</table>
-				</div><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.viewStream();" help="Watch this item's web stream on the in-game screen.">
+				</div><div class="aaOnlyIfCanStream aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="display: none; border-radius: 10px;" onclick="arcadeHud.viewStream();" help="Watch this item's web stream on the in-game screen.">
 					<table style="width: 100%; height: 100%;">
 						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
 							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
@@ -276,7 +279,7 @@
 							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Stream</div>
 						</td></tr>
 					</table>
-				</div><div style="display: none;"><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="" help="Run this item on the in-game screen using Libretro.">
+				</div><div class="aaOnlyIfLibretroCanRun aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.runLibretro(); window.location.reload();" help="Run this item on the in-game screen using Libretro.">
 					<table style="width: 100%; height: 100%;">
 						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
 							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
@@ -289,7 +292,33 @@
 							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Run</div>
 						</td></tr>
 					</table>
-				</div></div>
+				</div><div class="aaOnlyIfCanPreview aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="display: none; border-radius: 10px;" onclick="arcadeHud.viewPreview(); window.location.reload();" help="Watch this item's web stream on the in-game screen.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("previewicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Preview</div>
+						</td></tr>
+					</table>
+				</div><div class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideContainerButton helpNote" style="border-radius: 10px;" onclick="arcadeHud.autoInspect(); window.location.reload();" help="Auto-tune to the best URL to view for this item.">
+					<table style="width: 100%; height: 100%;">
+						<tr><td style="white-space: nowrap;" class="aaBigIconSizeHeight">
+							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
+								<script>
+									var bigIconSize = parseInt(arcadeHud.themeSizes.BigIconSize);
+									document.write(arcadeHud.generateIconHTML("autoicon.png", bigIconSize, bigIconSize, "aaTextColorOneColor"));
+								</script>
+							</div>
+
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText">Inspect</div>
+						</td></tr>
+					</table>
+				</div>
 			</div>
 		</div>
 
@@ -313,8 +342,159 @@
 		</div>
 
 		<script>
+			var retroButtons = {
+				"RETRO_DEVICE_ID_JOYPAD_B": 0,
+				"RETRO_DEVICE_ID_JOYPAD_Y": 1,
+				"RETRO_DEVICE_ID_JOYPAD_SELECT": 2,
+				"RETRO_DEVICE_ID_JOYPAD_START": 3,
+				"RETRO_DEVICE_ID_JOYPAD_UP": 4,
+				"RETRO_DEVICE_ID_JOYPAD_DOWN": 5,
+				"RETRO_DEVICE_ID_JOYPAD_LEFT": 6,
+				"RETRO_DEVICE_ID_JOYPAD_RIGHT": 7,
+				"RETRO_DEVICE_ID_JOYPAD_A": 8,
+				"RETRO_DEVICE_ID_JOYPAD_X": 9,
+				"RETRO_DEVICE_ID_JOYPAD_L": 10,
+				"RETRO_DEVICE_ID_JOYPAD_R": 11,
+				"RETRO_DEVICE_ID_JOYPAD_L2": 12,
+				"RETRO_DEVICE_ID_JOYPAD_R2": 13,
+				"RETRO_DEVICE_ID_JOYPAD_L3": 14,
+				"RETRO_DEVICE_ID_JOYPAD_R3": 15
+			};
+
+			function retroButtonDown(buttonElem)
+			{
+				var buttonName = buttonElem.getAttribute("retro");
+				var buttonNumber = retroButtons[buttonName];
+				if( typeof buttonNumber === 'number' )
+					aaapi.system.setLibretroGUIGamepadButtonState(buttonNumber, 1);
+			}
+
+			function retroButtonUp(buttonElem)
+			{
+				var buttonName = buttonElem.getAttribute("retro");
+				var buttonNumber = retroButtons[buttonName];
+				if( typeof buttonNumber === 'number' )
+					aaapi.system.setLibretroGUIGamepadButtonState(buttonNumber, 0);
+			}
+
+			function closeGUIGamepad(elem)
+			{
+				aaapi.system.setLibretroGUIGamepadEnabled(false);
+				elem.parentNode.parentNode.style.display = "none";
+			}
+		</script>
+
+		<style>
+			.libretroGUIGamepad
+			{
+				/*display: none;*/
+			}
+
+			.libretroButton
+			{
+				opacity: 0;
+			}
+
+			.libretroButton:hover
+			{
+				opacity: 0.5;
+			}
+		</style>
+		<div class="libretroGUIGamepadContainer">
+			<div class="libretroGUIGamepad" style="width: 641px; height: 325px; background-image: url('retropad_big.png'); position: fixed; right: 20px; bottom: 20px; opacity: 0.7;">
+				<div style="position: relative;">
+					<div class="aaThemeColorOneColor" style="width: 100%; text-align: right; position: absolute;" onclick="closeGUIGamepad(this);">
+						<script>
+							var iconSize = arcadeHud.themeSizes.IconSize;
+							var iconHTML = arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
+							document.write(iconHTML);
+						</script>
+					</div>
+				</div>
+				<table cellspacing="0" cellpadding="0" border="0" style="empty-cells: show; width: 100%; height: 100%;">
+					<tr><td style="height: 38px;" colspan="5">
+						<table cellspacing="0" cellpadding="0" border="0" style="pointer-events: all; border-collapse: separate; empty-cells: show; width: 100%; height: 100%; color: #000; font-weight: 900; font-family: Arial;">
+							<tr>
+								<td style="width: 48px;">&nbsp;</td>
+								<td style="width: 56px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_L3" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td style="width: 60px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_L2" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td style="width: 86px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_L" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td>&nbsp;</td>
+								<td style="width: 86px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_R" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td style="width: 60px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_R2" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td style="width: 56px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_R3" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								<td style="width: 48px;">&nbsp;</td>
+							</tr>
+						</table>
+					</td></tr>
+					<tr><td style="height: 22px;" colspan="5"></td></tr>
+					<tr>
+						<td style="width: 18px;"></td>
+						<td style="width: 240px;">
+							<table cellspacing="0" cellpadding="0" border="0" style="pointer-events: all; border-collapse: separate; empty-cells: show; width: 100%; height: 100%; color: #000; font-weight: 900; font-family: Arial;">
+								<tr>
+									<td style="width: 33%; height: 33%;">&nbsp;</td>
+									<td style="width: 33%;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_UP" class="libretroButton aaThemeColorOneBackgroundColor">
+									</td>
+									<td style="width: 33%;">&nbsp;</td>
+								</tr>
+								<tr>
+									<td style="height: 33%;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_LEFT" class="libretroButton aaThemeColorOneBackgroundColor"></td>
+									<td >&nbsp;</td>
+									<td onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_RIGHT" class="libretroButton aaThemeColorOneBackgroundColor"></td>
+								</tr>
+								<tr>
+									<td style="height: 33%;">&nbsp;</td>
+									<td onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_DOWN" class="libretroButton aaThemeColorOneBackgroundColor">
+									</td>
+									<td>&nbsp;</td>
+								</tr>
+							</table>
+						</td>
+						<td>
+							<table cellspacing="0" cellpadding="0" border="0" style="pointer-events: all; border-collapse: separate; empty-cells: show; width: 100%; height: 100%; color: #000; font-weight: 900; font-family: Arial;">
+								<tr><td style="height: 40px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_START" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td></tr>
+								<tr><td>&nbsp;</td></tr>
+								<tr><td style="height: 40px;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_SELECT" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td></tr>
+							</table>
+						</td>
+						<td style="width: 240px;">
+							<table cellspacing="0" cellpadding="0" border="0" style="pointer-events: all; border-collapse: separate; empty-cells: show; width: 100%; height: 100%; color: #000; font-weight: 900; font-family: Arial;">
+								<tr>
+									<td style="width: 33%; height: 33%;">&nbsp;</td>
+									<td style="width: 33%;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_X" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+									<td style="width: 33%;">&nbsp;</td>
+								</tr>
+								<tr>
+									<td style="height: 33%;" onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_Y" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td><td >
+									</td>
+									<td onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_A" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+								</tr>
+								<tr>
+									<td style="height: 33%;">&nbsp;</td>
+									<td onmousedown="retroButtonDown(this);" onmouseup="retroButtonUp(this);" retro="RETRO_DEVICE_ID_JOYPAD_B" class="libretroButton aaThemeColorOneBackgroundColor">&nbsp;</td>
+									<td>&nbsp;</td>
+								</tr>
+							</table>
+						</td>
+						<td style="width: 18px;"></td>
+					</tr>
+					<tr><td style="height: 22px;" colspan="5"></td></tr>
+				</table>
+			</div>
+		</div>
+
+		<script>
 			var hudHeaderContainerElem = document.querySelector(".hudHeaderContainer");
 			var hudSideContainerElem = document.querySelector(".hudSideContainer");
+			var libretroGUIGamepadContainerElem = document.querySelector(".libretroGUIGamepadContainer");
+			libretroGUIGamepadContainerElem.id = "GUIGamepad";
+
+			var GUIGamepadState = aaapi.system.getLibretroGUIGamepadEnabled();
+			//if( GUIGamepadState )
+			//	libretroGUIGamepadContainerElem.style.display = "block";
+			//else
+				libretroGUIGamepadContainerElem.style.display = "none";
 
 			hudHeaderContainerElem.style.display = "none";
 			hudSideContainerElem.style.display = "none";
@@ -329,12 +509,18 @@
 				{
 					hudHeaderContainerElem.style.display = "block";
 					hudSideContainerElem.style.display = "block";
+
+					if( !!arcadeHud && arcadeHud.embeddedInstanceType === "Libretro" && GUIGamepadState )
+						libretroGUIGamepadContainerElem.style.display = "block";
+					//else
+					//	libretroGUIGamepadContainerElem.style.display = "none";
 				}
 
 				autoHideHandle = setTimeout(function()
 				{
 					hudHeaderContainerElem.style.display = "none";
 					hudSideContainerElem.style.display = "none";
+					libretroGUIGamepadContainerElem.style.display = "none";
 				}, 6000);
 			}, false);
 		</script>
@@ -358,15 +544,19 @@
 					if(button)
 						button.addEventListener("mouseover", function(e)
 						{
-							if( this.className.indexOf(" activeHudRow") === -1 )
-								this.className += " activeHudRow";
+							if( !this.classList.contains("activeHudRow") )
+								this.classList.add("activeHudRow");
+
+							//if( this.className.indexOf(" activeHudRow") === -1 )
+							//	this.className += " activeHudRow";
 						}.bind(row), true);
 
 					row.addEventListener("mouseout", function(e)
 					{
 						var hilighted = this.querySelector(".hudSideContainerButton:hover");
 						if( !!!hilighted )
-							this.className = this.className.replace(" activeHudRow", "");
+							this.classList.remove("activeHudRow");
+							//this.className = this.className.replace(" activeHudRow", "");
 					}.bind(row), true);
 				}
 			}

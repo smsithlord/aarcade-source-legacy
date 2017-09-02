@@ -11,13 +11,23 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Edit Object", "", true, true, "", "window.location='asset://ui/overlay.html';");
+			var objectId = arcadeHud.getParameterByName("objectId");
+			if( !!!objectId )
+				objectId = "";
+			
+			function setSlave(value)
+			{
+				aaapi.system.setSlaveScreen(objectId, value);
+			}
+
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Edit Object", "", true, true, uiBack, "window.location='asset://ui/overlay.html';");
 			document.write(windowHeaderHTML);
 		</script>
 
 		<center>
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Activate Slave Screen" onclick="aaapi.system.setSlaveScreen(true);" /><br />
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Deactivate Slave Screen" onclick="aaapi.system.setSlaveScreen(false);" />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Activate Slave Screen" onclick="setSlave(true);" /><br />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Deactivate Slave Screen" onclick="setSlave(false);" />
 		</center>
 
 		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">

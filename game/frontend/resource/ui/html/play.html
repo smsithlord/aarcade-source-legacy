@@ -5,41 +5,61 @@
 		<script src="asset://ui/tga.js"></script>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 80%; height: 70%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/welcome.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Maps
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
-							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div style="background-color: rgba(50, 50, 50, 0.8); border-radius: 10px; padding: 2px;">
-				<input id="filterBox" placeholder="Search..." style="font-size: 20px; font-family: Arial; background-color: rgba(0, 0, 0, 0.4); font-style: italic; color: #fff; font-weight: bold; border: 2px solid #000; padding: 4px; border-radius: 10px; width: 100%;" oninput="johnnyFive(this);" />
-			</div>
-
-			<div style="height: 88%;">
-				<div id="mapsContainer" onscroll="deadSea(this);"></div>
-			</div>
+		<div id="worldContextContainer" style="pointer-events: none; position: fixed; z-index: 999999; -webkit-transition: all; -webkit-transition-delay: 0.3s; -webkit-transition-duration: 0.3s; -webkit-transition-timing-function: ease-in; opacity: 0; border: 5px solid rgba(0, 0, 0, 0.5); border-radius: 5px; top: 540px; left: 960px;">
+			<input type="button" value="Play Now" class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" onclick="playNow();" style="min-width: 160px; width: 100%; margin: 0;" /><br />
+			<input type="button" value="Instances" class="aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor aaTitleTextSizeFontSize aaTitleText aaTextColorOneColor" onclick="viewInstances();" style="min-width: 160px; width: 100%; margin: 0;" />
+			<div style="background-color: rgba(0, 0, 0, 0.5);" class="aaTitleText aaTitleTextSizeFontSize aaTextColorOneColor"></div>
 		</div>
 
-		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
 
 		<script>
-			var tga = new TGA();
-			var mapsContainer = document.querySelector("#mapsContainer");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Play", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
 
-			var g_screenshots = aaapi.system.getAllMapScreenshots();
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+
+			// otherwise, use session storage
+			if( !!!tabId )
+				tabId = sessionStorage.getItem("aaPlayTab", tabId);
+
+			// otherwise, let arcadeHud decide
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "worlds",
+						"title": "Worlds"
+					},
+					{
+						"id": "custom",
+						"title": "Maps"
+					}
+				],
+				"activeTabId": tabId,
+				"onChangeCallbackName": "onChangeCallback"
+			});
+			document.write(windowTabsHeaderHTML);
+
+			function onChangeCallback(tabId)
+			{
+				sessionStorage.setItem("aaPlayTab", tabId);
+			}
+
+			// get the current mapHistory (or create an empty mapHistory)
+			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+
+			var worldContextContainer = document.querySelector("#worldContextContainer");
+			worldContextContainer.mapFileShort = null;
+
 			var mapz = aaapi.system.getAllMaps();
 
 			// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
@@ -69,6 +89,249 @@
 				}
 			});
 
+			worldContextContainer.addEventListener("mouseover", function(e)
+			{
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0.7s";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "1.0";
+			}, true);
+
+			worldContextContainer.addEventListener("mouseout", function(e)
+			{
+				worldContextContainer.style.pointerEvents = "none";
+				worldContextContainer.style.webkitTransitionDelay = "0";
+				worldContextContainer.style.webkitTransitionDuration = "0";
+				worldContextContainer.style.opacity = "0";
+			}, true);
+
+			function mapIconClicked(elem)
+			{
+				playNow();
+				return;
+
+				/* insta-"context" menu
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "0.99";
+				worldContextContainer.offsetTop;
+				worldContextContainer.style.opacity = "1.0";
+				*/
+			}
+
+			function mapIconMouseMoveListener(e)
+			{
+				if( worldContextContainer.style.pointerEvents !== "none" )
+				{
+					document.removeEventListener("mousemove", mapIconMouseMoveListener, true);
+					return;
+				}
+
+				worldContextContainer.style.top = e.clientY + 1;
+				worldContextContainer.style.left = e.clientX + 1;
+
+				worldContextContainer.style.pointerEvents = "all";
+				worldContextContainer.style.webkitTransitionDelay = "0.7s";
+				worldContextContainer.style.webkitTransitionDuration = "0.3s";
+				worldContextContainer.style.opacity = "1.0";
+
+				document.removeEventListener("mousemove", mapIconMouseMoveListener, true);
+				//worldContextContainer.style.display = "none";
+			}
+
+			function playNow(testMapName)
+			{
+				//console.log("Play Now: " + worldContextContainer.mapFileShort);
+
+				if( !!!testMapName )
+					testMapName = worldContextContainer.mapFileShort.toLowerCase() + ".bsp";
+
+				var map;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if( testMapName === maps[i].platforms[arcadeHud.platformId].file.toLowerCase() )
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!map )
+				{
+					// try to find an entry for us in the mapHistory
+					var hasInstanceToLoad = false;
+					var mapHistoryEntry = mapHistory[map.info.id];
+					var mapInstances;
+					if( !!mapHistoryEntry )
+					{
+						if( mapHistoryEntry.instanceId === "" )
+						{
+							mapInstances = aaapi.system.getMapInstances(map.info.id);
+							
+							if( mapInstances.length > 0 )
+								mapHistoryEntry.instanceId = mapInstances[0].id;
+						}
+
+						if( mapHistoryEntry.instanceId !== "" )
+						{
+							mapHistoryEntry.timestamp = new Date().getTime();
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+							hasInstanceToLoad = true;
+						}
+						//localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+					}
+
+					if( hasInstanceToLoad )
+					{
+						window.location = "asset://ui/loading.html?map=" + mapHistoryEntry.mapId + "&instance=" + mapHistoryEntry.instanceId + "&pos=" + mapHistoryEntry.position + "&rot=" + mapHistoryEntry.rotation + "&screenshot=" + mapHistoryEntry.screenshotId;
+					}
+					else
+					{
+						// are there any instances at all?
+						if( !!!mapInstances )
+							mapInstances = aaapi.system.getMapInstances(map.info.id);
+
+						if( mapInstances.length > 0 )
+							window.location = "asset://ui/playInstance.html?id=" + map.info.id;
+						else
+						{
+							// create our mapHistory entry
+							var mapHistoryEntry = {
+								"mapId": map.info.id,
+								"instanceId": "",
+								"position": "",
+								"rotation": "",
+								"screenshotId": "",
+								"timestamp": new Date().getTime()
+							};
+
+							// add our entry to the mapHistory
+							mapHistory[map.info.id] = mapHistoryEntry;
+
+							// save the mapHistory out
+							localStorage.setItem("mapHistory", JSON.stringify(mapHistory));
+
+							window.location = "asset://ui/loading.html?map=" + map.info.id + "&instance=" + "" + "&pos=" + "" + "&rot=" + "" + "&screenshot=" + "";
+						}
+					}
+				}
+			}
+
+			function viewInstances()
+			{
+				console.log("View Instances: " + worldContextContainer.mapFileShort);
+				
+				var map;
+				for( var i = 0; i < maps.length; i++ )
+				{
+					if( worldContextContainer.mapFileShort.toLowerCase() + ".bsp" === maps[i].platforms[arcadeHud.platformId].file.toLowerCase() )
+					{
+						map = maps[i];
+						break;
+					}
+				}
+
+				if( !!map )
+				{
+					window.location = "asset://ui/playInstance.html?id=" + map.info.id;
+				}
+				else
+				{
+					console.log("ERROR: Could not find map with filename: " + worldContextContainer.mapFileShort + ".bsp");
+				}
+			}
+
+			function mapIconMouseOver(elem)
+			{
+				//elem.appendChild(worldContextContainer);
+				worldContextContainer.mapFileShort = elem.id;
+
+				worldContextContainer.querySelector("div").innerHTML = elem.id;
+				worldContextContainer.style.opacity = "0.01";
+				worldContextContainer.offsetTop;
+				worldContextContainer.style.opacity = "0";
+				document.addEventListener("mousemove", mapIconMouseMoveListener, true);
+			}
+
+			function mapIconMouseOut(elem)
+			{
+				if( worldContextContainer.style.pointerEvents !== "none" )
+				{
+					worldContextContainer.style.pointerEvents = "none";
+					worldContextContainer.style.webkitTransitionDelay = "0";
+					worldContextContainer.style.webkitTransitionDuration = "0";
+					worldContextContainer.style.opacity = "0";
+				}
+			}
+		</script>
+
+		<map name="image-maps-2016-03-11-231208" id="ImageMapsCom-image-maps-2016-03-11-231208">
+			<area shape="rect" coords="998,561,1000,563" alt="Image Map" style="outline:none;" title="Image Map" href="javascript: void(0);" />
+			<area id="sm_orchard" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="258,186,295,217,327,272,368,298,470,278,442,249,469,243,458,229,493,213,483,171,446,142,381,156,345,129,294,113,244,152,258,160" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);" />
+			<area id="sm_acreage" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="103,361,100,410,128,430,140,464,163,481,247,466,268,412,294,405,298,370,284,347,234,355,183,321,143,308,95,343" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_expo" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="329,347,328,401,344,460,438,515,510,500,509,493,607,472,620,477,690,462,689,411,713,386,578,292,502,308,472,310,445,320" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_apartmentsuite" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="724,350,725,434,747,450,922,414,916,353,892,335,873,337,853,323" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_primo" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="722,225,722,248,744,262,744,305,782,333,853,320,874,332,957,314,948,243,876,193" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_garage" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="545,107,545,141,591,176,752,149,748,128,806,115,811,88,782,48,752,45,613,78" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+			<area id="sm_apartment" href="javascript: void(0);" onclick="mapIconClicked(this);" shape="poly" coords="709,244,643,259,627,290,650,331,678,338,740,325,738,270" style="outline:none;" target="_self" onmouseover="mapIconMouseOver(this);" onmouseout="mapIconMouseOut(this);"     />
+		</map>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="worlds">
+			<img src="starterland.png" usemap="#image-maps-2016-03-11-231208" /><br />
+			<select style="width: 100%;" class="aaTitleTextSizeFontSize aaThemeColorTwoBackgroundColor aaTextColorTwoColor">
+				<option>Starter Land</option>
+			</select>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="custom" style="padding: 0; margin: 0;">
+			<div style="padding: 2px; padding-top: 0;">
+				<input id="filterBox" placeholder="Search maps..." class="aaTitleTextSizeFontSize" style="width: 100%;" oninput="johnnyFive(this);" />
+			</div>
+			<div style="height: 750px; width: 1500px;">
+				<div id="mapsContainer" class="aaScrollBars" onscroll="deadSea(this);"></div>
+			</div>
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<style>
+			.instancesButtonContainer
+			{
+				display: none;
+			}
+
+			.mapThumbContainer:hover .instancesButtonContainer
+			{
+				display: block;
+			}
+		</style>
+
+		<script>
+			var tga = new TGA();
+			var mapsContainer = document.querySelector("#mapsContainer");
+
+			var g_screenshots = aaapi.system.getAllMapScreenshots();
+			
+
 			function compareIds(testId, baseId)
 			{
 				var intTestId = Number(testId);
@@ -80,6 +343,8 @@
 					return false;
 			}
 
+				var iconSize = arcadeHud.themeSizes.IconSize;
+				var html = "Instances";//arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
 			var count = 0;
 			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
 			var screenshotKeys = Object.keys(g_screenshots);
@@ -90,14 +355,25 @@
 				mapName = mapName.substring(0, mapName.length-4);
 
 				mapContainer = document.createElement("div");
-				mapContainer.className = "mapThumbContainer";
-				mapContainer.style.cssText = "width: 240px; height: 162px;";
+				mapContainer.className = "mapThumbContainer aaThemeColorOneHoverBorderColor aaThemeColorOneHoverShadedBackground";
+				mapContainer.style.cssText = "width: 240px; -webkit-transition: -webkit-transform 1s ease-in-out;";
 				mapContainer.map = maps[x];
 				mapContainer.addEventListener("click", function(e)
 				{
-					window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
-					//aaapi.system.deactivateInputMode();
-					//aaapi.system.loadMap(this.map.info.id);
+					if( e.target.tagName !== "INPUT" )
+						playNow(this.map.platforms[arcadeHud.platformId].file.toLowerCase());
+						//console.log("Quick load it!");
+					//window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+				}.bind(mapContainer), true);
+
+				mapContainer.addEventListener("mouseover", function(e)
+				{
+					this.style.webkitTransform = "scale(1.2)";
+				}.bind(mapContainer), true);
+
+				mapContainer.addEventListener("mouseout", function(e)
+				{
+					this.style.webkitTransform = "initial";
 				}.bind(mapContainer), true);
 
 				mapImage = document.createElement("div");
@@ -127,7 +403,31 @@
 
 				mapContainer.appendChild(mapImage);
 
+
+				instancesButtonContainer = document.createElement("div");
+				instancesButtonContainer.className = "instancesButtonContainer helpNote";
+				instancesButtonContainer.setAttribute("help", "View advanced options for loading this map.");
+				instancesButtonContainer.style.cssText = "position: relative; float: left; bottom: 32px;";
+
+				instancesButton = document.createElement("input");
+				instancesButton.type = "button";
+				instancesButton.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneBorderColor aaTextColorOneColor";
+				instancesButton.style.cssText = "position: absolute; padding: 4px; border-radius: 4px; font-weight: bold; letter-spacing: 0.1em;";
+				instancesButton.value = html;
+				instancesButton.map = maps[x];
+				instancesButton.addEventListener("click", function(e)
+				{
+					e.stopImmediatePropagation();
+					window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+					//aaapi.system.deleteScreenshot(this.shotId);
+					//window.location='asset://ui/welcome.html?tab=screenshots';
+				}.bind(instancesButton), true);
+
+				instancesButtonContainer.appendChild(instancesButton);
+				mapContainer.appendChild(instancesButtonContainer);
+
 				mapTitle = document.createElement("div");
+				mapTitle.className = "aaTitleTextSizeFontSize aaTitleText";
 				mapTitleNode = document.createTextNode(maps[x].title);
 
 				mapTitle.appendChild(mapTitleNode);

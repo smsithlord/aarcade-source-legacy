@@ -8,6 +8,7 @@
 //#include "c_inputslate.h"
 #include "c_inputlistener.h"
 #include "c_embeddedinstance.h"
+#include "c_inputslate.h"
 /*
 enum listener_t
 {
@@ -30,6 +31,7 @@ public:
 	ITexture* GetInputSlateCanvasTexture();
 
 	// accessors
+	vgui::CInputSlate* GetInputSlate() { return m_pInputSlate; }
 	bool IsTempSelect() { return m_bTempSelect; }
 	bool GetInputCapture() { return m_bInputCapture; }
 	C_EmbeddedInstance* GetEmbeddedInstance() { return m_pEmbeddedInstance; }
@@ -40,7 +42,7 @@ public:
 	bool GetWasForceInputMode() { return m_bWasForcedInputMode; }
 
 	
-	void SetFullscreenMode(bool value) { m_bFullscreenMode = value; }
+	void SetFullscreenMode(bool value);// { m_bFullscreenMode = value; }
 	//void SetOverlayMode(bool value) { m_bOverlayMode = value; }
 	void ActivateInputMode(bool bFullscreen = false, bool bMainMenu = false, C_EmbeddedInstance* pEmbeddedInstance = null, bool bInputCapture = true);
 	void ForceInputMode();
@@ -57,11 +59,13 @@ public:
 	void MouseWheelUp();
 
 	// mutators
+	void SetInputSlate(vgui::CInputSlate* pInputSlate) { m_pInputSlate = pInputSlate; }
 	void SetTempSelect(bool value) { m_bTempSelect = value; }
 	void SetInputCapture(bool value) { m_bInputCapture = value; }
 	void SetEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance) { m_pEmbeddedInstance = pEmbeddedInstance; }
 	
 private:
+	vgui::CInputSlate* m_pInputSlate;
 	bool m_bTempSelect;
 	std::map<std::string, vgui::KeyCode> m_sourceKeyEnumMap;
 	C_EmbeddedInstance* m_pEmbeddedInstance;

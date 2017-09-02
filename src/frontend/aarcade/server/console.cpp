@@ -1,5 +1,10 @@
 #include "cbase.h"
 #include "prop_shortcut_entity.h"
+#include "hl2mp_player.h"
+#include "KeyValues.h"
+#include "Filesystem.h"
+#include <vector>
+#include "../game/server/triggers.h"
 //#include "../../game/client/glow_outline_effect.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -126,6 +131,7 @@ ConCommand teleport_player("teleport_player", TeleportPlayer, "For internal use 
 
 void SpawnShortcut(const CCommand &args)
 {
+	DevMsg("Spawning object on server: %s\n", args[1]);
 //	DevMsg("yaarbelzzzzzzzzz\n");
 
 	/*
@@ -205,6 +211,9 @@ void SpawnShortcut(const CCommand &args)
 	pShortcut->KeyValue("modelId", args[3]);
 	pShortcut->KeyValue("slave", args[12]);
 
+	int iParentEntityIndex = Q_atoi(args[13]);
+	bool bShouldGhost = (Q_atoi(args[14])) ? true : false;
+
 	pShortcut->Precache();
 	DispatchSpawn(pShortcut);
 	pShortcut->Activate();
@@ -225,7 +234,14 @@ void SpawnShortcut(const CCommand &args)
 			pPhysics->EnableMotion(true);
 	}
 
-	if (Q_atoi(args[13]) == 1)
+	if (iParentEntityIndex >= 0)
+	{
+		CBaseEntity* pParentEntity = CBaseEntity::Instance(iParentEntityIndex);
+		if (pParentEntity)
+			pShortcut->SetParent(pParentEntity, -1, false);
+	}
+
+	if (bShouldGhost)
 		engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
 
 //	pShortcut->SetModelScale(Q_atof(args[9]), 0);
@@ -248,6 +264,151 @@ void SpawnInstance(const CCommand &args)
 	DevMsg("Spawn Instance: %s\n", args[1]);
 }
 ConCommand spawninstance("spawninstance", SpawnInstance, "Spawns an entire instance.  Many shortcuts.", FCVAR_NONE);
+
+void ShowHubsMenu(const CCommand &args)
+{
+	Msg("Nodes are currently disabled in Redux.  They will be re-enabled when I finish coding support for them.\n");
+	return;
+
+	CBaseEntity* pPlayerEntity = UTIL_GetCommandClient();
+
+	/*
+	CBaseEntity* pPlayerBaseEntity = UTIL_GetCommandClient();
+	CHL2MP_Player* pMPPlayer = dynamic_cast<CHL2MP_Player*>(pPlayerBaseEntity);
+	*/
+
+	// We are given the button entity, who's parent is the node_info entity.
+	CBaseEntity* pButtonEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	CBaseEntity* pNodeInfoEntity = pButtonEntity->GetParent();
+
+	// Find the node volume
+	CTriggerMultiple* pTrigger = NULL;
+	CBaseEntity* pTriggerEntity = gEntList.FindEntityByClassname(gEntList.FirstEnt(), "trigger_multiple");
+	while (pTriggerEntity)
+	{
+		pTrigger = dynamic_cast<CTriggerMultiple*>(pTriggerEntity);
+		if (pTrigger && pTrigger->GetEnabled() && Q_strcmp(STRING(pTrigger->GetEntityName()), "") && !Q_stricmp(STRING(pTrigger->m_iFilterName), "filterHubEntities") && pTrigger->PointIsWithin(pNodeInfoEntity->GetAbsOrigin()) ) //(!pNodeInfoEntity && pTrigger->PointIsWithin(pMPPlayer->GetAbsOrigin())) || (pAltEntity && pTrigger->PointIsWithin(pAltEntity->GetAbsOrigin())))
+		{
+			// Node volume found
+			break;
+		}
+		else
+		{
+			pTrigger = NULL;
+			pTriggerEntity = gEntList.FindEntityByClassname(pTriggerEntity, "trigger_multiple");
+		}
+	}
+
+	if (!pTrigger)
+	{
+		DevMsg("ERROR: Could not find node volume!\n");
+		return;
+	}
+
+	// We now have the node_info entity and the trigger volume entity
+	// Let's create the KV that will be saved out to a file for the client-side code to load.
+	KeyValues* pNodeKV = new KeyValues("node");
+	KeyValues* pNodeSetupKV = pNodeKV->FindKey("setup", true);
+	pNodeSetupKV->SetString("style", pTriggerEntity->GetEntityName().ToCStr());
+
+	Vector origin = pNodeInfoEntity->GetAbsOrigin();
+	QAngle angles = pNodeInfoEntity->GetAbsAngles();
+
+	char buf[512];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", origin.x, origin.y, origin.z);
+	pNodeSetupKV->SetString("origin", buf);
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", angles.x, angles.y, angles.z);
+	pNodeSetupKV->SetString("angles", buf);
+
+	// these 3 are only useful server-side!
+	pNodeSetupKV->SetInt("buttonIndex", pButtonEntity->entindex());
+	pNodeSetupKV->SetInt("nodeInfoIndex", pNodeInfoEntity->entindex());
+	pNodeSetupKV->SetInt("triggerIndex", pTrigger->entindex());
+
+	// Next, determine if the trigger volume is empty.
+	// If it isn't, push all of the entity indexes into the KV file for the client-side code to load.
+	KeyValues* pNodeObjectsKV = pNodeSetupKV->FindKey("objects", true);
+	KeyValues* pNodeObjectKV;
+	CPropShortcutEntity* pShortcut;
+	CBaseEntity* testEntity = gEntList.FindEntityByClassname(gEntList.FirstEnt(), "prop_shortcut");
+	while (testEntity)
+	{
+		if (pTrigger->PointIsWithin(testEntity->GetAbsOrigin()))
+		{
+			pShortcut = dynamic_cast<CPropShortcutEntity*>(testEntity);
+			if (pShortcut)
+			{
+				//bEmptyVolume = false;
+				pNodeObjectKV = pNodeObjectsKV->CreateNewKey();
+				pNodeObjectKV->SetName("prop_shortcut");
+				pNodeObjectKV->SetInt(NULL, pShortcut->entindex());
+				//shortcuts.push_back(pShortcut);
+			}
+		}
+
+		testEntity = gEntList.FindEntityByClassname(testEntity, "prop_shortcut");
+	}
+
+	pNodeKV->SaveToFile(g_pFullFileSystem, "nodevolume.txt", "DEFAULT_WRITE_PATH"); 
+
+	edict_t *pClient = engine->PEntityOfEntIndex(pPlayerEntity->entindex());
+	engine->ClientCommand( pClient, "showhubsmenuclient\n" );
+}
+ConCommand showhubsmenu("showhubsmenu", ShowHubsMenu, "Shows the HUBs menu.", FCVAR_HIDDEN);
+
+void ShowHubSaveMenu(const CCommand &args)
+{
+	KeyValues* pNodeInfoKV = new KeyValues("node");
+	if (!pNodeInfoKV->LoadFromFile(g_pFullFileSystem, "nodevolume.txt", "DEFAULT_WRITE_PATH"))
+	{
+		DevMsg("ERROR: Could not load nodevolume.txt!\n");
+		return;
+	}
+
+	// Find the info shortcut for the node.
+	//KeyValues* pInstanceKV = NULL;
+	CBaseEntity* pInfoBaseEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (!pInfoBaseEntity)
+	{
+		DevMsg("ERROR: Could not find info object within node command.\n");
+		return;
+	}
+
+	CPropShortcutEntity* pInfoShortcut = dynamic_cast<CPropShortcutEntity*>(pInfoBaseEntity);
+	if (!pInfoShortcut)
+	{
+		DevMsg("ERROR: Could not cast base entity to shortcut entity for node.\n");
+		return;
+	}
+
+	CBaseEntity* pBaseEntity;
+	CPropShortcutEntity* pPropShortcutEntity;
+	for (KeyValues *sub = pNodeInfoKV->FindKey("setup/objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		// loop through it adding all the info to the response object.
+		pBaseEntity = CBaseEntity::Instance(sub->GetInt());
+		if (!pBaseEntity)
+			continue;
+
+		pPropShortcutEntity = dynamic_cast<CPropShortcutEntity*>(pBaseEntity);
+		if (!pPropShortcutEntity)
+			continue;
+
+		// don't try to parent ourselves to ourselves.
+		if (pPropShortcutEntity == pInfoShortcut)
+			continue;
+
+		// these entities already exist.  parent them to the info object, then tell the client-side code when we're done.
+		pPropShortcutEntity->SetParent(pInfoShortcut);
+	}
+
+	pNodeInfoKV->deleteThis();
+
+	CBaseEntity* pPlayerEntity = UTIL_GetCommandClient();
+	edict_t *pClient = engine->PEntityOfEntIndex(pPlayerEntity->entindex());
+	engine->ClientCommand(pClient, UTIL_VarArgs("showhubsavemenuclient %i;\n", pInfoShortcut->entindex()));
+}
+ConCommand showhubsavemenu("showhubsavemenu", ShowHubSaveMenu, "Shows the HUB save menu.", FCVAR_HIDDEN);
 
 /*
 // WE are given: [1]itemfile [2]model [3]origin [4]angles [5]nophysics [6]allowplacement
@@ -744,6 +905,64 @@ void RemoveObject(const CCommand &args)
 	pProp->InputKillHierarchy(emptyDummy);
 }
 ConCommand removeobject("removeobject", RemoveObject, "Deletes an object from the game.");
+
+void BulkRemovedObject(const CCommand &args)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	int iInfoShortcutIndex = Q_atoi(args[1]);
+	CPropShortcutEntity* pInfoShortcut = (iInfoShortcutIndex >= 0) ? dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(Q_atoi(args[1]))) : NULL;
+
+	KeyValues* pNodeInfoKV = new KeyValues("node");
+	if (!pNodeInfoKV->LoadFromFile(g_pFullFileSystem, "nodevolume.txt", "DEFAULT_WRITE_PATH"))
+	{
+		DevMsg("ERROR: Could not load nodevolume.txt!\n");
+		return;
+	}
+
+	// Find the info shortcut for the node.
+	//KeyValues* pInstanceKV = NULL;
+	CBaseEntity* pInfoBaseEntity = CBaseEntity::Instance(Q_atoi(args[1]));
+	if (!pInfoBaseEntity)
+	{
+		DevMsg("ERROR: Could not find info object within node command.\n");
+		return;
+	}
+
+	CBaseEntity* pBaseEntity;
+	CPropShortcutEntity* pPropShortcutEntity;
+	for (KeyValues *sub = pNodeInfoKV->FindKey("setup/objects", true)->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		// loop through it adding all the info to the response object.
+		pBaseEntity = CBaseEntity::Instance(sub->GetInt());
+		if (!pBaseEntity)
+			continue;
+
+		pPropShortcutEntity = dynamic_cast<CPropShortcutEntity*>(pBaseEntity);
+		if (!pPropShortcutEntity)
+			continue;
+
+		// don't try to parent ourselves to ourselves.
+		if (pInfoShortcut && (pPropShortcutEntity == pInfoShortcut || pPropShortcutEntity->GetMoveParent() == pInfoShortcut->GetBaseEntity()))
+			continue;
+
+		inputdata_t emptyDummy;
+		pPropShortcutEntity->InputKillHierarchy(emptyDummy);
+	}
+	pNodeInfoKV->deleteThis();
+
+	if (pInfoShortcut)
+	{
+		inputdata_t emptyDummy;
+		pInfoShortcut->InputKillHierarchy(emptyDummy);
+	}
+
+	//CBaseEntity* pPlayerEntity = UTIL_GetCommandClient();
+	//edict_t *pClient = engine->PEntityOfEntIndex(pPlayerEntity->entindex());
+	//engine->ClientCommand(pClient, UTIL_VarArgs("showhubclearedmenuclient %i;\n", pInfoShortcut->entindex()));
+}
+ConCommand bulkremovedobject("bulkremovedobjects", BulkRemovedObject, "Deletes lots of objects from the game.");
 
 void SetObjectIds(const CCommand &args)
 {

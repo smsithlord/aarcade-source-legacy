@@ -1,0 +1,821 @@
+
+<html>
+	<head>
+		<title>Anarchy Portal</title>
+		<script>
+			function testLocalStorage() {
+			    var mod = 'modernizr';
+			    try {
+			        localStorage.setItem(mod, mod);
+			        localStorage.removeItem(mod);
+			        return true;
+			    } catch(e) {
+			        return false;
+			    }
+			}
+
+			function getParameterByName(name, url)
+			{
+				// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+			    if (!url) url = window.location.href;
+			    name = name.replace(/[\[\]]/g, "\\$&");
+			    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			        results = regex.exec(url);
+			    if (!results) return null;
+			    if (!results[2]) return '';
+			    return decodeURIComponent(results[2].replace(/\+/g, " "));
+			}
+
+			function ExtractYouTubePlaylistId(trailerURL)
+			{
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+			  
+			  var playlist = getParameterByName("list", trailerURL);
+			  return playlist;
+			}
+
+			function ExtractYouTubeId(trailerURL)
+			{
+			  if( typeof trailerURL === "undefined" )
+			    return trailerURL;
+			  
+			  var youtubeid;
+			  if( trailerURL.indexOf("youtube") != -1 && trailerURL.indexOf("v=") != -1 )
+			  {
+			    youtubeid = trailerURL.substr(trailerURL.indexOf("v=")+2);
+
+			    var found = youtubeid.indexOf("&");
+			    if( found > -1 )
+			    {
+			      youtubeid = youtubeid.substring(0, found);
+			    }
+			  }
+			  else
+			  {
+			    var found = trailerURL.indexOf("youtu.be/");
+			    if( found != -1 )
+			    {
+			      youtubeid = trailerURL.substring(found+9);
+
+			      found = youtubeid.indexOf("&");
+			      if( found != -1 )
+			      {
+			        youtubeid = youtubeid.substring(0, found);
+			      }
+			    }
+			  }
+
+			  return youtubeid;
+			}
+		</script>
+		<style>
+			body
+			{
+				background-image: url('anarchyPortalBackground.gif');
+				background-size: cover;
+				background-attachment: fixed;
+				/*width: 90%;*/
+				margin-left: auto;
+				margin-right: auto;
+				margin-top: 0;
+				padding-top: 0;
+				margin-bottom: 6px;
+				padding-bottom: 0;
+				/*margin-top: 20px;*/
+			}
+
+			form
+			{
+				padding: 0;
+				margin: 0;
+			}
+
+			.widget
+			{
+				display: inline-block;
+			}
+
+			.widgetContainer
+			{
+			}
+
+			.apNewWidgetPanel
+			{
+				background-color: rgba(25, 25, 25, 0.8);
+				border: 3px solid rgba(42, 42, 42, 0.8);
+				padding: 6px;
+				margin: 2px;
+				border-radius: 8px;
+				font-family: Arial;
+				font-size: 18px;
+				letter-spacing: 0.1em;
+				color: #ccc;
+				text-align: center;
+				width: 100%;
+				margin-top: 15px;
+				/*display: inline-block;*/
+			}
+
+			.apNewWidgetPanel:nth-of-type(1)
+			{
+				margin-top: 8px;
+			}
+
+			.apNewWidgetPanel input
+			{
+				width: 100%;
+				background-color: rgba(25, 25, 25, 0.8);
+				border: 3px solid rgba(42, 42, 42, 0.8);
+				padding: 6px;
+				margin: 2px;
+				border-radius: 8px;
+				font-family: Arial;
+				font-size: 18px;
+				letter-spacing: 0.1em;
+				color: #ccc;
+				text-align: center;
+			}
+
+			.apNewWidgetPanel input:hover
+			{
+				border-color: rgba(255, 255, 255, 1.0);
+			}
+
+			.customStuff
+			{
+				width: 98%;
+				display: none;
+			}
+
+			.apNewWidgetPanel:hover .customStuff
+			{
+				display: block;
+			}
+
+			.apInput/* input*/
+			{
+				background-color: rgba(25, 25, 25, 0.8);
+				border: 3px solid rgba(42, 42, 42, 0.8);
+				padding: 6px;
+				margin: 2px;
+				border-radius: 8px;
+				font-family: Arial;
+				font-size: 18px;
+				letter-spacing: 0.1em;
+				color: #ccc;
+				width: 100%;
+				text-align: center;
+			}
+
+			input:hover
+			{
+				border-color: rgba(255, 255, 255, 1.0);
+			}
+
+			#anarchyPortalTitle
+			{
+				width: 90%;
+				/*background-color: rgba(100, 40, 40, 0.8);*/
+				background-color: rgba(250, 50, 50, 0.6);
+				border: 3px solid #000;
+				padding: 6px;
+				margin: 2px;
+				margin-left: auto;
+				margin-right: auto;
+				border-radius: 8px;
+				font-family: Arial;
+				font-size: 18px;
+				letter-spacing: 0.1em;
+				color: rgba(255, 255, 255, 0.8);
+				text-align: center;
+				text-shadow: 2px 2px 2px #000;
+				-webkit-box-shadow: 3px 5px 8px #000;
+			}
+
+			.sectionHeader
+			{
+				font-family: Arial;
+				color: #999;
+				font-size: 8px;
+				letter-spacing: 0.3em;
+				text-align: center;
+				margin: 10px;
+				text-transform: uppercase;
+			}
+
+			hr
+			{
+				border-style: solid;
+				border-color: rgba(100, 100, 100, 0.5);
+				border-width: 1px 0 0 0;
+			}
+
+			.aaScrollBars::-webkit-scrollbar
+			{
+				width: 15px;
+				height: 15px;
+			}
+
+			.aaScrollBars::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+				border-radius: 10px;
+				background-color: rgba(100, 100, 100, 0.7);
+			}
+
+			.aaScrollBars::-webkit-scrollbar-thumb
+			{
+				border-radius: 10px;
+				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,1);
+				background-color: #555;
+			}
+
+			.aaScrollBars::-webkit-scrollbar-corner
+			{
+				background-color: transparent;
+			}
+
+			.widgetContainer:hover div/*.floatButtonOuter*/
+			{
+				visibility: visible;
+				pointer-events: all;
+				border-color: rgba(255, 255, 255, 1.0);
+			}
+
+			.floatButtonOuter
+			{
+				visibility: hidden;
+				/*pointer-events: none;*/
+			}
+
+			.floatButtonOuter:hover
+			{
+				border-color: rgba(255, 255, 255, 1.0);
+			}
+
+			.newWidgetLnk
+			{
+				border-color: rgb(50, 150, 150) !important;
+				background-color: rgba(20, 70, 70, 0.7) !important;
+			}
+
+			.newWidgetLnk:hover
+			{
+				border-color: rgb(255, 255, 255) !important;
+				background-color: rgba(100, 200, 200, 0.7) !important;
+				color: #fff !important;
+			}
+		</style>
+	</head>
+	<body class="aaScrollBars" onselectstart="return false;">
+		<center>
+			<div class="containerPillar" style="width: 90%; max-width: 400px; margin-right: 22px;">
+				<hr />
+				<div class="apNewWidgetPanel" style="border-color: rgb(50, 150, 150);">
+					<a name="newwidget"></a>
+					<div style="font-size: 20px; color: rgb(50, 150, 150);" class="sectionHeader">New Bookmark</div>
+					<input type="text" placeholder="URL" id="urlBox" /><br />
+					<input type="text" placeholder="Title" id="titleBox" /><br />
+					<input type="text" placeholder="Section (optional)" /><br />
+					<input type="text" placeholder="Type" style="display: none;" value="button" />
+					<!-- <input type="text" placeholder="Target" style="display: none;" value="_blank" /> -->
+					<input type="button" value="Create" style="text-align: center; background-color: rgba(20, 70, 70, 0.7);" onclick="createWidget.call(this);" />
+				</div>
+
+				<div class="apNewWidgetPanel" style="border-color: rgb(50, 150, 150);">
+					<div style="font-size: 20px; color: rgb(50, 150, 150);" class="sectionHeader">Save / Load</div>
+					<div class="customStuff">
+						<form id="customizationsForm">
+							<input type="text" id="homeURL" />
+						</form>
+						<div style="font-size: 12px; text-align: left; width: 100%; line-height: 125%;">
+							<ul>
+								<li>Your customizations automatically get saved into <u>this</u> browser's cache.</li>
+								<li>This customizations string lets you take your customization into another browser, or backup your bookmarks.</li>
+								<li>Copy & paste this customization string to use your customizations in other browsers.</li>
+								<li>Set your <u>web browser home page</u> in your Steam settings to:<br /><input style="display: inline; width: 98%; background-color: transparent; border: 0; color: #fff; font-size: 12px;" value="http://www.anarchyarcade.com/anarchyPortal.html" onclick="this.select();" readonly /></li>
+								
+							</ul>
+						</div>
+					</div>
+				</div>
+				<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+				<center>
+					<div class="apNewWidgetPanel" style="border: 0; color: #000; font-size: 12px; font-weight: 900;">
+						Created by SM Sith Lord
+					</div>
+				</center>
+			</div>
+
+			<script>
+				var customizationsFormElem = document.querySelector("#customizationsForm");
+				customizationsFormElem.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					//var formElem = this;
+					var dataLump = this.querySelector("input").value;
+					try
+					{
+						var customDataPayload = JSON.parse(dataLump);
+						if( !!customDataPayload )
+						{
+							data = customDataPayload;
+							data.timestamp = (new Date()).toJSON();
+							window.localStorage.setItem("portalData", JSON.stringify(data));
+
+							window.location = "anarchyPortal.html";//?data=" + encodeURIComponent(JSON.stringify(data));
+							return;
+						}
+						else
+							this.querySelector("input").value = originalDataLump;
+					}
+					catch(e)
+					{
+						this.querySelector("input").value = originalDataLump;
+					}
+				}.bind(customizationsFormElem), true);
+
+				var urlBoxElem = document.querySelector("#urlBox");
+				var titleBoxElem = document.querySelector("#titleBox");
+				function generateTitle(inTitle, url)
+				{
+					var title = inTitle;
+					if( title === "" )
+					{
+						// create a title
+						/*
+						var regEx = /(?=[^\\/]*$).+$/i;
+						var matches = regEx.exec(url);
+						if( matches )
+						{
+							var titleVal = matches[matches.length-1];
+							var foundDot = titleVal.lastIndexOf(".");
+							if( foundDot >= titleVal.length - 4)
+								titleVal = titleVal.substring(0, foundDot);
+
+							title = titleVal;
+						}
+						*/
+
+						if( true || title === "" )
+						{
+							var shortStuff = url;
+							if( shortStuff.indexOf("http://") === 0 )
+								shortStuff = shortStuff.substring(7);
+
+							if( shortStuff.indexOf("https://") === 0 )
+								shortStuff = shortStuff.substring(8);
+
+							if( shortStuff.indexOf("www.") === 0 )
+								shortStuff = shortStuff.substring(4);
+
+							var foundDot = shortStuff.indexOf(".");
+							if( foundDot >= 0 )
+								shortStuff = shortStuff.substring(0, foundDot);
+
+							if( shortStuff !== "" )
+								title = shortStuff;
+						}
+
+						if( title === "" )
+							title = url;
+					}
+
+					return title;
+				}
+
+				urlBoxElem.addEventListener("blur", function(e)
+				{
+					var title = titleBoxElem.value;
+					var url = urlBoxElem.value;
+
+					titleBoxElem.value = generateTitle(title, url);
+				}.bind(urlBoxElem), true);
+
+				function createWidget()
+				{
+					var panel = this.parentNode;
+
+					var customWidget = {};
+					var fields = panel.querySelectorAll("input[type='text']");
+					var key;
+					for( var i = 0; i < fields.length; i++ )
+					{
+						var key = fields[i].placeholder.toLowerCase();
+						if( key === "section (optional)" )
+							key = "section";
+						
+						customWidget[key] = fields[i].value;
+					}
+
+					if( !!!customWidget.url || customWidget.url === "" )
+						return;
+
+					if( !!!customWidget.title || customWidget.title === "" )
+						return;
+
+					if( customWidget.url[0] !== '#' )
+					{
+						if( customWidget.url.indexOf("http://") !== 0 )
+							customWidget.url = "http://" + customWidget.url;
+					}
+/*
+					if( !!!customWidget.title || customWidget.title === "" )
+					{
+						// create a title
+						var regEx = /(?=[^\\/]*$).+$/i;
+						var matches = regEx.exec(customWidget.url);
+						if( matches )
+						{
+							var titleVal = matches[matches.length-1];
+							var foundDot = titleVal.lastIndexOf(".");
+							if( foundDot >= titleVal.length - 4)
+								titleVal = titleVal.substring(0, foundDot);
+
+							customWidget.title = titleVal;
+						}
+
+						if( customWidget.title === "" )
+						{
+							var shortStuff = customWidget.url;
+							if( shortStuff.indexOf("http://") === 0 )
+								shortStuff = shortStuff.substring(7);
+
+							if( shortStuff.indexOf("https://") === 0 )
+								shortStuff = shortStuff.substring(8);
+
+							if( shortStuff.indexOf("www.") === 0 )
+								shortStuff = shortStuff.substring(4);
+
+							var found = shortStuff.indexOf(".");
+							if( found >= 0 )
+								shortStuff = shortStuff.substring(0, found);
+
+							if( shortStuff !== "" )
+								customWidget.title = shortStuff;
+						}
+
+						if( customWidget.title === "" )
+							customWidget.title = customWidget.url;
+					}
+*/
+		          	// default section is "Bookmarks"
+		          	if( !!!customWidget.section || customWidget.section === "" )
+		          		customWidget.section = "Bookmarks";
+
+					// fix case-sensitive section names
+					var section = customWidget.section.toLowerCase();
+					for( var i = 0; i < activeWidgets.length; i++ )
+					{
+						if( activeWidgets[i].section.toLowerCase() === section )
+						{
+							customWidget.section = activeWidgets[i].section;
+							break;
+						}
+					}
+
+					if( !!!data.custom )
+						data.custom = [];
+
+					data.custom.push(customWidget);
+
+					data.timestamp = (new Date()).toJSON();
+					window.localStorage.setItem("portalData", JSON.stringify(data));
+
+					window.location = "anarchyPortal.html";//?data=" + encodeURIComponent(JSON.stringify(data));
+				}
+
+				function clearLocalStorageData()
+				{
+
+				}
+			</script>
+
+			<input type="button" value="INSERT CUSTOM WIDGETS" onclick="goGo();" style="display: none;" />
+			<input type="button" value="Clear Local Storage Data" onclick="clearLocalStorageData();" style="display: none;" />
+		</center>
+
+		<script>
+			var essentials = {
+				0x1:
+				{
+					"title": "New Window",
+					"type": "button",
+					"url": "http://www.google.com/",
+					"section": "",
+					"tempEssential": true
+				},
+				0x2:
+				{
+					"title": "New Bookmark",
+					"type": "button",
+					"url": "#newwidget",
+					"section": "",
+					"tempEssential": true
+				},
+				0x4:
+				{
+					"title": "YouTube History",
+					"type": "button",
+					//"target": "YouTubeHistory",
+					"url": "http://www.youtube.com/feed/history",
+					"section": "Bookmarks",
+					"tempEssential": true
+				}/*,
+				0x8:
+				{
+					"title": "Netflix",
+					"type": "button",
+					"target": "Netflix",
+					"url": "http://www.netflix.com/",
+					"section": "Bookmarks"
+				}*/,
+				0x8:
+				{
+					"title": "Google",
+					"type": "text",
+					//"target": "Google",
+					"url": "https://www.google.com/#safe=active&q=",
+					"section": "Search",
+					"tempEssential": true,
+					"tempSearch": true
+				},
+				0x10:
+				{
+					"title": "YouTube",
+					"type": "text",
+					//"target": "YouTube",
+					"url": "https://www.google.com/#safe=active&q=YouTube+",
+					"section": "Search",
+					"tempEssential": true,
+					"tempSearch": true
+				}
+			};
+
+			var homeURLElem = document.querySelector("#homeURL");
+			var data;// = getParameterByName("data");
+
+			// try to load data from localStorage if not found in URL
+			var localStorageData;
+			if( testLocalStorage() )
+				localStorageData = window.localStorage.getItem('portalData');
+
+			if( !!localStorageData )
+			{
+				data = JSON.parse(localStorageData);
+
+				var potentialData = getParameterByName("data");
+
+				if( !!potentialData )
+				{
+					// decide if potentialDate is newer than data
+					var usePotential = false;
+					var ourDate = (!!data.timestamp) ? new Date(data.timestamp) : undefined;
+					var potentialDate = (!!potentialData.timestamp) ? new Date(potentialData.timestamp) : undefined;
+
+					if( !!ourDate && !!potentialDate )
+					{
+						if(Date.compare(ourDate, potentialDate) === 1 )
+							usePotential = true;
+					}
+
+					if( (usePotential || !!!ourDate) && !!potentialDate)
+						data = JSON.parse(decodeURIComponent(potentialData));
+				}
+			}
+			else
+			{
+				data = getParameterByName("data");
+
+				if( !!data )
+					data = JSON.parse(decodeURIComponent(data));
+			}
+
+			if( !!!data )
+			{
+				// otherwise, create a blank new data object.
+				data = {
+					"essentialsMask": 0x0,
+					"timestamp": (new Date()).toJSON()
+				};
+			}
+
+			if( !!data )
+			{
+				// this is the only update that you don't update timestamp in!!
+				originalDataLump = JSON.stringify(data);
+				window.localStorage.setItem("portalData", originalDataLump);
+
+				homeURLElem.value = originalDataLump;//encodeURIComponent(JSON.stringify(data));//"http://www.anarchyarcade.com/anarchyPortal.html?data=" + encodeURIComponent(JSON.stringify(data));
+				homeURLElem.addEventListener("focus", function(e)
+				{
+					this.select();
+				}.bind(homeURLElem), true);
+
+				var activeWidgets = [];
+
+				var essentialsMask = parseInt(data.essentialsMask);
+				var essentialsKeys = Object.keys(essentials);
+				for( var i = 0; i < essentialsKeys.length; i++ )
+				{
+					if( !essentialsMask || parseInt(essentialsKeys[i]) & essentialsMask )
+						activeWidgets.push(essentials[essentialsKeys[i]]);
+				}
+
+				if( !!data.custom )
+				{
+					for( var i = 0; i < data.custom.length; i++ )
+						activeWidgets.push(data.custom[i]);
+				}
+
+				var sections = [];
+				for( var i = 0; i < activeWidgets.length; i++ )
+				{
+					if( sections.indexOf(activeWidgets[i].section) < 0 )
+						sections.push(activeWidgets[i].section);
+				}
+
+				var containerElem = document.createElement("div");
+				var sectionElem, sectionHeaderElem, widgetElem;
+				var section, widget;
+				for( var i = 0; i < sections.length; i++ )
+				{
+					section = sections[i];
+
+					sectionElem = document.createElement("div");
+					sectionElem.className = "section apNewWidgetPanel";
+					sectionElem.style.cssText = "width: 100%; display: inline-block;";
+
+					if( section !== "" )
+					{
+						sectionHeaderElem = document.createElement("div");
+						sectionHeaderElem.className = "sectionHeader";
+						sectionHeaderElem.style.cssText = "font-size: 20px;";
+						sectionHeaderElem.innerHTML = section;
+						sectionElem.appendChild(sectionHeaderElem);
+					}
+
+					for( var j = 0; j < activeWidgets.length; j++ )
+					{
+						widget = activeWidgets[j];
+						if( widget.section !== section )
+							continue;
+
+						var widgetContainer = document.createElement("div");
+						widgetContainer.className = "widgetContainer";
+
+						if( !widget.tempEssential )
+						{
+							var editContainerOuter = document.createElement("div");
+							editContainerOuter.className = "floatButtonOuter";
+							editContainerOuter.style.cssText = "display: none; position: relative; float: left; left: 0px; width 40px;";
+							var editButtonContainer = document.createElement("div");
+							editButtonContainer.style.cssText = "display: inline-block; position: absolute;";
+							var editButton = document.createElement("div");
+							editButton.className = "apInput";
+							editButton.style.cssText = "padding-left: 0; padding-right: 0;";
+							editButton.innerHTML = "<img src='editicon.png' height='16' width='16' /><div style='display: inline; position: relative; left: -24px; border: 1px solid pink; pointer-events: none; visibility: hidden;'><div style='position: absolute;'>&nbsp;</div></div>";
+							editButtonContainer.appendChild(editButton);
+							editContainerOuter.appendChild(editButtonContainer);
+							widgetContainer.appendChild(editContainerOuter);
+
+							var deleteContainerOuter = document.createElement("div");
+							deleteContainerOuter.widget = widget;
+							deleteContainerOuter.addEventListener("click", function(e)
+							{
+								var index = data.custom.indexOf(this.widget);
+								if( index >= 0 )
+									data.custom.splice(index, 1);
+
+								data.timestamp = (new Date()).toJSON();
+								window.localStorage.setItem("portalData", JSON.stringify(data));
+
+								var parent = this.parentNode;
+								var container = parent.parentNode;
+								container.removeChild(parent);
+
+								originalDataLump = JSON.stringify(data);
+								homeURLElem.value = originalDataLump;//"http://www.anarchyarcade.com/anarchyPortal.html?data=" + encodeURIComponent(JSON.stringify(data));
+
+								if( !!!container.querySelector(".widgetContainer") )
+								{
+									var index = activeWidgets.indexOf(this.widget);
+									if( index >= 0 )
+										activeWidgets.splice(index, 1);
+
+									container.parentNode.removeChild(container);
+								}
+							}.bind(deleteContainerOuter), true);
+							deleteContainerOuter.className = "floatButtonOuter";
+							deleteContainerOuter.style.cssText = "position: relative; float: right; left: -32px; width 40px;";
+							var deleteButtonContainer = document.createElement("div");
+							deleteButtonContainer.style.cssText = "display: inline-block; position: absolute;";
+							var deleteButton = document.createElement("div");
+							deleteButton.className = "apInput";
+							deleteButton.style.cssText = "padding-left: 0; padding-right: 0;";
+							deleteButton.innerHTML = "<img src='xicon.png' height='16' width='16' style='position: relative; left: 2px; top: 3px;' /><div style='display: inline; position: relative; left: -24px; border: 1px solid pink; pointer-events: none; visibility: hidden;'><div style='position: absolute;'>&nbsp;</div></div>";
+							deleteButtonContainer.appendChild(deleteButton);
+							deleteContainerOuter.appendChild(deleteButtonContainer);
+							widgetContainer.appendChild(deleteContainerOuter);
+						}
+
+						widgetElem = document.createElement("input");
+						widgetElem.className = "widget apInput";
+						widgetElem.widget = widget;
+						if( widget.type === "button" )
+						{
+							widgetElem.type = widget.type;
+							widgetElem.value = widget.title;
+
+							if( widget.url[0] === "#" )
+								widgetElem.classList.add("newWidgetLnk");
+
+							widgetElem.addEventListener("click", function(e)
+							{
+								if( this.widget.url[0] === "#" )
+								{
+									window.location.hash = this.widget.url;
+									document.querySelector("#urlBox").focus();
+								}
+								else
+								{
+									//window.location = this.widget.url;
+									var goodWidth = 1280;
+									var goodHeight = 720;
+
+									var fudge = 10;
+									goodWidth += fudge;
+									goodHeight += fudge;
+
+									var url = this.widget.url;
+
+									// corret the youtube URL on this widget
+									var youTubeId = ExtractYouTubeId(this.widget.url)
+									var youTubePlaylistId = ExtractYouTubePlaylistId(this.widget.url);
+						            if( !!youTubePlaylistId )
+						              url = "http://www.anarchyarcade.com/youtube_player.php?id=" + youTubeId + "&list=" + youTubePlaylistId + "&autoplay=0";
+						            else if( !!youTubeId )
+						              url = "http://www.anarchyarcade.com/youtube_player.php?id=" + youTubeId + "&autoplay=0";
+
+									window.open(url, this.widget.section, "toolbar=no,location=yes,status=no,menubar=no,scrollbars=yes,resizable=yes,width=" + goodWidth + ",height=" + goodHeight);
+								}
+							}.bind(widgetElem), true);
+						}
+						else if( widget.type === "text" )
+						{
+							widgetElem.type = widget.type;
+							widgetElem.placeholder = widget.title;
+
+							/*
+							widgetElem.addEventListener("click", function(e)
+							{
+								window.location = this.widget.url;
+							}.bind(widgetElem), true);
+							*/
+						}
+						//widgetElem.innerHTML = widget.title + " - " + widget.url;
+						if( !!!widget.tempSearch )
+						{
+							widgetContainer.appendChild(widgetElem);
+						}
+						else
+						{
+							var widgetElemForm = document.createElement("form");
+							widgetElemForm.widget = widget;
+
+							widgetElemForm.addEventListener("submit", function(e)
+							{
+								e.preventDefault();
+
+								var url = this.widget.url;//"https://www.google.com/#safe=active&q=";
+								var urlTerm = encodeURIComponent(this.value);
+								var goodWidth = 1280;
+								var goodHeight = 720;
+
+								var fudge = 10;
+								goodWidth += fudge;
+								goodHeight += fudge;
+
+								window.open(url + urlTerm, this.widget.section, "toolbar=no,location=yes,status=no,menubar=no,scrollbars=yes,resizable=yes,width=" + goodWidth + ",height=" + goodHeight);
+
+								this.value = "";
+							}.bind(widgetElem), true);
+
+							widgetElemForm.appendChild(widgetElem);
+
+							widgetContainer.appendChild(widgetElemForm);	
+						}
+						sectionElem.appendChild(widgetContainer);
+					}
+
+					containerElem.appendChild(sectionElem);
+				}
+
+				var container = document.querySelector(".containerPillar");
+				container.insertBefore(containerElem, container.firstChild);
+			}
+		</script>
+	</body>
+</html>

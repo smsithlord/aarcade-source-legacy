@@ -121,6 +121,10 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 		char additionalPreviewURL[AA_MAX_STRING];
 		char key[AA_MAX_STRING];
 		char value[AA_MAX_STRING];
+		// Changed for Steamworks update.
+		//uint64 numSubscriptions;
+		//uint64 numFavorites;
+		//uint64 numAdditionalPreviews;
 		uint32 numSubscriptions;
 		uint32 numFavorites;
 		uint32 numAdditionalPreviews;
@@ -128,6 +132,9 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 		SteamWorkshopKeyValueTag_t* pKeyValueTag;
 		//uint32 additionalURLSize;
 		//uint32 previewURLSize;
+
+		// Changed for Steamworks update.
+		//EItemPreviewType previewType;
 		bool bAdditionalIsImage;
 		unsigned int i;
 		for (i = 0; i < pResult->m_unNumResultsReturned; i++)
@@ -167,7 +174,9 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 				steamapicontext->SteamUGC()->GetQueryUGCPreviewURL(pResult->m_handle, i, url, AA_MAX_STRING);
 				pSteamWorkshopDetails->previewURL = std::string(url);
 
+				// Changed for Steamworks update.
 				steamapicontext->SteamUGC()->GetQueryUGCStatistic(pResult->m_handle, i, k_EItemStatistic_NumSubscriptions, &numSubscriptions);
+				//steamapicontext->SteamUGC()->GetQueryUGCStatistic(pResult->m_handle, i, k_EItemStatistic_NumSubscriptions, &numSubscriptions);
 				pSteamWorkshopDetails->numSubscriptions = numSubscriptions;
 
 				steamapicontext->SteamUGC()->GetQueryUGCStatistic(pResult->m_handle, i, k_EItemStatistic_NumFavorites, &numFavorites);
@@ -175,9 +184,12 @@ void C_WorkshopQuery::OnUGCQueried(SteamUGCQueryCompleted_t* pResult, bool bIOFa
 				
 				numAdditionalPreviews = steamapicontext->SteamUGC()->GetQueryUGCNumAdditionalPreviews(pResult->m_handle, i);
 
+				char originalFileName[AA_MAX_STRING];
 				for (unsigned int j = 0; j < numAdditionalPreviews; j++)
 				{
+					// Changed for Steamworks update
 					steamapicontext->SteamUGC()->GetQueryUGCAdditionalPreview(pResult->m_handle, i, j, additionalPreviewURL, AA_MAX_STRING, &bAdditionalIsImage);
+					//steamapicontext->SteamUGC()->GetQueryUGCAdditionalPreview(pResult->m_handle, i, j, additionalPreviewURL, AA_MAX_STRING, originalFileName, AA_MAX_STRING, &previewType);
 					pSteamWorkshopDetails->additionalPreviewURLs.push_back(std::string(additionalPreviewURL));
 				}
 

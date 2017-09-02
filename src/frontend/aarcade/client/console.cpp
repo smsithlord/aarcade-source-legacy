@@ -17,6 +17,7 @@
 //ConVar xbmc_enable( "xbmc_enable", "0", FCVAR_ARCHIVE );
 //ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);	// obsolete
 //ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);	// obsolete
+ConVar auto_load_map("auto_load_map", "1", FCVAR_ARCHIVE);
 ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);	// ALWAYS start off.
 ConVar broadcast_game("broadcast_game", "Anarchy Arcade", FCVAR_NONE);	// ALWAYS start on Anarchy Arcade.
 ConVar broadcast_auto_game("broadcast_auto_game", "1", FCVAR_ARCHIVE);
@@ -26,6 +27,11 @@ ConVar kodi_ip("kodi_ip", "192.168.0.100", FCVAR_ARCHIVE, "The ip of the Kodi ho
 ConVar kodi_port("kodi_port", "8080", FCVAR_ARCHIVE, "The port of the Kodi host.");
 ConVar kodi_user("kodi_user", "", FCVAR_ARCHIVE, "The user of the Kodi host.");
 ConVar kodi_password("kodi_password", "", FCVAR_ARCHIVE, "The password of the Kodi host. (NOT HIDDEN, SENT OVER HTTP GET REQUESTS AS PART OF THE URL TO TALK TO KODI!)");
+ConVar libretro_volume("libretro_volume", "1.0", FCVAR_ARCHIVE, "Libretro's volume level, a float between 0 and 1.");
+ConVar old_libretro_volume("old_libretro_volume", "1.0", FCVAR_HIDDEN, "Internal.  Used to remember what value to set Libretro to when un-muted.");
+ConVar libretro_gui_gamepad("libretro_gui_gamepad", "0", FCVAR_ARCHIVE, "The starting state of the Libretro GUI on-screen gamepad.");
+ConVar auto_libretro("auto_libretro", "0", FCVAR_ARCHIVE, "Automatically run compatible shortcuts on the in-game screens with Libretro when selecting objects.");
+ConVar wait_for_libretro("wait_for_libretro", "1", FCVAR_ARCHIVE, "Allow AArcade to hang while it waits for Libretro instances to fully close.");
 ConVar workshop("workshop", "1", FCVAR_NONE);
 
 bool IsFileEqual(const char* inFileA, std::string inFileB)
@@ -712,6 +718,22 @@ void TaskRemember(const CCommand &args)
 }
 ConCommand task_remember("task_remember", TaskRemember, "Usage: sets the selected entity as continuous play.");
 
+void SetLibretroVolume(const CCommand &args)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	float fVolume = Q_atof(args[1]);
+	if (fVolume > 3.0)
+		fVolume = 3.0;
+	else if (fVolume < 0.0)
+		fVolume = 0.0;
+	
+	libretro_volume.SetValue(fVolume);
+	g_pAnarchyManager->GetLibretroManager()->SetVolume(fVolume);
+}
+ConCommand set_libretro_volume("set_libretro_volume", SetLibretroVolume, "Usage: sets the libretro volume & updates any currently running instances too.");
+
 void TaskClear(const CCommand &args)
 {
 	g_pAnarchyManager->TaskClear();
@@ -790,6 +812,26 @@ void TestFunction2( const CCommand &args )
 ConCommand test_function2( "testfunc2", TestFunction2, "Usage: executes an arbitrary hard-coded C++ routine" );
 */
 
+void ShowHubsMenuClient(const CCommand &args)
+{
+	g_pAnarchyManager->ShowNodeManagerMenu();
+}
+ConCommand showhubsmenuclient("showhubsmenuclient", ShowHubsMenuClient, "Opens the Node Manager.", FCVAR_HIDDEN);
+
+void ShowHubSaveMenuClient(const CCommand &args)
+{
+	C_BaseEntity* pBaseEntity = C_BaseEntity::Instance(Q_atoi(args[1]));
+	if (!pBaseEntity)
+		return;
+
+	C_PropShortcutEntity* pPropShortcut = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
+	if (!pPropShortcut)
+		return;
+
+	g_pAnarchyManager->ShowHubSaveMenuClient(pPropShortcut);
+}
+ConCommand showhubsavemenuclient("showhubsavemenuclient", ShowHubSaveMenuClient, "Does some logic to save the node.", FCVAR_HIDDEN);
+
 void AnarchyManager(const CCommand &args)
 {
 	g_pAnarchyManager->AnarchyStartup();
@@ -858,7 +900,7 @@ void BuildContextUp(const CCommand &args)
 			g_pAnarchyManager->DeselectEntity("asset://ui/libraryBrowser.html");
 		else
 			pHudBrowserInstance->SetUrl("asset://ui/libraryBrowser.html");
-
+		
 		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
 	}
 	else
@@ -867,10 +909,12 @@ void BuildContextUp(const CCommand &args)
 		if (g_pAnarchyManager->GetInputManager()->GetInputMode())
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
+		std::string url = VarArgs("asset://ui/buildModeContext.html?entity=%i", pShortcut->entindex());
+
 		if (g_pAnarchyManager->GetSelectedEntity())
-			g_pAnarchyManager->DeselectEntity("asset://ui/buildModeContext.html");
+			g_pAnarchyManager->DeselectEntity(url);
 		else
-			pHudBrowserInstance->SetUrl("asset://ui/buildModeContext.html");
+			pHudBrowserInstance->SetUrl(url);
 
 		g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pHudBrowserInstance);
 	}
@@ -1040,6 +1084,12 @@ ConCommand setbroadcastgame("set_broadcast_game", SetBroadcastGame, "Sets the cu
 
 void AttemptSelectObject(const CCommand &args)
 {
+	//if (g_pAnarchyManager->GetIgnoreNextFire())
+	//{
+	//	g_pAnarchyManager->SetIgnoreNextFire(false);
+	//	return;
+	//}
+
 	if (!g_pAnarchyManager->GetLastHoverGlowEntity())
 	{
 		if (args.ArgC() > 1)
@@ -1150,3 +1200,33 @@ void SpawnObjects(const CCommand &args)
 	*/
 }
 ConCommand spawnobjects("spawnobjects", SpawnObjects, "Usage: ...");
+
+void GamepadNotify(const CCommand &args)
+{
+	int mode = Q_atoi(args[1]);
+	int state = Q_atoi(args[2]);
+
+	if (mode == 0)
+	{
+		//if (state == 0)
+			//g_pAnarchyManager->SetIgnoreNextFire(true);
+		if (state == 1)
+		{
+			engine->ClientCmd("-attack; -attack2;");
+			//g_pAnarchyManager->SetIgnoreNextFire(false);	// just in case +attack didn't fire some how
+		}
+	}
+}
+ConCommand gamepadnotify("gamepad_notify", GamepadNotify, "Usage: Allows AArcade to prevent engine errors when plugging or unplugging an xbox 360 gamepad.");
+
+void SetToastText(const CCommand &args)
+{
+	g_pAnarchyManager->SetToastText(std::string(args[1]));
+}
+ConCommand settoasttext("set_toast_text", SetToastText, "Usage: ", FCVAR_HIDDEN);
+
+void AddToastMessage(const CCommand &args)
+{
+	g_pAnarchyManager->AddToastMessage(std::string(args[1]));
+}
+ConCommand addtoastmessage("add_toast_message", AddToastMessage, "Usage: ", FCVAR_HIDDEN);

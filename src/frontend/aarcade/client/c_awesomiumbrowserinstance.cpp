@@ -43,6 +43,7 @@ C_AwesomiumBrowserInstance::C_AwesomiumBrowserInstance()
 	m_iState = 1;	// initializing
 	m_iLastVisibleFrame = -1;
 	m_URL = "";
+	m_iOriginalEntIndex = -1;
 }
 
 C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()

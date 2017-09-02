@@ -17,7 +17,9 @@
 #include "c_windowmanager.h"
 #include <vector>
 #include "vgui/ISystem.h"
+#include "vgui_controls/Label.h"
 #include "vgui_controls/Controls.h"
+#include "hlvr/proxydll.h"
 
 enum aaState
 {
@@ -99,6 +101,22 @@ public:
 	// Called after rendering
 	virtual void PostRender();
 
+	void InitHoverLabel(vgui::Label* pHoverLabel) { m_pHoverLabel = pHoverLabel; }
+	void ManageHoverLabel();
+	void UpdateHoverLabel();
+	std::string GetHoverTitle() { return m_hoverTitle; }
+	//void SetHoverLabel(int iEntityIndex, std::string title);
+
+	void PopToast();
+	void AddToastMessage(std::string text);
+	void SetNextToastExpiration(float fValue) { m_fNextToastExpiration = fValue; }
+	float GetNextToastExpiration() { return m_fNextToastExpiration; }
+	void AddToastLabel(vgui::Label* pLabel);
+	void RemoveToastLabel(vgui::Label* pLabel);
+	void SetToastText(std::string text);
+	void UpdateToastText();
+	std::string GetToastText() { return m_toastText; }
+
 	//void CalculateDynamicMultiplyer();
 	void CheckPicMip();
 	int GetDynamicMultiplyer();
@@ -109,6 +127,7 @@ public:
 	bool HandleUiToggle();
 	bool HandleCycleToNextWeapon();
 	bool HandleCycleToPrevWeapon();
+	void DoPause();
 	void Pause();
 	void Unpause();
 	bool IsPaused() { return m_bPaused; }
@@ -124,7 +143,7 @@ public:
 	void AddSubKeysToKeys(KeyValues* kv, KeyValues* targetKV);	// TODO: Make the sibling to this weirdly named function a method of the anarchy manager too.
 
 	bool WeaponsEnabled();
-	void LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId);
+	bool LoadMapCommand(std::string mapId, std::string instanceId, std::string position, std::string rotation, std::string screenshotId);
 
 	uint64 GetTimeNumber();
 	std::string GetTimeString();
@@ -137,7 +156,7 @@ public:
 	void RunAArcade();	// initializes AArcade's loading of libraries and stuff.
 
 	void HudStateNotify();
-	void SetSlaveScreen(bool bVal);
+	void SetSlaveScreen(std::string objectId, bool bVal);
 
 	bool CompareLoadedFromKeyValuesFileId(const char* testId, const char* baseId);
 
@@ -190,7 +209,11 @@ public:
 	void ActivateObjectPlacementMode(C_PropShortcutEntity* pShortcut, const char* mode = "spawn");
 	void DeactivateObjectPlacementMode(bool confirm);
 
+	void ShowHubSaveMenuClient(C_PropShortcutEntity* pInfoShortcut);
+	void ShowNodeManagerMenu();
 	void ShowEngineOptionsMenu();
+
+	std::string GetSteamGamesCode(std::string requestId);
 
 	// helpers
 	void GenerateUniqueId(char* result);
@@ -204,6 +227,10 @@ public:
 
 	//void SetNextInstanceId(std::string instanceId) { m_nextInstanceId = instanceId; }
 
+	bool DetermineLibretroCompatible(KeyValues* pItemKV, std::string& gameFile, std::string& coreFile);
+	bool DetermineStreamCompatible(KeyValues* pItemKV);
+	bool DeterminePreviewCompatible(KeyValues* pItemKV);
+
 	void WriteBroadcastGame(std::string gameTitle);
 	//void xCastSetGameName();
 	void xCastSetLiveURL();
@@ -211,6 +238,7 @@ public:
 	void TestSQLite2();
 
 	void SetNextLoadInfo(std::string instanceId = "", std::string position = "", std::string rotation = "");
+	std::string GetHomeURL();
 
 	// accessors
 	bool GetSuspendEmbedded() { return m_bSuspendEmbedded; }
@@ -241,6 +269,7 @@ public:
 	std::string GetOldEngineNoFocusSleep() { return m_oldEngineNoFocusSleep; }
 	C_BaseEntity* GetLastHoverGlowEntity() { return m_pHoverGlowEntity; }
 	std::string GetTabMenuFile() { return m_tabMenuFile; }
+	//bool GetIgnoreNextFire() { return m_bIgnoreNextFire; }
 
 	// mutators
 	void SetLastNearestObjectToPlayerLook(object_t* pObject) { m_pLastNearestObjectToPlayerLook = pObject; }
@@ -252,11 +281,20 @@ public:
 	void SetAArcadeUserFolder(std::string val) { m_aarcadeUserFolder = val; }
 	void SetOldEngineNoFocusSleep(std::string val) { m_oldEngineNoFocusSleep = val; }
 	void SetTabMenuFile(std::string url) { m_tabMenuFile = url; }
+	//void SetIgnoreNextFire(bool bValue) { m_bIgnoreNextFire = bValue; }
 	
 protected:
 	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 private:
+	std::string m_hoverTitle;
+	int m_iHoverEntityIndex;
+	vgui::Label* m_pHoverLabel;
+	float m_fNextToastExpiration;
+	KeyValues* m_pToastMessagesKV;
+	std::vector<vgui::Label*> m_toastLabels;
+	std::string m_toastText;
+	//bool m_bIgnoreNextFire;
 	bool m_bIsDisconnecting;
 	ConVar* m_pWeaponsEnabledConVar;
 	std::string m_tabMenuFile;

@@ -167,7 +167,7 @@
 			{
 				-webkit-appearance: none;
 				width: 15px;
-				height: 30px;
+				height: 24px;
 				background-color: #ddd;
 				border: 1px solid #bbb;
 				border-radius: 20%;
@@ -233,8 +233,16 @@
 						"title": "Sound"
 					},
 					{
+						"id": "camera",
+						"title": "Camera"
+					},
+					{
 						"id": "ui",
 						"title": "UI"
+					},
+					{
+						"id": "libretro",
+						"title": "Libretro"
 					},
 					{
 						"id": "kodi",
@@ -262,7 +270,15 @@
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
 		</div>
 
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="camera">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="ui">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="libretro">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
 		</div>
 
@@ -384,6 +400,24 @@
 						{
 							this.value = val;
 							aaapi.system.consoleCommand("mat_fastspecular " + this.value);
+						}
+					},
+					"autoload":
+					{
+						"title": "AArcade Startup Behavior",
+						"type": "toggle",
+						"help": "AArcade can automatically load into the most recent map that you visited after it starts up.",
+						"valueTitles": {"0": "Show Main Menu", "1": "Load Most Recent Map"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("auto_load_map");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("auto_load_map " + this.value);
 						}
 					},
 					"console":
@@ -594,6 +628,149 @@
 						}
 					}
 				},
+				"camera":
+				{
+					"cameramode":
+					{
+						"title": "Camera Mode",
+						"type": "select",
+						"help": "Choose which kind of camera perspective to use.",
+						"valueTitles": {"firstperson": "Firstperson", "thirdperson": "Thirdperson", "placeholder": "Change Camera Mode..."},
+						"value": null,
+						"getValue": function()
+						{
+							this.value = "";
+						},
+						"setValue": function(val)
+						{
+							aaapi.system.consoleCommand(val);
+						}
+					},
+					"camyaw":
+					{
+						"title": "Camera YAW",
+						"type": "slider",
+						"sliderMin": -130,
+						"sliderMax": 130,
+						"sliderStep": 1.0,
+						"help": "Cam YAW.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cam_idealyaw");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cam_idealyaw " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"campitch":
+					{
+						"title": "Camera Pitch",
+						"type": "slider",
+						"sliderMin": 0,
+						"sliderMax": 90,
+						"sliderStep": 1.0,
+						"help": "Cam Pitch.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cam_idealpitch");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cam_idealpitch " + this.value);
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camdist":
+					{
+						"title": "Camera Distance",
+						"type": "slider",
+						"sliderMin": 50,
+						"sliderMax": 1000,
+						"sliderStep": 1.0,
+						"help": "Cam distance.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cam_idealdist");
+							console.log(val);
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cam_idealdist " + this.value + "; thirdperson;");
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camhoriz":
+					{
+						"title": "Camera Horizontal",
+						"type": "slider",
+						"sliderMin": -100,
+						"sliderMax": 100,
+						"sliderStep": 1.0,
+						"help": "Cam horizontal.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cam_idealdistright");
+							console.log(val);
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cam_idealdistright " + this.value + "; thirdperson;");
+						},
+						"onSlide": function(val)
+						{
+							this.setValue(val);
+						}
+					},
+					"camspeed":
+					{
+						"title": "Camera Smooth",
+						"type": "slider",
+						"sliderMin": 4.0,
+						"sliderMax": 200.0,
+						"sliderStep": 1.0,
+						"help": "Cam zpeed.",
+						"valueTitles": {},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cam_ideallag");
+							console.log(val);
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cam_ideallag " + this.value);
+						}
+					}
+				},
 				"ui":
 				{
 					"hud":
@@ -665,6 +842,45 @@
 								this.value = val;
 								window.location = "asset://ui/options.html?tab=ui";
 							}
+						}
+					}
+				},
+				"libretro":
+				{
+					"autolibretro":
+					{
+						"title": "Auto Run w/ Libretro",
+						"type": "toggle",
+						"help": "Automatically run compatible shortcuts on the in-game screens w/ Libretro.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("auto_libretro");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("auto_libretro " + this.value);
+						}
+					},
+					"waitforlibretro":
+					{
+						"title": "Wait For Libretro To Close",
+						"type": "toggle",
+						"help": "This allows AArcade to hang while Libretro cores finish closing. Having this enabled allows you to directly switch between Libretro cabinets. (If it is disabled, you'll have to deselect one Libretro cabinet prior to selecting the next one.)",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("wait_for_libretro");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("wait_for_libretro " + this.value);
 						}
 					}
 				},
@@ -889,7 +1105,7 @@
 			function onSlide(e)
 			{
 				var option = this.inputOption;
-				var row = slider.parentNode.parentNode;
+				var row = this.parentNode;
 				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
 				var val = parseNumber(this.value);
 
@@ -898,6 +1114,9 @@
 					labelDiv.innerHTML = valTitle;
 				else
 					labelDiv.innerHTML = val;
+
+				if( typeof option.onSlide === "function" )
+					option.onSlide.call(option, val);
 			}
 
 			var category;
@@ -1059,8 +1278,23 @@
 							this.classList.remove("aaThemeColorOneBackgroundColor");
 						}.bind(selectBox), true);
 
+						//<option value="" disabled selected>Select your option</option>
+
+						if( !!option.valueTitles.placeholder )
+						{
+							selectBoxOption = document.createElement("option");
+							selectBoxOption.text = option.valueTitles.placeholder;
+							selectBoxOption.value = "";
+							selectBoxOption.selected = true;
+							selectBoxOption.disabled = true;
+							selectBox.appendChild(selectBoxOption);
+						}
+
 						for( var value in option.valueTitles )
 						{
+							if( value === "placeholder" )
+								continue;
+
 							selectBoxOption = document.createElement("option");
 							selectBoxOption.text = option.valueTitles[value];
 							selectBoxOption.value = value;

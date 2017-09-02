@@ -31,6 +31,13 @@ typedef struct
 paTestData;
 */
 
+struct RunningLibretroCores_t
+{
+	int count;
+	std::string last_error;
+	std::string last_msg;
+};
+
 struct libretro_raw {
 	void(*set_environment)(retro_environment_t);
 	void(*set_video_refresh)(retro_video_refresh_t);
@@ -71,9 +78,30 @@ struct libretro_core_option {
 
 class C_LibretroInstance;
 
+struct memory_map_t {
+	//RETRO_MEMORY_RTC
+	size_t rtcsize;
+	uint8_t* rtcdata;
+
+	//RETRO_MEMORY_SAVE_RAM
+	size_t saveramsize;
+	uint8_t* saveramdata;
+
+	//RETRO_MEMORY_SYSTEM_RAM
+	size_t systemramsize;
+	uint8_t* systemramdata;
+
+	//RETRO_MEMORY_VIDEO_RAM
+	size_t videoramsize;
+	uint8_t* videoramdata;
+};
+
 struct LibretroInstanceInfo_t
 {
+	RunningLibretroCores_t* runninglibretrocores;
 	int state;
+	bool paused;
+	bool reset;
 	bool close;
 	std::string id;
 	bool ready;
@@ -110,6 +138,7 @@ struct LibretroInstanceInfo_t
 	int samplerate;
 	int framerate;
 	float lastrendered;
+	float volume;
 	//int16_t* audiobuffer;
 	//unsigned int audiobuffersize;
 	//unsigned int audiobufferpos;
@@ -191,6 +220,16 @@ struct LibretroInstanceInfo_t
 	bool need_fullpath;	// If true, retro_load_game() is guaranteed to provide a valid pathname in retro_game_info::path. ::data and ::size are both invalid. If false, ::data and ::size are guaranteed to be valid, but ::path might not be valid. This is typically set to true for libretro implementations that must load from file. Implementations should strive for setting this to false, as it allows the frontend to perform patching, etc.
 	bool block_extract;	// If true, the frontend is not allowed to extract any archives before loading the real content. Necessary for certain libretro implementations that load games from zipped archives.
 
+	size_t statesize;
+	void* statedata;// = malloc(pitch*height);
+
+	memory_map_t* memorymap;
+
+	std::string prettycore;
+	std::string prettygame;
+	KeyValues* settings;
+
+
 	//KeyValues* activekeybinds;
 };
 
@@ -205,19 +244,31 @@ public:
 
 	void CleanUpTexture();
 
+	KeyValues* GetOverlayKV() { return m_pOverlayKV; }
+	void SetOverlay(std::string overlayId);
+	void SaveOverlay(std::string type, std::string overlayId, float x, float y, float width, float height);
+	void ClearOverlay(std::string type, std::string overlayId);
 	void Init(std::string id, std::string title, int iEntIndex);
 	bool CreateWorkerThread(std::string core);
 	void Update();
 	bool LoadCore(std::string coreFile = "");
 	static bool LoadGame();
+	void SetReset(bool bValue);
+	void SetPause(bool bValue);
+	void SetVolume(float fVolume);
+	bool GetPause();
 	void OnGameLoaded();
 	void OnCoreLoaded();
+	std::string GetLibretroCore();
+	std::string GetLibretroFile();
+	//float GetLibretroVolume();
 	static bool BuildInterface(libretro_raw* raw, void* pLib);
 	static void CreateAudioStream();
 	static void DestroyAudioStream();
 	std::string GetOriginalItemId() { return m_originalItemId; }
 	int GetOriginalEntIndex() { return m_iOriginalEntIndex; }
 	void SetOriginalItemId(std::string itemId) { m_originalItemId = itemId; }
+	void SetOriginalEntIndex(int val) { m_iOriginalEntIndex = val; }
 
 	bool HasInfo() { return (m_info != null); }
 	std::vector<libretro_core_option*>& GetAllOptions() { return m_info->options; }	// others should always check if m_info exists first themselves!!
@@ -232,8 +283,10 @@ public:
 	bool Deselect();
 
 	void Close();
+	void GetFullscreenInfo(float& fPositionX, float& fPositionY, float& fSizeX, float& fSizeY, std::string& overlayId);
 
 	std::string GetURL() { return ""; }
+
 
 	// threaded
 	//unsigned Worker(void *params);
@@ -264,6 +317,7 @@ public:
 	void SaveLibretroOption(std::string type, std::string name_internal, std::string value);
 
 	// accessors
+	std::string GetOverlayId() { return m_overlayId; }
 	libretro_raw* GetRaw() { return m_raw; }
 	LibretroInstanceInfo_t* GetInfo() { return m_info; }
 	ITexture* GetTexture() { return m_pTexture; }
@@ -282,6 +336,8 @@ public:
 	void SetTitle(std::string title) { m_title = title; }
 
 private:
+	std::string m_overlayId;
+	KeyValues* m_pOverlayKV;
 	std::string m_originalGame;
 	int m_iLastVisibleFrame;
 	ITexture* m_pTexture;
@@ -290,13 +346,18 @@ private:
 	std::string m_id;
 	std::string m_originalItemId;
 	libretro_raw* m_raw;
-	std::string m_userBase;
-	std::string m_corePath;
-	std::string m_assetsPath;
-	std::string m_systemPath;
-	std::string m_savePath;
+	//std::string m_userBase;
+	//std::string m_corePath;
+	//std::string m_assetsPath;
+	//std::string m_systemPath;
+	//std::string m_savePath;
 	LibretroInstanceInfo_t* m_info;
 	int m_iOriginalEntIndex;
+	//float m_fPositionX;
+	//float m_fPositionY;
+	//float m_fSizeX;
+	//float m_fSizeY;
+	//std::string m_file;
 	//C_OpenGLManager* m_pOpenGLManager;
 	//CSysModule* m_pModule;
 };

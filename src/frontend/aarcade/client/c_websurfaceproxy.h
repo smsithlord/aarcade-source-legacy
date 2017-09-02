@@ -13,7 +13,7 @@
 //#include "c_websurfaceregen.h"
 
 //#include "c_webtab.h"
-#include <map>
+//#include <map>
 
 #include "c_embeddedinstance.h"
 #include "c_canvasregen.h"
@@ -63,7 +63,11 @@ private:
 	std::string		m_originalUrl;
 
 	std::string		m_originalSimpleImageChannel;
-	static std::map<std::string, std::map<std::string, ITexture*>> s_simpleImages;	// a map of shortcut to
+	//static std::map<std::string, std::map<std::string, ITexture*>> s_simpleImages;	// a map of shortcut to
+	//static CUtlMap<std::string, CUtlMap<std::string, ITexture*>> s_simpleImages;
+	static CUtlMap<std::string, ITexture*> s_screenSimpleImages;
+	static CUtlMap<std::string, ITexture*> s_marqueeSimpleImages;
+	static bool s_bLessThanReady;
 
 //	static int				s_textureCount;	// probably needed for cleanup??
 	static CCanvasRegen* s_pCanvasRegen;

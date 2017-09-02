@@ -1,22 +1,22 @@
-class IInputSlate
-{
-	public:
-		virtual void		Create(vgui::VPANEL parent) = 0;
-		virtual void		Destroy( void ) = 0;
-		virtual vgui::Panel*		GetPanel() = 0;
-		virtual void Update() = 0;
-		virtual ITexture* GetCanvasTexture() { return null; }
-};
- 
-extern IInputSlate* InputSlate;
-
-
 #ifndef INPUT_SLATE_H
 #define INPUT_SLATE_H
+
+class IInputSlate
+{
+public:
+	virtual void		Create(vgui::VPANEL parent) = 0;
+	virtual void		Destroy(void) = 0;
+	virtual vgui::Panel*		GetPanel() = 0;
+	virtual void Update() = 0;
+	virtual ITexture* GetCanvasTexture() { return null; }
+};
+
+extern IInputSlate* InputSlate;
 
 //#include "c_webViewManager.h"
 #include <vgui_controls/Panel.h>
 #include <vgui_controls/Frame.h>
+#include "vgui_controls/Label.h"
 #include "aarcade/client/C_EmbeddedInstance.h"
 //#include <vgui_controls/TextEntry.h>
 //#include <vgui_controls/Button.h>
@@ -47,7 +47,7 @@ namespace vgui
 		void OnTick();
 		void Update();
 		void SelfDestruct();
-		//void PaintBackground();
+		void PaintBackground();
 
 		void OnCursorMoved(int x, int y);
 		void OnMouseWheeled(int delta);
@@ -67,10 +67,15 @@ namespace vgui
 
 		ITexture* GetCanvasTexture();
 
+		void AdjustOverlay(float fX, float fY, float fWidth, float fHeight, std::string overlayId);
+
 	private:
+		Label* m_pLabel;
 		bool m_bMainMenu;
 		bool m_bFullscreen;
 		bool m_bInputCapture;
+		ImagePanel* m_pImagePanel;
+		ImagePanel* m_pHudImagePanel;
 	//	bool m_bOverlay;
 	//	static long m_fPreviousTime;
 

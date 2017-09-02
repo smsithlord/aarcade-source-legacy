@@ -11,6 +11,7 @@
 C_InputManager::C_InputManager()
 {
 	DevMsg("InputManager: Constructor\n");
+	m_pInputSlate = null;
 	m_bTempSelect = false;
 	m_bInputMode = false;
 	m_bForcedInputMode = false;
@@ -192,6 +193,15 @@ vgui::KeyCode C_InputManager::StringToSteamKeyEnum(std::string text)
 ITexture* C_InputManager::GetInputSlateCanvasTexture()
 {
 	return InputSlate->GetCanvasTexture();
+}
+
+void C_InputManager::SetFullscreenMode(bool value)
+{
+	//bool bNeedsNotify = (m_bFullscreenMode != value);
+	m_bFullscreenMode = value;
+
+	//if ( bNeedsNotify)
+	//	g_pAnarchyManager->HudStateNotify();
 }
 
 void C_InputManager::ForceInputMode()

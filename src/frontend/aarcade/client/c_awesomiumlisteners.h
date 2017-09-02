@@ -22,7 +22,7 @@ class MasterViewListener : public WebViewListener::View
 	void OnChangeAddressBar(WebView* caller, const WebURL &url) {};
 	void OnChangeTooltip(WebView* caller, const WebString &tooltip) {};
 	void OnChangeTargetURL(WebView* caller, const WebURL &url);
-	void OnChangeCursor(WebView* caller, Cursor cursor) {};
+	void OnChangeCursor(WebView* caller, Awesomium::Cursor cursor) {};
 	void OnChangeFocus(WebView* caller, FocusedElementType focused_type) {};
 	void OnAddConsoleMessage(WebView* caller, const WebString &message, int line_number, const WebString &source);
 	void OnShowCreatedWebView(WebView* caller, WebView* new_view, const WebURL &opener_url, const WebURL &target_url, const Rect &initial_pos, bool is_popup);
@@ -43,7 +43,7 @@ class ViewListener : public WebViewListener::View
 	void OnChangeAddressBar(WebView* caller, const WebURL &url) {};
 	void OnChangeTooltip(WebView* caller, const WebString &tooltip) {};
 	void OnChangeTargetURL(WebView* caller, const WebURL &url);
-	void OnChangeCursor(WebView* caller, Cursor cursor) {};
+	void OnChangeCursor(WebView* caller, Awesomium::Cursor cursor) {};
 	void OnChangeFocus(WebView* caller, FocusedElementType focused_type) {};
 	void OnAddConsoleMessage(WebView* caller, const WebString &message, int line_number, const WebString &source);
 	void OnShowCreatedWebView(WebView* caller, WebView* new_view, const WebURL &opener_url, const WebURL &target_url, const Rect &initial_pos, bool is_popup);

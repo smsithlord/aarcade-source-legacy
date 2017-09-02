@@ -167,6 +167,19 @@ void C_SteamBrowserManager::OnSteamBrowserInstanceCreated(C_SteamBrowserInstance
 	//pSteamBrowserInstance->GetInfo()->state = 1;
 }
 
+
+C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstanceByEntityIndex(int iEntityIndex)
+{
+	unsigned int max = m_steamBrowserInstances.size();
+	for (unsigned int i = 0; i < max; i++)
+	{
+		if (m_steamBrowserInstances[i]->GetOriginalEntIndex() == iEntityIndex)
+			return m_steamBrowserInstances[i];
+	}
+
+	return null;
+}
+
 C_SteamBrowserInstance* C_SteamBrowserManager::FindSteamBrowserInstance(unsigned int unHandle)
 {
 	unsigned int max = m_steamBrowserInstances.size();
@@ -269,6 +282,11 @@ void C_SteamBrowserManager::DestroySteamBrowserInstance(C_SteamBrowserInstance* 
 		DevMsg("WARNING: Failed to remove Steam Browser instance!\n");
 
 	pInstance->SelfDestruct();
+}
+
+unsigned int C_SteamBrowserManager::GetInstanceCount()
+{
+	return m_steamBrowserInstances.size();
 }
 
 // TODO: This function is kinda pointless now that m_steamBrowserInstances is a vector itself.  Could just return a pointer directly to it.

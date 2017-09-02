@@ -17,7 +17,7 @@ arcadeHud.addScraper({
 		"type": 100
 	},
 	"run": function(url, field, doc)
-	{
+	{		
 		var response = {};
 
 		var videoId = doc.querySelector("meta[itemprop='videoId']").getAttribute("content");
@@ -25,7 +25,17 @@ arcadeHud.addScraper({
 		var goodUri = doc.querySelector("link[itemprop='url']").getAttribute("href");
 
 		// reference
-		response.reference = goodUri;
+		var goodRef = goodUri;
+		var ytid = arcadeHud.extractYouTubeId(goodRef);
+		var ytplaylist = arcadeHud.extractYouTubePlaylistId(goodRef);
+		if( !!ytid )
+		{
+			if( !!ytplaylist )
+				goodRef = "http://www.youtube.com/watch?v=" + ytid + "&index=1&list=" + ytplaylist;
+			else
+				goodRef = "http://www.youtube.com/watch?v=" + ytid;
+		}
+		response.reference = goodRef;
 
 		// file
 		response.file = goodUri;
@@ -55,39 +65,44 @@ arcadeHud.addScraper({
 	},
 	"test": function(url, doc, callback)
 	{
-		//callback({"validForScrape": true, "redirect": false});
+		var testerLocation = document.createElement("a");
+		testerLocation.href = url;
+
 		var validForScrape = false;
 		var redirect = false;
 
-		var pageElem = doc.querySelector("#page");
-		var pageType = pageElem.className;
-		if( pageType.indexOf(" search ") >= 0 )
+		if( testerLocation.hostname.indexOf("youtube") >= 0 )
 		{
-			// perform search results logic
-		}
-		else if( pageType.indexOf(" watch ") >= 0 )
-		{
-			console.log("what meow");
-			//var container = doc.querySelector(".metaScrapeContainer");
-			//container.style.display = "block";
+			var pageElem = doc.querySelector("#page");
+			var pageType = pageElem.className;
+			if( pageType.indexOf(" search ") >= 0 )
+			{
+				// perform search results logic
+			}
+			else if( pageType.indexOf(" watch ") >= 0 )
+			{
+				console.log("what meow");
+				//var container = doc.querySelector(".metaScrapeContainer");
+				//container.style.display = "block";
 
 
-			/*
-			backstab
-			volitile
-			lacerate
-			lacerate
-			root with knife throw
-			try to backstab
-			good shiv
-			try to backstab
-			lacerate
-			lacerate
-			volitile
-			*/
+				/*
+				backstab
+				volitile
+				lacerate
+				lacerate
+				root with knife throw
+				try to backstab
+				good shiv
+				try to backstab
+				lacerate
+				lacerate
+				volitile
+				*/
 
-			// hud-notify that this page can be scraped
-			validForScrape = true;
+				// hud-notify that this page can be scraped
+				validForScrape = true;
+			}
 		}
 		//<div id="page" class=" search branded-page-v2-secondary-column-wide no-flex">
 		//console.log("You Tube is examining the page...");

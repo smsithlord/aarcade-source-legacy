@@ -613,18 +613,9 @@ bool C_MetaverseManager::ConvertLibraryVersion(unsigned int uOld, unsigned int u
 {
 	// 1. Make a backup of library.db to aarcade_user/backups/library-auto0.db
 	// 2. The library is already loaded, so it just needs to be converted right now.
-	// 3. The ONLY conversion needed right now is from version -1/0 to version 1. Assume this is the case.
+	// 3. The oldest conversion needed right now is from version -1/0 to version 1.
 
-	// VERSION 0 TO VERSION 1:
-	/*
-	- Instances need to re-structure their info node to be info/local/FIELD
-	- The platforms key is now stored under the info/local key as well, it is no longer a sibling to generation.
-	- Instances converted from Version 0 to Version 1 are no longer considered or tagged as Legacy because Version 0 stuff tried to resolve item & model ID's upon addon consumption rather than on instance load.  Their info needs to be restructured still, but leave their resolved item & model ID's alone.
-	- Library conversion should be done IMMEDIATELY upon any outdated library.db that gets loaded.
-	- library.db files NEED to have their Library Version saved to their header, or be assumed Version 0.
-	- Library Version should NOT change EVER, but ESPECIALLY after Redux is out of beta.
-	- Conversion between Library Versions should be ABNORMAL behavior and only really needed by beta testers who don't want to lose their saves.
-	*/
+	// always create a backup of library.db
 
 	// make sure the backups folder exists
 	g_pFullFileSystem->CreateDirHierarchy("backups", "DEFAULT_WRITE_PATH");
@@ -645,232 +636,265 @@ bool C_MetaverseManager::ConvertLibraryVersion(unsigned int uOld, unsigned int u
 		g_pFullFileSystem->WriteFile(backupFile.c_str(), "DEFAULT_WRITE_PATH", buf);
 	buf.Purge();
 
-	// Alright, a backup has been made.  Time to start converting.
-	std::vector<std::string> badInstanceIds;
-	std::vector<std::string> instanceIds;
-	sqlite3* pDb = m_db;
-	//unsigned int count = 0;
-
-	sqlite3_stmt *stmtSelAll = NULL;
-	int rc = sqlite3_prepare(pDb, "SELECT * from instances", -1, &stmtSelAll, NULL);
-	if (rc != SQLITE_OK)
-		DevMsg("prepare failed: %s\n", sqlite3_errmsg(pDb));
-
-	while (sqlite3_step(stmtSelAll) == SQLITE_ROW)
-		instanceIds.push_back(std::string((const char*)sqlite3_column_text(stmtSelAll, 0)));
-	sqlite3_finalize(stmtSelAll);
-
-	for (unsigned int i = 0; i < instanceIds.size(); i++)
+	// now determine which conversion to do
+	if (uOld == 0 && uTarget == 1)
 	{
-		sqlite3_stmt *stmtSel = NULL;
-		int rc = sqlite3_prepare(pDb, VarArgs("SELECT * from instances WHERE id = \"%s\"", instanceIds[i].c_str()), -1, &stmtSel, NULL);
-		if (rc != SQLITE_OK)
-		{
-			DevMsg("prepare failed: %s\n", sqlite3_errmsg(pDb));
-			sqlite3_finalize(stmtSel);
-			continue;
-		}
-
-		if (sqlite3_step(stmtSel) != SQLITE_ROW)
-		{
-			DevMsg("warning: did now find a row. skipping.\n");
-			sqlite3_finalize(stmtSel);
-			continue;
-		}
-
-		std::string rowId = std::string((const char*)sqlite3_column_text(stmtSel, 0));
-//		DevMsg("Row ID is: %s\n", rowId.c_str());
-		if (rowId == "")
-		{
-			sqlite3_finalize(stmtSel);
-			continue;
-		}
-
-		int length = sqlite3_column_bytes(stmtSel, 1);
-		if (length == 0)
-		{
-			DevMsg("WARNING: Zero-byte KeyValues detected as bad.\n");
-			badInstanceIds.push_back(rowId);
-			sqlite3_finalize(stmtSel);
-			continue;
-		}
-
-		KeyValues* pInstance = new KeyValues("instance");
-
-		CUtlBuffer buf(0, length, 0);
-		buf.CopyBuffer(sqlite3_column_blob(stmtSel, 1), length);
-		pInstance->ReadAsBinary(buf);
-
-		// done with the select statement now
-		sqlite3_finalize(stmtSel);
-		buf.Purge();
-
-		// instance is loaded & ready to convert
-		KeyValues* oldInfoKV = pInstance->FindKey("info");
-		if (!oldInfoKV)
-		{
-			// bogus save detected, clear it out... later
-			badInstanceIds.push_back(rowId);
-			pInstance->deleteThis();
-			continue;
-		}
-
-		//KeyValues* infoKV = pInstance->FindKey("info/local", true);
-
-		// copy subkeys from oldInfo to info
-		for (KeyValues *sub = oldInfoKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-		{
-			if (sub->GetFirstSubKey())
-				continue;	// don't copy some garbage values that show up.
-
-			pInstance->SetString(VarArgs("info/local/%s", sub->GetName()), sub->GetString());
-		}
-
+		// VERSION 0 TO VERSION 1:
 		/*
-		generation
-		info (parent)
-		title
-		map
-		style
-		creator
-		id
-		platforms (parent) (sometimes)
-		objects (parent) (sometimes)
+		- Instances need to re-structure their info node to be info/local/FIELD
+		- The platforms key is now stored under the info/local key as well, it is no longer a sibling to generation.
+		- Instances converted from Version 0 to Version 1 are no longer considered or tagged as Legacy because Version 0 stuff tried to resolve item & model ID's upon addon consumption rather than on instance load.  Their info needs to be restructured still, but leave their resolved item & model ID's alone.
+		- Library conversion should be done IMMEDIATELY upon any outdated library.db that gets loaded.
+		- library.db files NEED to have their Library Version saved to their header, or be assumed Version 0.
+		- Library Version should NOT change EVER, but ESPECIALLY after Redux is out of beta.
+		- Conversion between Library Versions should be ABNORMAL behavior and only really needed by beta testers who don't want to lose their saves.
 		*/
 
-		DevMsg("Converted instance w/ id %s\n", rowId.c_str());// and info : \n", rowId.c_str());
-		//for (KeyValues *sub = pInstance->FindKey("info/local")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-		//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
+		// Alright, a backup has been made.  Time to start converting.
+		std::vector<std::string> badInstanceIds;
+		std::vector<std::string> instanceIds;
+		sqlite3* pDb = m_db;
+		//unsigned int count = 0;
 
-		//// Remove the platforms tab cuz it shouldn't be there.
-		// Copy workshopId and mountId from the platform keys, if needed
-		KeyValues* platformsKV = pInstance->FindKey(VarArgs("platforms/%s", AA_PLATFORM_ID));
-		if (platformsKV)
-		{
-			for (KeyValues *sub = platformsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-			{
-				pInstance->SetString(VarArgs("info/local/platforms/%s/%s", AA_PLATFORM_ID, sub->GetName()), sub->GetString());
-			}
-		}
-
-		std::vector<KeyValues*> targetSubKeys;
-		// remove everything in the info key besides "local"
-		for (KeyValues *sub = pInstance->FindKey("info")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-		{
-			if (Q_strcmp(sub->GetName(), "local"))
-				targetSubKeys.push_back(sub);
-		}
-
-		KeyValues* pOldInfoKV = pInstance->FindKey("info");
-		for (unsigned int j = 0; j < targetSubKeys.size(); j++)
-		{
-			pOldInfoKV->RemoveSubKey(targetSubKeys[j]);
-			//pInstance->SetString("info", "");
-		}
-		targetSubKeys.clear();
-
-		// then remove the old platforms key
-		if (pInstance->FindKey("platforms"))
-		{
-			pInstance->RemoveSubKey(pInstance->FindKey("platforms"));
-			//pInstance->SetString("platforms", "");
-			platformsKV = null;
-		}
-
-		// done removing stuff.
-
-		//DevMsg("And now...\n");
-		//for (KeyValues *sub = pInstance->FindKey("info/local")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-		//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
-
-		// Now save the instance back out to the library.db
-		sqlite3_stmt *stmtInst = NULL;
-		rc = sqlite3_prepare(pDb, VarArgs("REPLACE INTO instances VALUES(\"%s\", ?)", rowId.c_str()), -1, &stmtInst, NULL);
+		sqlite3_stmt *stmtSelAll = NULL;
+		int rc = sqlite3_prepare(pDb, "SELECT * from instances", -1, &stmtSelAll, NULL);
 		if (rc != SQLITE_OK)
-		{
-			DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
-			sqlite3_finalize(stmtInst);
-		}
-		else
-		{
-			// SQLITE_STATIC because the statement is finalized before the buffer is freed:
-			CUtlBuffer instBuf;
-			pInstance->WriteAsBinary(instBuf);
+			DevMsg("prepare failed: %s\n", sqlite3_errmsg(pDb));
 
-			int size = instBuf.Size();
-			rc = sqlite3_bind_blob(stmtInst, 1, instBuf.Base(), size, SQLITE_STATIC);
+		while (sqlite3_step(stmtSelAll) == SQLITE_ROW)
+			instanceIds.push_back(std::string((const char*)sqlite3_column_text(stmtSelAll, 0)));
+		sqlite3_finalize(stmtSelAll);
+
+		for (unsigned int i = 0; i < instanceIds.size(); i++)
+		{
+			sqlite3_stmt *stmtSel = NULL;
+			int rc = sqlite3_prepare(pDb, VarArgs("SELECT * from instances WHERE id = \"%s\"", instanceIds[i].c_str()), -1, &stmtSel, NULL);
 			if (rc != SQLITE_OK)
-				DevMsg("FATAL ERROR: bind failed: %s\n", sqlite3_errmsg(pDb));
-			else
 			{
-				rc = sqlite3_step(stmtInst);
-				if (rc != SQLITE_DONE)
+				DevMsg("prepare failed: %s\n", sqlite3_errmsg(pDb));
+				sqlite3_finalize(stmtSel);
+				continue;
+			}
+
+			if (sqlite3_step(stmtSel) != SQLITE_ROW)
+			{
+				DevMsg("warning: did now find a row. skipping.\n");
+				sqlite3_finalize(stmtSel);
+				continue;
+			}
+
+			std::string rowId = std::string((const char*)sqlite3_column_text(stmtSel, 0));
+			//		DevMsg("Row ID is: %s\n", rowId.c_str());
+			if (rowId == "")
+			{
+				sqlite3_finalize(stmtSel);
+				continue;
+			}
+
+			int length = sqlite3_column_bytes(stmtSel, 1);
+			if (length == 0)
+			{
+				DevMsg("WARNING: Zero-byte KeyValues detected as bad.\n");
+				badInstanceIds.push_back(rowId);
+				sqlite3_finalize(stmtSel);
+				continue;
+			}
+
+			KeyValues* pInstance = new KeyValues("instance");
+
+			CUtlBuffer buf(0, length, 0);
+			buf.CopyBuffer(sqlite3_column_blob(stmtSel, 1), length);
+			pInstance->ReadAsBinary(buf);
+
+			// done with the select statement now
+			sqlite3_finalize(stmtSel);
+			buf.Purge();
+
+			// instance is loaded & ready to convert
+			KeyValues* oldInfoKV = pInstance->FindKey("info");
+			if (!oldInfoKV)
+			{
+				// bogus save detected, clear it out... later
+				badInstanceIds.push_back(rowId);
+				pInstance->deleteThis();
+				continue;
+			}
+
+			//KeyValues* infoKV = pInstance->FindKey("info/local", true);
+
+			// copy subkeys from oldInfo to info
+			for (KeyValues *sub = oldInfoKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				if (sub->GetFirstSubKey())
+					continue;	// don't copy some garbage values that show up.
+
+				pInstance->SetString(VarArgs("info/local/%s", sub->GetName()), sub->GetString());
+			}
+
+			/*
+			generation
+			info (parent)
+			title
+			map
+			style
+			creator
+			id
+			platforms (parent) (sometimes)
+			objects (parent) (sometimes)
+			*/
+
+			DevMsg("Converted instance w/ id %s\n", rowId.c_str());// and info : \n", rowId.c_str());
+			//for (KeyValues *sub = pInstance->FindKey("info/local")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
+
+			//// Remove the platforms tab cuz it shouldn't be there.
+			// Copy workshopId and mountId from the platform keys, if needed
+			KeyValues* platformsKV = pInstance->FindKey(VarArgs("platforms/%s", AA_PLATFORM_ID));
+			if (platformsKV)
+			{
+				for (KeyValues *sub = platformsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
 				{
-					if (rc == SQLITE_ERROR)
-						DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
-					else
-						DevMsg("Weird other error!!\n");
+					pInstance->SetString(VarArgs("info/local/platforms/%s/%s", AA_PLATFORM_ID, sub->GetName()), sub->GetString());
 				}
 			}
-			sqlite3_finalize(stmtInst);
-			instBuf.Purge();
+
+			std::vector<KeyValues*> targetSubKeys;
+			// remove everything in the info key besides "local"
+			for (KeyValues *sub = pInstance->FindKey("info")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			{
+				if (Q_strcmp(sub->GetName(), "local"))
+					targetSubKeys.push_back(sub);
+			}
+
+			KeyValues* pOldInfoKV = pInstance->FindKey("info");
+			for (unsigned int j = 0; j < targetSubKeys.size(); j++)
+			{
+				pOldInfoKV->RemoveSubKey(targetSubKeys[j]);
+				//pInstance->SetString("info", "");
+			}
+			targetSubKeys.clear();
+
+			// then remove the old platforms key
+			if (pInstance->FindKey("platforms"))
+			{
+				pInstance->RemoveSubKey(pInstance->FindKey("platforms"));
+				//pInstance->SetString("platforms", "");
+				platformsKV = null;
+			}
+
+			// done removing stuff.
+
+			//DevMsg("And now...\n");
+			//for (KeyValues *sub = pInstance->FindKey("info/local")->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+			//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
+
+			// Now save the instance back out to the library.db
+			sqlite3_stmt *stmtInst = NULL;
+			rc = sqlite3_prepare(pDb, VarArgs("REPLACE INTO instances VALUES(\"%s\", ?)", rowId.c_str()), -1, &stmtInst, NULL);
+			if (rc != SQLITE_OK)
+			{
+				DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
+				sqlite3_finalize(stmtInst);
+			}
+			else
+			{
+				// SQLITE_STATIC because the statement is finalized before the buffer is freed:
+				CUtlBuffer instBuf;
+				pInstance->WriteAsBinary(instBuf);
+
+				int size = instBuf.Size();
+				rc = sqlite3_bind_blob(stmtInst, 1, instBuf.Base(), size, SQLITE_STATIC);
+				if (rc != SQLITE_OK)
+					DevMsg("FATAL ERROR: bind failed: %s\n", sqlite3_errmsg(pDb));
+				else
+				{
+					rc = sqlite3_step(stmtInst);
+					if (rc != SQLITE_DONE)
+					{
+						if (rc == SQLITE_ERROR)
+							DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
+						else
+							DevMsg("Weird other error!!\n");
+					}
+				}
+				sqlite3_finalize(stmtInst);
+				instBuf.Purge();
+			}
+			pInstance->deleteThis();
 		}
-		pInstance->deleteThis();
-	}
-	instanceIds.clear();
+		instanceIds.clear();
 
-	// remove bad instances
-	DevMsg("Removing %u bogus instances from old library.\n", badInstanceIds.size());
-	for (unsigned int i = 0; i < badInstanceIds.size(); i++)
-	{
-		/*
-		DELETE
-		FROM
-		artists_backup
-		WHERE
-		artistid = 1;
-		*/
+		// remove bad instances
+		DevMsg("Removing %u bogus instances from old library.\n", badInstanceIds.size());
+		for (unsigned int i = 0; i < badInstanceIds.size(); i++)
+		{
+			/*
+			DELETE
+			FROM
+			artists_backup
+			WHERE
+			artistid = 1;
+			*/
 
-		sqlite3_stmt *stmtDel = NULL;
-		rc = sqlite3_prepare(pDb, VarArgs("DELETE FROM instances WHERE id = \"%s\"", badInstanceIds[i].c_str()), -1, &stmtDel, NULL);
+			sqlite3_stmt *stmtDel = NULL;
+			rc = sqlite3_prepare(pDb, VarArgs("DELETE FROM instances WHERE id = \"%s\"", badInstanceIds[i].c_str()), -1, &stmtDel, NULL);
+			if (rc != SQLITE_OK)
+				DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
+
+			rc = sqlite3_step(stmtDel);
+			if (rc != SQLITE_DONE)
+				DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
+
+			sqlite3_finalize(stmtDel);
+		}
+		badInstanceIds.clear();
+
+		//DevMsg("ERROR: Could not find old info key!  Contents include:\n");
+		//for (KeyValues *sub = pInstance->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
+
+		// Now add the version table and set it to 1
+		// now save our AA_LIBRARY_VERSION number to the DB for future proofing
+		char *error;
+		const char *sqlCreateVersionTable = "CREATE TABLE version (id INTEGER PRIMARY KEY, value INTEGER);";
+		rc = sqlite3_exec(pDb, sqlCreateVersionTable, NULL, NULL, &error);
+		if (rc != SQLITE_OK)
+		{
+			DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(pDb));
+			sqlite3_free(error);
+		}
+
+		sqlite3_stmt *stmt3 = NULL;
+		rc = sqlite3_prepare(pDb, "INSERT INTO version (id, value) VALUES(0, 1)", -1, &stmt3, NULL);
 		if (rc != SQLITE_OK)
 			DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
 
-		rc = sqlite3_step(stmtDel);
+		rc = sqlite3_step(stmt3);
 		if (rc != SQLITE_DONE)
 			DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
 
-		sqlite3_finalize(stmtDel);
+		sqlite3_finalize(stmt3);
+
+		return true;
 	}
-	badInstanceIds.clear();
+	//else if (uOld == 1 && uTarget == 2)
+	//{
+		// VERSION 1 TO VERSION 2:
+		/*
+		- There is now a default NODE type
+		- The platforms key is now stored under the info/local key as well, it is no longer a sibling to generation.
+		- Instances converted from Version 0 to Version 1 are no longer considered or tagged as Legacy because Version 0 stuff tried to resolve item & model ID's upon addon consumption rather than on instance load.  Their info needs to be restructured still, but leave their resolved item & model ID's alone.
+		- Library conversion should be done IMMEDIATELY upon any outdated library.db that gets loaded.
+		- library.db files NEED to have their Library Version saved to their header, or be assumed Version 0.
+		- Library Version should NOT change EVER, but ESPECIALLY after Redux is out of beta.
+		- Conversion between Library Versions should be ABNORMAL behavior and only really needed by beta testers who don't want to lose their saves.
+		*/
+	//	return true;
+	//}
+	else
+		DevMsg("ERROR: Unknown library conversion values!\n");
 
-	//DevMsg("ERROR: Could not find old info key!  Contents include:\n");
-	//for (KeyValues *sub = pInstance->GetFirstSubKey(); sub; sub = sub->GetNextKey())
-	//	DevMsg("\t%s: %s\n", sub->GetName(), sub->GetString());
-
-	// Now add the version table and set it to 1
-	// now save our AA_LIBRARY_VERSION number to the DB for future proofing
-	char *error;
-	const char *sqlCreateVersionTable = "CREATE TABLE version (id INTEGER PRIMARY KEY, value INTEGER);";
-	rc = sqlite3_exec(pDb, sqlCreateVersionTable, NULL, NULL, &error);
-	if (rc != SQLITE_OK)
-	{
-		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(pDb));
-		sqlite3_free(error);
-	}
-
-	sqlite3_stmt *stmt3 = NULL;
-	rc = sqlite3_prepare(pDb, "INSERT INTO version (id, value) VALUES(0, 1)", -1, &stmt3, NULL);
-	if (rc != SQLITE_OK)
-		DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
-
-	rc = sqlite3_step(stmt3);
-	if (rc != SQLITE_DONE)
-		DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
-
-	sqlite3_finalize(stmt3);
-
-	return true;
+	return false;
 }
 
 void C_MetaverseManager::Update()
@@ -1080,6 +1104,23 @@ void C_MetaverseManager::AddModel(KeyValues* pModel)
 	}
 }
 
+void C_MetaverseManager::DeleteSQL(sqlite3** pDb, const char* tableName, const char* id)
+{
+	if (!pDb)
+		pDb = &m_db;
+
+	char *error;
+	sqlite3_stmt *stmt = NULL;
+	const char *sqlDeleteInstance = VarArgs("DELETE from %s where id=\"%s\";", tableName, id);
+	int rc = sqlite3_exec(*pDb, sqlDeleteInstance, NULL, NULL, &error);
+
+	if (rc != SQLITE_OK)
+	{
+		DevMsg("Error executing SQLite3 statement: %s\n", sqlite3_errmsg(*pDb));
+		sqlite3_free(error);
+	}
+}
+
 void C_MetaverseManager::SaveSQL(sqlite3** pDb, const char* tableName, const char* id, KeyValues* kv)
 {
 	if (!pDb)
@@ -1228,6 +1269,43 @@ void C_MetaverseManager::SaveType(KeyValues* pType, sqlite3* pDb)
 	sqlite3_finalize(stmt);
 	buf.Purge();
 }
+/*
+void C_MetaverseManager::SaveMap(KeyValues* pMap, sqlite3* pDb)
+{
+	if (!pDb)
+		pDb = m_db;
+
+	KeyValues* active = this->GetActiveKeyValues(pType);
+
+	// FIXME: ALWAYS SAVING TO ACTIVE, BUT WHEN OTHER KEY SLOTS GET USED, WILL HAVE TO SAVE TO USE LOGIC TO DETERMINE WHICH SUB-KEY WE'RE SAVING.
+	// NOTE: We're only using the item to get the ID and to update its modified time.
+	active->SetString("info/modified", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));	// save as string because KeyValue's have no uint64 data type.
+
+	// FIXME: SAVING TO .KEY FILES DISABLED FOR MYSQL MIGRATION!!
+	// And dodged a bullet there, because when KV's get saved & loaded from disk, they forget their types, and ID's that start with 0 get screwed.
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare(pDb, VarArgs("REPLACE INTO types VALUES(\"%s\", ?)", active->GetString("info/id")), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: prepare failed: %s\n", sqlite3_errmsg(pDb));
+
+	// SQLITE_STATIC because the statement is finalized before the buffer is freed:
+	CUtlBuffer buf;
+	pType->WriteAsBinary(buf);
+
+	int size = buf.Size();
+	rc = sqlite3_bind_blob(stmt, 1, buf.Base(), size, SQLITE_STATIC);
+	if (rc != SQLITE_OK)
+		DevMsg("FATAL ERROR: bind failed: %s\n", sqlite3_errmsg(pDb));
+	else
+	{
+		rc = sqlite3_step(stmt);
+		if (rc != SQLITE_DONE)
+			DevMsg("FATAL ERROR: execution failed: %s\n", sqlite3_errmsg(pDb));
+	}
+	sqlite3_finalize(stmt);
+	buf.Purge();
+}
+*/
 
 // Create the item and return it, but don't save it or add it to the library.
 bool C_MetaverseManager::CreateItem(int iLegacy, std::string itemId, KeyValues* pItemKV, std::string title, std::string description, std::string file, std::string type, std::string app, std::string reference, std::string preview, std::string download, std::string stream, std::string screen, std::string marquee, std::string model)
@@ -1605,6 +1683,67 @@ bool C_MetaverseManager::LoadSQLKevValues(const char* tableName, const char* id,
 	return bSuccess;
 }
 
+void C_MetaverseManager::SaveInstanceTitle(instance_t* pInstance)
+{
+	C_Backpack* pBackpack = null;
+	KeyValues* pInstanceKV = new KeyValues("instance");
+	if (!this->LoadSQLKevValues("instances", pInstance->id.c_str(), pInstanceKV))
+	{
+		// if this wasn't in our library, try other librarys.
+		// check all backpacks...
+		pBackpack = g_pAnarchyManager->GetBackpackManager()->FindBackpackWithInstanceId(pInstance->id);
+		if (pBackpack)
+		{
+			// we found the backpack containing this instance ID
+			DevMsg("Loading from instance backpack w/ ID %s...\n", pBackpack->GetId().c_str());
+			pBackpack->OpenDb();
+			sqlite3* pDb = pBackpack->GetSQLDb();
+			if (!pDb || !g_pAnarchyManager->GetMetaverseManager()->LoadSQLKevValues("instances", pInstance->id.c_str(), pInstanceKV, pDb))
+			{
+				DevMsg("CRITICAL ERROR: Failed to load instance from library!\n");
+				pBackpack->CloseDb();
+				pBackpack = null;
+			}
+			else
+				pBackpack->CloseDb();
+		}
+
+		if (!pBackpack)
+		{
+			DevMsg("WARNING: Could not load instance!");// Attempting to load as legacy instance...\n");
+			pInstanceKV->deleteThis();
+			pInstanceKV = null;
+		}
+	}
+
+	if (pInstanceKV)
+	{
+		pInstanceKV->SetString("info/local/title", pInstance->title.c_str());
+
+		if (!pBackpack)
+			g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", pInstance->id.c_str(), pInstanceKV);
+		else
+		{
+			DevMsg("Weird backpack detected! Don't know how to handle it! Fix it!\n");
+			//g_pAnarchyManager->GetMetaverseManager()->SaveSQL(*(pBackpack->GetSQLDb()), "instances", pInstance->id.c_str(), pInstanceKV);
+		}
+
+		pInstanceKV->deleteThis();
+		pInstanceKV = null;
+	}
+}
+
+void C_MetaverseManager::DeleteInstance(instance_t* pInstance)
+{
+	// can't delete the currently loaded instance
+	if (pInstance->id == g_pAnarchyManager->GetInstanceId())
+		return;
+
+	this->DeleteSQL(null, "instances", pInstance->id.c_str());
+
+	g_pAnarchyManager->GetInstanceManager()->RemoveInstance(pInstance);
+}
+
 KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlreadyLoaded, std::string file, std::string filePath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack, std::string searchPath, bool bShouldAddToActiveLibrary)
 {
 	KeyValues* pItem = new KeyValues("item");
@@ -1649,6 +1788,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlr
 			//pItem->SetString("local/info/alias", "");
 
 			// determine if this is a model or not
+			std::string itemFile = pItem->GetString("filelocation");
 			std::string modelFile = pItem->GetString("filelocation");
 			//if (modelFile.find("cabinets") >= 0)
 				//DevMsg("Harrrr: %s\n", modelFile.c_str());
@@ -1656,7 +1796,7 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlr
 			if (foundExt == modelFile.length() - 4)
 			{
 				bResponseIsModel = true;
-				std::string itemId = g_pAnarchyManager->GenerateLegacyHash(pItem->GetString("filelocation"));
+				std::string itemId = g_pAnarchyManager->GenerateLegacyHash(itemFile.c_str());
 				
 				pItem->SetString("local/info/id", itemId.c_str());
 				pItem->SetString("local/title", pItem->GetString("title"));
@@ -1690,6 +1830,27 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlr
 			{
 				bResponseIsModel = false;
 
+				std::string nodeId;
+
+				// NEEDS RESOLVING!!
+				std::string legacyType = pItem->GetString("type");
+				std::string resolvedType = this->ResolveLegacyType(legacyType);
+				pItem->SetString("local/type", resolvedType.c_str());
+
+				if (legacyType == "node")
+				{
+					// Try to extract a legacy ID from the relative .set file path, cuz redux doesn't save shit that way anymore.
+					nodeId = g_pAnarchyManager->ExtractLegacyId(itemFile);
+
+					if (nodeId != "")
+					{
+						DevMsg("Legacy node consumed from workshop with extracted id: %s\n", nodeId.c_str());
+
+						// Replace the local/file field with the nodeId instead.
+						itemFile = nodeId;
+					}
+				}
+
 				std::string itemId = g_pAnarchyManager->ExtractLegacyId(file, pItem);
 				pItem->SetString("local/info/id", itemId.c_str());
 				pItem->SetString(VarArgs("local/platforms/%s/workshopId", AA_PLATFORM_ID), workshopIds.c_str());
@@ -1702,12 +1863,8 @@ KeyValues* C_MetaverseManager::LoadLocalItemLegacy(bool& bIsModel, bool& bWasAlr
 					pItem->SetString("local/keywords", pItem->GetString("group"));
 
 				pItem->SetString("local/description", pItem->GetString("description"));
-				pItem->SetString("local/file", pItem->GetString("filelocation"));
-
-				// NEEDS RESOLVING!!
-				std::string legacyType = pItem->GetString("type");
-				std::string resolvedType = this->ResolveLegacyType(legacyType);
-				pItem->SetString("local/type", resolvedType.c_str());
+				pItem->SetString("local/file", itemFile.c_str());
+				//pItem->SetString("local/file", pItem->GetString("filelocation"));
 
 				// NEEDS RESOLVING!!
 				std::string legacyApp = pItem->GetString("app");
@@ -2425,6 +2582,11 @@ unsigned int C_MetaverseManager::LoadAllLocalInstances(sqlite3* pDb, std::map<st
 		//	DevMsg("%s is %s\n", sub->GetName(), sub->GetString());
 
 		std::string instanceId = pInstance->GetString("info/local/id");
+		if (instanceId != rowId)
+		{
+			DevMsg("Skipping ID conflicted instance: rowid(%s) vs instanceid(%s)\n", rowId.c_str(), instanceId.c_str());
+			continue;
+		}
 		//DevMsg("Instance id is: %s vs %s\n", instanceId.c_str(), rowId.c_str());
 		if (instanceId == "")
 		{
@@ -2670,6 +2832,67 @@ KeyValues* C_MetaverseManager::GetLibraryType(std::string id)
 		return it->second;
 	else
 		return null;
+}
+
+std::string C_MetaverseManager::GetSpecialTypeId(std::string typeTitle)
+{
+	KeyValues* pTypeKV;
+	std::map<std::string, KeyValues*>::iterator it = m_types.begin();// find(id);
+	while (it != m_types.end())
+	{
+		pTypeKV = this->GetActiveKeyValues(it->second);
+		if (pTypeKV && std::string(pTypeKV->GetString("title")) == typeTitle)
+			return std::string(pTypeKV->GetString("info/id"));
+
+		it++;
+	}
+
+	// FUTURE-PROOF WAY OF FINDING IMPORTANT SHIT:
+	// If we can't find it, add it to the library.
+
+	pTypeKV = new KeyValues("type");
+	if (pTypeKV->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\types\\%s.txt", typeTitle.c_str()), "MOD"))
+	{
+		KeyValues* active = this->GetActiveKeyValues(pTypeKV);
+		this->SaveSQL(null, "types", active->GetString("info/id"), pTypeKV);
+		this->AddType(pTypeKV);
+
+		return std::string(active->GetString("info/id"));
+	}
+
+	DevMsg("WARNING: Could NOT find special type with title %s\n", typeTitle.c_str());
+	return "";
+}
+
+std::string C_MetaverseManager::GetSpecialModelId(std::string modelType)
+{
+	std::string file = "";
+	if (modelType == "node")
+		file = "models\\cabinets\\node.mdl";
+
+	KeyValues* pSearchInfo = new KeyValues("search");
+	pSearchInfo->SetString("file", file.c_str());
+
+	KeyValues* pModelKV = this->GetActiveKeyValues(this->FindLibraryModel(pSearchInfo));
+	if (pModelKV)
+		return std::string(pModelKV->GetString("info/id"));
+
+
+	// FUTURE-PROOF WAY OF FINDING IMPORTANT SHIT:
+	// If we can't find it, add it to the library.
+
+	KeyValues* pCabinetKV = new KeyValues("model");
+	if (pCabinetKV->LoadFromFile(g_pFullFileSystem, VarArgs("defaultLibrary\\cabinets\\%s.txt", modelType.c_str()), "MOD"))
+	{
+		KeyValues* active = this->GetActiveKeyValues(pCabinetKV);
+		this->SaveSQL(null, "models", active->GetString("info/id"), pCabinetKV);
+		this->AddModel(pCabinetKV);
+
+		return std::string(active->GetString("info/id"));
+	}
+
+	DevMsg("WARNING: Could NOT find special model with file %s\n", file.c_str());
+	return "";
 }
 
 const char* C_MetaverseManager::GetFirstLibraryEntry(KeyValues*& response, const char* category)
@@ -3123,8 +3346,17 @@ KeyValues* C_MetaverseManager::FindLibraryEntry(const char* category, KeyValues*
 	//unsigned int i, numTokens;
 	bool bFoundMatch;
 
-	std::map<std::string, KeyValues*>* pCategoryEntries = (!Q_strcmp(category, "items")) ? &m_items : &m_models;
+	// Determine if we are dealing with type = nodes
+	bool bIsNodeTypeSearch = false;
+	KeyValues* pTypeKV = this->GetActiveKeyValues(this->GetLibraryType(pSearchInfo->GetString("type")));
+	if (pTypeKV && !Q_strcmp(pTypeKV->GetString("title"), "node"))
+		bIsNodeTypeSearch = true;
 
+	instance_t* pNodeInstance;
+	std::string nodeInstanceId;
+	std::string testNodeStyle = pSearchInfo->GetString("nodestyle");
+
+	std::map<std::string, KeyValues*>* pCategoryEntries = (!Q_strcmp(category, "items")) ? &m_items : &m_models;
 	while (it != pCategoryEntries->end())
 	{
 		bFoundMatch = false;
@@ -3137,7 +3369,9 @@ KeyValues* C_MetaverseManager::FindLibraryEntry(const char* category, KeyValues*
 			for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
 			{
 				fieldName = searchField->GetName();
-				if (fieldName == "title")
+				if (fieldName == "nodestyle")	// skip this psuedo search field
+					continue;
+				else if (fieldName == "title")
 				{
 					if (!Q_strcmp(searchField->GetString(), ""))
 						bGood = true;
@@ -3210,8 +3444,41 @@ KeyValues* C_MetaverseManager::FindLibraryEntry(const char* category, KeyValues*
 
 			if (bGood)
 			{
-				bFoundMatch = true;
-				break;
+				// validate node search results
+				if (bIsNodeTypeSearch)
+				{
+					if (testNodeStyle == "")
+					{
+						// if we are NOT given a nodestyle, then we are ONLY good if we are of node_walls or node_floors
+						nodeInstanceId = active->GetString("file");
+						//DevMsg("Node isntance id is: ")
+						pNodeInstance = g_pAnarchyManager->GetInstanceManager()->GetInstance(nodeInstanceId);
+						if (!pNodeInstance)
+							bGood = false;
+						else
+						{
+							//testNodeStyle = pNodeInstance->style;
+
+							//if (!pNodeInstance || pNodeInstance->style != testNodeStyle)
+							if (!pNodeInstance || (pNodeInstance->style != "node_smallwall" && pNodeInstance->style != "node_floor3x4"))
+								bGood = false;
+						}
+					}
+					else
+					{
+						// confirm our match is also the right nodestyle
+						nodeInstanceId = active->GetString("file");
+						pNodeInstance = g_pAnarchyManager->GetInstanceManager()->GetInstance(nodeInstanceId);
+						if (!pNodeInstance || pNodeInstance->style != testNodeStyle)
+							bGood = false;
+					}
+				}
+
+				if (bGood)
+				{
+					bFoundMatch = true;
+					break;
+				}
 			}
 		}
 
@@ -3437,7 +3704,7 @@ std::string C_MetaverseManager::FindFirstLibraryEntry(KeyValues*& response, cons
 		m_pPreviousSearchInfo = pSearchInfo;
 		it = &m_previousFindItemIterator;
 	}
-	else// if (categoryBuf == "models")
+	else// if (categoryBuf == "models") // if (!Q_strcmp(category, "items"))
 	{
 		categoryEntries = &m_models;
 

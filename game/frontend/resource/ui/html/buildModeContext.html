@@ -6,6 +6,10 @@
 			var entityIndex = arcadeHud.getParameterByName("entity");
 			if( entityIndex === null )
 				entityIndex = -1;
+			
+			var entityInfo;
+			if( entityIndex !== -1 )
+				entityInfo = aaapi.system.getEntityInfo(parseInt(entityIndex));
 		</script>
 	</head>
 	<body style="background-color: transparent;">
@@ -20,9 +24,20 @@
 		</script>
 
 		<center>
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 65%;" value="Object Info" onclick="viewObjectInfo();" help="View mount & workshop info about this object." /><input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; width: 35%;" value="Delete" onclick="deleteObject();" help="Remove this object from the world." /><br />
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move the object under your crosshair." /><br /><!--
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Edit Item" onclick="editItem();" help="Select & move the object under your crosshair." /><br />-->
+			<div class="aaThemeColorOneHighColor aaTextColorTwoColor aaTextSizeFontSize aaTitleText" style="max-width: 300px; margin-left: auto; margin-right: auto; display: inline-block; padding: 0;">
+				<div>
+					<div id='itemTitle' style="display: block; overflow: hidden; text-overflow: ellipsis; padding: 4px;"></div>
+					<img id='marqueeImage' class="aaThemeColorTwoInverseShadedBorderColor" style="max-width: 300px; max-height: 500px; margin-left: auto; margin-right: auto; display: none; border-style: solid; border-width: 2px;" />
+				</div>
+			</div>
+			<br /><br />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Object" onclick="editObject();" help="Edit this object to make it a slave screen or physics-enabled." /><br />
+			<div class="onlyIfItem">
+				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Item" onclick="editItem();" help="Manage the item used by this object." /><br />
+			</div>
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Model" onclick="editModel();" help="Manage the model used by this object." /><br />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move this object." /><br />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Delete" onclick="deleteObject();" help="Remove this object from the world." /><br />
 			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn." />
 		</center>
 
@@ -39,6 +54,27 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var entry;
+			if( !!!entityInfo.item )
+			{
+				entry = aaapi.library.getLibraryModel(entityInfo.model.id);
+
+				var onlyIfItemElems = document.querySelectorAll(".onlyIfItem");
+				for( var i = 0; i < onlyIfItemElems.length; i++ )
+					onlyIfItemElems[i].style.display = "none";
+			}
+			else
+				entry = aaapi.library.getLibraryItem(entityInfo.item.id);
+
+			if( !!entry )
+			{
+				var itemTitle = document.querySelector("#itemTitle");
+				itemTitle.innerText = entry.title;
+
+				var marqueeImageElem = document.querySelector("#marqueeImage");
+				arcadeHud.loadItemBestImage(marqueeImageElem, entry);
+			}
+
 			function viewObjectInfo()
 			{
 				aaapi.system.viewObjectInfo(entityIndex);
@@ -56,11 +92,19 @@
 
 			function editItem()
 			{
-				/*
-				var info = aaapi.system.getObjectInfo(entityIndex);
-				var itemInfo = info.item;
-				console.log(JSON.stringify(itemInfo));
-				*/
+				window.location='asset://ui/editItem.html?id=' + entityInfo.item.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function editObject()
+			{
+				//console.log(entityInfo.object.id);
+				window.location='asset://ui/editObject.html?id=' + entityInfo.object.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+				//window.location = 'asset://ui/editObject.html?objectId=' + entityInfo.object.id;
+			}
+
+			function editModel()
+			{
+				window.location='asset://ui/editModel.html?id=' + entityInfo.model.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
 			}
 		</script>
 	</body>

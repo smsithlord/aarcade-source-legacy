@@ -11,8 +11,9 @@
 		<div style="display: inline-block;">
 
 		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
 			//window.location='asset://ui/libraryBrowser.html?category=items';
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Item Properties", "width: 600px;", false, true, "", "window.location='asset://ui/overlay.html';");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Item Properties", "width: 600px;", false, true, uiBack, "window.location='asset://ui/overlay.html';");
 			document.write(windowHeaderHTML);
 		</script>
 
@@ -95,6 +96,8 @@
 					</td>
 				</tr>
 			</table>
+			<br />
+			<div id="nodeText" class="aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial;">NOTE<br />The actual contents of a node can only be modified & saved from its space in a HUB map.</div>
 		</div>
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="visual">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
@@ -251,6 +254,9 @@
 
 		<script>
 			var id = arcadeHud.getParameterByName("id");
+			if( !!!uiBack )
+				uiBack = "";
+
 			var item = aaapi.library.getLibraryItem(id);
 			var entryForm = document.querySelector("#entryForm");
 
@@ -424,9 +430,13 @@
 					// populate any TYPE lists
 					for( var j = 0; j < allTypesSorted.length; j++ )
 					{
+						if( !!allTypes[item.type] && allTypes[item.type].title !== "node" && allTypesSorted[j].title === "node" )
+							continue;
+
 						var optionElem = document.createElement("option");
 						optionElem.text = allTypesSorted[j].title;
 						optionElem.value = allTypesSorted[j].info.id;
+
 						dummyElem.appendChild(optionElem);
 					}
 				}
@@ -475,7 +485,27 @@
 				}
 
 				if( item.hasOwnProperty(fieldName) )
+				{
 					dummyElem.value = item[fieldName];
+
+					if( fieldName === "type" )
+					{
+						if(!!allTypes[item[fieldName]] && allTypes[item[fieldName]].title === "node")
+						{
+							document.querySelector("select[fieldname='type']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='file']").parentNode.parentNode.style.display = "none";
+							document.querySelector("select[fieldname='app']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='stream']").parentNode.parentNode.style.display = "none";
+							document.querySelector("input[fieldname='download']").parentNode.parentNode.style.display = "none";
+							document.querySelector("#nodeText").style.display = "initial";
+							document.querySelector(".aaTitleBar div.aaTitleText").innerHTML = "Node Properties";
+						}
+						else
+						{
+							document.querySelector("#nodeText").style.display = "none";
+						}
+					}
+				}
 			}
 		</script>
 	</body>

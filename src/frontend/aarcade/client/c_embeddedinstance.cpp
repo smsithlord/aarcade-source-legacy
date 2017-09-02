@@ -339,6 +339,15 @@ C_EmbeddedInstance::~C_EmbeddedInstance()
 	DevMsg("EmbeddedInstance: Destructor\n");
 }
 
+void C_EmbeddedInstance::GetFullscreenInfo(float& fPositionX, float& fPositionY, float& fSizeX, float& fSizeY, std::string& overlayId)
+{
+	fPositionX = 0;
+	fPositionY = 0;
+	fSizeX = 1;
+	fSizeY = 1;
+	overlayId = "";
+}
+
 std::string C_EmbeddedInstance::GetId()
 {
 	DevMsg("ERROR: Base method GetId called!\n");

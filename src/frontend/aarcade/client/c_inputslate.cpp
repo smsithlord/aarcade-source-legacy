@@ -26,7 +26,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	DevMsg("Input Slate Created\n");
 
 	// give the input manager a pointer to ourselves
-	//g_pAnarchyManager->GetInputManager()->SetInputSlate(this);
+	g_pAnarchyManager->GetInputManager()->SetInputSlate(this);
 
 	// vgui constructor stuff
 	SetParent( parent );
@@ -39,7 +39,7 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	SetMoveable(false);
 	SetWide(ScreenWidth());
 	SetTall(ScreenHeight());
-	SetPaintBackgroundEnabled(false);
+	SetPaintBackgroundEnabled(true);
 
 	// Hide all children of this panel (including the invisible title bar that steals mouse move input
 	for (int i = 0; i<GetChildCount(); i++)
@@ -47,6 +47,9 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 		Panel* pPanel = GetChild(i);
 		pPanel->SetVisible(false);
 	}
+
+	m_pImagePanel = null;
+	m_pHudImagePanel = null;
 
 	//vgui::HCursor
 	//input()->SetCursorOveride();
@@ -57,6 +60,8 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	m_bCursorHidden = false;
 	m_bInputCapture = g_pAnarchyManager->GetInputManager()->GetInputCapture();
 	m_bFullscreen = g_pAnarchyManager->GetInputManager()->GetFullscreenMode();
+
+	g_pAnarchyManager->HudStateNotify();
 
 	// the instance that wants input, under the UI layer.
 	m_pCanvasInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
@@ -142,22 +147,56 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 			DevMsg("Input Slate is adding texture to VGUI panel: %s\n", m_pCanvasTexture->GetName());
 
 			// NOTE: This might also be what changes the vgui/activecanvas texture from the error texture to an actual texture too!!
-			ImagePanel* pImagePanel = new ImagePanel(this, "active_canvas_panel");
-			pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
-			pImagePanel->SetShouldScaleImage(true);
-			pImagePanel->SetSize(GetWide(), GetTall());
-			pImagePanel->SetImage("activecanvas");
+			m_pImagePanel = new ImagePanel(this, "active_canvas_panel");
+			m_pImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+			m_pImagePanel->SetShouldScaleImage(true);
+			m_pImagePanel->SetProportional(false);
+
+			float fPositionX;
+			float fPositionY;
+			float fSizeX;
+			float fSizeY;
+			std::string overlayId;
+			m_pCanvasInstance->GetFullscreenInfo(fPositionX, fPositionY, fSizeX, fSizeY, overlayId);
+
+			int iPositionX = round(GetWide() * fPositionX) / 1;
+			int iPositionY = round(GetTall() * fPositionY) / 1;
+			int iSizeX = round(GetWide() * fSizeX) / 1;
+			int iSizeY = round(GetTall() * fSizeY) / 1;
+
+			m_pImagePanel->SetPos(iPositionX, iPositionY);
+			m_pImagePanel->SetSize(iSizeX, iSizeY);
+
+			m_pImagePanel->SetImage("activecanvas");
 		}
 
 		// create the texture reference on our VGUI panel for the HUD layer.
 		// NOTE: This is what creates the texture for sure, because hudcanvas doesn't even exist in the files anywhere.
 		ITexture* pHudTexture = pHudInstance->GetTexture();
-		ImagePanel* pHudImagePanel = new ImagePanel(this, "hud_canvas_panel");
-		pHudImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
-		pHudImagePanel->SetShouldScaleImage(true);
-		pHudImagePanel->SetSize(GetWide(), GetTall());
-		pHudImagePanel->SetImage("hudcanvas");
+		m_pHudImagePanel = new ImagePanel(this, "hud_canvas_panel");
+		m_pHudImagePanel->DisableMouseInputForThisPanel(true);	// prevents the mouse lag
+		m_pHudImagePanel->SetShouldScaleImage(true);
+		m_pHudImagePanel->SetSize(GetWide(), GetTall());
+		m_pHudImagePanel->SetImage("hudcanvas");
 	}
+
+	vgui::IScheme* pScheme = vgui::scheme()->GetIScheme(GetScheme());
+	vgui::HFont hFont = pScheme->GetFont("Trebuchet24");
+	m_pLabel = new Label(this, "Toast", g_pAnarchyManager->GetToastText().c_str());
+	m_pLabel->SetFont(hFont);
+	m_pLabel->DisableMouseInputForThisPanel(true);
+	m_pLabel->SetContentAlignment(Label::a_west);
+	m_pLabel->SetTextInset(20, 0);
+	m_pLabel->SetPos(0, ScreenHeight() / 5);
+	m_pLabel->SetPaintBackgroundEnabled(true);
+
+	int contentWidth;
+	int contentHeight;
+	m_pLabel->GetContentSize(contentWidth, contentHeight);
+	m_pLabel->SetSize(contentWidth + 20, contentHeight + 20);
+	m_pLabel->SetBgColor(Color(0, 0, 0, 220));
+
+	g_pAnarchyManager->AddToastLabel(m_pLabel);
 
 	// handle cursor visibility
 	if (!m_bFullscreen)
@@ -174,12 +213,42 @@ CInputSlate::CInputSlate(vgui::VPANEL parent) : Frame(null, "InputSlate")
 	Activate();
 }
 
+void CInputSlate::PaintBackground()
+{
+	if (g_pAnarchyManager->GetToastText() != "")
+		m_pLabel->SetBgColor(Color(0, 0, 0, 220));
+	else
+		m_pLabel->SetBgColor(Color(0, 0, 0, 0));
+}
+
 void CInputSlate::SelfDestruct()
 {
 	DevMsg("Begin input slate destructing...\n");
 	//delete this;
 
-	if (m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined() && m_pMaterialVar->IsTexture())
+	if (m_pCanvasInstance != g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
+		m_pCanvasInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+	/*
+	if (m_pCanvasInstance)
+		DevMsg("Check 0 true.\n");
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud")
+		DevMsg("Check 1 true.\n");
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown())
+		DevMsg("Check 2 true.\n");
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar)
+		DevMsg("Check 3 true.\n");
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined())
+		DevMsg("Check 4 true.\n");
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined() && m_pMaterialVar->IsTexture())
+		DevMsg("Check 5 true.\n");
+	*/
+
+	if (m_pCanvasInstance && m_pCanvasInstance->GetId() != "hud" && !g_pAnarchyManager->IsShuttingDown() && m_pMaterialVar && m_pMaterialVar->IsDefined() && m_pMaterialVar->IsTexture())
 	{
 		if (m_pOriginalTexture)
 		{
@@ -194,6 +263,8 @@ void CInputSlate::SelfDestruct()
 			m_pMaterialVar->SetTextureValue(null);
 		}
 	}
+
+	g_pAnarchyManager->GetInputManager()->SetInputSlate(null);
 
 	DevMsg("Input slate destructed.\n");
 	delete this;
@@ -232,6 +303,20 @@ void CInputSlate::ShowInputCursor()
 
 	if (m_bInputCapture)
 		ShowCursor(true);
+}
+
+void CInputSlate::AdjustOverlay(float fX, float fY, float fWidth, float fHeight, std::string overlayId)
+{
+	if (m_pImagePanel)
+	{
+		int iPositionX = round(GetWide() * fX) / 1;
+		int iPositionY = round(GetTall() * fY) / 1;
+		int iSizeX = round(GetWide() * fWidth) / 1;
+		int iSizeY = round(GetTall() * fHeight) / 1;
+
+		m_pImagePanel->SetPos(iPositionX, iPositionY);
+		m_pImagePanel->SetSize(iSizeX, iSizeY);
+	}
 }
 
 void CInputSlate::OnTick()
@@ -415,6 +500,8 @@ CInputSlate::~CInputSlate()
 
 	if (m_bCursorHidden)
 		this->ShowInputCursor();
+
+	g_pAnarchyManager->RemoveToastLabel(m_pLabel);
 }
 
 class CInputSlateInterface : public IInputSlate

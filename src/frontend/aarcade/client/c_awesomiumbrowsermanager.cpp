@@ -193,10 +193,10 @@ void C_AwesomiumBrowserManager::DestroyAwesomiumBrowserInstance(C_AwesomiumBrows
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
 
-	/*
+	///*
 	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
 		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(pInstance);
-	*/
+	//*/
 
 
 	//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
@@ -241,6 +241,18 @@ C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::CreateAwesomiumBrowserIns
 		SelectAwesomiumBrowserInstance(pAwesomiumBrowserInstance);
 
 	return pAwesomiumBrowserInstance;
+}
+
+C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInstanceByEntityIndex(int iEntityIndex)
+{
+	// iterate over all web tabs and call their destructors
+	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
+	{
+		if (it->second->GetOriginalEntIndex() == iEntityIndex && it->second->GetId() != "hud" )
+			return it->second;
+	}
+
+	return null;
 }
 
 C_AwesomiumBrowserInstance* C_AwesomiumBrowserManager::FindAwesomiumBrowserInstance(std::string id)
@@ -349,9 +361,11 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("fileBrowse"), false);
 	systemObject.SetCustomMethod(WSLit("metaSearch"), false);
 	systemObject.SetCustomMethod(WSLit("getDOM"), false);
-	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
 	systemObject.SetCustomMethod(WSLit("disconnect"), false);
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
+	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
+	systemObject.SetCustomMethod(WSLit("viewPreview"), false);
+	systemObject.SetCustomMethod(WSLit("runLibretro"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
 	systemObject.SetCustomMethod(WSLit("objectHover"), false);
@@ -364,11 +378,29 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("navigateToURI"), false);
 	systemObject.SetCustomMethod(WSLit("getWorldInfo"), true);
 	systemObject.SetCustomMethod(WSLit("viewObjectInfo"), false);
+	systemObject.SetCustomMethod(WSLit("getEntityInfo"), true);
 	systemObject.SetCustomMethod(WSLit("getObjectInfo"), true);
 	systemObject.SetCustomMethod(WSLit("getTransformInfo"), true);
 	systemObject.SetCustomMethod(WSLit("adjustObjectOffset"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectRot"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectScale"), false);
+	systemObject.SetCustomMethod(WSLit("goBack"), false);
+	systemObject.SetCustomMethod(WSLit("goForward"), false);
+	systemObject.SetCustomMethod(WSLit("reload"), false);
+	systemObject.SetCustomMethod(WSLit("goHome"), false);
+	systemObject.SetCustomMethod(WSLit("libretroPause"), false);
+	systemObject.SetCustomMethod(WSLit("libretroReset"), false);
+	systemObject.SetCustomMethod(WSLit("libretroSetOverlay"), false);
+	systemObject.SetCustomMethod(WSLit("libretroClearOverlay"), false);
+	systemObject.SetCustomMethod(WSLit("libretroSaveOverlay"), false);
+	systemObject.SetCustomMethod(WSLit("libretroUpdateDLL"), true);
+	systemObject.SetCustomMethod(WSLit("libretroGetAllDLLs"), true);
+	systemObject.SetCustomMethod(WSLit("getLibretroActiveOverlay"), true);
+	systemObject.SetCustomMethod(WSLit("getLibretroOverlays"), true);
+	systemObject.SetCustomMethod(WSLit("getLibretroGUIGamepadEnabled"), true);
+	systemObject.SetCustomMethod(WSLit("setLibretroGUIGamepadEnabled"), false);
+	systemObject.SetCustomMethod(WSLit("setLibretroGUIGamepadButtonState"), false);
+	systemObject.SetCustomMethod(WSLit("clearLibretroGUIGamepadButtonStates"), false);
 	systemObject.SetCustomMethod(WSLit("taskClear"), false);
 	systemObject.SetCustomMethod(WSLit("closeTask"), false);
 	systemObject.SetCustomMethod(WSLit("hideTask"), false);
@@ -379,7 +411,10 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("takeScreenshot"), false);
 	systemObject.SetCustomMethod(WSLit("deleteScreenshot"), false);
 	systemObject.SetCustomMethod(WSLit("teleportScreenshot"), false);
+	systemObject.SetCustomMethod(WSLit("saveNewNode"), false);
+	systemObject.SetCustomMethod(WSLit("clearNodeSpace"), false);
 	systemObject.SetCustomMethod(WSLit("feedback"), false);
+	systemObject.SetCustomMethod(WSLit("doPause"), false);
 	systemObject.SetCustomMethod(WSLit("consoleCommand"), false);
 	systemObject.SetCustomMethod(WSLit("specialReady"), false);
 	systemObject.SetCustomMethod(WSLit("selectTaskObject"), false);
@@ -391,6 +426,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getBackpack"), true);
 	systemObject.SetCustomMethod(WSLit("getNearestObjectToPlayerLook"), true);
 	systemObject.SetCustomMethod(WSLit("getNextNearestObjectToPlayerLook"), true);
+	systemObject.SetCustomMethod(WSLit("getNodeSetupInfo"), true);
 
 
 	// LIBRARY
@@ -415,11 +451,15 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("getLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("getLibraryModel"), true);
 	libraryObject.SetCustomMethod(WSLit("getSelectedLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
+	libraryObject.SetCustomMethod(WSLit("updateInstance"), true);
+	libraryObject.SetCustomMethod(WSLit("deleteInstance"), true);
+	libraryObject.SetCustomMethod(WSLit("updateModel"), true);
 	libraryObject.SetCustomMethod(WSLit("createItem"), true);
 	libraryObject.SetCustomMethod(WSLit("saveItem"), true);
 

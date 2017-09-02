@@ -41,4 +41,29 @@ private:
 	char* m_modelIdBuf;
 };
 
+class CNodeInfoEntity : public CBaseAnimating
+{
+public:
+	DECLARE_CLASS(CNodeInfoEntity, CBaseAnimating);
+	DECLARE_DATADESC();
+
+	CNodeInfoEntity()
+	{
+		//m_bActive = false;
+	}
+
+	void Spawn(void);
+	void Precache(void);
+
+	//void MoveThink( void );
+
+	// Input function
+	void InputToggle(inputdata_t &inputData);
+
+private:
+
+	//bool	m_bActive;
+	//float	m_flNextChangeTime;
+};
+
 #endif //PROP_SHORTCUT_ENTITY_H

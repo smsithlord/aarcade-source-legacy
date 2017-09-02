@@ -3,7 +3,6 @@
 
 #include "../../public/steam/steam_api.h"
 #include "c_steambrowsermanager.h"
-#include <map>
 #include <string>
 
 class C_SteamBrowserListener
@@ -44,7 +43,9 @@ private:
 	STEAM_CALLBACK(C_SteamBrowserListener, BrowserInstanceUpdateToolTip, HTML_UpdateToolTip_t, m_UpdateToolTip);
 	STEAM_CALLBACK(C_SteamBrowserListener, BrowserInstanceHideToolTip, HTML_HideToolTip_t, m_HideToolTip);
 
-	std::map<std::string, bool> m_pendingInstanceIds;
+	//CUtlStringMap
+	CUtlMap<std::string, int> m_pendingInstanceIds;
+	//std::map<std::string, bool> m_pendingInstanceIds;
 };
 
 #endif

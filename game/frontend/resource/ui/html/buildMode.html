@@ -275,6 +275,7 @@
 	</head>
 	<body style="background-color: transparent;" class="hiddenElem">
 		<style>
+			/*
 			#entryContainer::-webkit-scrollbar
 			{
 				width: 15px;
@@ -285,13 +286,13 @@
 			{
 				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
 				border-radius: 10px;
-				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
+				background-color: #000;
 			}
 
 			#entryContainer::-webkit-scrollbar-thumb
 			{
 				border-radius: 10px;
-				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
+				-webkit-box-shadow: inset 0 0 6px #000;
 				background-color: rgba(250, 50, 50, 0.7);
 			}
 
@@ -299,34 +300,69 @@
 			{
 				background-color: transparent;
 			}
+			*/
 
 			.namePlate
 			{
-				color: rgba(255, 255, 255, 0.5);
 				display: inline-block;
 				padding: 8px;
-				background-color: rgba(0, 0, 0, 0.99);
 				border-top-left-radius: 10px;
 				border-bottom-left-radius: 10px;
-				border: 2px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
-				border-right: 1px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
+
+				border-style: solid;
+				border-width: 2px;
+				border-right-width: 1px;
+				border-left-width: 20px;
+
+				color: #ccc;
+				background-color: #000;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.7);
+				border-right: 1px solid rgba(250, 50, 50, 0.7);
+				border-left: 20px solid rgba(250, 50, 50, 0.7);
+				color: rgba(255, 255, 255, 0.5);
+				background-color: rgba(0, 0, 0, 0.99);
+				*/
 				margin-bottom: 4px;
 				margin-top: 4px;
-				border-left: 20px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
 				letter-spacing: 0.1em;
 				font-style: italic;
-				opacity: 0.8;
+				opacity: 0.9;
 				-webkit-transition: border 0.5s ease-in-out, border-right 0.5s ease-in-out;
 			}
 
 			.selectedNamePlate
 			{
 				color: #fff;
+				background-color: #000;
 				-webkit-transition-delay: 0s, 0.5s;
 				opacity: 1.0;
-				border: 2px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
-				border-left: 40px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
-				border-right: 80px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
+				border-left-width: 40px;
+				border-right-width: 80px;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.9);
+				border-left: 40px solid rgba(250, 50, 50, 0.9);
+				border-right: 80px solid rgba(250, 50, 50, 0.9);
+				*/
+			}
+
+			.entryImageContainer
+			{
+				padding: 20px;
+				display: block;
+				position: relative;
+				right: 0px;
+			}
+
+			.entryImageContainer
+			{
+				-webkit-transition: right 0.5s ease-in-out;
+				/*-webkit-transition-delay: 0.5s, 0.5s;*/
+			}
+
+			.selectedNamePlateParent .entryImageContainer
+			{
+				right: 20px;
 			}
 
 			#title
@@ -338,17 +374,12 @@
 				font-weight: 900;
 				-webkit-text-stroke: 2px black;
 				text-shadow:
-       3px 3px 0 #000,
-     -1px -1px 0 #000,  
-      1px -1px 0 #000,
-      -1px 1px 0 #000,
-       1px 1px 0 #000;
-/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#000000+0,000000+100&0+0,0.5+25,0.9+75 */
-background: -moz-linear-gradient(left,  rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.9) 75%, rgba(0,0,0,0.9) 100%); /* FF3.6-15 */
-background: -webkit-linear-gradient(left,  rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 25%,rgba(0,0,0,0.9) 75%,rgba(0,0,0,0.9) 100%); /* Chrome10-25,Safari5.1-6 */
-background: linear-gradient(to right,  rgba(0,0,0,0) 0%,rgba(0,0,0,0.5) 25%,rgba(0,0,0,0.9) 75%,rgba(0,0,0,0.9) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', endColorstr='#e6000000',GradientType=1 ); /* IE6-9 */
-
+					3px 3px 0 #000,
+					-1px -1px 0 #000,
+					1px -1px 0 #000,
+					-1px 1px 0 #000,
+					1px 1px 0 #000;
+				background: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 25%, rgba(0,0,0,0.9) 75%, rgba(0,0,0,0.9) 100%);
 			}
 
 			#titleRule
@@ -358,11 +389,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', e
 				right: 0;
 				height: 4px;
 				width: 50%;
-				/* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#fa3232+0,fa3232+100&0+0,0.5+25,0.9+75 */
-background: -moz-linear-gradient(left,  rgba(250,50,50,0) 0%, rgba(250,50,50,0.5) 25%, rgba(250,50,50,0.9) 75%, rgba(250,50,50,0.9) 100%); /* FF3.6-15 */
-background: -webkit-linear-gradient(left,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%); /* Chrome10-25,Safari5.1-6 */
-background: linear-gradient(to right,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', endColorstr='#e6fa3232',GradientType=1 ); /* IE6-9 */
+				/*background: -webkit-linear-gradient(left,  rgba(250,50,50,0) 0%,rgba(250,50,50,0.5) 25%,rgba(250,50,50,0.9) 75%,rgba(250,50,50,0.9) 100%);*/
 
 			}
 
@@ -376,25 +403,25 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 		<!--<div id="pageContent">-->
 			<div id="title" style="position: fixed; top: 0; right: 0; width: 50%; height: 74px; text-align: right;"></div>
-			<div id="titleRule"></div>
-			<div id="entryContainer" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
+			<div id="titleRule" class="aaThemeColorOneFadeBackground"></div>
+			<div id="entryContainer" class="aaThemeColorOneScrollBars" style="font-size: 20px; font-weight: 900; position: fixed; top: 80px; bottom: 0; right: 0; margin: 0; text-align: right; border: 0; color: #fff; overflow-y: scroll; font-family: Arial;"></div>
 
 			<div id="transformMenuContainer" style="display: none;">
 				<div id="transformMenu">
 					<table>
 						<tr><td style="width: 250px;">
-							<div id="wl_transform" class="wlContainer" style="height: 220px;">
+							<div id="wl_transform" class="wlContainer aaThemeColorOneScrollBars" style="height: 220px;">
 								<div class="wlEntry">
-									<div class="wlPlate wlPlateSelected" name="rotateTab" onclick="selectPlate(this);">
+									<div class="wlPlate wlPlateSelected aaThemeColorOneFadedBorderColor" name="rotateTab" onclick="selectPlate(this);">
 										Rotate
 									</div><br />
-									<div class="wlPlate" name="offsetTab" onclick="selectPlate(this);">
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="offsetTab" onclick="selectPlate(this);">
 										Offset
 									</div><br />
-									<div class="wlPlate" name="scaleTab" onclick="selectPlate(this);">
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="scaleTab" onclick="selectPlate(this);">
 										Scale
 									</div><br />
-									<div class="wlPlate" name="scaleTab" onclick="resetTransform(this);">
+									<div class="wlPlate aaThemeColorOneFadedBorderColor" name="scaleTab" onclick="resetTransform(this);">
 										Reset
 									</div><br />
 								</div>
@@ -541,7 +568,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				var selected = container.querySelector(".wlPlateSelected");
 				if( selected )
 				{
-					selected.className = "wlPlate";
+					selected.classList.remove("wlPlateSelected");
 					return selected;
 				}
 
@@ -579,7 +606,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 			function selectPlate(thisElem)
 			{
 				selectNone(wl_transformContainer);
-				thisElem.className += " wlPlateSelected";
+				thisElem.classList.add("wlPlateSelected");
 				
 				var panelName = thisElem.getAttribute("name");
 
@@ -592,9 +619,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 			{
 				// deselect everything
 				var selected = container.querySelector(".selectedNamePlate");
-				if( selected )
+				if( !!selected )
 				{
-					selected.className = "namePlate";
+					selected.classList.remove("selectedNamePlate");//Name = "namePlate";
+					selected.parentNode.classList.remove("selectedNamePlateParent");
 					return selected;
 				}
 
@@ -603,7 +631,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 			function selectNext()
 			{
-				console.log("Select next.");
 				var next;
 				var old = selectNoneM(entryContainerElem);
 				if( !!old )
@@ -622,7 +649,9 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 				if( !!next )
 				{
-					next.querySelector(".namePlate").className += " selectedNamePlate";
+					//next.querySelector(".namePlate").className += " selectedNamePlate";
+					next.querySelector(".namePlate").classList.add("selectedNamePlate");
+					next.querySelector(".namePlate").parentNode.classList.add("selectedNamePlateParent");
 					if( (old && next === old.parentNode.nextSibling) || !!!old )
 						updateScroll();
 
@@ -666,7 +695,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 
 				if( !!prev )
 				{
-					prev.querySelector(".namePlate").className += " selectedNamePlate";
+					prev.querySelector(".namePlate").classList.add("selectedNamePlate");
+					prev.querySelector(".namePlate").parentNode.classList.add("selectedNamePlateParent");
 
 					if( (old && prev === old.parentNode.previousSibling) || !!!old )
 						updateScroll();
@@ -720,13 +750,13 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				// deselect everything
 				var selected = document.querySelector(".selectedNamePlate");
 				if( selected )
-					selected.className = "namePlate";
+					selected.classList.remove("selectedNamePlate");
 
 				// select a rando one
 				var potentials = document.querySelectorAll(".namePlate");
 				//console.log(potentials.length);
 				var randoIndex = Math.floor(Math.random() * 10) + 0;
-				potentials[randoIndex].className += " selectedNamePlate";
+				potentials[randoIndex].classList.add("selectedNamePlate");
 			}
 
 			function doStuff()
@@ -906,6 +936,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 						entry = entries[i];
 						//console.log(JSON.stringify(entry));
 						entryElem = document.createElement("div");
+						//entryElem.style.display = "none";
 						entryElem.entry = entry;
 
 						if( category === "objects" || category === "items")
@@ -921,15 +952,41 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 						prettyName = prettyName.toUpperCase();
 
 						namePlateElem = document.createElement("div");
-						namePlateElem.className = "namePlate";
+						namePlateElem.className = "namePlate aaThemeColorOneHighBorderColor";
 						namePlateElem.innerHTML = prettyName;
 
-						//if(entry.info.id === libraryBrowserContext.id)
-						//	namePlateElem.className += " selectedNamePlate";
+						if( category === "items" )
+						{
+							var entryImageContainer = document.createElement("div");
+							entryImageContainer.className = "entryImageContainer";
+							entryImageContainer.style.display = "none";
+
+							var imageName = entry.platforms[arcadeHud.platformId].file;
+							imageName = imageName.substring(imageName.lastIndexOf("\\") + 1);
+							imageName = imageName.substring(0, imageName.lastIndexOf("."));
+
+							var entryImage = document.createElement("img");
+							entryImage.addEventListener("load", function(e)
+							{
+								clearTimeout(this.parentNode.timeoutHandle);
+								this.style.display = "block";
+								entryContainerElem.appendChild(this.parentNode);
+							}.bind(entryImageContainer), true);
+
+							entryElem.timeoutHandle = setTimeout(function()
+							{
+								entryContainerElem.appendChild(this);
+							}.bind(entryElem), 1000);
+
+							entryImage.src = "cabinets/" + imageName + ".png";
+
+							entryImageContainer.appendChild(entryImage);
+							entryElem.appendChild(entryImageContainer);
+						}
 
 						entryElem.appendChild(namePlateElem);
-
-						entryContainerElem.appendChild(entryElem);
+						if( category !== "items" )
+							entryContainerElem.appendChild(entryElem);
 
 						//console.log(JSON.stringify(entry));
 						//entry = aaapi.library.findNextLibraryModel();
@@ -1055,7 +1112,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				overflow-y: scroll;
 				font-family: Arial;
 			}
-
+/*
 			.wlContainer::-webkit-scrollbar
 			{
 				width: 15px;
@@ -1066,13 +1123,13 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 			{
 				-webkit-box-shadow: inset 0 0 6px rgba(250, 50, 50, 0.7);
 				border-radius: 10px;
-				background-color: #000;/* rgba(250, 50, 50, 0.7);*//*rgba(100, 100, 100, 1.0);*/
+				background-color: #000;
 			}
 
 			.wlContainer::-webkit-scrollbar-thumb
 			{
 				border-radius: 10px;
-				-webkit-box-shadow: inset 0 0 6px #000;/*rgba(200,200,200,1);*/
+				-webkit-box-shadow: inset 0 0 6px #000;
 				background-color: rgba(250, 50, 50, 0.7);
 			}
 
@@ -1080,25 +1137,31 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 			{
 				background-color: transparent;
 			}
-
+*/
 			.wlPlate
 			{
 				color: rgba(255, 255, 255, 0.5);
 				display: inline-block;
 				padding: 8px;
-				background-color: rgba(0, 0, 0, 0.99);
 				border-top-left-radius: 10px;
 				border-bottom-left-radius: 10px;
-				border: 2px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
-				border-right: 1px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
+				border-style: solid;
+				border-width: 2px;
+				border-right-width: 1px;
+				border-left-width: 20px;
 				margin-bottom: 4px;
 				margin-top: 4px;
-				border-left: 20px solid rgba(250, 50, 50, 0.7);/*rgb(100, 100, 100);*/
 				letter-spacing: 0.1em;
 				font-style: italic;
 				opacity: 0.8;
 				text-transform: uppercase;
 				-webkit-transition: border 0.5s ease-in-out, border-right 0.5s ease-in-out;
+				background-color: rgba(0, 0, 0, 0.99);
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.7);
+				border-left: 20px solid rgba(250, 50, 50, 0.7);
+				border-right: 1px solid rgba(250, 50, 50, 0.7);
+				*/
 			}
 
 			.wlPlate:hover
@@ -1111,9 +1174,15 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00fa3232', e
 				color: #fff;
 				-webkit-transition-delay: 0s, 0.5s;
 				opacity: 1.0;
-				border: 2px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
-				border-left: 40px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
-				border-right: 80px solid rgba(250, 50, 50, 0.9);/*rgb(255, 255, 255);*/
+				border-style: solid;
+				border-width: 2px;
+				border-left-width: 40px;
+				border-right-width: 80px;
+				/*
+				border: 2px solid rgba(250, 50, 50, 0.9);
+				border-left: 40px solid rgba(250, 50, 50, 0.9);
+				border-right: 80px solid rgba(250, 50, 50, 0.9);
+				*/
 			}
 
 			.optLabel, .optValue

@@ -11,7 +11,94 @@
 C_LibretroManager::C_LibretroManager()
 {
 	DevMsg("LibretroManager: Constructor\n");
+
+	m_pWaitForLibretroConVar = cvar->FindVar("wait_for_libretro");
+
+	m_pRunningLibretroCores = new RunningLibretroCores_t;
+	m_pRunningLibretroCores->count = 0;
+	m_pRunningLibretroCores->last_error = "";
+	m_pRunningLibretroCores->last_msg = "";
+	m_iPreviousRunningCoreCount = 0;
+
+	m_corePath = "\\libretro\\cores";
+
+	m_userBase = engine->GetGameDirectory();
+	size_t found = m_userBase.find_last_of("/\\");
+	if (found != std::string::npos)
+		m_userBase = m_userBase.substr(0, found);
+
+	m_userBase += "\\aarcade_user";
+	m_assetsPath = m_userBase + "\\libretro\\assets";
+	m_systemPath = m_userBase + "\\libretro\\system";
+	m_savePath = m_userBase + "\\libretro\\save";
+	m_userPath = m_userBase + "\\libretro\\user";
+
+	m_pCoreSettingsKV = new KeyValues("cores");
+	m_pCoreSettingsKV->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\coreSettings.txt", m_userPath.c_str()));
+	for (KeyValues *sub = m_pCoreSettingsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		sub->SetBool("exists", false);	// assume nothing exists until their DLL is found
+
+	m_pOverlaysKV = new KeyValues("overlays");
+	m_pOverlaysKV->LoadFromFile(g_pFullFileSystem, VarArgs("%s\\overlaySettings.txt", m_userPath.c_str()));
+
+	bool bAlreadyExists;
+	FileFindHandle_t findHandle;
+	KeyValues* pTargetKV;
+	const char *pFilename = g_pFullFileSystem->FindFirstEx("libretro\\cores\\*.dll", "MOD", &findHandle);
+	while (pFilename != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(findHandle))
+		{
+			pFilename = g_pFullFileSystem->FindNext(findHandle);
+			continue;
+		}
+
+		// Now scan for DLL files and populate the core settings with anything missing.
+		bAlreadyExists = false;
+		for (KeyValues *sub = m_pCoreSettingsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+		{
+			if (!Q_stricmp(pFilename, sub->GetString("file")))
+			{
+				bAlreadyExists = true;
+				sub->SetBool("exists", true);
+				break;
+			}
+		}
+
+		if (!bAlreadyExists)
+		{
+			// Add an entry for this to the KV!
+			pTargetKV = m_pCoreSettingsKV->CreateNewKey();
+			pTargetKV->SetName("core");
+			pTargetKV->SetString("file", pFilename);
+			pTargetKV->SetBool("exists", true);
+			pTargetKV->SetInt("priority", 0);
+
+			if (!Q_stricmp(pFilename, "ffmpeg_libretro.dll"))
+			{
+				pTargetKV->SetBool("enabled", true);
+				pTargetKV->SetString("paths/path/path", "");
+				pTargetKV->SetString("paths/path/extensions", "avi, mpg, mp4, mpeg, vob, mkv");
+			}
+			else
+				pTargetKV->SetBool("enabled", false);
+		}
+
+		pFilename = g_pFullFileSystem->FindNext(findHandle);
+	}
+	g_pFullFileSystem->FindClose(findHandle);
+
+	m_pBlacklistedDLLsKV = new KeyValues("blacklist");
+	// First, try to load from user folder
+	if (!g_pFullFileSystem->FileExists(VarArgs("%s%s\\blacklist.txt", m_userBase.c_str(), m_corePath.c_str())) || !m_pBlacklistedDLLsKV->LoadFromFile(g_pFullFileSystem, VarArgs("%s%s\\blacklist.txt", m_userBase.c_str(), m_corePath.c_str())))
+	{
+		if (!m_pBlacklistedDLLsKV->LoadFromFile(g_pFullFileSystem, VarArgs("%s%s\\blacklist.txt", engine->GetGameDirectory(), m_corePath.c_str())))	// otherwise, load from frontend folder
+			DevMsg("ERROR: Could not load %s%s\\blacklist.txt\n", engine->GetGameDirectory(), m_corePath.c_str());
+	}
+
 	m_bSoundEnabled = true;
+	m_bGUIGamepadEnabled = cvar->FindVar("libretro_gui_gamepad")->GetBool();
+	m_pGUIGamepadStateKV = new KeyValues("gamepad");
 	m_pSelectedLibretroInstance = null;
 	m_pFocusedLibretroInstance = null;
 
@@ -211,6 +298,13 @@ C_LibretroManager::~C_LibretroManager()
 
 	if (m_pInputListener)
 		delete m_pInputListener;
+
+	m_pGUIGamepadStateKV->deleteThis();
+	m_pCoreSettingsKV->deleteThis();
+	m_pBlacklistedDLLsKV->deleteThis();
+	m_pOverlaysKV->deleteThis();
+
+	delete m_pRunningLibretroCores;	// if any CORES are STILL running after this & try to access this, = CTD
 }
 
 #include "vgui/IInput.h"
@@ -250,170 +344,199 @@ void C_LibretroManager::ManageInputUpdate(LibretroInstanceInfo_t* info, unsigned
 
 int C_LibretroManager::GetInputState(LibretroInstanceInfo_t* info, unsigned int retroport, unsigned int retrodevice, unsigned int retroindex, unsigned int retroid)
 {
-	// = this->RetroKeyToString(retroid);
-	//std::string deviceText = this->RetroDeviceToString(retrodevice);
-
-	//DevMsg("Found deviceText: %s\n", retrodevice.c_str());
-
-	//return (int16_t)0;
-	// get the steam key code to detect for this retro key
-	//std::string keyPath = VarArgs("port%u/%s/index%u/%s", retroport, retrodevice.c_str(), retroindex, retroid.c_str());
-	//if ( retroid > 11)
-	//	DevMsg("Using retroid %u\n", retroid);
-
 	std::string keyPath = "port" + std::to_string(retroport) + "/device" + std::to_string(retrodevice) + "/index" + std::to_string(retroindex) + "/key" + std::to_string(retroid);//VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retroid);
-	//DevMsg("Update keypath: %s\n", keyPath.c_str());
 
-	std::string steamKeyText = info->gamekeybinds->GetString(keyPath.c_str(), "default");
-
-	if (steamKeyText == "default")
+	if (m_bGUIGamepadEnabled)
 	{
-		steamKeyText = info->corekeybinds->GetString(keyPath.c_str(), "default");
+		// note: for buttons, returning non-zero should indiate pressed, so its okay that its an int WAY non-zero (max).
+		//int min = -0x8000;
+		//int max = 0x7fff;
+
+		// grab a [-1, 1] float
+		//float floatVal = m_pGUIGamepadStateKV->GetFloat(keyPath.c_str());//) ? 1.0f : 0.0f;
+
+		// scale the float
+		//floatVal *= (floatVal > 0.0f) ? max : min;
+
+		// convert to int
+		int intVal = m_pGUIGamepadStateKV->GetInt(keyPath.c_str());//(int)floatVal;
+		//DevMsg("Value %s: %i\n", keyPath.c_str(), intVal);
+
+		// make sure it's within range
+		if (intVal > 0x7fff)
+			intVal = 0x7fff;
+		else if (intVal < -0x8000)
+			intVal = -0x8000;
+
+		return intVal;
+	}
+	else
+	{
+		// = this->RetroKeyToString(retroid);
+		//std::string deviceText = this->RetroDeviceToString(retrodevice);
+
+		//DevMsg("Found deviceText: %s\n", retrodevice.c_str());
+
+		//return (int16_t)0;
+		// get the steam key code to detect for this retro key
+		//std::string keyPath = VarArgs("port%u/%s/index%u/%s", retroport, retrodevice.c_str(), retroindex, retroid.c_str());
+		//if ( retroid > 11)
+		//	DevMsg("Using retroid %u\n", retroid);
+
+		//std::string keyPath = "port" + std::to_string(retroport) + "/device" + std::to_string(retrodevice) + "/index" + std::to_string(retroindex) + "/key" + std::to_string(retroid);//VarArgs("port%u/device%u/index%u/key%u", retroport, retrodevice, retroindex, retroid);
+		//DevMsg("Update keypath: %s\n", keyPath.c_str());
+
+		std::string steamKeyText = info->gamekeybinds->GetString(keyPath.c_str(), "default");
 
 		if (steamKeyText == "default")
 		{
-			steamKeyText = info->libretrokeybinds->GetString(keyPath.c_str(), "unbound");
+			steamKeyText = info->corekeybinds->GetString(keyPath.c_str(), "default");
 
-			if (retroid > 11 && steamKeyText != "unbound" )
-				DevMsg("Using high bind from libretro KV: %s\n", keyPath.c_str());
+			if (steamKeyText == "default")
+			{
+				steamKeyText = info->libretrokeybinds->GetString(keyPath.c_str(), "unbound");
+
+				if (retroid > 11 && steamKeyText != "unbound")
+					DevMsg("Using high bind from libretro KV: %s\n", keyPath.c_str());
+			}
 		}
-	}
 
-//	DevMsg("Steam key: %s\n", steamKeyText.c_str());
+		//	DevMsg("Steam key: %s\n", steamKeyText.c_str());
 
-	if (steamKeyText == "unbound")
-		return 0;
+		if (steamKeyText == "unbound")
+			return 0;
 
-	if (retroid > 11)
-		DevMsg("Key %u is bound to: %s\n", retroid, steamKeyText.c_str());
+		if (retroid > 11)
+			DevMsg("Key %u is bound to: %s\n", retroid, steamKeyText.c_str());
 
-	vgui::KeyCode steamKeyCode = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(steamKeyText);
+		vgui::KeyCode steamKeyCode = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(steamKeyText);
 
-	if (steamKeyCode == KEY_NONE)
-		return 0;
+		if (steamKeyCode == KEY_NONE)
+			return 0;
 
-	if (IsJoystickAxisCode(steamKeyCode))
-		DevMsg("WARNING: GAMEPAD AXIS CODE DETECTED IN LIBRETRO INPUT!!\n");
+		if (IsJoystickAxisCode(steamKeyCode))
+			DevMsg("WARNING: GAMEPAD AXIS CODE DETECTED IN LIBRETRO INPUT!!\n");
 
-	// note: for buttons, returning non-zero should indiate pressed, so its okay that its an int WAY non-zero (max).
-	int min = -0x8000;
-	int max = 0x7fff;
+		// note: for buttons, returning non-zero should indiate pressed, so its okay that its an int WAY non-zero (max).
+		int min = -0x8000;
+		int max = 0x7fff;
 
-	// grab a [-1, 1] float
-	float floatVal = (vgui::input()->IsKeyDown(steamKeyCode)) ? 1.0f : 0.0f;
+		// grab a [-1, 1] float
+		float floatVal = (vgui::input()->IsKeyDown(steamKeyCode)) ? 1.0f : 0.0f;
 
-	// scale the float
-	floatVal *= (floatVal > 0.0f) ? max : min;
+		// scale the float
+		floatVal *= (floatVal > 0.0f) ? max : min;
 
-	// convert to int
-	int intVal = (int)floatVal;
+		// convert to int
+		int intVal = (int)floatVal;
 
-	// make sure it's within range
-	if (intVal > 0x7fff)
-		intVal = 0x7fff;
-	else if (intVal < -0x8000)
-		intVal = -0x8000;
+		// make sure it's within range
+		if (intVal > 0x7fff)
+			intVal = 0x7fff;
+		else if (intVal < -0x8000)
+			intVal = -0x8000;
 
-	return intVal;
+		return intVal;
 
-	/*
+		/*
 
-	if ( IsJoystickButtonCode( code ) )
-	{
-	int offset = ( code - JOYSTICK_FIRST_BUTTON ) % JOYSTICK_MAX_BUTTON_COUNT;
-	return (ButtonCode_t)( JOYSTICK_FIRST_BUTTON + offset );
-	}
+		if ( IsJoystickButtonCode( code ) )
+		{
+		int offset = ( code - JOYSTICK_FIRST_BUTTON ) % JOYSTICK_MAX_BUTTON_COUNT;
+		return (ButtonCode_t)( JOYSTICK_FIRST_BUTTON + offset );
+		}
 
-	if ( IsJoystickPOVCode( code ) )
-	{
-	int offset = ( code - JOYSTICK_FIRST_POV_BUTTON ) % JOYSTICK_POV_BUTTON_COUNT;
-	return (ButtonCode_t)( JOYSTICK_FIRST_POV_BUTTON + offset );
-	}
+		if ( IsJoystickPOVCode( code ) )
+		{
+		int offset = ( code - JOYSTICK_FIRST_POV_BUTTON ) % JOYSTICK_POV_BUTTON_COUNT;
+		return (ButtonCode_t)( JOYSTICK_FIRST_POV_BUTTON + offset );
+		}
 
-	if ( IsJoystickAxisCode( code ) )
-	{
-	int offset = ( code - JOYSTICK_FIRST_AXIS_BUTTON ) % JOYSTICK_AXIS_BUTTON_COUNT;
-	return (ButtonCode_t)( JOYSTICK_FIRST_AXIS_BUTTON + offset );
-	}
+		if ( IsJoystickAxisCode( code ) )
+		{
+		int offset = ( code - JOYSTICK_FIRST_AXIS_BUTTON ) % JOYSTICK_AXIS_BUTTON_COUNT;
+		return (ButtonCode_t)( JOYSTICK_FIRST_AXIS_BUTTON + offset );
+		}
 
-	void		GetMousePos(int &x, int &y);
+		void		GetMousePos(int &x, int &y);
 
-	float		m_flAccumulatedMouseXMovement;
-	float		m_flAccumulatedMouseYMovement;
-	float		m_flPreviousMouseXPosition;
-	float		m_flPreviousMouseYPosition;
+		float		m_flAccumulatedMouseXMovement;
+		float		m_flAccumulatedMouseYMovement;
+		float		m_flPreviousMouseXPosition;
+		float		m_flPreviousMouseYPosition;
 
-	virtual		float		Joystick_GetForward( void );
-	virtual		float		Joystick_GetSide( void );
-	virtual		float		Joystick_GetPitch( void );
-	virtual		float		Joystick_GetYaw( void );
-	
-	*/
+		virtual		float		Joystick_GetForward( void );
+		virtual		float		Joystick_GetSide( void );
+		virtual		float		Joystick_GetPitch( void );
+		virtual		float		Joystick_GetYaw( void );
 
-	// loop through all retro keys
-	/*
-	if (retrodevice == "RETRO_DEVICE_JOYPAD")
-	{
+		*/
+
+		// loop through all retro keys
+		/*
+		if (retrodevice == "RETRO_DEVICE_JOYPAD")
+		{
 		auto it = m_retroKeyJoypadMap.begin();
 		while (it != m_retroKeyJoypadMap.end())
 		{
-			keyPath = VarArgs("port%u/%s/index%u/%s", retroport, retroindex, retrodevice.c_str(), it->first.c_str());
-			text = info->gamekeybinds->GetString(keyPath.c_str(), "default");
-
-			if (text == "default")
-			{
-				text = info->corekeybinds->GetString(it->first.c_str(), "default");
-
-				if (text == "default")
-					text = info->libretrokeybinds->GetString(it->first.c_str(), "unbound");
-			}
-
-			code = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(text);
-
-			if (!IsJoystickAxisCode(code))
-			{
-				info->inputstate[it->first] = Q_atof(VarArgs("%f", vgui::input()->IsKeyDown(code)));	// FIXME: FIX ME RTFN cuz retro "floats" range from some huge int to some huge negative int.
-			}
-		}
-	}
-	*/
-	/*
-	// enum (RetroKeyboard only)
-	auto it2 = m_retroKeyUnsignedMap.begin();
-	while (it2 != m_retroKeyUnsignedMap.end())
-	{
-		keyPath = VarArgs("port%u/%s/%s", retroport, retrodevice.c_str(), it2->first.c_str());
+		keyPath = VarArgs("port%u/%s/index%u/%s", retroport, retroindex, retrodevice.c_str(), it->first.c_str());
 		text = info->gamekeybinds->GetString(keyPath.c_str(), "default");
 
 		if (text == "default")
 		{
-			text = info->corekeybinds->GetString(it2->first.c_str(), "default");
+		text = info->corekeybinds->GetString(it->first.c_str(), "default");
 
-			if (text == "default")
-				text = info->libretrokeybinds->GetString(it2->first.c_str(), "unbound");
+		if (text == "default")
+		text = info->libretrokeybinds->GetString(it->first.c_str(), "unbound");
 		}
 
 		code = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(text);
 
 		if (!IsJoystickAxisCode(code))
-			info->inputstate[it2->first] = Q_atof(VarArgs("%f", vgui::input()->IsKeyDown(code)));
-	}
-	*/
+		{
+		info->inputstate[it->first] = Q_atof(VarArgs("%f", vgui::input()->IsKeyDown(code)));	// FIXME: FIX ME RTFN cuz retro "floats" range from some huge int to some huge negative int.
+		}
+		}
+		}
+		*/
+		/*
+		// enum (RetroKeyboard only)
+		auto it2 = m_retroKeyUnsignedMap.begin();
+		while (it2 != m_retroKeyUnsignedMap.end())
+		{
+		keyPath = VarArgs("port%u/%s/%s", retroport, retrodevice.c_str(), it2->first.c_str());
+		text = info->gamekeybinds->GetString(keyPath.c_str(), "default");
 
-	/*
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_SELECT] = vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_START] = vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_UP] = vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_DOWN] = vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_LEFT] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_RIGHT] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_A] = vgui::input()->IsKeyDown(KEY_XBUTTON_B);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_B] = vgui::input()->IsKeyDown(KEY_XBUTTON_A);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_X] = vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_Y] = vgui::input()->IsKeyDown(KEY_XBUTTON_X);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_L] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
-	m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_R] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
-	*/
+		if (text == "default")
+		{
+		text = info->corekeybinds->GetString(it2->first.c_str(), "default");
+
+		if (text == "default")
+		text = info->libretrokeybinds->GetString(it2->first.c_str(), "unbound");
+		}
+
+		code = g_pAnarchyManager->GetInputManager()->StringToSteamKeyEnum(text);
+
+		if (!IsJoystickAxisCode(code))
+		info->inputstate[it2->first] = Q_atof(VarArgs("%f", vgui::input()->IsKeyDown(code)));
+		}
+		*/
+
+		/*
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_SELECT] = vgui::input()->IsKeyDown(KEY_XBUTTON_BACK);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_START] = vgui::input()->IsKeyDown(KEY_XBUTTON_START) || vgui::input()->IsKeyDown(KEY_ENTER);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_UP] = vgui::input()->IsKeyDown(KEY_XBUTTON_UP);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_DOWN] = vgui::input()->IsKeyDown(KEY_XBUTTON_DOWN);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_LEFT] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_RIGHT] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_A] = vgui::input()->IsKeyDown(KEY_XBUTTON_B);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_B] = vgui::input()->IsKeyDown(KEY_XBUTTON_A);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_X] = vgui::input()->IsKeyDown(KEY_XBUTTON_Y);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_Y] = vgui::input()->IsKeyDown(KEY_XBUTTON_X);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_L] = vgui::input()->IsKeyDown(KEY_XBUTTON_LEFT_SHOULDER);
+		m_info->inputstate[RETRO_DEVICE_ID_JOYPAD_R] = vgui::input()->IsKeyDown(KEY_XBUTTON_RIGHT_SHOULDER);
+		*/
+	}
 }
 
 std::string C_LibretroManager::RetroKeyboardKeyToString(retro_key retrokey)
@@ -531,6 +654,11 @@ void C_LibretroManager::CloseAllInstances()
 	m_libretroInstances.clear();
 }
 
+void C_LibretroManager::LevelShutdownPreEntity()
+{
+	this->CloseAllInstances();
+}
+
 void C_LibretroManager::Update()
 {
 	/*
@@ -548,6 +676,37 @@ void C_LibretroManager::Update()
 			it->second->Update();
 	}
 
+	bool bLibretroWaitEnabled = m_pWaitForLibretroConVar->GetBool();
+	//if (!bLibretroWaitEnabled)
+	//{
+		bool bHadError = false;
+		if (m_pRunningLibretroCores->last_error != "")
+		{
+			g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Aborted - %s", m_pRunningLibretroCores->last_error.c_str()));
+			m_pRunningLibretroCores->last_error = "";
+			bHadError = true;
+		}
+
+		bool bHadMsg = false;
+		if (m_pRunningLibretroCores->last_msg != "")
+		{
+			g_pAnarchyManager->AddToastMessage(VarArgs("Libretro - %s", m_pRunningLibretroCores->last_msg.c_str()));
+			m_pRunningLibretroCores->last_msg = "";
+			bHadMsg = true;
+		}
+	//}
+
+	if (m_iPreviousRunningCoreCount != m_pRunningLibretroCores->count)
+	{
+		if (m_iPreviousRunningCoreCount > m_pRunningLibretroCores->count && !bLibretroWaitEnabled )
+			g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Closed (%i running)", m_pRunningLibretroCores->count));
+		//else
+			//g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Core Opened (%i running)", m_pRunningLibretroCores->count));	// printed directly prior to thread being spawned, which is where count is incremented.
+			
+		
+		m_iPreviousRunningCoreCount = m_pRunningLibretroCores->count;
+	}
+
 //	if (m_pSelectedLibretroInstance)
 	//	m_pSelectedLibretroInstance->Update();
 
@@ -559,6 +718,8 @@ void C_LibretroManager::Update()
 
 C_LibretroInstance* C_LibretroManager::CreateLibretroInstance()
 {
+	this->ClearGUIGamepadInputState();
+
 	C_LibretroInstance* pLibretroInstance = new C_LibretroInstance();
 	SelectLibretroInstance(pLibretroInstance);
 	return pLibretroInstance;
@@ -572,10 +733,10 @@ void C_LibretroManager::DestroyLibretroInstance(C_LibretroInstance* pInstance)
 		g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
 
-	/*
+	///*
 	if (g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance() == pInstance)
 		g_pAnarchyManager->GetCanvasManager()->SetDifferentDisplayInstance(pInstance);
-	*/
+	//*/
 
 
 	//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(null);
@@ -592,7 +753,45 @@ void C_LibretroManager::DestroyLibretroInstance(C_LibretroInstance* pInstance)
 	if (foundLibretroInstance != m_libretroInstances.end())
 		m_libretroInstances.erase(foundLibretroInstance);
 
+	int iCurrentCount = m_pRunningLibretroCores->count;
 	pInstance->SelfDestruct();
+
+	// Also clear GUI gamepad inputs & deactivate it
+	this->ClearGUIGamepadInputState();
+
+	if (iCurrentCount > 0 && m_pWaitForLibretroConVar->GetBool())
+	{
+		ConVar* pDummyVar = null;
+		int iTesterCount = m_pRunningLibretroCores->count;
+		while (iTesterCount == iCurrentCount)
+		{
+			//DevMsg("Waiting on Libretro...\n");
+			pDummyVar = cvar->FindVar("wait_for_libretro");
+			iTesterCount = m_pRunningLibretroCores->count;
+			// hang while the other thread finishes. :S
+		}
+
+		if (pDummyVar)	// in case compiler optimization requires the variable to actually be used
+			pDummyVar->SetValue(pDummyVar->GetBool());
+
+		bool bHadError = false;
+		if (m_pRunningLibretroCores->last_error != "")
+		{
+			g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Aborted - %s", m_pRunningLibretroCores->last_error.c_str()));
+			m_pRunningLibretroCores->last_error = "";
+			bHadError = true;
+		}
+
+		bool bHadMsg = false;
+		if (m_pRunningLibretroCores->last_msg != "")
+		{
+			g_pAnarchyManager->AddToastMessage(VarArgs("Libretro - %s", m_pRunningLibretroCores->last_msg.c_str()));
+			m_pRunningLibretroCores->last_msg = "";
+			bHadMsg = true;
+		}
+
+		g_pAnarchyManager->AddToastMessage(VarArgs("Libretro Closed (%i running)", iTesterCount));
+	}
 }
 
 bool C_LibretroManager::FocusLibretroInstance(C_LibretroInstance* pLibretroInstance)
@@ -652,6 +851,20 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(uint uId)
 	return null;
 }
 
+C_LibretroInstance* C_LibretroManager::FindLibretroInstanceByEntityIndex(int iEntityIndex)
+{
+	auto foundLibretroInstance = m_libretroInstances.begin();
+	while (foundLibretroInstance != m_libretroInstances.end())
+	{
+		if (foundLibretroInstance->second->GetOriginalEntIndex() == iEntityIndex)
+			return foundLibretroInstance->second;
+		else
+			foundLibretroInstance++;
+	}
+
+	return null;
+}
+
 C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
 {
 	//typedef std::map<std::string, std::map<std::string, std::string>>::iterator it_type;
@@ -665,6 +878,16 @@ C_LibretroInstance* C_LibretroManager::FindLibretroInstance(std::string id)
 	}
 
 	return null;
+}
+
+void C_LibretroManager::SetVolume(float fVolume)
+{
+	auto foundLibretroInstance = m_libretroInstances.begin();
+	while (foundLibretroInstance != m_libretroInstances.end())
+	{
+		foundLibretroInstance->second->SetVolume(fVolume);
+		foundLibretroInstance++;
+	}
 }
 
 void C_LibretroManager::RunEmbeddedLibretro(std::string core, std::string file)
@@ -746,8 +969,10 @@ retro_key C_LibretroManager::StringToRetroKeyboardKey(std::string text)
 	return RETROK_UNKNOWN;
 }
 
-unsigned int C_LibretroManager::GetInstanceCount()
+int C_LibretroManager::GetInstanceCount()
 {
+	return m_pRunningLibretroCores->count;
+	/*
 	unsigned int count = 0;
 
 	auto it = m_libretroInstances.begin();
@@ -758,6 +983,211 @@ unsigned int C_LibretroManager::GetInstanceCount()
 	}
 
 	return count;
+	*/
+}
+
+void C_LibretroManager::SetGUIGamepadInputState(unsigned int retroport, unsigned int retrodevice, unsigned int retroindex, unsigned int retroid, int iValue)
+{
+	std::string keyPath = "port" + std::to_string(retroport) + "/device" + std::to_string(retrodevice) + "/index" + std::to_string(retroindex) + "/key" + std::to_string(retroid);
+	m_pGUIGamepadStateKV->SetInt(keyPath.c_str(), iValue);
+}
+
+void C_LibretroManager::ClearGUIGamepadInputState()
+{
+	m_pGUIGamepadStateKV->Clear();	// TODO: Make sure this doesn't rekt the key itself, because we'll be adding stuff back into it later.
+}
+
+KeyValues* C_LibretroManager::FindOrCreateCoreSettings(std::string coreFile)
+{
+	for (KeyValues *sub = m_pCoreSettingsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		if (std::string(sub->GetString("file")) == coreFile)
+			return sub;
+	}
+	
+	return null;
+}
+
+void C_LibretroManager::SaveCoreSettings()
+{
+	g_pFullFileSystem->CreateDirHierarchy("libretro\\user", "DEFAULT_WRITE_PATH");
+	std::string saveFile = "libretro\\user\\coreSettings.txt";
+	m_pCoreSettingsKV->SaveToFile(g_pFullFileSystem, "libretro\\user\\coreSettings.txt", "DEFAULT_WRITE_PATH");
+}
+
+void C_LibretroManager::SaveOverlaysKV(std::string type, std::string overlayId, std::string prettyCore, std::string prettyGame)
+{
+	KeyValues* pOverlayEntryKV = null;
+	std::string testerCore;
+	std::string testerGame;
+	for (KeyValues *sub = m_pOverlaysKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		testerCore = sub->GetString("core");
+		testerGame = sub->GetString("game");
+
+		if (testerCore != prettyCore)
+			continue;
+
+		if ((type == "core" && testerGame == "") || (type == "game" && testerGame == prettyGame))
+		{
+			pOverlayEntryKV = sub;
+			break;
+		}
+	}
+
+	if (!pOverlayEntryKV && overlayId != "")
+	{
+		pOverlayEntryKV = m_pOverlaysKV->CreateNewKey();
+		pOverlayEntryKV->SetName("overlay");
+		pOverlayEntryKV->SetString("core", prettyCore.c_str());
+		if (type == "game")
+			pOverlayEntryKV->SetString("game", prettyGame.c_str());
+	}
+
+	if (overlayId != "")
+		pOverlayEntryKV->SetString("overlayId", overlayId.c_str());
+	else if (pOverlayEntryKV)
+	{
+		pOverlayEntryKV->Clear();
+		pOverlayEntryKV->SetString(null, "");
+	}
+
+	g_pFullFileSystem->CreateDirHierarchy(m_userPath.c_str(), "DEFAULT_WRITE_PATH");
+	m_pOverlaysKV->SaveToFile(g_pFullFileSystem, VarArgs("%s\\overlaySettings.txt", m_userPath.c_str()), "DEFAULT_WRITE_PATH");
+}
+
+std::string C_LibretroManager::DetermineOverlay(std::string prettyCore, std::string prettyGame)
+{
+	KeyValues* pOverlayCoreKV = null;
+	KeyValues* pOverlayGameKV = null;
+	std::string testerCore;
+	std::string testerGame;
+	for (KeyValues *sub = m_pOverlaysKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+	{
+		testerCore = sub->GetString("core");
+		testerGame = sub->GetString("game");
+		if (testerCore == prettyCore)
+		{
+			if (testerGame == prettyGame)
+				pOverlayGameKV = sub;
+			else if (testerGame == "")
+				pOverlayCoreKV = sub;
+		}
+	}
+
+	std::string overlayId;
+
+	if (pOverlayGameKV)
+		overlayId = pOverlayGameKV->GetString("overlayId");
+	else if (pOverlayCoreKV)
+		overlayId = pOverlayCoreKV->GetString("overlayId");
+	else
+		overlayId = "";
+
+	return overlayId;
+}
+
+void C_LibretroManager::SetGUIGamepadEnabled(bool bValue)
+{
+	m_bGUIGamepadEnabled = bValue;
+	cvar->FindVar("libretro_gui_gamepad")->SetValue(bValue);
+}
+
+std::string C_LibretroManager::GetLibretroPath(retro_path_names retro_path_name)
+{
+	switch (retro_path_name)
+	{
+		case RETRO_CORE_PATH:
+			return m_corePath;
+		case RETRO_USER_BASE:
+			return m_userBase;
+		case RETRO_ASSETS_PATH:
+			return m_assetsPath;
+		case RETRO_SYSTEM_PATH:
+			return m_systemPath;
+		case RETRO_SAVE_PATH:
+			return m_savePath;
+		case RETRO_USER_PATH:
+			return m_userPath;
+
+		default:
+			return "";
+	}
+}
+
+void C_LibretroManager::DetectAllOverlaysPNGs()
+{
+	std::vector<std::string> files;
+	std::string id;
+	FileFindHandle_t pFileFindHandle;
+	const char *pFile = g_pFullFileSystem->FindFirstEx("resource\\ui\\html\\overlays\\*.png", "MOD", &pFileFindHandle);
+	while (pFile != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
+		{
+			pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+			continue;
+		}
+
+		id = pFile;
+		if (id.length() < 5)
+		{
+			pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+			continue;
+		}
+
+		id = id.substr(0, id.length() - 4);
+
+		if (!g_pFullFileSystem->FileExists(VarArgs("resource\\ui\\html\\overlays\\%s.cfg", id.c_str()), "MOD"))
+			files.push_back(id);
+
+		pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+	}
+	g_pFullFileSystem->FindClose(pFileFindHandle);
+
+	KeyValues* pOverlayKV;
+	for (unsigned int i = 0; i < files.size(); i++)
+	{
+		id = files[i];
+		pOverlayKV = new KeyValues("overlay");
+		pOverlayKV->SetFloat("settings/default/x", 0);
+		pOverlayKV->SetFloat("settings/default/y", 0);
+		pOverlayKV->SetFloat("settings/default/width", 1);
+		pOverlayKV->SetFloat("settings/default/height", 1);
+		if (!pOverlayKV->SaveToFile(g_pFullFileSystem, VarArgs("resource\\ui\\html\\overlays\\%s.cfg", id.c_str()), "DEFAULT_WRITE_PATH"))
+			DevMsg("ERROR: Could not write file.\n");
+		pOverlayKV->deleteThis();
+		pOverlayKV = null;
+	}
+}
+
+void C_LibretroManager::DetectAllOverlays(std::vector<std::string>& overlayFiles)
+
+{
+	std::string id;
+	FileFindHandle_t pFileFindHandle;
+	const char *pFile = g_pFullFileSystem->FindFirstEx("resource\\ui\\html\\overlays\\*.cfg", "MOD", &pFileFindHandle);
+	while (pFile != NULL)
+	{
+		if (g_pFullFileSystem->FindIsDirectory(pFileFindHandle))
+		{
+			pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+			continue;
+		}
+
+		id = pFile;
+		if (id.length() < 5)
+		{
+			pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+			continue;
+		}
+
+		id = id.substr(0, id.length() - 4);
+		overlayFiles.push_back(id);
+
+		pFile = g_pFullFileSystem->FindNext(pFileFindHandle);
+	}
+	g_pFullFileSystem->FindClose(pFileFindHandle);
 }
 
 void C_LibretroManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embeddedInstances)
@@ -765,7 +1195,9 @@ void C_LibretroManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embedd
 	auto it = m_libretroInstances.begin();
 	while (it != m_libretroInstances.end())
 	{
-		embeddedInstances.push_back(it->second);
+		if (it->second->HasInfo() && it->second->GetInfo()->state == 5)
+			embeddedInstances.push_back(it->second);
+
 		it++;
 	}
 }
