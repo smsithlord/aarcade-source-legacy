@@ -21,24 +21,92 @@
 		<script>
 			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Context Menu", "", true, true, "", "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
+
+			var bigIconSize = arcadeHud.themeSizes.BigIconSize;
 		</script>
 
 		<center>
 			<div class="aaThemeColorOneHighColor aaTextColorTwoColor aaTextSizeFontSize aaTitleText" style="max-width: 300px; margin-left: auto; margin-right: auto; display: inline-block; padding: 0;">
 				<div>
 					<div id='itemTitle' style="display: block; overflow: hidden; text-overflow: ellipsis; padding: 4px;"></div>
-					<img id='marqueeImage' class="aaThemeColorTwoInverseShadedBorderColor" style="max-width: 300px; max-height: 500px; margin-left: auto; margin-right: auto; display: none; border-style: solid; border-width: 2px;" />
+					<img id='marqueeImage' class="aaThemeColorTwoInverseShadedBorderColor" style="max-width: 300px; max-height: 300px; margin-left: auto; margin-right: auto; display: none; border-style: solid; border-width: 2px;" />
 				</div>
 			</div>
 			<br /><br />
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Object" onclick="editObject();" help="Edit this object to make it a slave screen or physics-enabled." /><br />
 			<div class="onlyIfItem">
-				<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Item" onclick="editItem();" help="Manage the item used by this object." /><br />
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editObject();" help="Edit this object to make it a slave screen or physics-enabled.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("objecticon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Object
+				</div>
 			</div>
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Model" onclick="editModel();" help="Manage the model used by this object." /><br />
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move this object." /><br />
+			<div class="onlyIfItem">
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editItem();" help="Manage the item used by this object.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("itemicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Item
+				</div>
+			</div>
+			<div class="onlyIfModel">
+				<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="cloneObject();" help="Manage the item used by this object.">
+					<script>
+						var iconHTML = arcadeHud.generateIconHTML("cloneicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+						document.write(iconHTML);
+					</script>
+					Clone
+				</div>
+			</div>
+			<!--
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Model" onclick="editModel();" help="Manage the model used by this object." />
+			-->
+			<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="editModel();" help="Manage the model used by this object.">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("3dmodelicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+					document.write(iconHTML);
+				</script>
+				Model
+			</div>
+			<!--<br />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Move" onclick="moveObject();" help="Select & move this object." />
+			-->
+			<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="moveObject();" help="Select & move this object.">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("moveicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+					document.write(iconHTML);
+				</script>
+				Move
+			</div>
+			<!--
 			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Delete" onclick="deleteObject();" help="Remove this object from the world." /><br />
-			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn." />
+			-->
+			<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="deleteObject();" help="Remove this object from the world.">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("eraseicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+					document.write(iconHTML);
+				</script>
+				Delete
+			</div>
+			<!--
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 30px; width: 100%;" value="Library" onclick="window.location='asset://ui/libraryBrowser.html?category=items';" help="Browse your personal library for something new to spawn." /><br />
+			-->
+			<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="libraryBrowser();" help="Browse your personal library for something new to spawn.">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("libraryicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+					document.write(iconHTML);
+				</script>
+				Library
+			</div>
+			<div class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoHoverShadedBorderColor helpNote" style="padding: 10px; padding-left: 30px; padding-right: 0px; display: block; border-width: 2px; border-style: solid; text-align: left; margin-bottom: 4px;" onclick="addToBackpack();" help="Add this object to your backpack so you can easily spawn it agian later.">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("backpackaddicon.png", bigIconSize, bigIconSize, "aaTextColorTwoColor");
+					document.write(iconHTML);
+				</script>
+				Backpack
+			</div>
 		</center>
 
 		<script>
@@ -62,9 +130,19 @@
 				var onlyIfItemElems = document.querySelectorAll(".onlyIfItem");
 				for( var i = 0; i < onlyIfItemElems.length; i++ )
 					onlyIfItemElems[i].style.display = "none";
+
+				var onlyIfModelElems = document.querySelectorAll(".onlyIfModel");
+				for( var i = 0; i < onlyIfModelElems.length; i++ )
+					onlyIfModelElems[i].style.display = "block";
 			}
 			else
+			{
 				entry = aaapi.library.getLibraryItem(entityInfo.item.id);
+
+				var onlyIfModelElems = document.querySelectorAll(".onlyIfModel");
+				for( var i = 0; i < onlyIfModelElems.length; i++ )
+					onlyIfModelElems[i].style.display = "none";
+			}
 
 			if( !!entry )
 			{
@@ -82,7 +160,46 @@
 
 			function moveObject()
 			{
-				aaapi.system.moveObject(entityIndex);
+				var oldId = (!!entityInfo.item) ? entityInfo.item.id : entityInfo.model.id;
+				var oldTransform = localStorage.getItem("trans" + oldId);
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				//var modelId = oldTransform.modelId;
+				//if( typeof modelId === 'undefined' )
+				//	modelId = "";
+
+				var scale = oldTransform.scale;
+				if( typeof scale === 'undefined' )
+					scale = "1.0";
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+				
+				aaapi.system.moveObject(entityIndex, scale, pitch, yaw, roll, offX, offY, offZ);
 			}
 
 			function deleteObject()
@@ -105,6 +222,101 @@
 			function editModel()
 			{
 				window.location='asset://ui/editModel.html?id=' + entityInfo.model.id + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function libraryBrowser()
+			{
+				window.location='asset://ui/libraryBrowser.html?category=items' + '&uiback=' + encodeURIComponent("window.location='asset://ui/buildModeContext.html?entity=" + entityIndex + "';");
+			}
+
+			function addToBackpack()
+			{
+				var backpackEntries = localStorage.getItem("myBackpack");
+				if( !!backpackEntries )
+					backpackEntries = JSON.parse(backpackEntries);
+				else
+					backpackEntries = [];
+
+				var isItem = (!!entityInfo.item && entityInfo.item !== "") ? true : false;
+				var matchId = (isItem) ? entityInfo.item.id : entityInfo.model.id;
+				var typeName = (isItem) ? "item" : "model";
+				var alreadyExists = false;
+				for( var i = 0; i < backpackEntries.length; i++ )
+				{
+					if( backpackEntries[i][typeName] === matchId )
+					{
+						alreadyExists = true;
+						break;
+					}
+				}
+
+				if( !alreadyExists )
+				{
+					var backpackEntry = {};
+					backpackEntry[typeName] = matchId;
+					//backpackEntries.push(backpackEntry);
+					backpackEntries.unshift(backpackEntry);
+					localStorage.setItem("myBackpack", JSON.stringify(backpackEntries));
+					aaapi.system.addToastMessage("Added To Backpack");
+					aaapi.system.deactivateInputMode();
+				}
+				else
+				{
+					console.log("ERROR: Item already exists in backpack.");
+					aaapi.system.deactivateInputMode();
+				}
+			}
+
+			function cloneObject()
+			{
+				var isItem = false;
+				var oldId = (!!entityInfo.item) ? entityInfo.item.id : entityInfo.model.id;
+				var oldTransform = localStorage.getItem("trans" + oldId);
+				if( !!!oldTransform )
+					oldTransform = {};
+				else
+					oldTransform = JSON.parse(oldTransform);
+
+				//var modelId = oldTransform.modelId;
+				//if( typeof modelId === 'undefined' )
+				//	modelId = "";
+
+				var scale = oldTransform.scale;
+				if( typeof scale === 'undefined' )
+					scale = "1.0";
+
+				var pitch = oldTransform.pitch;
+				if( typeof pitch === 'undefined' )
+					pitch = "0";
+
+				var yaw = oldTransform.yaw;
+				if( typeof yaw === 'undefined' )
+					yaw = "0";
+				
+				var roll = oldTransform.roll;
+				if( typeof roll === 'undefined' )
+					roll = "0";
+				
+				var offX = oldTransform.offX;
+				if( typeof offX === 'undefined' )
+					offX = "0";
+				
+				var offY = oldTransform.offY;
+				if( typeof offY === 'undefined' )
+					offY = "0";
+				
+				var offZ = oldTransform.offZ;
+				if( typeof offZ === 'undefined' )
+					offZ = "0";
+
+				if( isItem )
+				{
+					aaapi.system.spawnEntry("items", oldId, "", "", "", scale, pitch, yaw, roll, offX, offY, offZ);
+				}
+				else
+				{
+					aaapi.system.spawnEntry("models", oldId, "", "", "", scale, pitch, yaw, roll, offX, offY, offZ);
+				}
 			}
 		</script>
 	</body>

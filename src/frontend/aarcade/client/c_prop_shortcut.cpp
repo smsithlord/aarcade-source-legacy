@@ -38,12 +38,15 @@ C_PropShortcutEntity::~C_PropShortcutEntity()
 
 void C_PropShortcutEntity::Initialize()
 {
+	if (m_bInitialized)
+		return;
+
 	Vector absOrigin = this->GetAbsOrigin();
 	object_t* pSpawningObject = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject();
-	if (pSpawningObject)
-		DevMsg("Abs origin (dist %f) is: %f %f %f vs %f %f %f\n", pSpawningObject->origin.DistTo(absOrigin), absOrigin.x, absOrigin.y, absOrigin.z, absOrigin.x, absOrigin.y, absOrigin.z);
+	//if (pSpawningObject)
+	//	DevMsg("Abs origin (dist %f) is: %f %f %f vs %f %f %f\n", pSpawningObject->origin.DistTo(absOrigin), absOrigin.x, absOrigin.y, absOrigin.z, absOrigin.x, absOrigin.y, absOrigin.z);
 
-	if (pSpawningObject && pSpawningObject->origin.DistTo(absOrigin) < 1.0)// GEEZ! not even position is set yet.  defer //&& !Q_strcmp(pSpawningObject->itemId.c_str(), m_itemId) )	// FIXME: accounts for rounding errors, but can produce false-positives!! // FIXME2: m_itemId isn't set until the 1st data update, der.  so this check is probably very unqualified.  too many false positive posibilities.
+	if (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() == null && pSpawningObject && pSpawningObject->origin.DistTo(absOrigin) < 1.0)// GEEZ! not even position is set yet.  defer //&& !Q_strcmp(pSpawningObject->itemId.c_str(), m_itemId) )	// FIXME: accounts for rounding errors, but can produce false-positives!! // FIXME2: m_itemId isn't set until the 1st data update, der.  so this check is probably very unqualified.  too many false positive posibilities.
 	{
 		// THIS IS THE OBJECT THE CURRENT USER IS SPAWNING!!
 		//Precache();
@@ -257,8 +260,8 @@ void C_PropShortcutEntity::Spawn()
 	//SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
 	//if (engine->IsInGame() && Q_strcmp(g_pAnarchyManager->MapName(), ""))
 
-	object_t* pSpawningObject = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject();
-	if ( !pSpawningObject)	// FIXME: Simply checking if the local user is spawning an entity is NOT enough to determine if THIS entity is the one he is spawning...
+	object_t* pSpawningObject = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject();//!pSpawningObject ||
+	if (!pSpawningObject || g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity() != null)	// FIXME: Simply checking if the local user is spawning an entity is NOT enough to determine if THIS entity is the one he is spawning...
 		this->Initialize();
 
 	//	DevMsg("SPAWNING!!\n");

@@ -89,6 +89,7 @@ public:
 	void OnMouseReleased(vgui::MouseCode code);
 	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
 	void OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
+	void OnMouseWheeled(int delta);
 
 	void InjectJavaScript(std::string code);
 

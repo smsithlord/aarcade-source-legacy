@@ -121,6 +121,7 @@ public:
 	void SetIncomingNodeId(std::string nodeId) { m_incomingNodeId = nodeId; }
 	
 private:
+	ConVar* m_pRecentModelIdConVar;
 	std::string m_incomingNodeId;
 	int m_iUnspawnedWithinRangeEstimate;
 	transform_t* m_pTransform;

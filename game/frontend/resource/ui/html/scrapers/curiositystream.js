@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "curiositystream",
 	"api_version": 0.1,
 	"title": "CuriosityStream",
+	"summary": "TV & Documentaries",
+	"description": "CuriosityStream is a subscription site with lots of short science documentaries & TV shows.",
 	"homepage": "http://app.curiositystream.com/",
 	"search": "http://app.curiositystream.com/search/$TERM",
+	"can_acquire": false,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

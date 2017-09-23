@@ -4,6 +4,17 @@
 		<script src="hud.js"></script>
 		<script>
 
+			var originalItemId = arcadeHud.getParameterByName("itemId");
+			if( !!!originalItemId )
+				originalItemId = "";
+
+			var originalModelId = arcadeHud.getParameterByName("modelId");
+			if( !!!originalModelId )
+				originalModelId = "";
+
+			//var currentItemId = "";
+			var currentModelId = originalModelId;
+
 			var mode = arcadeHud.getParameterByName("mode");
 			var isDoingStuff = false;
 			var g_allowTransformUpdate = true;
@@ -17,6 +28,54 @@
 			var method;
 			var transformInfo;
 			var wl_transformContainer;
+
+			function saveTransformChangesCallback()
+			{
+				if( originalItemId != "" )
+				{
+					var oldTransform = localStorage.getItem("trans" + originalItemId);
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					//console.log("Old Transform: " + JSON.stringify(oldTransform));
+
+					oldTransform.modelId = currentModelId;
+					oldTransform.scale = scaleElem.value;
+					oldTransform.pitch = pitchElem.value;
+					oldTransform.yaw = yawElem.value;
+					oldTransform.roll = rollElem.value;
+					oldTransform.offX = offXElem.value;
+					oldTransform.offY = offYElem.value;
+					oldTransform.offZ = offZElem.value;
+//console.log("Saving modelID for item: " + currentModelId);
+					localStorage.setItem("trans" + originalItemId, JSON.stringify(oldTransform));
+				}
+				else if( originalModelId != "" )
+				{
+					var oldTransform = localStorage.getItem("trans" + originalModelId);
+					if( !!!oldTransform )
+						oldTransform = {};
+					else
+						oldTransform = JSON.parse(oldTransform);
+
+					//console.log("Old Transform: " + JSON.stringify(oldTransform));
+
+					oldTransform.modelId = "";//currentModelId;
+					oldTransform.scale = scaleElem.value;
+					oldTransform.pitch = pitchElem.value;
+					oldTransform.yaw = yawElem.value;
+					oldTransform.roll = rollElem.value;
+					oldTransform.offX = offXElem.value;
+					oldTransform.offY = offYElem.value;
+					oldTransform.offZ = offZElem.value;
+
+					localStorage.setItem("trans" + originalModelId, JSON.stringify(oldTransform));
+				}
+
+				return true;
+			}
 
 			var cmdListener = {
 				"displayMode": "browse",
@@ -495,6 +554,16 @@
 		<!--</div>-->
 
 		<script>
+			wl_transformContainer = document.querySelector("#wl_transform");
+			
+			var scaleElem = document.querySelector("input[name='scale']");
+			var pitchElem = document.querySelector("input[name='pitch']");
+			var yawElem = document.querySelector("input[name='yaw']");
+			var rollElem = document.querySelector("input[name='roll']");
+			var offXElem = document.querySelector("input[name='offX']");
+			var offYElem = document.querySelector("input[name='offY']");
+			var offZElem = document.querySelector("input[name='offZ']");
+
 			function parseNumber(num)
 			{
 				return Number(parseFloat(num).toFixed(2));
@@ -532,9 +601,9 @@
 
 					if( g_allowTransformUpdate )
 					{
-						var pitch = document.querySelector("input[name=pitch]");
-						var yaw = document.querySelector("input[name=yaw]");
-						var roll = document.querySelector("input[name=roll]");
+						var pitch = pitchElem;
+						var yaw = yawElem;
+						var roll = rollElem;
 						aaapi.system.adjustObjectRot(parseFloat(pitch.value), parseFloat(yaw.value), parseFloat(roll.value));
 					}
 				}
@@ -544,9 +613,9 @@
 
 					if( g_allowTransformUpdate )
 					{
-						var offX = document.querySelector("input[name=offX]");
-						var offY = document.querySelector("input[name=offY]");
-						var offZ = document.querySelector("input[name=offZ]");
+						var offX = offXElem;
+						var offY = offYElem;
+						var offZ = offZElem;
 						aaapi.system.adjustObjectOffset(parseFloat(offX.value), parseFloat(offY.value), parseFloat(offZ.value));
 					}
 				}
@@ -560,10 +629,21 @@
 				}
 
 				valueElem.innerHTML = postfix;
+
+				oldScale = scaleElem.value;
+				oldPitch = pitchElem.value;
+				oldYaw = yawElem.value;
+				oldRoll = rollElem.value;
+				oldOffX = offXElem.value;
+				oldOffY = offYElem.value;
+				oldOffZ = offZElem.value;
 			}
 
 			function selectNone(container)
 			{
+				if( !!!container )
+					return;
+
 				// deselect everything
 				var selected = container.querySelector(".wlPlateSelected");
 				if( selected )
@@ -629,6 +709,90 @@
 				return;
 			}
 
+			///*
+			var oldScale = "1.0";
+			var oldPitch = "0";
+			var oldYaw = "0";
+			var oldRoll = "0";
+			var oldOffX = "0";
+			var oldOffY = "0";
+			var oldOffZ = "0";
+			//*/
+			//var oldScale, oldPitch, oldYaw, oldRoll, oldOffX, oldOffY, oldOffZ;
+			function loadOldTransform(originalId)
+			{
+				/*
+				oldScale = document.querySelector("input[name='scale']").value;
+				oldPitch = document.querySelector("input[name='pitch']").value;
+				oldYaw = document.querySelector("input[name='yaw']").value;
+				oldRoll = document.querySelector("input[name='roll']").value;
+				oldOffX = document.querySelector("input[name='offX']").value;
+				oldOffY = document.querySelector("input[name='offY']").value;
+				oldOffZ = document.querySelector("input[name='offZ']").value;
+				*/
+
+				var scale, pitch, yaw, roll, offX, offY, offZ;
+				var oldTransform = localStorage.getItem("trans" + originalId);
+				if( !!oldTransform )
+				{
+					oldTransform = JSON.parse(oldTransform);
+
+					scale = oldTransform.scale;
+					if( typeof scale === 'undefined' )
+						scale = "1.0";
+
+					pitch = oldTransform.pitch;
+					if( typeof pitch === 'undefined' )
+						pitch = "0";
+
+					yaw = oldTransform.yaw;
+					if( typeof yaw === 'undefined' )
+						yaw = "0";
+					
+					roll = oldTransform.roll;
+					if( typeof roll === 'undefined' )
+						roll = "0";
+					
+					offX = oldTransform.offX;
+					if( typeof offX === 'undefined' )
+						offX = "0";
+					
+					offY = oldTransform.offY;
+					if( typeof offY === 'undefined' )
+						offY = "0";
+					
+					offZ = oldTransform.offZ;
+					if( typeof offZ === 'undefined' )
+						offZ = "0";
+				}
+				else
+				{
+					scale = oldScale;
+					pitch = oldPitch;
+					yaw = oldYaw;
+					roll = oldRoll;
+					offX = oldOffX;
+					offY = oldOffY;
+					offZ = oldOffZ;
+				}
+
+				scaleElem.value = scale;
+				pitchElem.value = pitch;
+				yawElem.value = yaw;
+				rollElem.value = roll;
+				offXElem.value = offX;
+				offYElem.value = offY;
+				offZElem.value = offZ;
+
+
+				if( g_allowTransformUpdate )
+				{
+					aaapi.system.adjustObjectOffset(parseFloat(offX), parseFloat(offY), parseFloat(offZ));
+					aaapi.system.adjustObjectRot(parseFloat(pitch), parseFloat(yaw), parseFloat(roll));
+					aaapi.system.adjustObjectScale(parseFloat(scale));
+				}
+			}
+
 			function selectNext()
 			{
 				var next;
@@ -664,9 +828,18 @@
 					{
 						//console.log("category is " + category + " and mode is " + mode);
 						if( category === "items" ) //mode === "spawn" && 
+						{
+							//currentItemId = this.entry.info.id;
+							currentModelId = this.entry.info.id;
+							loadOldTransform(this.entry.info.id);
 							aaapi.system.cabinetSelected(this.entry.info.id);
+						}
 						else if( category !== "objects" )
+						{
+							currentModelId = this.entry.info.id;
+							loadOldTransform(this.entry.info.id);
 							aaapi.system.modelSelected(this.entry.info.id);
+						}
 						//else if( category === "objects" )
 							//aaapi.system.objectSelected(this.entry.id);
 						
@@ -709,11 +882,17 @@
 					prev.timerHandle = setTimeout(function()
 					{
 						if( category === "items" ) //mode === "spawn" && 
+						{
+							loadOldTransform(this.entry.info.id);
 							aaapi.system.cabinetSelected(this.entry.info.id);
+						}
 						//else if( category === "objects" )
 							//aaapi.system.objectSelected(this.entry.id);
 						else if( category !== "objects" )
+						{
+							loadOldTransform(this.entry.info.id);
 							aaapi.system.modelSelected(this.entry.info.id);
+						}
 							//console.log("xxx tea bag disabled");
 					}.bind(prev), 1000);
 				}
@@ -819,18 +998,19 @@
 					}
 					else if( mode !== "move" && libraryBrowserContext.filter === "" )
 					{
-						console.log("yar");
-						//searchCategory = libraryBrowserContext.category;
+						//console.log("yar " + category);
+						searchCategory = category;//libraryBrowserContext.category;
+						//console.log(searchCategory);
 						var searchText = libraryBrowserContext.search;
 						if( searchText != "" )
 						{
 							method = "find";
-							response = aaapi.library.findFirstLibraryEntry(category, "title", searchText);
+							response = aaapi.library.findFirstLibraryEntry(searchCategory, "title", searchText);
 						}
 						else
 						{
 							method = "get";
-							response = aaapi.library.getFirstLibraryEntry(searchCategory);
+							//response = aaapi.library.getFirstLibraryEntry(searchCategory);
 						}
 					}
 					else if( mode !== "move" )
@@ -851,9 +1031,8 @@
 					response = aaapi.system.getNearestObjectToPlayerLook(searchCategory);
 				}
 
-				if( mode !== "move" || category === "items" )
+				if( !!response && response.success && (mode !== "move" || category === "items") )
 				{
-					//console.log(JSON.stringify(response));
 					var queryId = response.queryId;
 					var entry = response.entry;
 					var entryElem;
@@ -865,7 +1044,7 @@
 					var max = 999;	// FIXME: arbitraty limit!!!!  Also, should get these async, not all at once.
 					while( response.success && count < max )
 					{
-						if( category !== "models" || !entry.dynamic)
+						if( category !== "models" || entry.dynamic !== "1")
 							entries.push(entry);
 
 						if( method === "get" )
@@ -873,7 +1052,10 @@
 							if( category === "objects" )
 								response = aaapi.system.getNextNearestObjectToPlayerLook(queryId, searchCategory);
 							else
+							{
 								response = aaapi.library.getNextLibraryEntry(queryId, searchCategory);
+								//response = aaapi.library.getNextLibraryEntry(queryId, category);
+							}
 						}
 						else
 						{
@@ -883,6 +1065,8 @@
 
 						entry = response.entry;
 						count++;
+
+						//console.log(response.success + ", " + count + ", " + max);
 						//entry = aaapi.library.findNextLibraryModel();
 					}
 //console.log(JSON.stringify(entries));
@@ -943,9 +1127,14 @@
 							prettyName = entry.title;
 						else
 						{
-							prettyName = entry.platforms[sourcePlatformId].file;
+							prettyName = entry.title;
+							if( prettyName === "" )
+								prettyName = entry.platforms[sourcePlatformId].file;
+
 							prettyName = prettyName.substring(prettyName.lastIndexOf("\\") + 1);
-							prettyName = prettyName.substring(0, prettyName.length - 4);
+							prettyName = prettyName.substring(prettyName.lastIndexOf("/") + 1);
+							if( prettyName.indexOf(".mdl") === prettyName.length - 4 || prettyName.indexOf(".MDL") === prettyName.length - 4)
+								prettyName = prettyName.substring(0, prettyName.length - 4);
 						}
 
 						prettyName = prettyName.replace(/_/g, " ");
@@ -1011,7 +1200,7 @@
 					initialHelper("scale", scale, "");
 				}
 
-				wl_transformContainer = document.querySelector("#wl_transform");
+				//wl_transformContainer = document.querySelector("#wl_transform");
 			}
 
 

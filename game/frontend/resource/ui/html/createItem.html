@@ -99,7 +99,7 @@
 						</td>
 						<td class="aaKeyvalueTableValue">
 							<select fieldname="app" class="aaTextSizeFontSize" style="width: 100%;">
-								<option>Windows (default)</option>
+								<option value="">Windows (default)</option>
 							</select>
 						</td>
 						<td style="width: 1%; white-space: nowrap;">
@@ -334,6 +334,9 @@
 				//	dummyElem.value = item[fieldName];
 			}
 
+			//if( arcadeHud.isImageExtension(item.file) )
+			//	spawnItemNow();
+
 			function generateTitle(inTitle, url)
 			{
 				var title = inTitle;
@@ -562,12 +565,14 @@
 								}
 							}
 						}
+
+						if( arcadeHud.isImageExtension(item.file) )
+							spawnItemNow();
 					}
 				}
 	 		}
 
-	 		var mainButtonElem = document.querySelector("#saveButton");
-	 		mainButtonElem.addEventListener("click", function()
+	 		function spawnItemNow()
 	 		{
 	 			// add the params in the form to the item
 	 			var elems = itemStuff.querySelectorAll("input, select");
@@ -593,6 +598,12 @@
 
 				if( aaapi.library.saveItem(item.info.id, params) )
 					aaapi.system.spawnItem(item.info.id);
+	 		}
+
+	 		var mainButtonElem = document.querySelector("#saveButton");
+	 		mainButtonElem.addEventListener("click", function()
+	 		{
+	 			spawnItemNow();
 			});
 
 			function fetchYouTubeInfo()

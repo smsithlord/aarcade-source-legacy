@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "thegamesdb",
 	"api_version": 0.1,
 	"title": "TheGamesDB",
+	"summary": "Retro & Modern Games",
+	"description": "TheGamesDB is a wiki-style database great for finding boxart, posters, screenshots, etc.",
 	"homepage": "http://www.thegamesdb.net/",
 	"search": "http://thegamesdb.net/search/?string=$TERM",
+	"can_acquire": false,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

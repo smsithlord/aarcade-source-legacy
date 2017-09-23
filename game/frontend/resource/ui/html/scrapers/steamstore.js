@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "steamstore",
 	"api_version": 0.1,
 	"title": "Steam Store",
+	"summary": "PC Games",
+	"description": "The Steam Store has lots of PC games, VR games, plus some apps & movies.",
 	"homepage": "http://store.steampowered.com/",
 	"search": "http://store.steampowered.com/search/?term=$TERM",
+	"can_acquire": true,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

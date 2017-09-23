@@ -1,0 +1,137 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script>
+		</script>
+		<style>
+			#briefing
+			{
+				overflow-y: scroll;
+				max-height: 600px;
+				width: 100%;
+				text-align: left;
+				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
+				border-radius: 10px;
+			}
+
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+		//"window.location='asset://ui/import.html';", "window.location='asset://ui/welcome.html';"
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Import Steam Games", "", true, true, "", "");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div id="fetchingStuff" style="display: block; font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize helpNote" help="AArcade is making sure it does not add any duplicates.">	
+			<br />
+			<center>
+				<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+				<br />
+				PLEASE WAIT
+			</center>
+			<br />
+		</div>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+				<div id="startupLoadingMessagesContainer" style="display: block; margin-left: 0; margin-right: 0;"></div>
+		</div>
+
+		<input id="doneButton" type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="OK" onclick="onFinished();" help="Return to the Main Menu." style="display: none;" />
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+
+			var shouldClose = false;
+
+			function aaOnActivateInputMode(opts)
+			{
+				/*
+				isFullscreen,
+				isHudPinned,
+				isMapLoaded,
+				isObjectSelected,
+				isItemSelected,
+				isMainMenu,
+				url,
+				isSelectedObject,
+				embeddedInstanceType,
+				canStream,
+				canPreview,
+				canGoForward,
+				canGoBack,
+				libretroCore,
+				libretroFile,
+				libretroCanRun,
+				libretroOverlayX,
+				libretroOverlayY,
+				libretroOverlayWidth,
+				libretroOverlayHeight,
+				libretroOverlayId,
+				activeScraperId
+			)
+			{*/
+				if( opts.mapLoaded )
+					shouldClose = true;
+			}
+
+			function onFinished()
+			{
+				if( !shouldClose )
+					window.location='asset://ui/welcome.html';
+				else
+					aaapi.system.deactivateInputMode();
+			}
+
+			function EventListener()
+			{
+
+			}
+
+			EventListener.prototype.doneImportingSteamGames = function()
+			{
+				//document.querySelector(".aaTitleText").innerText = "Complete";
+				document.querySelector("#fetchingStuff").style.display = "none";
+				document.querySelector("#doneButton").style.display = "block";
+			};
+
+			var eventListener = new EventListener();
+
+			//aaapi.system.detectAllModels();
+			aaapi.system.startImportSteamGames();
+		</script>
+	</body>
+</html>

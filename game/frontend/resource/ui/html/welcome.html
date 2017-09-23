@@ -128,7 +128,7 @@
 
 							// otherwise, use session storage
 							if( !!!tabId )
-								tabId = sessionStorage.getItem("aaMainTab", tabId);
+								tabId = sessionStorage.getItem("aaMainTab");//, tabId);
 
 							// otherwise, let arcadeHud decide
 							if( !!!tabId )
@@ -149,6 +149,10 @@
 										"title": "Screenshots"
 									},
 									{
+										"id": "backpack",
+										"title": "Backpack"
+									},
+									{
 										"id": "commands",
 										"title": "Commands"
 									}
@@ -158,9 +162,15 @@
 							});
 							document.write(windowTabsHeaderHTML);
 
+							var backpackReady = false;
 							function onChangeCallback(tabId)
 							{
 								sessionStorage.setItem("aaMainTab", tabId);
+								if( tabId === "backpack" && !backpackReady )
+								{
+									backpackReady = true;
+									constructBackpack();
+								}
 							}
 
 							var aaModalMenu;
@@ -373,6 +383,12 @@
 							<div id="screenshotList" class="aaOnlyIfMapLoaded" style="padding: 10px;"></div>
 						</div>
 
+						<div class="aaTabContent aaWindowPaneContentScrollable aaScrollBars aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="backpack">
+							<div id="backpack">
+								<div id="noEntriesInBackpack">Your backpack is empty.</div>
+							</div>
+						</div>
+
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="commands" style="border-radius: 4px; height: 100%; display: block; height: 416px;">
 							<div id="commands" class="aaOnlyIfMapLoaded" style="padding: 4px; text-align: center;"></div>
 						</div>
@@ -442,6 +458,12 @@
 			var screenshotListElem = document.querySelector("#screenshotList");
 
 			var commands = [
+				{
+					"title": "Toggle Libretro",
+					"command": "toggle auto_libretro 0 1",
+					"closeMenu": true,
+					"help": "Toggle Libretro auto-play on/off."
+				},
 				{
 					"title": "Toggle Mute",
 					"command": "toggle volume 0 1",
@@ -577,6 +599,15 @@
 
 		<style>
 			#noTasksOpen
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+			}
+
+			#noEntriesInBackpack
 			{
 				font-family: Arial;
 				font-size: 20px;
@@ -776,6 +807,8 @@
 			var tasks = response.tasks;
 			var windowsTasks = response.windowsTasks;
 			
+			var backpackContainer = document.querySelector("#backpack");
+
 			var tasksContainer = document.querySelector("#tasks");
 			var toggleTasksButton = document.querySelector("#toggleTasksButton");
 
@@ -872,7 +905,7 @@
 
 			if( tasks.length <= 2 )
 			{
-				document.querySelector("#closeAllButton").style.display = "none";	// obsolete
+				//document.querySelector("#closeAllButton").style.display = "none";	// obsolete
 				document.querySelector("#noTasksOpen").style.display = "block";
 			}
 			else
@@ -1350,8 +1383,279 @@
 
 			*/
 
-			var worldsContainer = document.querySelector("#worldsContainer");
-			worldsContainer.innerHTML = "TODO: Progressively get every map & a screenshot to go with it.";
+			//var worldsContainer = document.querySelector("#worldsContainer");
+			//worldsContainer.innerHTML = "TODO: Progressively get every map & a screenshot to go with it.";
+
+			var backpackEntries;
+			function constructBackpack()
+			{
+				function appendBackpackEntry(backpackEntry, isItem)
+				{
+					backpackEntryContainer = document.createElement("div");
+
+					backpackEntryContainer.className = "taskContainer aaTitleTextSize aaTitleText";
+					//if( task.isDisplayTask )
+					//	backpackEntryContainer.className += " displayed aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+					//else
+						backpackEntryContainer.className += " aaThemeColorTwoHoverShadedBackground aaThemeColorTwoLowBorderColor";//aaThemeColorTwoShadedBorderColor
+
+					backpackEntryContainer.style.cssText = "font-family: Arial; font-weight: bold; letter-spacing: 0.1em; padding: 10px; border-radius: 4px; border-style: solid; border-width: 2px; cursor-events: all; margin-top: 4px; margin-bottom: 4px; box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); margin-right: 4px;";
+
+					var entryElem = document.createElement("div");
+					entryElem.style.cssText = "width: 80%; text-shadow: none;";
+					entryElem.className = "taskTitle aaTextColorTwoColor";
+
+					if( isItem )
+					{
+						var entryImageContainer = document.createElement("div");
+						entryImageContainer.style.cssText = "display: inline-block; margin-right: 10px; vertical-align: top; width: 90px; height: 38px; text-align: center; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);";
+
+						var entryImage = document.createElement("img");
+						entryImage.style.display = "none";
+						entryImage.entry = backpackEntry;
+						entryImageContainer.appendChild(entryImage);
+						entryElem.appendChild(entryImageContainer);
+						entryElem.image = entryImage;
+
+						arcadeHud.loadItemBestImage(entryImage, entryImage.entry, function()
+						{
+							this.ready = true;
+
+							var imageContainer = this.parentNode;
+							imageContainer.style.background = "transparent url('" + this.src + "') center";
+							imageContainer.style.backgroundSize = "cover";
+						});
+					}
+					else
+					{
+						var entryTypeImageContainer = document.createElement("div");
+						entryTypeImageContainer.style.cssText = "display: inline-block; margin-right: 10px; vertical-align: top; width: 90px; text-align: center;";
+
+						var typeIconName = (isItem) ? "itemicon.png" : "3dmodelicon.png";
+						var iconHTML = arcadeHud.generateIconHTML(typeIconName, typeIconSize, typeIconSize, "aaTextColorTwoColor");
+						entryTypeImageContainer.innerHTML = iconHTML;
+						entryElem.appendChild(entryTypeImageContainer);
+					}
+
+					//if( task.isDisplayTask )
+					//	entryElem.className = "taskTitle aaTextColorOneColor";
+					//else
+					//{
+					//}
+
+					var textNode = document.createTextNode(backpackEntry.title);
+					entryElem.appendChild(textNode);
+					//entryElem.innerHTML += backpackEntry.title;
+					//entryElem.innerHTML = task.title;
+					entryElem.backpackEntry = backpackEntry;
+					entryElem.isItem = isItem;
+
+					entryElem.addEventListener("click", function(e)
+					{
+						var backpackEntry = this.backpackEntry;
+						if( this.isItem )
+						{
+							var oldTransform = localStorage.getItem("trans" + backpackEntry.info.id);
+
+							if( !!!oldTransform )
+								oldTransform = {};
+							else
+								oldTransform = JSON.parse(oldTransform);
+
+							var modelId = oldTransform.modelId;
+							if( typeof modelId === 'undefined' )
+								modelId = "";
+
+							var scale = oldTransform.scale;
+							if( typeof scale === 'undefined' )
+								scale = "1.0";
+
+							var pitch = oldTransform.pitch;
+							if( typeof pitch === 'undefined' )
+								pitch = "0";
+
+							var yaw = oldTransform.yaw;
+							if( typeof yaw === 'undefined' )
+								yaw = "0";
+							
+							var roll = oldTransform.roll;
+							if( typeof roll === 'undefined' )
+								roll = "0";
+							
+							var offX = oldTransform.offX;
+							if( typeof offX === 'undefined' )
+								offX = "0";
+							
+							var offY = oldTransform.offY;
+							if( typeof offY === 'undefined' )
+								offY = "0";
+							
+							var offZ = oldTransform.offZ;
+							if( typeof offZ === 'undefined' )
+								offZ = "0";
+
+							aaapi.system.spawnEntry("items", backpackEntry.info.id, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ);
+							//aaapi.system.spawnItem(backpackEntry.info.id);
+						}
+						else
+						{
+							var oldTransform = localStorage.getItem("trans" + backpackEntry.info.id);
+
+							if( !!!oldTransform )
+								oldTransform = {};
+							else
+								oldTransform = JSON.parse(oldTransform);
+
+							var modelId = "";
+							//var modelId = oldTransform.modelId;
+							//if( typeof modelId === 'undefined' )
+							//	modelId = "";
+
+							var scale = oldTransform.scale;
+							if( typeof scale === 'undefined' )
+								scale = "1.0";
+
+							var pitch = oldTransform.pitch;
+							if( typeof pitch === 'undefined' )
+								pitch = "0";
+
+							var yaw = oldTransform.yaw;
+							if( typeof yaw === 'undefined' )
+								yaw = "0";
+							
+							var roll = oldTransform.roll;
+							if( typeof roll === 'undefined' )
+								roll = "0";
+							
+							var offX = oldTransform.offX;
+							if( typeof offX === 'undefined' )
+								offX = "0";
+							
+							var offY = oldTransform.offY;
+							if( typeof offY === 'undefined' )
+								offY = "0";
+							
+							var offZ = oldTransform.offZ;
+							if( typeof offZ === 'undefined' )
+								offZ = "0";
+							
+							aaapi.system.spawnEntry("models", backpackEntry.info.id, "", "", modelId, scale, pitch, yaw, roll, offX, offY, offZ);
+						}
+						//aaapi.system.displayTask(this.id);
+						//aaapi.system.deactivateInputMode();
+					}.bind(entryElem));
+
+					iconsContainer = document.createElement("div");
+					iconsContainer.className = "iconsContainer";
+					iconsContainer.style.cssText = "float: right;";
+
+
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton aaThemeColorOneHoverShadedBackground helpNote";
+
+					iconButton.setAttribute("help", "Edit this entry's properties.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					//iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						var pageName = (this.isItem) ? "editItem.html" : "editModel.html";
+						window.location = "asset://ui/" + pageName + "?id=" + encodeURIComponent(this.backpackEntry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/welcome.html?tab=backpack';");
+					}.bind(entryElem));
+
+					var iconHTML = arcadeHud.generateIconHTML("editicon.png", typeIconSize, typeIconSize, "aaTextColorOneColor");
+					iconButton.innerHTML = iconHTML;
+					iconsContainer.appendChild(iconButton);
+
+
+
+					iconButton = document.createElement("div");
+					iconButton.className = "taskButton aaThemeColorOneHoverShadedBackground helpNote";
+
+					iconButton.setAttribute("help", "Remove this entry from your backpack.");
+					iconButton.style.cssText = "margin-right: 8px;";
+					//iconButton.taskId = task.id;
+					iconButton.addEventListener("click", function()
+					{
+						var backpackEntry = this.backpackEntry;
+						var isItem = this.isItem;
+						var matchId = backpackEntry.info.id;
+
+						var typeName = (isItem) ? "item" : "model";
+						var foundEntry = false;
+						for( var i = 0; i < backpackEntries.length; i++ )
+						{
+							if( backpackEntries[i][typeName] === matchId )
+							{
+								backpackEntries.splice(i, 1);
+								foundEntry = true;
+								break;
+							}
+						}
+
+						if( !foundEntry )
+							console.log("ERROR: Item already exists in backpack.");
+						else
+						{
+							localStorage.setItem("myBackpack", JSON.stringify(backpackEntries));
+							aaapi.system.addToastMessage("Removed From Backpack");
+							location.reload();
+						}
+					}.bind(entryElem));
+
+					var iconHTML = arcadeHud.generateIconHTML("backpackremoveicon.png", typeIconSize, typeIconSize, "aaTextColorOneColor");
+					iconButton.innerHTML = iconHTML;
+					iconsContainer.appendChild(iconButton);
+
+					backpackEntryContainer.appendChild(iconsContainer);
+
+					backpackEntryContainer.appendChild(entryElem);
+					backpackContainer.appendChild(backpackEntryContainer);
+				}
+
+
+				// test stimuli
+				/*
+				var backpackEntries = [
+					{
+						"item": "-pIfOJJYD8G1t3rDPKzW"
+					},
+					{
+						"model": "06369288"
+					}
+				];
+				*/
+
+				backpackEntries = localStorage.getItem("myBackpack");
+				if( !!backpackEntries )
+					backpackEntries = JSON.parse(backpackEntries);
+				else
+					backpackEntries = [];
+
+				var typeIconSize = "38px";
+
+				if( backpackEntries.length > 0 )
+					document.querySelector("#noEntriesInBackpack").style.display = "none";
+				else
+					document.querySelector("#noEntriesInBackpack").style.display = "block";
+
+				var entryInfo, entry, hasItem, hasModel, item, model;
+				for( var i = 0; i < backpackEntries.length; i++ )
+				{
+					entryInfo = backpackEntries[i];
+					hasItem = (!!entryInfo.item);
+					hasModel = (!!entryInfo.model);
+					if( hasItem )
+						entry = aaapi.library.getLibraryItem(entryInfo.item);
+					else if( hasModel )
+						entry = aaapi.library.getLibraryModel(entryInfo.model);
+					else
+						entry = undefined;
+
+					if( !!entry )
+						appendBackpackEntry(entry, hasItem);
+				}
+			}
 
 		</script>
 

@@ -44,6 +44,7 @@ public:
 	C_SteamBrowserInstance* GetSelectedSteamBrowserInstance() { return m_pSelectedSteamBrowserInstance; }
 	C_InputListenerSteamBrowser* GetInputListener() { return m_pInputListener; }
 	C_SteamBrowserListener* GetBrowserListener() { return m_pBrowserListener; }
+	bool IsSupported() { return m_bSupported; }
 
 	// mutators	
 
@@ -54,6 +55,7 @@ private:
 	C_SteamBrowserInstance* m_pSelectedSteamBrowserInstance;
 	C_SteamBrowserInstance* m_pFocusedSteamBrowserInstance;
 	std::vector<C_SteamBrowserInstance*> m_steamBrowserInstances;
+	bool m_bSupported;
 	//std::map<std::string, C_SteamBrowserInstance*> m_steamBrowserInstances;
 	//std::map<std::string, C_SteamBrowserInstance*> m_defunctSteamBrowserInstances;
 	//std::map<unsigned int, std::string> m_steamBrowserInstanceIds;

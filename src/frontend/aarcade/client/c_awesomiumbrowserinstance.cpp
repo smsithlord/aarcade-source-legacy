@@ -972,6 +972,19 @@ bool C_AwesomiumBrowserInstance::RequestLoadSimpleImage(std::string channel, std
 	args.push_back(channel);
 	args.push_back(itemId);	// these should also be remembered locally too, so we can load entire websites as images too.
 
+	/*
+	// for legacy resolving, we need to send the item type also
+	std::string itemTypeTitle = "";
+	KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId));
+	if (pItemKV)
+	{
+		KeyValues* pTypeKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryType(pItemKV->GetString("type")));
+		if (pTypeKV)
+			itemTypeTitle = pTypeKV->GetString("title");
+	}
+	args.push_back(itemTypeTitle);
+	*/
+
 	m_iNumImagesLoading++;
 	DispatchJavaScriptMethod("imageLoader", "loadImage", args);
 	return true;

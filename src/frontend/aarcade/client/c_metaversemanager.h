@@ -4,6 +4,7 @@
 #include "c_webtab.h"
 #include "filesystem.h"
 #include "c_instancemanager.h"
+#include "c_anarchymanager.h"
 //#include "c_prop_shortcut.h"
 #include "../../sqlite/include/sqlite/sqlite3.h"
 
@@ -43,17 +44,22 @@ public:
 	int ExtractLibraryVersion(sqlite3** pDb = null);
 
 	bool ConvertLibraryVersion(unsigned int uOld, unsigned int uTarget);
+	bool CreateLibraryBackup();
+	unsigned int GetLibraryDbSize();
 
 	void Update();
 
 	//void ImportSteamGame(std::string name, std::string appid);
 	void ImportSteamGames(KeyValues* kv);
+	void ImportNextSteamGame();
+	void StartImportSteamGames();
 
 	void ModelFileChanged(std::string id);
 	void AddModel(KeyValues* pModel);
 	void AddItem(KeyValues* pItem);
 	void AddType(KeyValues* pType);
 	void SaveItem(KeyValues* pItem, sqlite3* pDb = null);
+	void SaveApp(KeyValues* pApp, sqlite3* pDb = null);
 	void SaveModel(KeyValues* pItem, sqlite3* pDb = null);
 	void SaveType(KeyValues* pType, sqlite3* pDb = null);
 	//void SaveMap(KeyValues* pMap, sqlite3* pDb = null);
@@ -61,6 +67,7 @@ public:
 	void DeleteSQL(sqlite3** pDb, const char* tableName, const char* id);
 	//KeyValues* CreateItem(KeyValues* pInfo);
 	bool CreateItem(int iLegacy, std::string itemId, KeyValues* pItemKV, std::string title, std::string description, std::string file, std::string type, std::string app, std::string reference, std::string preview, std::string download, std::string stream, std::string screen, std::string marquee, std::string model);
+	bool DeleteApp(std::string appId);
 
 	void SmartMergItemKVs(KeyValues* pItemA, KeyValues* pItemB, bool bPreferFirst = true);// , bool bFullMerg, bool bRefreshArtworkIfNeeded = true);
 
@@ -81,6 +88,8 @@ public:
 	void LoadNextLocalItemLegacy();
 	void LoadLocalItemLegacyClose();
 	void ResolveLoadLocalItemLegacyBuffer();
+
+	void AddApp(KeyValues* pAppKV);
 
 	// local
 	std::string ResolveLegacyType(std::string legacyType);
@@ -103,7 +112,7 @@ public:
 	KeyValues* LoadNextLocalApp();
 	void LoadLocalAppClose();
 
-	const char* GetFirstLibraryEntry(KeyValues*& response, const char* category);
+	std::string GetFirstLibraryEntry(KeyValues*& response, const char* category);//const char* 
 	KeyValues* GetNextLibraryEntry(const char* queryId, const char* category);
 
 	KeyValues* GetFirstLibraryItem();	// LEGACY OBSOLETE
@@ -119,6 +128,13 @@ public:
 
 	KeyValues* GetLibraryModel(std::string id);
 	//KeyValues* FindLibraryModel(KeyValues* pSearchInfo, bool bExactOnly);
+
+	KeyValues* GetFirstLibraryApp();
+	KeyValues* GetNextLibraryApp();
+	KeyValues* FindFirstLibraryApp(KeyValues* pSearchInfo);
+	KeyValues* FindNextLibraryApp();
+	KeyValues* FindLibraryApp(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
+	KeyValues* FindLibraryApp(KeyValues* pSearchInfo);
 
 	std::string FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryEntry(const char* queryId, const char* category);	// TODO: get rid of category and store that info in the search context (just like pSearchInfo is.)
@@ -136,8 +152,8 @@ public:
 	std::string GetSpecialTypeId(std::string typeTitle);
 	std::string GetSpecialModelId(std::string modelType);
 
-	KeyValues* GetFirstLibraryApp();
-	KeyValues* GetNextLibraryApp();
+//	KeyValues* GetFirstLibraryApp();
+//	KeyValues* GetNextLibraryApp();
 	KeyValues* GetLibraryApp(std::string id);
 
 	KeyValues* GetScreenshot(std::string id);
@@ -158,6 +174,11 @@ public:
 	std::map<std::string, KeyValues*>& GetAllApps() { return m_apps; }
 	void DetectAllLegacyCabinets();
 	void DetectAllMaps();
+	void DetectAllModels();	// OBSOLETE!!
+	unsigned int ProcessModels(importInfo_t* pImportInfo);
+	KeyValues* CreateModelFromFileTarget(std::string modelFile);
+	bool ProcessModel(std::string modelFile);
+	unsigned int DetectAllModelsRecursive(const char* folder);//(std::string pathname, FileFindHandle_t hFile, const char* pFilename);
 	KeyValues* DetectFirstMap(bool& bAlreadyExists);
 	KeyValues* DetectNextMap(bool& bAlreadyExists);
 	void OnDetectAllMapsCompleted();
@@ -193,8 +214,16 @@ public:
 
 	KeyValues* GetPreviousSearchInfo() { return m_pPreviousSearchInfo; }
 	KeyValues* GetPreviousModelSearchInfo() { return m_pPreviousModelSearchInfo; }
+	KeyValues* GetPreviousAppSearchInfo() { return m_pPreviousAppSearchInfo; }
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 	std::string GetLoadingScreenshotId() { return m_loadingScreenshotId; }
+
+	// these should only be used for grabbing iterators!!
+	std::map<std::string, KeyValues*> GetMapsMap() { return m_maps; }
+	std::map<std::string, KeyValues*> GetAppsMap() { return m_apps; }
+	std::map<std::string, KeyValues*> GetModelsMap() { return m_models; }
+	std::map<std::string, KeyValues*> GetItemsMap() { return m_items; }
+	std::map<std::string, KeyValues*> GetTypesMap() { return m_types; }
 
 	// mutators
 	void SetSpawningRotationAxis(int value) { m_iSpawningRotationAxis = value; }
@@ -204,6 +233,12 @@ public:
 	void SetLoadingScreenshotId(std::string val) { m_loadingScreenshotId = val; }
 	
 private:
+	//unsigned int m_uProcessBatchSize;
+	//unsigned int m_uProcessCurrentCycle;
+	unsigned int m_uNumSteamGamesToImport;
+	unsigned int m_uNumSteamGamesToImported;
+	KeyValues* m_pImportSteamGamesKV;
+	KeyValues* m_pImportSteamGamesSubKV;
 	std::string m_loadingScreenshotId;
 	std::vector<std::string> m_defaultFields;
 
@@ -234,9 +269,12 @@ private:
 	std::map<std::string, KeyValues*>::iterator m_previousGetItemIterator;	// are these used yet?????
 	std::map<std::string, KeyValues*>::iterator m_previousFindItemIterator;
 	std::map<std::string, KeyValues*>::iterator m_previousGetModelIterator;
+//	std::map<std::string, KeyValues*>::iterator m_previousGetAppIterator;
 	std::map<std::string, KeyValues*>::iterator m_previousFindModelIterator;
+	std::map<std::string, KeyValues*>::iterator m_previousFindAppIterator;
 	KeyValues* m_pPreviousSearchInfo;
 	KeyValues* m_pPreviousModelSearchInfo;
+	KeyValues* m_pPreviousAppSearchInfo;
 
 	FileFindHandle_t m_previousLoadLocalAppFileHandle;
 	std::string m_previousLoadLocalAppFilePath;

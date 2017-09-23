@@ -29,7 +29,9 @@ function ArcadeHud()
 	this.fileBrowseHandles = {};
 	this.metaScrapeHandles = {};
 	this.activeScraper = null;
-	this.libretroOverlay = null
+	this.activeScraperId = "";
+	this.libretroOverlay = null;
+	this.libretroOverlayContainer = null;
 	this.activeScraperItemId = "";
 	this.activeScraperField = "";
 	this.embeddedInstanceType = "";
@@ -1259,14 +1261,52 @@ ArcadeHud.prototype.displayLibretroOverlay = function(overlay)
 
 		if( !!!this.libretroOverlay )
 		{
+			/*
 			this.libretroOverlay = document.createElement("img");
 			this.libretroOverlay.id = "aaLibretroOverlayImage";
-			this.libretroOverlay.style.cssText = "position: fixed; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none; width: 100%; height: 100%;";
+			this.libretroOverlay.style.cssText = "position: fixed; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none; margin-left: auto; margin-right: auto; height: 100%;";
 			document.body.insertBefore(this.libretroOverlay, document.body.firstChild);
 		}
+		this.libretroOverlay.src = "overlays/" + overlay.overlayId + ".png";
+		*/
+			this.libretroOverlayContainer = document.createElement("table");
+			this.libretroOverlayContainer.border = "0";
+			this.libretroOverlayContainer.cellSpacing = "0";
+			this.libretroOverlayContainer.cellPadding = "0";
+			this.libretroOverlayContainer.id = "aaLibretroOverlayImageContainer";
+			this.libretroOverlayContainer.style.cssText = "display: none; border-collapse: separate; empty-cells: show; position: fixed; pointer-events: none; left: 0; top: 0; height: 100%; width: 100%;";
 
-		//if( this.overlayId !== overlay.overlayId )
-			this.libretroOverlay.src = "overlays/" + overlay.overlayId + ".png";
+			var tr = document.createElement("tr");
+			var td = document.createElement("td");
+			td.style.width = "30%";
+			//td.className = "aaThemeColorOneShadedBackground";
+			td.style.backgroundColor = "#000";
+			tr.appendChild(td);
+
+			td = document.createElement("td");
+			td.style.width = "1%";
+			td.align = "center";
+			this.libretroOverlay = document.createElement("img");
+			this.libretroOverlay.addEventListener("load", function(e)
+			{
+				this.parentNode.style.width = this.offsetWidth + "px";
+				this.parentNode.parentNode.parentNode.style.display = "table";
+			}.bind(this.libretroOverlay), true);
+			this.libretroOverlay.id = "aaLibretroOverlayImage";
+			this.libretroOverlay.style.cssText = "display: none; pointer-events: none; height: 1080px; max-width: 1920px;";
+			td.appendChild(this.libretroOverlay);
+			tr.appendChild(td);
+
+			td = document.createElement("td");
+			td.style.width = "30%";
+			//td.className = "aaThemeColorOneShadedBackground";
+			td.style.backgroundColor = "#000";
+			tr.appendChild(td);
+
+			this.libretroOverlayContainer.appendChild(tr);
+			document.body.insertBefore(this.libretroOverlayContainer, document.body.firstChild);
+		}
+		this.libretroOverlay.src = "overlays/" + overlay.overlayId + ".png";
 
 		this.libretroOverlay.style.display = "block";
 	}
@@ -1344,6 +1384,7 @@ ArcadeHud.prototype.getURL = function()
 ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 {
 	this.url = url;
+	this.activeScraperId = scraperId;	// this is not the ONLY place this is set.  it's also set at the OnSomethingSeomthingRequestState method too. :S
 
 	if( !!this.addressElem && this.addressElem.value !== this.url )
 	{
@@ -1378,7 +1419,8 @@ ArcadeHud.prototype.onActivateInputMode = function(
 		libretroOverlayY,
 		libretroOverlayWidth,
 		libretroOverlayHeight,
-		libretroOverlayId
+		libretroOverlayId,
+		activeScraperId
 	)
 {
 	console.log("onActivateInputMode received.");
@@ -1392,6 +1434,13 @@ ArcadeHud.prototype.onActivateInputMode = function(
 	canStream = (canStream == "1") ? true : false;
 	canPreview = (canPreview == "1") ? true : false;
 	libretroCanRun = (libretroCanRun == "1") ? true : false;
+
+	if( !!!activeScraperId )
+		activeScraperId = "";
+	console.log(activeScraperId);
+
+	// should we set active scraper ID for the arcadeHud here? (probably, why not.)
+	this.activeScraperId = activeScraperId;
 
 	// handle all aaOnlyIfMapLoaded elems
 	var elems = document.querySelectorAll(".aaOnlyIfMapLoaded");
@@ -1567,6 +1616,7 @@ ArcadeHud.prototype.onActivateInputMode = function(
 	}
 
 	// call any callback on the page, if one exists.
+	//console.log("PRIOR: " + activeScraperId);
 	if( typeof window["aaOnActivateInputMode"] === "function" )
 		window["aaOnActivateInputMode"]({
 			"fullscreen": isFullscreen,
@@ -1577,12 +1627,30 @@ ArcadeHud.prototype.onActivateInputMode = function(
 			"mainMenu": isMainMenu,
 			"url": url,
 			"selectedObject": isSelectedObject,
-			"embeddedInstanceType": embeddedInstanceType
+			"embeddedInstanceType": embeddedInstanceType,
+			"canStream": canStream,
+			"canPreview": canPreview,
+			"canGoForward": canGoForward,
+			"canGoBack": canGoBack,
+			"libretroCore": libretroCore,
+			"libretroFile": libretroFile,
+			"libretroCanRun": libretroCanRun,
+			"libretroOverlayX": libretroOverlayX,
+			"libretroOverlayY": libretroOverlayY,
+			"libretroOverlayWidth": libretroOverlayWidth,
+			"libretroOverlayHeight": libretroOverlayHeight,
+			"libretroOverlayId": libretroOverlayId,
+			"activeScraperId": activeScraperId
 		});
 
 	var embeddedLabel = "AArcade";
 	if( embeddedInstanceType === "SteamworksBrowser" )
-		embeddedLabel = "Web Browser";
+	{
+		//if( activeScraperId === "")
+			embeddedLabel = "Web Browser";
+		//else
+		//	embeddedLabel = "Scrape Mode";
+	}
 	else if( embeddedInstanceType === "AwesomiumBrowser" )
 		embeddedLabel = "Awesomium";
 	else if( embeddedInstanceType === "Libretro" )
@@ -2396,7 +2464,7 @@ ArcadeHud.prototype.metaSearchEasy = function()
 ArcadeHud.prototype.metaSearch = function(itemId, field, scraperId, term)
 {
 	var scraper = this.scrapers[scraperId];
-	if( !!scraper && !!scraper.search && (term === "" || scraper.search.indexOf("$TERM") >= 0) )
+	if( !!scraper && !!scraper.search && ((field === "acquire") || (term === "" || scraper.search.indexOf("$TERM") >= 0)) )
 	{
 		var query = (term !== "") ? scraper.search.replace("$TERM", term) : scraper.homepage;
 
@@ -2417,16 +2485,16 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 	{
 		if( this.activeScraper.id === "importSteamGames" )
 		{
-			console.log("Time to send " + (scrapedData.length / 2) + " Steam items to AArcade...");
+			//console.log("Time to send " + (scrapedData.length / 2) + " Steam items to AArcade...");
 
+			console.log("Attempt to scrape...");
 			var success = aaapi.system.importSteamGames(scrapedData);
 
 			if( success )
 			{
-				console.log("Steam games imported!");
-
-				//aaapi.system.autoInspect(this.activeScraperItemId);
-				aaapi.system.deactivateInputMode(true);
+				//console.log("Steam games imported!");
+				//aaapi.system.deactivateInputMode(true);
+				window.location = "asset://ui/importSteamGamesProgress.html";
 			}
 			else
 				console.log("Import rejected!");
@@ -2506,7 +2574,7 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 					console.log("Item updated!");
 
 					aaapi.system.autoInspect(this.activeScraperItemId);
-					//aaapi.system.deactivateInputMode();
+					aaapi.system.deactivateInputMode();
 				}
 				else
 					console.log("Item update rejected!");
@@ -3173,7 +3241,7 @@ ArcadeHud.prototype.dragListener = function(titleBarElem)
 	{
 		e.preventDefault();
 		document.removeEventListener("mousemove", mouseMoveListener, false);
-		document.removeEventListener(arguments.callee, true);
+		document.removeEventListener("mouseup", arguments.callee, true);
 	}, true);
 
 	document.addEventListener("mousemove", mouseMoveListener, false);
@@ -3254,7 +3322,7 @@ ArcadeHud.prototype.gripListener = function(titleBarElem)
 	{
 		e.preventDefault();
 		document.removeEventListener("mousemove", mouseMoveListener, false);
-		document.removeEventListener(arguments.callee, true);
+		document.removeEventListener("mouseup", arguments.callee, true);
 	}, true);
 
 	document.addEventListener("mousemove", mouseMoveListener, false);
@@ -3788,7 +3856,7 @@ ArcadeHud.prototype.onDOMGot = function(url, response)
 		//var callback = this.metaScrapeHandles[callId].callback;
 		delete this.metaScrapeHandles[callId];
 
-		// FIXME: WHEN DOES THE BROWSER INSTANCE CLEAR ITS ACTIVE SCRAPER????? It doesn't, but it needs to.
+		// FIXME: WHEN DOES THE BROWSER INSTANCE CLEAR ITS ACTIVE SCRAPER????? It doesn't, but it needs to. (POSSIBLY FIXED ALREADY)
 		//var results = scraper[callId](url, doc);
 		//callback(results);
 		callback(callId, url, doc);

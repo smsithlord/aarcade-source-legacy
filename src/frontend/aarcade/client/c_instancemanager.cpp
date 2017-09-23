@@ -27,6 +27,8 @@ C_InstanceManager::C_InstanceManager()
 	m_pTransform->rotR = 0;
 	m_pTransform->scale = 1.0;
 
+	m_pRecentModelIdConVar = cvar->FindVar("recent_model_id");//null;
+
 	m_incomingNodeId = "";
 
 	m_iUnspawnedWithinRangeEstimate = 0;
@@ -342,9 +344,9 @@ std::string C_InstanceManager::CreateBlankInstance(int iLegacy, KeyValues* pInst
 	pInstanceInfoKV->SetString("title", title.c_str());
 	pInstanceInfoKV->SetString("map", mapId.c_str());
 	pInstanceInfoKV->SetString("style", style.c_str());	// for nodes
-	pInstanceInfoKV->SetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID), workshopIds.c_str());
-	pInstanceInfoKV->SetString(VarArgs("platforms/%s/mountId", AA_PLATFORM_ID), mountIds.c_str());
-	//pInstanceInfoKV->SetString(VarArgs("platforms/%s/backpackId", AA_PLATFORM_ID), backpackId.c_str());
+	pInstanceInfoKV->SetString(VarArgs("platforms/%s/workshopIds", AA_PLATFORM_ID), workshopIds.c_str());
+	pInstanceInfoKV->SetString(VarArgs("platforms/%s/mountIds", AA_PLATFORM_ID), mountIds.c_str());
+	//pInstanceInfoKV->SetString(VarArgs("platforms/%s/backpackIds", AA_PLATFORM_ID), backpackId.c_str());
 
 	if (!pBackpack)
 		g_pAnarchyManager->GetInstanceManager()->AddInstance(iLegacy, instanceId, mapId, title, file, workshopIds, mountIds, style);
@@ -1216,7 +1218,9 @@ void C_InstanceManager::ChangeModel(C_BaseEntity* pEntity, std::string modelId, 
 	if (!g_pFullFileSystem->FileExists(modelFile.c_str()))
 		modelFile = "models/icons/missing.mdl";
 
-	DevMsg("Here the model id is: %s\n", modelId.c_str());
+	//DevMsg("Here the model id is: %s\n", modelId.c_str());
+
+	m_pRecentModelIdConVar->SetValue(modelId.c_str());
 
 	int iMakeGhost = (bMakeGhost) ? 1 : 0;
 	engine->ServerCmd(VarArgs("switchmodel \"%s\" \"%s\" %i %i;\n", modelId.c_str(), modelFile.c_str(), pEntity->entindex(), iMakeGhost));

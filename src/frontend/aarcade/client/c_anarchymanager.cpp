@@ -33,6 +33,7 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pHoverLabel = null;
 	m_iHoverEntityIndex = -1;
 	m_hoverTitle = "";
+	m_fHoverTitleExpiration = 0;
 
 	//m_bIgnoreNextFire = false;
 	m_tabMenuFile = "taskMenu.html";	// OBSOLETE!!
@@ -42,6 +43,9 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pLastNearestObjectToPlayerLook = null;
 
 	m_bIsDisconnecting = false;
+
+	m_pHoverTitlesConVar = null;
+	m_pToastMsgsConVar = null;
 
 	m_iLastDynamicMultiplyer = -1;
 	m_pPicMipConVar = null;
@@ -75,6 +79,16 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pNextLoadInfo->instanceId = "";
 	m_pNextLoadInfo->position = "";
 	m_pNextLoadInfo->rotation = "";
+
+	m_pImportInfo = new importInfo_t();
+	m_pImportInfo->count = 0;
+	m_pImportInfo->status = AAIMPORTSTATUS_NONE;
+	m_pImportInfo->type = AAIMPORT_NONE;
+	m_uPreviousImportCount = 0;
+	m_uLastProcessedModelIndex = 0;
+	m_uValidProcessedModelCount = 0;
+	m_uProcessBatchSize = 100;
+	m_uProcessCurrentCycle = 0;
 }
 
 C_AnarchyManager::~C_AnarchyManager()
@@ -573,6 +587,12 @@ void C_AnarchyManager::Shutdown()
 	m_pToastMessagesKV->deleteThis();
 	m_pToastMessagesKV = null;
 
+	delete m_pNextLoadInfo;
+	m_pNextLoadInfo = null;
+
+	delete m_pImportInfo;
+	m_pImportInfo = null;
+
 	DevMsg("AnarchyManager: Finished Shutdown\n");
 
 	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
@@ -826,7 +846,15 @@ void C_AnarchyManager::Update(float frametime)
 			if (m_fNextToastExpiration > 0 && m_fNextToastExpiration <= engine->Time())
 				this->PopToast();
 
+			if (m_fHoverTitleExpiration > 0 && m_fHoverTitleExpiration <= engine->Time())
+			{
+				m_hoverTitle = "";
+				m_fHoverTitleExpiration = 0;
+				this->UpdateHoverLabel();
+			}
+
 			ManageHoverLabel();
+			ManageImportScans();
 
 			//DevMsg("AnarchyManager: Update\n");
 			break;
@@ -848,7 +876,13 @@ void C_AnarchyManager::Update(float frametime)
 
 		case AASTATE_STEAMBROWSERMANAGER:
 			m_pSteamBrowserManager = new C_SteamBrowserManager();
-			g_pAnarchyManager->IncrementState();
+			if (m_pSteamBrowserManager->IsSupported())
+				g_pAnarchyManager->IncrementState();
+			else
+			{
+				m_state = AASTATE_NONE;
+				m_bIncrementState = false;
+			}
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGER:
@@ -918,68 +952,88 @@ void C_AnarchyManager::ManageHoverLabel()
 	if (!m_pHoverLabel)
 		return;
 
-	// get the entity under the player's crosshair
-	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
-	if (!pPlayer)
-		return;
-
-	if (pPlayer->GetHealth() <= 0)
-		return;
-
-	C_BaseEntity* pEntity = null;
-	// fire a trace line
-	trace_t tr;
-	Vector forward;
-	pPlayer->EyeVectors(&forward);
-	UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
-
-	int iEntityIndex;
-	if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
-	{
-		pEntity = tr.m_pEnt;
-		iEntityIndex = pEntity->entindex();
-	}
+	float fHoverTitleDuration = 4.0;
 
 	bool bChanged = false;
 	int iHoverEntityIndex = -1;
 	std::string hoverTitle = "";
-	if (pEntity)
+
+	if (!m_pHoverTitlesConVar->GetBool())
 	{
-		//if (m_iHoverEntityIndex == iEntityIndex)
-			//hoverTitle = m_hoverTitle;
-		if ( m_iHoverEntityIndex != iEntityIndex)
-		{
+		if (m_iHoverEntityIndex != -1)
 			bChanged = true;
-
-			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
-			if (pShortcut)
-			{
-				std::string itemId = pShortcut->GetItemId();
-
-				C_EmbeddedInstance* pDisplayInstance = m_pCanvasManager->GetDisplayInstance();
-				std::string displayItemId = (pDisplayInstance) ? pDisplayInstance->GetOriginalItemId() : "";
-
-				object_t* pObject = m_pInstanceManager->GetInstanceObject(pShortcut->GetObjectId());
-				if (itemId != "" && (displayItemId == "" || !pObject->slave || itemId == displayItemId))
-				{
-					// an item.
-					KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(itemId));
-					if (pItemKV)
-						hoverTitle = pItemKV->GetString("title");
-				}
-				else if (displayItemId != "")
-				{
-					KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(displayItemId));
-					if (pItemKV)
-						hoverTitle = pItemKV->GetString("title");// std::string(pItemKV->GetString("title")) + " (slave)";
-				}
-			}
-
-			iHoverEntityIndex = iEntityIndex;
-		}
+		else
+			return;
 	}
-	else if ( m_iHoverEntityIndex != -1 )
-		bChanged = true;
+	else
+	{
+		// get the entity under the player's crosshair
+		C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+		if (!pPlayer)
+			return;
+
+		if (pPlayer->GetHealth() <= 0)
+			return;
+
+		C_BaseEntity* pEntity = null;
+		// fire a trace line
+		trace_t tr;
+		Vector forward;
+		pPlayer->EyeVectors(&forward);
+		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE, MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr);
+
+		int iEntityIndex;
+		if (tr.fraction != 1.0 && tr.DidHitNonWorldEntity())
+		{
+			pEntity = tr.m_pEnt;
+			iEntityIndex = pEntity->entindex();
+		}
+
+		if (pEntity)
+		{
+			//if (m_iHoverEntityIndex == iEntityIndex)
+			//hoverTitle = m_hoverTitle;
+			if (m_iHoverEntityIndex != iEntityIndex)
+			{
+				bChanged = true;
+
+				C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
+				if (pShortcut)
+				{
+					std::string itemId = pShortcut->GetItemId();
+
+					C_EmbeddedInstance* pDisplayInstance = m_pCanvasManager->GetDisplayInstance();
+					std::string displayItemId = (pDisplayInstance) ? pDisplayInstance->GetOriginalItemId() : "";
+
+					object_t* pObject = m_pInstanceManager->GetInstanceObject(pShortcut->GetObjectId());
+					if (itemId != "" && (displayItemId == "" || !pObject->slave || pEntity == m_pSelectedEntity || itemId == displayItemId))
+					{
+						// an item.
+						KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(itemId));
+						if (pItemKV)
+							hoverTitle = pItemKV->GetString("title");
+						else
+						{
+							KeyValues* pModelKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryModel(itemId));
+							if (pModelKV)
+								hoverTitle = pModelKV->GetString("title");
+						}
+					}
+					else if (displayItemId != "")
+					{
+						KeyValues* pItemKV = this->GetMetaverseManager()->GetActiveKeyValues(this->GetMetaverseManager()->GetLibraryItem(displayItemId));
+						if (pItemKV)
+							hoverTitle = pItemKV->GetString("title");// std::string(pItemKV->GetString("title")) + " (slave)";
+					}
+				}
+
+				m_fHoverTitleExpiration = engine->Time() + fHoverTitleDuration;
+				iHoverEntityIndex = iEntityIndex;
+			}
+		}
+		else if (m_iHoverEntityIndex != -1)
+			bChanged = true;
+	}
 
 	if (bChanged)
 	{
@@ -1012,6 +1066,30 @@ void C_AnarchyManager::UpdateHoverLabel()
 	delete[] wc;
 }
 
+std::string C_AnarchyManager::ExtractRelativeAssetPath(std::string fullPath)
+{
+	std::string path = fullPath;
+	bool bUseBackslash = (path.find("\\") != std::string::npos);
+	size_t foundFirstSlash = (bUseBackslash) ? path.find_first_of("\\") : path.find_first_of("/");
+	std::string token;
+	while (foundFirstSlash != std::string::npos)
+	{
+		token = path.substr(0, foundFirstSlash);
+		std::transform(token.begin(), token.end(), token.begin(), ::tolower);
+		if (token == "models" && g_pFullFileSystem->FileExists(path.c_str(), "GAME"))
+			break;
+		else
+			path = path.substr(foundFirstSlash + 1);
+
+		foundFirstSlash = (bUseBackslash) ? path.find_first_of("\\") : path.find_first_of("/");
+	}
+
+	if (foundFirstSlash != std::string::npos)
+		return path;
+	else
+		return fullPath;
+}
+
 void C_AnarchyManager::PopToast()
 {
 	std::vector<KeyValues*> deadMessages;
@@ -1041,6 +1119,9 @@ void C_AnarchyManager::PopToast()
 
 void C_AnarchyManager::AddToastMessage(std::string text)
 {
+	if (!m_pToastMsgsConVar->GetBool())
+		return;
+
 	float fToastDuration = 7.0;
 
 	float fEndTime = engine->Time() + fToastDuration;
@@ -1204,10 +1285,7 @@ bool C_AnarchyManager::HandleUiToggle()
 {
 	// ignore the start button on the gamepad if we are NOT the focused window
 	HWND myHWnd = FindWindow(null, "AArcade: Source");
-	//HWND myHWnd = GetActiveWindow();
-	//HWND topHWnd = GetTopWindow(null);
 	HWND foregroundWindow = GetForegroundWindow();
-	//if (myHWnd != topHWnd)
 	if (myHWnd != foregroundWindow)
 		return true;
 
@@ -1310,11 +1388,13 @@ bool C_AnarchyManager::HandleUiToggle()
 	{
 		if (this->GetMetaverseManager()->GetSpawningObjectEntity())
 		{
+			std::string mode = this->GetMetaverseManager()->GetLibraryBrowserContext("id");
+
 			g_pAnarchyManager->DeactivateObjectPlacementMode(false);
 
 			// undo changes AND cancel
 			C_PropShortcutEntity* pShortcut = g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity();
-			g_pAnarchyManager->DeactivateObjectPlacementMode(false);
+			g_pAnarchyManager->DeactivateObjectPlacementMode(false);	// FIXME: probably does absolutely NOTHING calling it twice, but make sure before removing this line.
 
 			//std::string id = pShortcut->GetObjectId();
 			//g_pAnarchyManager->GetInstanceManager()->ResetObjectChanges(pShortcut);
@@ -1322,6 +1402,11 @@ bool C_AnarchyManager::HandleUiToggle()
 			// "save" cha
 			//m_pInstanceManager->ApplyChanges(id, pShortcut);
 			DevMsg("CHANGES REVERTED\n");
+
+			if (mode == "automove")
+				this->AddToastMessage("Move Canceled");
+			else
+				this->AddToastMessage("Spawn Canceled");
 		}
 		else
 		{
@@ -1947,10 +2032,11 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 
 		// if there is an active node kv for the item, attempt to get file
 		file = itemActive->GetString("file");
+
 		if (file != "")
 		{
 			// does it have an app?
-			if (Q_strcmp(itemActive->GetString("app"), ""))
+			if (Q_strcmp(itemActive->GetString("app"), "") && Q_strcmp(itemActive->GetString("app"), "Windows (default)"))	// to catch erronous items created by the bugged create & edit item menus
 			{
 				bHasApp = true;
 
@@ -1963,13 +2049,30 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 					bAppGood = true;
 
 					appExecutable = appActive->GetString("file");
-					if (appExecutable != "")
+					if (appExecutable != "" && g_pFullFileSystem->FileExists(appExecutable.c_str()))
 					{
 						bAppExecutableGood = true;
+						appCommands = appActive->GetString("commandformat");
+
+
+						std::string slash = "";
+						std::string otherSlash = "";
+						if (appCommands.find("\\") != std::string::npos)
+						{
+							slash = "\\";
+							otherSlash = "/";
+						}
+						else if (appCommands.find("/") != std::string::npos)
+						{
+							slash = "/";
+							otherSlash = "\\";
+						}
 
 						// just grab the FIRST filepath for now.
 						// FIXME: Need to keep searching through filepaths until the item's file is found inside of one.
 						// Note: Apps are not required to have a filepath specified.
+						std::string shortFileOnly = file;
+						bool bShortFileResolved = false;
 						std::string testFile;
 						std::string testPath;
 						KeyValues* filepaths = appActive->FindKey("filepaths", true);
@@ -1981,25 +2084,73 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 
 							testPath = sub->GetString("path");
 
+							// remove any trailing slash
+							size_t foundLastSlash = testPath.find_last_of("/\\");
+							if (foundLastSlash == testPath.length() - 1)
+								testPath = testPath.substr(0, foundLastSlash);
+
 							// test if this path exists
 							// FIXME: always assume it exists for now
 							//if (true)
-							if (g_pFullFileSystem->FileExists(testPath.c_str()))
+							if (g_pFullFileSystem->IsDirectory(testPath.c_str()))//g_pFullFileSystem->FileExists(testPath.c_str()))
 							{
 								bAtLeastOneAppFilepathExists = true;
 
 								// test if the file exists inside of this filepath
-								testFile = testPath + file;
+								std::string testSlash = (testPath.find("\\") != std::string::npos) ? "\\" : "/";
+								std::string testOtherSlash = (testSlash == "\\") ? "/" : "\\";
+
+								std::replace(testPath.begin(), testPath.end(), testOtherSlash[0], testSlash[0]);	// slashes should all be the same direction.
+
+								// lets create a short file
+								std::string testShortFileOnly = shortFileOnly;
+								std::replace(testShortFileOnly.begin(), testShortFileOnly.end(), testOtherSlash[0], testSlash[0]);	// slashes should all be the same direction.
+
+								// if the testPath is found at the base of the short file, simply subtract it
+								size_t found = testShortFileOnly.find(testPath);
+								if (found == 0)
+									testShortFileOnly = testShortFileOnly.substr(found + testPath.length() + 1);
+								else if (testShortFileOnly.find(":") != std::string::npos)
+								{
+									size_t foundLastSlash = testShortFileOnly.find_last_of("/\\");
+									if (foundLastSlash != std::string::npos)
+										testShortFileOnly = testShortFileOnly.substr(foundLastSlash + 1);
+								}
+								testFile = testPath + testSlash + testShortFileOnly;	// NOTE: This might be the full path if the full path has no ":" in it.
 
 								// FIXME: always assume the file exists in this path for now.
-								if (g_pFullFileSystem->FileExists(testFile.c_str()))
+								FileFindHandle_t findHandle;
+								const char* pFilename = g_pFullFileSystem->FindFirstEx(testFile.c_str(), "", &findHandle);
+
+								if (pFilename != NULL)
 								{
+									shortFileOnly = testShortFileOnly;
+
+									if (slash == "")
+									{
+										slash = testSlash;
+										otherSlash = testOtherSlash;
+									}
+
+									bShortFileResolved = true;
 									composedFile = testFile;
 									appFilepath = testPath;
 									bAppFilepathGood = true;
 									bItemFileGood = true;
+									g_pFullFileSystem->FindClose(findHandle);
 									break;
 								}
+								g_pFullFileSystem->FindClose(findHandle);
+							}
+						}
+
+						if (!bShortFileResolved)
+						{
+							if (shortFileOnly.find(":") != std::string::npos)
+							{
+								size_t foundLastSlash = shortFileOnly.find_last_of("/\\");
+								if (foundLastSlash != std::string::npos)
+									shortFileOnly = shortFileOnly.substr(foundLastSlash + 1);
 							}
 						}
 
@@ -2007,9 +2158,14 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 						if (!bAppFilepathGood)
 							composedFile = file;
 
+						if (slash != "")
+						{
+							std::replace(shortFileOnly.begin(), shortFileOnly.end(), otherSlash[0], slash[0]);	// slashes should all be the same direction.
+							std::replace(composedFile.begin(), composedFile.end(), otherSlash[0], slash[0]);	// slashes should all be the same direction.
+						}
+
 						// generate the commands
 						// try to apply a command format
-						appCommands = appActive->GetString("commandformat");
 						if (appCommands != "")
 						{
 							// if the app has a command syntax, replace item variables with their values.
@@ -2034,6 +2190,16 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 								}
 								else
 									errorType = UNKNOWN_ERROR;
+							}
+
+							found = appCommands.find("$SHORTFILE");
+							if (found != std::string::npos)
+							{
+								while (found != std::string::npos)
+								{
+									appCommands.replace(found, 10, shortFileOnly);
+									found = appCommands.find("$SHORTFILE");
+								}
 							}
 
 							found = appCommands.find("$QUOTE");
@@ -2233,6 +2399,17 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 			}
 		}
 
+
+		// we may have launched from something on continous play, so lets check for that case...
+		std::vector<C_EmbeddedInstance*> embeddedInstances;
+		m_pCanvasManager->GetAllInstances(embeddedInstances);
+		unsigned int max = embeddedInstances.size();
+		for (unsigned int i = 0; i < max; i++)
+		{
+			if (embeddedInstances[i]->GetOriginalItemId() == id)
+				embeddedInstances[i]->Close();
+		}
+
 		// launch the item
 		g_pAnarchyManager->ArcadeCreateProcess(executable, executableDirectory, masterCommands);
 	}
@@ -2240,6 +2417,37 @@ launchErrorType_t C_AnarchyManager::LaunchItem(std::string id)
 	//	DevMsg("ERROR: Could not launch item.\n");
 
 	return errorType;
+}
+
+void C_AnarchyManager::Acquire(std::string query)
+{
+	//DevMsg("DISPLAY MAIN MENU\n");
+	if (m_pSelectedEntity)
+		this->DeselectEntity("asset://ui/welcome.html");
+	else
+	{
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+		pHudBrowserInstance->SetUrl("asset://ui/welcome.html");
+	}
+
+	m_pInputManager->ActivateInputMode(true, true);
+
+	FileHandle_t launch_file = filesystem->Open("Arcade_Launcher.bat", "w", "EXECUTABLE_PATH");
+	if (!launch_file)
+	{
+		Msg("Error creating ArcadeLauncher.bat!\n");
+		return;
+	}
+
+	if (query.find("\"") == std::string::npos)
+	{
+		std::string goodQuery = "\"" + query + "\"";
+		filesystem->FPrintf(launch_file, "START \"Launching web browser...\" %s", goodQuery.c_str());
+		filesystem->Close(launch_file);
+		system("Arcade_Launcher.bat");
+	}
+	else
+		DevMsg("ERROR: Invalid URL detected.  Cannot have quotes in it.\n");
 }
 
 void C_AnarchyManager::BeginImportSteamGames()
@@ -2257,13 +2465,7 @@ void C_AnarchyManager::BeginImportSteamGames()
 	// 4. Import all games from their list into a KeyValues file ownedGames.key
 	// 5. Load all entries from ownedGames.key as items, but do not automatically save them out until the user modifies them.
 
-	this->GetInputManager()->DeactivateInputMode(true);
-
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
-	if (g_pAnarchyManager->GetSelectedEntity())
-		g_pAnarchyManager->DeselectEntity("asset://ui/overlay.html");
-	else
-		pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
 
 	CSteamID sid = steamapicontext->SteamUser()->GetSteamID();
 	std::string profileUrl = "http://www.steamcommunity.com/profiles/" + std::string(VarArgs("%llu", sid.ConvertToUint64())) + "/games/?tab=all";
@@ -2271,12 +2473,22 @@ void C_AnarchyManager::BeginImportSteamGames()
 	C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
 	pSteamBrowserInstance->SetActiveScraper("importSteamGames", "", "");
 
+	//this->HudStateNotify();	// So the UI knows we have a scraper PRIOR to loading a overlay.html (so overlay.html can perform auto-hide or auto-close)
+
+	if (g_pAnarchyManager->GetSelectedEntity())
+		g_pAnarchyManager->DeselectEntity("asset://ui/overlay.html");
+	else
+		pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
+
+	this->GetInputManager()->DeactivateInputMode(true);
+
 	std::string id = "scrape" + std::string(g_pAnarchyManager->GenerateUniqueId());
 
 	pSteamBrowserInstance->Init(id, profileUrl, "Steam Game Importer", null);
 	pSteamBrowserInstance->Focus();
 	pSteamBrowserInstance->Select();
 	g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance(pSteamBrowserInstance);
+	//this->HudStateNotify();	// So the UI knows we have a scraper PRIOR to loading a overlay.html (so overlay.html can perform auto-hide or auto-close)
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pSteamBrowserInstance);
 }
 
@@ -2514,6 +2726,7 @@ void C_AnarchyManager::ArcadeCreateProcess(std::string executable, std::string e
 	DevMsg("Finished launching item.\n");
 }
 
+#include "aarcade/client/c_earlyerror.h"
 void C_AnarchyManager::RunAArcade()
 {
 	if (!this->IsInitialized())
@@ -2599,9 +2812,15 @@ void C_AnarchyManager::HudStateNotify()
 	// embeddedInstanceType
 	bool bCanGoForward = false;
 	bool bCanGoBack = false;
+	std::string activeScraperId;
 	std::string libretroCore = "";
 	std::string libretroFile = "";
 	std::string embeddedType = "Unknown";
+
+	C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+	if (pSteamBrowserInstance)
+		activeScraperId = pSteamBrowserInstance->GetScraperId();
+
 	if (pEmbeddedInstance)
 	{
 		pEmbeddedInstance->GetFullscreenInfo(fPositionX, fPositionY, fSizeX, fSizeY, overlayId);
@@ -2614,7 +2833,7 @@ void C_AnarchyManager::HudStateNotify()
 			libretroFile = pLibretroInstance->GetLibretroFile();
 		}
 
-		C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
+		//C_SteamBrowserInstance* pSteamBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(pEmbeddedInstance);
 		if (pSteamBrowserInstance)
 		{
 			embeddedType = "SteamworksBrowser";
@@ -2658,6 +2877,7 @@ void C_AnarchyManager::HudStateNotify()
 	params.push_back(VarArgs("%f", fSizeX));
 	params.push_back(VarArgs("%f", fSizeY));
 	params.push_back(overlayId);
+	params.push_back(activeScraperId);
 	
 	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
 }
@@ -3389,12 +3609,43 @@ void C_AnarchyManager::Disconnect()
 	//}
 }
 
+bool C_AnarchyManager::CheckVideoCardAbilities()
+{
+	ITexture* pTestTexture = g_pMaterialSystem->CreateProceduralTexture("test", TEXTURE_GROUP_VGUI, AA_EMBEDDED_INSTANCE_WIDTH, AA_EMBEDDED_INSTANCE_HEIGHT, IMAGE_FORMAT_BGR888, 1);
+	int multiplyer = g_pAnarchyManager->GetDynamicMultiplyer();
+
+	if (!pTestTexture || pTestTexture->IsError() || pTestTexture->GetActualWidth() * multiplyer != AA_EMBEDDED_INSTANCE_WIDTH || pTestTexture->GetActualHeight() * multiplyer != AA_EMBEDDED_INSTANCE_HEIGHT)
+	{
+		if (pTestTexture)
+			pTestTexture->DeleteIfUnreferenced();
+
+		return false;
+	}
+	else
+	{
+		if (pTestTexture)
+			pTestTexture->DeleteIfUnreferenced();
+
+		return true;
+	}
+}
+
 void C_AnarchyManager::AnarchyStartup()
 {
+	// check for black screen bug
+	if (!this->CheckVideoCardAbilities())
+	{
+		this->ThrowEarlyError("Sorry, your video card is not currently supported by Anarchy Arcade!\nPlease notify SM Sith Lord (the developer) of what video card you\nhave so support can be added!");
+		return;
+	}
+
+
 	DevMsg("AnarchyManager: AnarchyStartup\n");
 	m_bIncrementState = true;
 
 	m_pWeaponsEnabledConVar = cvar->FindVar("r_drawviewmodel");
+	m_pHoverTitlesConVar = cvar->FindVar("cl_hovertitles");
+	m_pToastMsgsConVar = cvar->FindVar("cl_toastmsgs");
 
 	ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
 	m_oldEngineNoFocusSleep = pConVar->GetString();
@@ -3459,6 +3710,343 @@ bool C_AnarchyManager::OnSteamBrowserCallback(unsigned int unHandle)
 	return true;
 }
 
+unsigned int DetectAllModelsRecursiveThreaded(const char* folder, importInfo_t* pInfo)
+{
+	KeyValues* pSearchInfoKV = new KeyValues("search");
+	unsigned int count = 0;
+	FileFindHandle_t hFileSearch;
+	std::string composedFile;
+	std::string modelFile;
+	KeyValues* pEntry;
+	KeyValues* pModel;
+	KeyValues* modelInfo;
+	std::string buf;
+	const char* potentialFile = g_pFullFileSystem->FindFirstEx(VarArgs("%s\\*", folder), "GAME", &hFileSearch);
+	while (pInfo->status == AAIMPORTSTATUS_WORKING && potentialFile)
+	{
+		if (!Q_strcmp(potentialFile, ".") || !Q_strcmp(potentialFile, ".."))
+		{
+			potentialFile = g_pFullFileSystem->FindNext(hFileSearch);
+			continue;
+		}
+
+		composedFile = std::string(folder) + "\\" + std::string(potentialFile);
+
+		if (g_pFullFileSystem->FindIsDirectory(hFileSearch))
+		{
+			count += DetectAllModelsRecursiveThreaded(composedFile.c_str(), pInfo);
+			potentialFile = g_pFullFileSystem->FindNext(hFileSearch);
+			continue;
+		}
+		else
+		{
+			if (V_GetFileExtension(potentialFile) && !Q_stricmp(V_GetFileExtension(potentialFile), "mdl"))
+			{
+				pInfo->data.push_back(composedFile);
+				count++;
+				pInfo->count++;
+			}
+
+			potentialFile = g_pFullFileSystem->FindNext(hFileSearch);
+			continue;
+		}
+	}
+
+	g_pFullFileSystem->FindClose(hFileSearch);
+	pSearchInfoKV->deleteThis();
+	return count;
+}
+
+unsigned SimpleFileScan(void *params)
+{
+	importInfo_t* pInfo = (importInfo_t*)params;
+	if (pInfo->status != AAIMPORTSTATUS_WAITING_TO_START)
+		return 0;
+
+	pInfo->status = AAIMPORTSTATUS_WORKING;
+	unsigned int detectedCount = DetectAllModelsRecursiveThreaded("models", pInfo);
+
+	if (pInfo->status == AAIMPORTSTATUS_WORKING)
+		pInfo->status = AAIMPORTSTATUS_COMPLETE;
+	else
+		pInfo->status = AAIMPORTSTATUS_ABORTED;
+
+	return 0;
+}
+
+void C_AnarchyManager::ThrowEarlyError(const char* msg)
+{
+	vgui::VPANEL gameParent = enginevgui->GetPanel(PANEL_TOOLS);
+	EarlyError->Create(gameParent, msg);
+}
+
+void C_AnarchyManager::DetectAllModelsThreaded()
+{
+	if (m_pImportInfo->status != AAIMPORTSTATUS_NONE)
+	{
+		DevMsg("ERROR: Threaded scan already in process!\n");
+		return;
+	}
+
+	//m_pImportInfo->count = 0;
+	//m_pImportInfo->data.clear();
+	m_pImportInfo->status = AAIMPORTSTATUS_WAITING_TO_START;
+	m_pImportInfo->type = AAIMPORT_MODELS;
+	m_uPreviousImportCount = 0;
+
+	CreateSimpleThread(SimpleFileScan, m_pImportInfo);
+}
+
+void C_AnarchyManager::ManageImportScans()
+{
+	bool bNeedsClear = false;
+	if (m_pImportInfo->status == AAIMPORTSTATUS_WORKING)
+	{
+		unsigned int nextCount = m_pImportInfo->count;
+		if (m_uPreviousImportCount != nextCount)
+		{
+			if (m_uPreviousImportCount < nextCount)
+			{
+				C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Detecting Models", "detectmodels", "", "", VarArgs("%u", nextCount), "");
+			}
+
+			m_uPreviousImportCount = nextCount;
+		}
+	}
+	else if (m_pImportInfo->status == AAIMPORTSTATUS_COMPLETE)
+	{
+		m_pImportInfo->status = AAIMPORTSTATUS_WAITING_FOR_PROCESSING;
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Detecting Models", "detectmodels", "", "", VarArgs("%u", m_pImportInfo->count), "");
+
+		//m_pImportInfo->status = AAIMPORTSTATUS_PROCESSING;
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Processing Models", "processmodels", "", VarArgs("%u", m_pImportInfo->count), "0", "processNextModelCallback");
+		//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "New Models Detected", "newmodels", "", "", "0", "");
+		//pHudBrowserInstance->AddHudLoadingMessage("", "", "Processing New Models", "processmodels", "", "", "", "processAllModelsCallback");
+	}
+	else if (m_pImportInfo->status == AAIMPORTSTATUS_ABORTED)
+	{
+		bNeedsClear = true;
+
+		//m_pImportInfo->status = AAIMPORTSTATUS_WAITING_FOR_PROCESSING;
+		//C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+		//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Detecting Models", "detectmodels", "", "", VarArgs("%u", m_pImportInfo->data.size()), "");
+	}
+
+	if (bNeedsClear)
+	{
+		m_pImportInfo->count = 0;
+		m_pImportInfo->data.clear();
+		m_pImportInfo->duplicates.clear();
+		m_pImportInfo->status = AAIMPORTSTATUS_NONE;
+		m_pImportInfo->type = AAIMPORT_NONE;
+	}
+}
+
+void C_AnarchyManager::ProcessNextModel()
+{
+	unsigned int index;
+	if (m_pImportInfo->status == AAIMPORTSTATUS_WAITING_FOR_PROCESSING)
+	{
+		m_pImportInfo->status = AAIMPORTSTATUS_PROCESSING;
+
+		//m_uLastProcessedModelIndex = 0;
+		m_uValidProcessedModelCount = 0;
+		index = 0;
+		m_uProcessBatchSize = cvar->FindVar("process_batch_size")->GetInt();
+		m_uProcessCurrentCycle = 0;
+	}
+	else if (m_pImportInfo->status == AAIMPORTSTATUS_PROCESSING)
+		index = m_uLastProcessedModelIndex + 1;
+	else
+	{
+		DevMsg("ERROR: Invalid state for model processing. Aborting.\n");
+		return;
+	}
+
+	if (index < m_pImportInfo->data.size())
+	{
+		if (m_pMetaverseManager->GetLibraryModel(this->GenerateLegacyHash(m_pImportInfo->data[index].c_str())))
+			m_pImportInfo->duplicates.push_back(index);
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+
+		m_uLastProcessedModelIndex = index;
+		m_uProcessCurrentCycle++;
+
+		if (m_uProcessCurrentCycle == 0 || m_uProcessCurrentCycle < m_uProcessBatchSize)
+		{
+			this->ProcessNextModel();
+			return;
+		}
+		else
+		{
+			m_uProcessCurrentCycle = 0;
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Processing Models", "processmodels", "", VarArgs("%u", m_pImportInfo->count), VarArgs("%u", m_uLastProcessedModelIndex+1), "processNextModelCallback");
+		}
+	}
+	else
+	{
+		m_pImportInfo->status = AAIMPORTSTATUS_WAITING_FOR_ADDING;
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Processing Models", "processmodels", "", VarArgs("%u", m_pImportInfo->count), VarArgs("%u", m_uLastProcessedModelIndex+1), "");
+		pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding New Models", "addingmodels", "", VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), "0", "addNextModelCallback");
+	}
+}
+
+void C_AnarchyManager::AddNextModel()
+{
+	unsigned int index;
+	if (m_pImportInfo->status == AAIMPORTSTATUS_WAITING_FOR_ADDING)
+	{
+		m_pImportInfo->status = AAIMPORTSTATUS_ADDING;
+
+		m_uLastProcessedModelIndex = 0;
+		m_uValidProcessedModelCount = 0;	// NOTE: This is overloaded during Adding Models (which comes AFTER the Processing Models) to hold the INDEX of the NEXT DUPLICATE to test against
+		index = 0;
+		//m_uProcessBatchSize = cvar->FindVar("process_batch_size")->GetInt();
+		//m_uProcessCurrentCycle = 0;
+	}
+	else if (m_pImportInfo->status == AAIMPORTSTATUS_ADDING)
+		index = m_uLastProcessedModelIndex + 1;
+	else
+	{
+		DevMsg("ERROR: Invalid state for model adding. Aborting.\n");
+		return;
+	}
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	if (index < m_pImportInfo->data.size())
+	{
+		m_uLastProcessedModelIndex = index;
+
+		//unsigned int uCurrentDuplicateCheckIndex = m_uValidProcessedModelCount;
+		if (m_uValidProcessedModelCount < m_pImportInfo->duplicates.size() && m_pImportInfo->duplicates[m_uValidProcessedModelCount] == index)
+		{
+			m_uValidProcessedModelCount++;
+			this->AddNextModel();
+			return;
+			//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding New Models", "addingmodels", "", VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), "+0", "addNextModelCallback");
+		}
+		else
+		{
+			m_pMetaverseManager->ProcessModel(m_pImportInfo->data[index]);
+
+			m_uProcessCurrentCycle++;
+
+			//if (m_uProcessCurrentCycle == 0 || m_uProcessCurrentCycle < m_uProcessBatchSize)
+			//{
+			//	this->AddNextModel();
+			//	return;
+			//}
+			//else
+			//{
+			//	m_uProcessCurrentCycle = 0;
+				pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding New Models", "addingmodels", "", VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), "+", "addNextModelCallback");
+				//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding New Models", "addingmodels", "", VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), VarArgs("+%u", m_uProcessBatchSize), "addNextModelCallback");
+			//}
+		}
+	}
+	else
+	{
+		//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Adding New Models", "addingmodels", "", VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), VarArgs("%u", m_pImportInfo->count - m_pImportInfo->duplicates.size()), "");
+		pHudBrowserInstance->AddHudLoadingMessage("", "", "Finished Importing Models", "processmodelscomplete", "", "", "", "");
+		g_pAnarchyManager->AddToastMessage(VarArgs("Models Imported (%u)", m_pImportInfo->count - m_pImportInfo->duplicates.size()));
+
+		std::vector<std::string> args;
+		pHudBrowserInstance->DispatchJavaScriptMethod("eventListener", "doneDetectingModels", args);
+
+		m_uLastProcessedModelIndex = 0;
+		m_uValidProcessedModelCount = 0;
+
+		m_pImportInfo->count = 0;
+		m_pImportInfo->data.clear();
+		m_pImportInfo->duplicates.clear();
+		m_pImportInfo->status = AAIMPORTSTATUS_NONE;
+		m_pImportInfo->type = AAIMPORT_NONE;
+	}
+}
+
+void C_AnarchyManager::ProcessAllModels()
+{
+	if (m_pImportInfo->status != AAIMPORTSTATUS_WAITING_FOR_PROCESSING)
+	{
+		DevMsg("ERROR: INvalid import state.\n");
+		return;
+	}
+
+	unsigned int count = m_pMetaverseManager->ProcessModels(m_pImportInfo);
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Processing New Models", "processmodels", "", "", VarArgs("%u", count), "");
+
+	// clear the import info, so it can be used next time.
+	m_pImportInfo->count = 0;
+	m_pImportInfo->data.clear();
+	m_pImportInfo->status = AAIMPORTSTATUS_NONE;
+	m_pImportInfo->type = AAIMPORT_NONE;
+}
+
+bool C_AnarchyManager::CheckStartWithWindows()
+{
+	bool bStatus = false;
+
+	HKEY hKey;
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &hKey) == ERROR_SUCCESS)
+	{
+		long key = RegQueryValueExA(hKey, "AArcade", NULL, NULL, NULL, NULL);
+		if (key != ERROR_FILE_NOT_FOUND)
+			bStatus = true;
+
+		RegCloseKey(hKey);
+	}
+
+	return bStatus;
+}
+
+bool C_AnarchyManager::SetStartWithWindows(bool bValue)
+{
+	bool bSuccess = false;
+
+	HKEY key;
+	if (RegOpenKey(HKEY_CURRENT_USER, TEXT("Software\\Valve\\Steam"), &key) == ERROR_SUCCESS)
+	{
+		char value[AA_MAX_STRING];
+		DWORD value_length = AA_MAX_STRING;
+		DWORD flags = REG_SZ;
+		RegQueryValueEx(key, "SteamPath", NULL, &flags, (LPBYTE)&value, &value_length);
+		RegCloseKey(key);
+
+		V_FixSlashes(value);
+
+		std::string steamLocation = std::string(value) + "\\steam.exe -applaunch 266430 -autoredux";
+
+		if (bValue)
+		{
+			// blindy add the key, overwriting it if it already exists.
+			HKEY hkey;
+			if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\Currentversion\\Run", 0, KEY_SET_VALUE, &hkey) == ERROR_SUCCESS)
+			{
+				char szBuf[AA_MAX_STRING];
+				Q_strcpy(szBuf, steamLocation.c_str());
+
+				RegSetValueEx(hkey, "AArcade", 0, REG_SZ, (LPBYTE)szBuf, strlen(szBuf) + 1);
+				RegCloseKey(hkey);
+				bSuccess = true;
+			}
+		}
+		else
+		{
+			RegDeleteKeyValue(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\Currentversion\\Run", "AArcade");
+			bSuccess = true;
+		}
+	}
+
+	return bSuccess;
+}
+
 bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 {
 	if (!g_pAnarchyManager->IsInitialized() )
@@ -3469,9 +4057,14 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 	{
 		// finished positioning & choosing model, ie: changes confirmed
 		DevMsg("CHANGES CONFIRMED\n");
+		C_AwesomiumBrowserInstance* pHubInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
+
+		std::string code = "saveTransformChangesCallback();";
+		pHubInstance->GetWebView()->ExecuteJavascript(WSLit(code.c_str()), WSLit(""));
 		g_pAnarchyManager->DeactivateObjectPlacementMode(true);
 
 		m_pInstanceManager->ApplyChanges(pShortcut);
+		m_pInstanceManager->ResetTransform();
 
 		return SelectEntity(pShortcut);
 	}
@@ -3537,12 +4130,17 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 
 		if (pShortcut)
 		{
-			if (m_pSelectedEntity && pEntity == m_pSelectedEntity)
+			if (m_pSelectedEntity && pEntity == m_pSelectedEntity )
 			{
-				//m_pInputManager->SetFullscreenMode(true);
-				C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
-				m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
-				//g_pAnarchyManager->HudStateNotify();
+				if (pShortcut->GetItemId() != pShortcut->GetModelId())
+				{
+					//m_pInputManager->SetFullscreenMode(true);
+					C_EmbeddedInstance* pEmbeddedInstance = m_pInputManager->GetEmbeddedInstance();
+					m_pInputManager->ActivateInputMode(true, m_pInputManager->GetMainMenuMode(), pEmbeddedInstance);
+					//g_pAnarchyManager->HudStateNotify();
+				}
+				else
+					return true;
 			}
 			else
 			{
@@ -4175,9 +4773,12 @@ void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortc
 	//DevMsg("Object val: %s\n", theObject->itemId.c_str());
 	m_pMetaverseManager->SetSpawningObject(theObject);
 
+	bool bIsMoveMode = false;
 	//std::string moreParams = "";
 	if (!Q_strcmp(mode, "move"))
 	{
+		bIsMoveMode = true;
+
 		//SetLibraryBrowserContext(std::string category, std::string id, std::string search, std::string filter)
 		std::string category = "";
 		KeyValues* itemKv = m_pMetaverseManager->GetLibraryItem(pShortcut->GetItemId());
@@ -4202,13 +4803,18 @@ void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortc
 		pShortcut->SetRenderMode(kRenderTransColor);
 		pShortcut->SetRenderColorA(160);
 		*/
+
+		//this->AddToastMessage("Move Mode");
 	}
+	//else
+	//	this->AddToastMessage("Spawn Mode");
 
 	C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 	//pHudInstance->SetUrl("asset://ui/cabinetSelect.html");
 	//std::string category = this->GetMetaverseManager()->GetLibraryBrowserContext("category");
 	//pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=spawn&category=%s", category.c_str()));
-	pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=%s", mode));
+
+	pHudInstance->SetUrl(VarArgs("asset://ui/buildMode.html?mode=%s&itemId=%s&modelId=%s", mode, pShortcut->GetItemId().c_str(), pShortcut->GetModelId().c_str()));
 	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, null, false);
 
 	/*
@@ -4314,6 +4920,8 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	{
 		m_iState = 1;
 
+		g_pAnarchyManager->GetMetaverseManager()->DetectAllMapScreenshots();
+
 		// iterate through all models and assign the dynamic property to them
 		// FIXME: THIS SHOULD BE DONE UPON MODEL IMPORT/LOADING!!
 		m_pMetaverseManager->FlagDynamicModels();
@@ -4334,6 +4942,12 @@ void C_AnarchyManager::OnDetectAllMapsComplete()
 	else
 	{
 		DevMsg("Done again!!\n");
+
+		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->GetSelectedAwesomiumBrowserInstance();
+		pHudBrowserInstance->AddHudLoadingMessage("", "", "Finished Importing Maps", "detectmapscomplete", "", "", "", "");
+
+		std::vector<std::string> args;
+		pHudBrowserInstance->DispatchJavaScriptMethod("eventListener", "doneDetectingMaps", args);
 	}
 	//*/
 }

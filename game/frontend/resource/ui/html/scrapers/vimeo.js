@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "vimeo",
 	"api_version": 0.1,
 	"title": "Vimeo",
+	"summary": "Videos & Music",
+	"description": "Vimeo is a site with streaming videos, much like YouTube.",
 	"homepage": "http://www.vimeo.com/",
 	"search": "http://vimeo.com/search?q=$TERM",
+	"can_acquire": false,
+	"allow_keywords": true,
 	"fields":
 	{
 		"all": 100,

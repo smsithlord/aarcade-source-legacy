@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "oculusstore",
 	"api_version": 0.1,
 	"title": "Oculus Store",
+	"summary": "VR Games",
+	"description": "The Oculus Store is home to Oculus Rift VR games.",
 	"homepage": "https://www.oculus.com/experiences/rift/",
 	"search": "http://www.google.com/search?q=$TERM+" + encodeURIComponent("site:https://www.oculus.com/experiences/rift"),
+	"can_acquire": true,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

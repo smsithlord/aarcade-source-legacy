@@ -352,7 +352,7 @@ void C_SteamBrowserListener::BrowserInstanceHorizontalScroll(HTML_HorizontalScro
 	if (!g_pAnarchyManager->OnSteamBrowserCallback(pResult->unBrowserHandle))
 		return;
 
-	DevMsg("C_SteamBrowserListener::BrowserInstanceHorizontalScroll\n");
+	//DevMsg("C_SteamBrowserListener::BrowserInstanceHorizontalScroll\n");
 
 	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pResult->unBrowserHandle);
 	if (!pBrowserInstance)
@@ -369,7 +369,7 @@ void C_SteamBrowserListener::BrowserInstanceVerticalScroll(HTML_VerticalScroll_t
 	if (!g_pAnarchyManager->OnSteamBrowserCallback(pResult->unBrowserHandle))
 		return;
 
-	DevMsg("C_SteamBrowserListener::BrowserInstanceVerticalScroll\n");
+	//DevMsg("C_SteamBrowserListener::BrowserInstanceVerticalScroll\n");
 
 	C_SteamBrowserInstance* pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->FindSteamBrowserInstance(pResult->unBrowserHandle);
 	if (!pBrowserInstance)

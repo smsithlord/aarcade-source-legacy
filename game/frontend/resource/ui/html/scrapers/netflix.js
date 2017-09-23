@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "netflix",
 	"api_version": 0.1,
 	"title": "Netflix",
+	"summary": "Movies & TV",
+	"description": "Netflix is a subscription site with lots of movies, TV shows, & documentaries.<br /><br />This scraper is *not* useful for finding movie posters or trailers.  Note that you'll have to manually give your new shortcut a title after you spawn it.",
 	"homepage": "http://www.netflix.com/",
 	"search": "http://www.netflix.com/search/$TERM",
+	"can_acquire": true,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

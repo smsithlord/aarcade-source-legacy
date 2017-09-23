@@ -101,11 +101,25 @@ public:
 	// Called after rendering
 	virtual void PostRender();
 
+	bool CheckVideoCardAbilities();
+
+	void ThrowEarlyError(const char* msg);
+
+	void DetectAllModelsThreaded();
+	void ManageImportScans();
+	void ProcessAllModels();
+	void ProcessNextModel();
+	void AddNextModel();
+
+	bool CheckStartWithWindows();
+	bool SetStartWithWindows(bool bValue);
 	void InitHoverLabel(vgui::Label* pHoverLabel) { m_pHoverLabel = pHoverLabel; }
 	void ManageHoverLabel();
 	void UpdateHoverLabel();
 	std::string GetHoverTitle() { return m_hoverTitle; }
 	//void SetHoverLabel(int iEntityIndex, std::string title);
+
+	std::string ExtractRelativeAssetPath(std::string fullPath);
 
 	void PopToast();
 	void AddToastMessage(std::string text);
@@ -149,6 +163,7 @@ public:
 	std::string GetTimeString();
 
 	void BeginImportSteamGames();
+	void Acquire(std::string query);
 
 	void ArcadeCreateProcess(std::string executable, std::string executableDirectory, std::string masterCommands);
 	
@@ -287,8 +302,17 @@ protected:
 	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 private:
+	unsigned int m_uProcessBatchSize;
+	unsigned int m_uProcessCurrentCycle;
+	unsigned int m_uValidProcessedModelCount;
+	unsigned int m_uLastProcessedModelIndex;
+	unsigned int m_uPreviousImportCount;
+	importInfo_t* m_pImportInfo;
+	ConVar* m_pHoverTitlesConVar;
+	ConVar* m_pToastMsgsConVar;
 	std::string m_hoverTitle;
 	int m_iHoverEntityIndex;
+	float m_fHoverTitleExpiration;
 	vgui::Label* m_pHoverLabel;
 	float m_fNextToastExpiration;
 	KeyValues* m_pToastMessagesKV;

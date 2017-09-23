@@ -111,7 +111,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		QAngle angles;
 		MatrixToAngles(entToWorld, angles);
 
-		std::string modelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
+		std::string modelId = cvar->FindVar("recent_model_id")->GetString();// g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
 		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f, false);
 		g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(pObject);
 		g_pAnarchyManager->GetInstanceManager()->SpawnObject(pObject);
@@ -156,10 +156,21 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		// SEARCH CONTEXT OF THE ENTRY SPAWNED
 		//const char* category = WebStringToCharString(args[0].ToString());
+
+		unsigned int numArgs = args.size();
 		std::string category = WebStringToCharString(args[0].ToString());
 		std::string id = WebStringToCharString(args[1].ToString());	// used as a starting point for the search // NOTE: Might need a find/getPrevious to go along with find/getNext
 		std::string search = WebStringToCharString(args[2].ToString());
 		std::string filter = WebStringToCharString(args[3].ToString());
+		std::string modelId = (numArgs > 4) ? WebStringToCharString(args[4].ToString()) : "";
+		std::string scale = (numArgs > 5) ? WebStringToCharString(args[5].ToString()) : "1.0";
+		std::string pitch = (numArgs > 6) ? WebStringToCharString(args[6].ToString()) : "0";
+		std::string yaw = (numArgs > 7) ? WebStringToCharString(args[7].ToString()) : "0";
+		std::string roll = (numArgs > 8) ? WebStringToCharString(args[8].ToString()) : "0";
+		std::string offX = (numArgs > 9) ? WebStringToCharString(args[9].ToString()) : "0";
+		std::string offY = (numArgs > 10) ? WebStringToCharString(args[10].ToString()) : "0";
+		std::string offZ = (numArgs > 11) ? WebStringToCharString(args[11].ToString()) : "0";
+
 		g_pAnarchyManager->GetMetaverseManager()->SetLibraryBrowserContext(category, id, search, filter);
 
 		// get the point that the local player is looking at
@@ -212,26 +223,37 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		// position in tr.endpos
 		// orientation in angles
 
-		std::string modelId;
-		if ( category == "items" )
-			modelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");	// TODO: Get the actual default model to use from the item itself, or intellegently figure out which one the user probably wants otherwise.
-		else if ( category == "models")
+		if (modelId == "")
 		{
-			// an empty modelId means the entry IS a model.
-			modelId = "";
+			if (category == "items")
+			{
+				std::string testerModelId = cvar->FindVar("recent_model_id")->GetString();
+				if (testerModelId != "")
+					modelId = testerModelId;// modelId = cvar->FindVar("recent_model_id")->GetString();
+				else
+					modelId = g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");	// TODO: Get the actual default model to use from the item itself, or intellegently figure out which one the user probably wants otherwise.
+			}
+			else if (category == "models")
+			{
+				// an empty modelId means the entry IS a model.
+				modelId = "";
 
-			/*
-			KeyValues* entry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
-			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(entry);
-			if (!active)
+				/*
+				KeyValues* entry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+				KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(entry);
+				if (!active)
 				DevMsg("ERROR: Could not find the given ID in the library!\n");
 
-			modelId = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-			*/
+				modelId = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
+				*/
+			}
 		}
-		
 
-		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, 1.0f, false);
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectRot(Q_atof(pitch.c_str()), Q_atof(yaw.c_str()), Q_atof(roll.c_str()));
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectOffset(Q_atof(offX.c_str()), Q_atof(offY.c_str()), Q_atof(offZ.c_str()));
+		g_pAnarchyManager->GetInstanceManager()->AdjustObjectScale(Q_atof(scale.c_str()));
+
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->AddObject("", id, modelId, tr.endpos, angles, Q_atof(scale.c_str()), false);
 		g_pAnarchyManager->GetMetaverseManager()->SetSpawningObject(pObject);
 		g_pAnarchyManager->GetInstanceManager()->SpawnObject(pObject);
 
@@ -284,7 +306,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		code += "\");";
 
 		if (error != NONE)
+		{
 			caller->ExecuteJavascript(WSLit(code.c_str()), WSLit(""));
+			g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
+			g_pAnarchyManager->GetInputManager()->SetFullscreenMode(true);
+		}
+		else
+		{
+			// TODO: Need to handle launching from instances that are only temporarily selected for input.  They probably keep playing even after launch, while launching from the selected cabinet always deselects the cabinet and ends playback.
+
+			//C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
+			//if (pEmbeddedInstance && pEmbeddedInstance->GetId() == "hud" && pEmbeddedInstance != 
+			//	pEmbeddedInstance->Close();
+		}
 	}
 	/*
 	else if (method_name == WSLit("loadNextLocalAppCallback"))
@@ -307,9 +341,21 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	*/
 	//else if (method_name == WSLit("loadLocalAppClose"))	// shouldn't really ever be called!!! (unless user abors the loading process)
 	//	g_pAnarchyManager->GetMetaverseManager()->LoadLocalAppClose();
+	else if (method_name == WSLit("detectAllModels"))
+	{
+		g_pAnarchyManager->DetectAllModelsThreaded();// > GetMetaverseManager()->DetectAllModels();
+	}
+	else if (method_name == WSLit("detectAllMaps"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->DetectAllMaps();
+	}
 	else if (method_name == WSLit("startupCallback"))
 	{
 		g_pAnarchyManager->OnStartupCallback();
+	}
+	else if (method_name == WSLit("importNextSteamGameCallback"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->ImportNextSteamGame();
 	}
 	else if (method_name == WSLit("readyToLoadUserLibraryCallback"))
 	{
@@ -360,6 +406,18 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	else if (method_name == WSLit("rebuildSoundCacheCallback"))
 	{
 		g_pAnarchyManager->OnRebuildSoundCacheCallback();
+	}
+	else if (method_name == WSLit("processAllModelsCallback"))
+	{
+		g_pAnarchyManager->ProcessAllModels();
+	}
+	else if (method_name == WSLit("processNextModelCallback"))
+	{
+		g_pAnarchyManager->ProcessNextModel();
+	}
+	else if (method_name == WSLit("addNextModelCallback"))
+	{
+		g_pAnarchyManager->AddNextModel();
 	}
 	else if (method_name == WSLit("defaultLibraryReadyCallback"))
 	{
@@ -695,6 +753,14 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	else if (method_name == WSLit("moveObject"))
 	{
 		// DO WORK
+		unsigned int numArgs = args.size();
+		std::string scale = (numArgs > 1) ? WebStringToCharString(args[1].ToString()) : "1.0";
+		std::string pitch = (numArgs > 2) ? WebStringToCharString(args[2].ToString()) : "0";
+		std::string yaw = (numArgs > 3) ? WebStringToCharString(args[3].ToString()) : "0";
+		std::string roll = (numArgs > 4) ? WebStringToCharString(args[4].ToString()) : "0";
+		std::string offX = (numArgs > 5) ? WebStringToCharString(args[5].ToString()) : "0";
+		std::string offY = (numArgs > 6) ? WebStringToCharString(args[6].ToString()) : "0";
+		std::string offZ = (numArgs > 7) ? WebStringToCharString(args[7].ToString()) : "0";
 
 		// MOVE
 		// FIXME: TODO: Make this a standard helper function to get the object under the player's cursor.
@@ -703,7 +769,6 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		//if (pEntity)
 			//pShortcut = dynamic_cast<C_PropShortcutEntity*>(pEntity);
 
-		unsigned int numArgs = args.size();
 		int iEntityIndex = (numArgs > 0) ? args[0].ToInteger() : -1;
 
 		C_BaseEntity* pEntity = null;// g_pAnarchyManager->GetSelectedEntity();
@@ -732,6 +797,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 		if (pShortcut)
 		{
+			g_pAnarchyManager->GetInstanceManager()->AdjustObjectRot(Q_atof(pitch.c_str()), Q_atof(yaw.c_str()), Q_atof(roll.c_str()));
+			g_pAnarchyManager->GetInstanceManager()->AdjustObjectOffset(Q_atof(offX.c_str()), Q_atof(offY.c_str()), Q_atof(offZ.c_str()));
+			g_pAnarchyManager->GetInstanceManager()->AdjustObjectScale(Q_atof(scale.c_str()));
+
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 			g_pAnarchyManager->ActivateObjectPlacementMode(pShortcut, "move");
 		}
@@ -739,6 +808,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	else if (method_name == WSLit("beginImportSteamGames"))
 	{
 		g_pAnarchyManager->BeginImportSteamGames();
+	}
+	else if (method_name == WSLit("startImportSteamGames"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->StartImportSteamGames();
 	}
 	else if (method_name == WSLit("setSlaveScreen"))
 	{
@@ -872,6 +945,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pLibretroInstance->SetPause(bValue);
 		}
 	}
+	else if (method_name == WSLit("setStartWithWindows"))
+	{
+		bool bValue = (args.size() > 0) ? !Q_strcmp(WebStringToCharString(args[0].ToString()), "1") : true;
+		g_pAnarchyManager->SetStartWithWindows(bValue);
+	}
 	else if (method_name == WSLit("libretroSaveOverlay"))
 	{
 		std::string type;
@@ -921,6 +999,14 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pLibretroInstance->ClearOverlay(type, overlayId);
 			//pLibretroInstance->SetOverlay(overlayId);
 		}
+	}
+	else if (method_name == WSLit("acquire"))
+	{
+		std::string query = WebStringToCharString(args[0].ToString());
+		if (query.find("http://") != 0 && query.find("https://") != 0)
+			query = "http://" + query;
+
+		g_pAnarchyManager->Acquire(query);
 	}
 	else if (method_name == WSLit("libretroSetOverlay"))
 	{
@@ -1068,6 +1154,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		if (args.size() > 1 && args[1].ToBoolean() )
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 	}
+	else if (method_name == WSLit("deleteApp"))
+	{
+		std::string appId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->GetMetaverseManager()->DeleteApp(appId);
+	}
 	else if (method_name == WSLit("teleportScreenshot"))
 	{
 		std::string id = WebStringToCharString(args[0].ToString());
@@ -1078,6 +1169,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		std::string nodeName = WebStringToCharString(args[0].ToString());
 		g_pAnarchyManager->GetInstanceManager()->CreateNewNode(nodeName);
+	}
+	else if (method_name == WSLit("addToastMessage"))
+	{
+		std::string text = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->AddToastMessage(text);
 	}
 	else if (method_name == WSLit("clearNodeSpace"))
 	{
@@ -1506,7 +1602,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string field = WebStringToCharString(args[2].ToString());
 		std::string query = WebStringToCharString(args[3].ToString());
 
-		if (itemId == "")
+		//if (itemId == "")
 			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
 		//KeyValues* pItem = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
@@ -1546,12 +1642,16 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					oldId = "scrape" + std::string(g_pAnarchyManager->GenerateUniqueId());
 
 				pBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+				pBrowserInstance->SetActiveScraper(scraperId, itemId, field);
 				pBrowserInstance->Init(oldId, query.c_str(), "Meta Search", null);
 			}
 			else
+			{
+				pBrowserInstance->SetActiveScraper(scraperId, itemId, field);
 				pBrowserInstance->SetUrl(query);	// reuse the current focused steam browser if it exists
+			}
 
-			pBrowserInstance->SetActiveScraper(scraperId, itemId, field);
+			//pBrowserInstance->SetActiveScraper(scraperId, itemId, field);
 				
 			pBrowserInstance->Select();
 			pBrowserInstance->Focus();
@@ -1563,9 +1663,19 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				pBrowserInstance->SetOriginalItemId(oldOriginalItemId);
 
 			g_pAnarchyManager->GetInputManager()->SetEmbeddedInstance((C_EmbeddedInstance*)pBrowserInstance);
+			//if (g_pAnarchyManager->GetSelectedEntity())
+				//g_pAnarchyManager->DeselectEntity("asset://ui/overlay.html");
+			//else
 
-			if (itemId == "")
+				C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+				pHudBrowserInstance->SetUrl("asset://ui/overlay.html");
+
+		//	g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+
+			//if (itemId == "")
 				g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true, pBrowserInstance);
+
+			g_pAnarchyManager->GetInputManager()->GetInputSlate()->AdjustOverlay(0, 0, 1, 1, "");
 		//}
 	}
 	else if (method_name == WSLit("saveLibretroOption"))
@@ -1608,6 +1718,41 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		std::string browseId = WebStringToCharString(args[0].ToString());
 		g_pAnarchyManager->ShowFileBrowseMenu(browseId);
+	}
+	else if (method_name == WSLit("removeAppFilepath"))
+	{
+		std::string appId = WebStringToCharString(args[0].ToString());
+		std::string appFilepathId = WebStringToCharString(args[1].ToString());
+		KeyValues* pAppKV = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(appId);
+		KeyValues* pActiveKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pAppKV);
+		if (pActiveKV)
+		{
+			if (appFilepathId != "undefined")
+			{
+				KeyValues* pFilepathKV = pActiveKV->FindKey(VarArgs("filepaths/%s", appFilepathId.c_str()));
+				if (pFilepathKV)
+				{
+					pActiveKV->FindKey("filepaths")->RemoveSubKey(pFilepathKV);
+					g_pAnarchyManager->GetMetaverseManager()->SaveApp(pAppKV);
+				}
+			}
+			else
+			{
+				// clean out corrupt KVs
+				std::vector<KeyValues*> victims;
+				KeyValues* pFilepathsKV = pActiveKV->FindKey("filepaths", true);
+				for (KeyValues *sub = pFilepathsKV->GetFirstSubKey(); sub; sub = sub->GetNextKey())
+				{
+					if (!Q_strcmp(sub->GetString("id"), ""))
+						victims.push_back(sub);
+				}
+
+				unsigned int max = victims.size();
+				for (unsigned int i = 0; i < max; i++)
+					pFilepathsKV->RemoveSubKey(victims[i]);
+				victims.clear();
+			}
+		}
 	}
 	else if (method_name == WSLit("saveLibretroKeybind"))
 	{
@@ -1852,6 +1997,111 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		else
 			return JSValue(0);
+	}
+	else if (method_name == WSLit("createModel"))
+	{
+		// TODO: This should be generalized because it's also done when model scanning & import.
+		KeyValues* pDataKV = new KeyValues("data");
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				pDataKV->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+		}
+
+		//g_pAnarchyManager->GetMetaverseManager()->GetDefaultFields();
+		//std::string title = pDataKV->GetString("title");
+		std::string modelFile = pDataKV->GetString("file");
+		//std::string screen = pDataKV->GetString("screen");
+		//std::string keywords = pDataKV->GetString("keywords");
+		//std::string mountIds = pDataKV->GetString("mountIds");
+		//std::string workshopIds = pDataKV->GetString("workshopIds");
+		//std::string download = pDataKV->GetString("download");
+		//std::string preview = pDataKV->GetString("preview");
+		pDataKV->deleteThis();
+
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->CreateModelFromFileTarget(modelFile);
+		if (pModel)
+		{
+			g_pAnarchyManager->GetMetaverseManager()->AddModel(pModel);
+			g_pAnarchyManager->GetMetaverseManager()->SaveModel(pModel);
+
+			g_pAnarchyManager->AddToastMessage("New Model Added");
+
+			JSObject model;
+			AddSubKeys(g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pModel), model);
+			return model;
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("createApp"))
+	{
+		KeyValues* pDataKV = new KeyValues("data");
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				pDataKV->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+		}
+
+		//g_pAnarchyManager->GetMetaverseManager()->GetDefaultFields();
+		std::string title = pDataKV->GetString("title");
+		std::string file = pDataKV->GetString("file");
+		std::string commandformat = pDataKV->GetString("commandformat");
+		std::string description = pDataKV->GetString("description");
+		std::string type = pDataKV->GetString("type");
+		std::string reference = pDataKV->GetString("reference");
+		std::string download = pDataKV->GetString("download");
+		std::string screen = pDataKV->GetString("screen");
+		pDataKV->deleteThis();
+
+		std::string appId = g_pAnarchyManager->GenerateUniqueId();
+
+		KeyValues* pAppKV = new KeyValues("app");
+		pAppKV->SetInt("generation", 3);
+
+		KeyValues* pActiveKV = pAppKV->FindKey("local", true);
+		pActiveKV->SetString("info/owner", "local");
+		pActiveKV->SetString("info/id", appId.c_str());
+		pActiveKV->SetString("info/created", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));
+
+		pActiveKV->SetString("title", title.c_str());
+		pActiveKV->SetString("file", file.c_str());
+		pActiveKV->SetString("commandformat", commandformat.c_str());
+		pActiveKV->SetString("description", description.c_str());
+		pActiveKV->SetString("type", type.c_str());
+		pActiveKV->SetString("reference", reference.c_str());
+		pActiveKV->SetString("download", download.c_str());
+		pActiveKV->SetString("screen", screen.c_str());
+		pActiveKV->FindKey("filepaths", true);
+
+		g_pAnarchyManager->GetMetaverseManager()->AddApp(pAppKV);
+		g_pAnarchyManager->GetMetaverseManager()->SaveApp(pAppKV);
+
+		g_pAnarchyManager->AddToastMessage("New Open-With App Profile Created");
+
+		JSObject app;
+		AddSubKeys(pActiveKV, app);
+		return app;
 	}
 	else if (method_name == WSLit("getAllLibraryApps"))
 	{
@@ -2266,6 +2516,7 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		{
 			fieldName = WebStringToCharString(args[i].ToString());
 			fieldValue = WebStringToCharString(args[i + 1].ToString());
+			std::transform(fieldValue.begin(), fieldValue.end(), fieldValue.begin(), ::tolower);
 			pSearchInfo->SetString(fieldName.c_str(), fieldValue.c_str());
 
 			DevMsg("Field name & value: %s %s\n", fieldName.c_str(), fieldValue.c_str());
@@ -2482,6 +2733,102 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		else
 			return JSValue(0);
 	}
+	else if (method_name == WSLit("findLibraryModel"))
+	{
+		// build the search info
+		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				//DevMsg("Using %s equals %s as search field.\n", fieldName.c_str(), fieldValue.c_str());
+				pSearchInfo->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+
+			//for (unsigned int i = 0; i < numArgs; i += 2)
+			//	pSearchInfo->SetString(WebStringToCharString(args[i].ToString()), WebStringToCharString(args[i + 2].ToString()));
+			/*
+			JSObject object = args[0].ToObject();
+			JSArray properties = object.GetPropertyNames();
+			std::string propertyName;
+			for (unsigned int i = 0; i < properties.size(); i++)
+			{
+			propertyName = WebStringToCharString(properties.At(i).ToString());
+			pSearchInfo->SetString(propertyName.c_str(), WebStringToCharString(object.GetProperty(properties.At(i).ToString()).ToString()));
+			}
+			*/
+		}
+		//pSearchInfo->SetString("title", WebStringToCharString(args[0].ToString()));
+
+		// start the search
+		KeyValues* pModel = g_pAnarchyManager->GetMetaverseManager()->FindLibraryModel(pSearchInfo);
+
+		if (pModel)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pModel);
+			JSObject model;
+			AddSubKeys(active, model);
+			return model;
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("findLibraryApp"))
+	{
+		// build the search info
+		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				DevMsg("Using %s equals %s as search field.\n", fieldName.c_str(), fieldValue.c_str());
+				pSearchInfo->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+
+			//for (unsigned int i = 0; i < numArgs; i += 2)
+			//	pSearchInfo->SetString(WebStringToCharString(args[i].ToString()), WebStringToCharString(args[i + 2].ToString()));
+			/*
+			JSObject object = args[0].ToObject();
+			JSArray properties = object.GetPropertyNames();
+			std::string propertyName;
+			for (unsigned int i = 0; i < properties.size(); i++)
+			{
+			propertyName = WebStringToCharString(properties.At(i).ToString());
+			pSearchInfo->SetString(propertyName.c_str(), WebStringToCharString(object.GetProperty(properties.At(i).ToString()).ToString()));
+			}
+			*/
+		}
+		//pSearchInfo->SetString("title", WebStringToCharString(args[0].ToString()));
+
+		// start the search
+		KeyValues* pApp = g_pAnarchyManager->GetMetaverseManager()->FindLibraryApp(pSearchInfo);
+
+		if (pApp)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pApp);
+			JSObject app;
+			AddSubKeys(active, app);
+			return app;
+		}
+		else
+			return JSValue(0);
+	}
 	else if (method_name == WSLit("saveItem"))
 	{
 		// construct a new KeyValues for the item
@@ -2547,6 +2894,11 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return WSLit(id.c_str());
 	}
+	else if (method_name == WSLit("generateUniqueId"))
+	{
+		std::string id = g_pAnarchyManager->GenerateUniqueId();
+		return WSLit(id.c_str());
+	}
 	else if (method_name == WSLit("updateModel"))
 	{
 		std::string id = WebStringToCharString(args[0].ToString());
@@ -2592,6 +2944,13 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 		else
 			return JSValue(0);
+	}
+	else if (method_name == WSLit("checkStartWithWindows"))
+	{
+		if (g_pAnarchyManager->CheckStartWithWindows())
+			return JSValue(WSLit("1"));
+		else
+			return JSValue(WSLit("0"));
 	}
 	else if (method_name == WSLit("libretroUpdateDLL"))
 	{
@@ -2729,8 +3088,61 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 				g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "ALL");
 				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "screen");
 				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "marquee");
-				g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 			}
+
+			return JSValue(true);
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("updateApp"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pApp = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(id);
+		if (pApp)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pApp);
+
+			// now loop through our updated fields
+			bool bHadFilepaths = false;
+			std::string filepathsKey;
+
+			bool bNeedsTextureUpdate = false;
+			std::string field;
+			std::string value;
+			JSArray update = args[1].ToArray();
+			unsigned int max = update.size();
+			for (unsigned int i = 0; i < max; i += 2)
+			{
+				field = WebStringToCharString(update.At(i).ToString());
+				value = WebStringToCharString(update.At(i + 1).ToString());
+
+				if (!bHadFilepaths && field.find("filepaths") != std::string::npos)
+				{
+					size_t found = field.find_last_of("/");
+					if (found != std::string::npos)
+					{
+						filepathsKey = field.substr(0, found);
+						found = filepathsKey.find("/");
+						if (found != std::string::npos)
+						{
+							filepathsKey = filepathsKey.substr(found + 1);
+							active->SetString(VarArgs("filepaths/%s/id", filepathsKey.c_str()), filepathsKey.c_str());
+							//active->FindKey(filepathsKey.c_str(), true);
+						}
+					}
+					
+					bHadFilepaths = true;
+				}
+
+				// update field with value
+				active->SetString(field.c_str(), value.c_str());
+			}
+
+			// now save the app's changes
+			g_pAnarchyManager->GetMetaverseManager()->SaveApp(pApp);
 
 			return JSValue(true);
 		}
@@ -3021,6 +3433,12 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		return response;
 	}
+	else if (method_name == WSLit("getRelativeAssetPath"))
+	{
+		std::string fullPath = WebStringToCharString(args[0].ToString());
+		std::string relativePath = g_pAnarchyManager->ExtractRelativeAssetPath(fullPath);
+		return WSLit(relativePath.c_str());
+	}
 	else if (method_name == WSLit("getAllBackpacks"))
 	{
 		JSObject response;
@@ -3270,6 +3688,37 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 			return WSLit(pConVar->GetString());
 		return JSValue(0);
 	}
+	else if (method_name == WSLit("getMount"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+		C_Mount* pMount = g_pAnarchyManager->GetMountManager()->GetMount(id);
+		if (pMount)
+		{
+			JSObject responseMount;
+			responseMount.SetProperty(WSLit("active"), JSValue(pMount->GetActive()));
+			responseMount.SetProperty(WSLit("id"), WSLit(pMount->GetId().c_str()));
+			responseMount.SetProperty(WSLit("title"), WSLit(pMount->GetTitle().c_str()));
+			responseMount.SetProperty(WSLit("base"), WSLit(pMount->GetBase().c_str()));
+			
+			JSArray responsePaths;
+			std::vector<std::string> paths = pMount->GetPaths();
+			unsigned int max2 = paths.size();
+			for (unsigned int j = 0; j < max2; j++)
+				responsePaths.Push(WSLit(paths[j].c_str()));
+			responseMount.SetProperty(WSLit("paths"), responsePaths);
+
+			JSArray responseMountedPaths;
+			std::vector<std::string> mountedPaths = pMount->GetMountedPaths();
+			max2 = mountedPaths.size();
+			for (unsigned int j = 0; j < max2; j++)
+				responseMountedPaths.Push(WSLit(mountedPaths[j].c_str()));
+			responseMount.SetProperty(WSLit("mountedPaths"), responseMountedPaths);
+
+			return responseMount;
+		}
+		else
+			return JSValue(0);
+	}
 	else if (method_name == WSLit("getAllMounts"))
 	{
 		JSObject response;
@@ -3440,6 +3889,14 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		response.SetProperty(WSLit("tasks"), tasks);
 		response.SetProperty(WSLit("windowsTasks"), windowsTasks);
 		return response;
+	}
+	else if (method_name == WSLit("createDbBackup"))
+	{
+		return JSValue(g_pAnarchyManager->GetMetaverseManager()->CreateLibraryBackup());
+	}
+	else if (method_name == WSLit("getDbSize"))
+	{
+		return JSValue((int)g_pAnarchyManager->GetMetaverseManager()->GetLibraryDbSize());
 	}
 	else if (method_name == WSLit("getWorldInfo"))
 	{

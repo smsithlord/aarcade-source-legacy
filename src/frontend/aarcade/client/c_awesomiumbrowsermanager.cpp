@@ -312,6 +312,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	if (!result.IsObject())
 	{
 		DevMsg("Failed to create AAAPI.\n");
+		g_pAnarchyManager->ThrowEarlyError("Anarchy Arcade cannot detect its UI process.\nPlease adjust your anti-virus software to allow\nAArcade to communicate with its UI and try again.");
 		return;
 	}
 
@@ -334,6 +335,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("loadFirstLocalApp"), false);
 	systemObject.SetCustomMethod(WSLit("loadNextLocalApp"), false);
 	systemObject.SetCustomMethod(WSLit("loadLocalAppClose"), false);
+	systemObject.SetCustomMethod(WSLit("detectAllMaps"), false);
+	systemObject.SetCustomMethod(WSLit("detectAllModels"), false);
 	systemObject.SetCustomMethod(WSLit("detectAllMapScreenshots"), true);
 	systemObject.SetCustomMethod(WSLit("getAllMapScreenshots"), true);
 	systemObject.SetCustomMethod(WSLit("getScreenshot"), true);
@@ -351,6 +354,8 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("saveLibretroKeybind"), false);
 	systemObject.SetCustomMethod(WSLit("getLibretroKeybinds"), true);
 	//systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
+	systemObject.SetCustomMethod(WSLit("generateUniqueId"), true);
+	systemObject.SetCustomMethod(WSLit("removeAppFilepath"), false);
 	systemObject.SetCustomMethod(WSLit("getMapInstances"), true);
 	systemObject.SetCustomMethod(WSLit("getInstance"), true);
 	systemObject.SetCustomMethod(WSLit("getDefaultLibretroInputDevices"), true);
@@ -372,11 +377,14 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("objectSelected"), false);
 	systemObject.SetCustomMethod(WSLit("moveObject"), false);
 	systemObject.SetCustomMethod(WSLit("deleteObject"), false);
-	systemObject.SetCustomMethod(WSLit("beginImportSteamGames"), false);
+	systemObject.SetCustomMethod(WSLit("beginImportSteamGames"), false);	// this loads the profile page
+	systemObject.SetCustomMethod(WSLit("startImportSteamGames"), false);	// this actually starts adding stuff to the library
 	systemObject.SetCustomMethod(WSLit("showEngineOptionsMenu"), false);
 	systemObject.SetCustomMethod(WSLit("setSlaveScreen"), false);
 	systemObject.SetCustomMethod(WSLit("navigateToURI"), false);
 	systemObject.SetCustomMethod(WSLit("getWorldInfo"), true);
+	systemObject.SetCustomMethod(WSLit("getDbSize"), true);
+	systemObject.SetCustomMethod(WSLit("createDbBackup"), true);
 	systemObject.SetCustomMethod(WSLit("viewObjectInfo"), false);
 	systemObject.SetCustomMethod(WSLit("getEntityInfo"), true);
 	systemObject.SetCustomMethod(WSLit("getObjectInfo"), true);
@@ -391,9 +399,12 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("libretroPause"), false);
 	systemObject.SetCustomMethod(WSLit("libretroReset"), false);
 	systemObject.SetCustomMethod(WSLit("libretroSetOverlay"), false);
+	systemObject.SetCustomMethod(WSLit("acquire"), false);
 	systemObject.SetCustomMethod(WSLit("libretroClearOverlay"), false);
 	systemObject.SetCustomMethod(WSLit("libretroSaveOverlay"), false);
 	systemObject.SetCustomMethod(WSLit("libretroUpdateDLL"), true);
+	systemObject.SetCustomMethod(WSLit("setStartWithWindows"), false);
+	systemObject.SetCustomMethod(WSLit("checkStartWithWindows"), true);
 	systemObject.SetCustomMethod(WSLit("libretroGetAllDLLs"), true);
 	systemObject.SetCustomMethod(WSLit("getLibretroActiveOverlay"), true);
 	systemObject.SetCustomMethod(WSLit("getLibretroOverlays"), true);
@@ -412,6 +423,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("deleteScreenshot"), false);
 	systemObject.SetCustomMethod(WSLit("teleportScreenshot"), false);
 	systemObject.SetCustomMethod(WSLit("saveNewNode"), false);
+	systemObject.SetCustomMethod(WSLit("addToastMessage"), false);
 	systemObject.SetCustomMethod(WSLit("clearNodeSpace"), false);
 	systemObject.SetCustomMethod(WSLit("feedback"), false);
 	systemObject.SetCustomMethod(WSLit("doPause"), false);
@@ -420,8 +432,10 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("selectTaskObject"), false);
 	systemObject.SetCustomMethod(WSLit("getConVarValue"), true);
 	systemObject.SetCustomMethod(WSLit("getAllMounts"), true);
+	systemObject.SetCustomMethod(WSLit("getMount"), true);
 	systemObject.SetCustomMethod(WSLit("getAllTasks"), true);
 	systemObject.SetCustomMethod(WSLit("getAllWorkshopSubscriptions"), true);
+	systemObject.SetCustomMethod(WSLit("getRelativeAssetPath"), true);
 	systemObject.SetCustomMethod(WSLit("getAllBackpacks"), true);
 	systemObject.SetCustomMethod(WSLit("getBackpack"), true);
 	systemObject.SetCustomMethod(WSLit("getNearestObjectToPlayerLook"), true);
@@ -456,12 +470,18 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("findNextLibraryItem"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
+	libraryObject.SetCustomMethod(WSLit("findLibraryModel"), true);
+	libraryObject.SetCustomMethod(WSLit("findLibraryApp"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
+	libraryObject.SetCustomMethod(WSLit("updateApp"), true);
 	libraryObject.SetCustomMethod(WSLit("updateInstance"), true);
 	libraryObject.SetCustomMethod(WSLit("deleteInstance"), true);
 	libraryObject.SetCustomMethod(WSLit("updateModel"), true);
 	libraryObject.SetCustomMethod(WSLit("createItem"), true);
+	libraryObject.SetCustomMethod(WSLit("createApp"), true);
+	libraryObject.SetCustomMethod(WSLit("createModel"), true);
 	libraryObject.SetCustomMethod(WSLit("saveItem"), true);
+	libraryObject.SetCustomMethod(WSLit("deleteApp"), false);
 
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryModel"), true);	// OBSOLETE!
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryModel"), true);	// OBSOLETE!
@@ -486,6 +506,10 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	callbacksObject.SetCustomMethod(WSLit("updateLibraryVersionCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("readyToLoadUserLibraryCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("rebuildSoundCacheCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("processAllModelsCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("processNextModelCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("addNextModelCallback"), false);
+	callbacksObject.SetCustomMethod(WSLit("importNextSteamGameCallback"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));

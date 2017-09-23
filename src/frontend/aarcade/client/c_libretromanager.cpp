@@ -1195,7 +1195,7 @@ void C_LibretroManager::GetAllInstances(std::vector<C_EmbeddedInstance*>& embedd
 	auto it = m_libretroInstances.begin();
 	while (it != m_libretroInstances.end())
 	{
-		if (it->second->HasInfo() && it->second->GetInfo()->state == 5)
+		if (it->second->HasInfo() && it->second->GetInfo()->state > 4 )// 5 || it->second->GetInfo()->state == 6)
 			embeddedInstances.push_back(it->second);
 
 		it++;

@@ -16,6 +16,7 @@ public:
 	void OnMouseMove(float x, float y);
 	void OnMousePressed(vgui::MouseCode code);
 	void OnMouseReleased(vgui::MouseCode code);
+	void OnMouseWheeled(int delta);
 
 	void OnKeyCodePressed(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);
 	void OnKeyCodeReleased(vgui::KeyCode code, bool bShiftState, bool bCtrlState, bool bAltState, bool bWinState, bool bAutorepeatState);

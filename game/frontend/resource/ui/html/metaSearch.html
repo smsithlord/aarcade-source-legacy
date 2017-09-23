@@ -6,36 +6,7 @@
 		<style>
 			#scraperButtonsContainer
 			{
-				display: block;
-				width: 100%;
-				/*height: 200px;*/
-				overflow-y: auto;
-				max-height: 300px;
-			}
-
-			#scraperButtonsContainer::-webkit-scrollbar
-			{
-				width: 15px;
-				height: 15px;
-			}
-
-			#scraperButtonsContainer::-webkit-scrollbar-track
-			{
-				-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
-				border-radius: 10px;
-				background-color: rgba(100, 100, 100, 0.7);
-			}
-
-			#scraperButtonsContainer::-webkit-scrollbar-thumb
-			{
-				border-radius: 10px;
-				-webkit-box-shadow: inset 0 0 6px rgba(100,100,100,1);
-				background-color: #777;
-			}
-
-			#scraperButtonsContainer::-webkit-scrollbar-corner
-			{
-				background-color: transparent;
+				margin-right: 2px;
 			}
 
 			#searchTagsContainer
@@ -48,40 +19,67 @@
 
 			#searchTagsContainer div
 			{
-				color: #fff;
 				display: inline;
 				text-decoration: underline;
 				white-space: nowrap;
 			}
 
+			.scraperButton
+			{
+				border-radius: 20px;
+				padding: 12px;
+				border-style: solid;
+				margin-bottom: 6px;
+				font-size: 22px;
+			}
 		</style>
 
 	</head>
 	<body>
-		<div class="hudContent" style="width: 20%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/overlay.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Meta Search
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="window.location='asset://ui/overlay.html';" help="Close this menu, but leave the HUD open.">
-							&nbsp;<img src="asset://ui/xicon.png" />&nbsp;
-						</div>
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var givenField = arcadeHud.getParameterByName("field");
+			var menuTitle = (givenField === "acquire") ? "Download/Purchase" : "Meta Search";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML(menuTitle, "width: 430px;", false, true, "", "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<div class="aaTitleText aaTitleTextSizeFontSize aaThemeColorOneColor">Scrapers
+			<div class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="overlayHelp();">
+				<script>
+					document.write(arcadeHud.generateIconHTML("help.png", 18, 18, "aaTextColorTwoHighColor"));
+				</script>
+			</div>
+		</div>
+		<div id="scraperButtonsParent" class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 300px;">
+			<div id="scraperButtonsContainer"></div>
+		</div>
+
+		<div>
+			<div class="aaTitleText aaTitleTextSizeFontSize aaThemeColorOneColor">Search</div>
+			<div class="aaWindowPaneContent aaThemeColorOneShadedBackground aaThemeColorOneLowBorderColor aaTextSizeFontSize aaTextColorOneColor" style="max-height: 600px;">
+				<select id="fieldSelect" style="width: 100%; font-size: 20px;" class="helpNote" help="IMPORTANT: This is the field of your item that will have data scraped into it."></select>
+				<input id="term" style="width: 100%; font-size: 20px;" placeholder="Search Term" class="helpNote" help="This is the search query that will be sent to the scraper.<br /><br />You can adjust it now, before choosing a scraper to search."></input>
+				<div id="tagsParent" style="font-family: Arial; font-weight: bold; margin-top: 10px;" class="helpNote" help="These presets will automatically add a keyword to your search query & choose the item field it thinks is the best fit for the preset.">Presets:<br />
+					<div id="searchTagsContainer">
+						<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+boxart</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="stream">+stream</div> <div field="preview">+gameplay</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
 					</div>
 				</div>
 			</div>
-			<div id="scraperButtonsContainer"></div>
-			<select id="fieldSelect" style="width: 100%; font-size: 20px;"></select>
-			<input id="term" style="width: 100%; font-size: 20px;" placeholder="Search Term"></input>
-			<div id="searchTagsContainer">
-				<div field="screen">+screenshot</div> <div field="screen">+wallpaper</div> <div field="marquee">+marquee</div> <div field="marquee">+boxart</div> <div field="marquee">+poster</div> <div field="preview">+scene</div> <div field="preview">+trailer</div> <div field="stream">+stream</div> <div field="preview">+gameplay</div> <div field="preview">+full</div> <div field="reference">+wiki</div> <div>-clear</div>
-			</div>
+		</div>
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 
@@ -89,22 +87,19 @@
 <!--		<div class="backButton">Back</div> -->
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 		<script>
-// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-function getParameterByName(name, url) {
-    if (!url) url = window.location.href;
-    name = name.replace(/[\[\]]/g, "\\$&");
-    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-        results = regex.exec(url);
-    if (!results) return null;
-    if (!results[2]) return '';
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
-
-		var givenField = getParameterByName("field");
+		var addedTag = "";
+		var tagsParent = document.querySelector("#tagsParent");
+		var scraperButtonsParent = document.querySelector("#scraperButtonsParent");
+		if(givenField === "acquire")
+		{
+			tagsParent.style.display = "none";
+			fieldSelect.style.display = "none";
+			scraperButtonsParent.style.maxHeight = "500px";
+		}
 
 		var termInput = document.querySelector("#term");
 		var fieldSelect = document.querySelector("#fieldSelect");
-		var itemId = getParameterByName("id");
+		var itemId = arcadeHud.getParameterByName("id");
 		var item = aaapi.library.getLibraryItem(itemId);
 		if( !!item )
 		{
@@ -131,14 +126,23 @@ function getParameterByName(name, url) {
 					if( term !== "clear" )
 					{
 						if( term === "stream" )	// don't add "stream" to search text
+						{
 							termInput.value = termInput.placeholder;
+							addedTag = "";
+						}
 						else
-							termInput.value = termInput.placeholder + " " + term;
+						{
+							addedTag = " " + term;
+							termInput.value = termInput.placeholder + addedTag;
+						}
 						
 						fieldSelect.value = this.getAttribute("field");
 					}
 					else
+					{
 						termInput.value = termInput.placeholder;
+						addedTag = "";
+					}
 
 					generateScraperList();
 				}.bind(termElem), true);
@@ -156,47 +160,94 @@ function getParameterByName(name, url) {
 
 			var button;
 			var scraper;
+			var scraperHelpText;
+			var isAcquire = (givenField === "acquire");
+
+			if( isAcquire && !!item.download && item.download !== "" )
+			{
+				button = document.createElement("div");
+				button.className = "scraperButton aaTitleText aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor";
+
+				scraperHelpText = "This download URL was specified by the item's properties.";
+				if( scraperHelpText !== "" )
+				{
+					button.classList.add("helpNote");
+					button.setAttribute("help", scraperHelpText);
+					arcadeHud.assignHelp(button);
+				}
+
+				button.addEventListener("click", function(e)
+				{
+					var query = item.download.replace("\"", "");
+					aaapi.system.acquire(query);
+				}.bind(button), true);
+				button.innerText = item.download;
+				hudContent.appendChild(button);
+			}
+
 			var x;
 			for( x in arcadeHud.scrapers )
 			{
 				scraper = arcadeHud.scrapers[x];
 
-				//if( !!!scraper.fields["all"] )
-				if( !!!scraper.fields[field] || scraper.id === "importSteamGames" )
+				if( isAcquire && scraper.can_acquire !== true )
+					continue;
+
+				if( !isAcquire && (!!!scraper.fields[field] || scraper.id === "importSteamGames") )
 					continue;
 
 				button = document.createElement("div");
-				button.className = "mainbutton";
+				button.className = "scraperButton aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";//mainbutton";
+				/*
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="OK" onclick="window.location='asset://ui/welcome.html';" help="Welcome to Anarchy Arcade!" />
+				*/
+
+				scraperHelpText = (!!scraper.summary) ? scraper.summary : "";
+				scraperHelpText += (!!scraper.description) ? "<br /><br />" + scraper.description : "";
+				if( scraperHelpText !== "" )
+				{
+					button.classList.add("helpNote");
+					button.setAttribute("help", scraperHelpText);
+					arcadeHud.assignHelp(button);
+				}
+
 				button.scraper = scraper;
 				button.addEventListener("click", function(e)
 				{
-					//var item =  aaapi.system.getSelectedItem();
-					//var item = aaapi.library.getSelectedLibraryItem();
-					//var item = aaapi.library.getLibraryItem(itemId);
-					if( !!item )
+					if( givenField === "acquire" )
 					{
-						//console.log("Clicked " + this.scraper.title);
-						/*
-						var term = item["title"];
-						var dateCull = term.indexOf(" (");
-						if( dateCull >= 0 )
-							term = term.substring(0, dateCull);
-						*/
-
-						var term = document.querySelector("#term").value;
-
-						var field = fieldSelect.options[fieldSelect.selectedIndex].value;
-
-						var dummy = {"itemId": itemId, "field": field, "scraperId": this.scraper.id, "term": term};
-						setTimeout(function()
+						var term = document.querySelector("#term").value;//encodeURIComponent(document.querySelector("#term").value);
+						term = term.replace("\"", "");
+						var query = (term !== "") ? this.scraper.search.replace("$TERM", term) : this.scraper.homepage;
+						
+						aaapi.system.acquire(query);
+					}
+					else
+					{
+						//var item =  aaapi.system.getSelectedItem();
+						//var item = aaapi.library.getSelectedLibraryItem();
+						//var item = aaapi.library.getLibraryItem(itemId);
+						if( !!item )
 						{
-							//console.log("testing " + this.itemId + " " + this.field + " " + this.scraperId + " " + this.term);
-							arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
-							document.location = "asset://ui/overlay.html";
-						}.bind(dummy), 10);
+							var term = termInput.value;
+							if( term === "" )
+								term = termInput.placeholder;
+
+							if( !!!this.scraper.allow_keywords && addedTag !== "" && term.indexOf(addedTag) === term.length - addedTag.length )
+								term = term.substring(0, term.indexOf(addedTag));
+
+							var field = fieldSelect.options[fieldSelect.selectedIndex].value;
+
+							var dummy = {"itemId": itemId, "field": field, "scraperId": this.scraper.id, "term": term};
+							setTimeout(function()
+							{
+								arcadeHud.metaSearch(this.itemId, this.field, this.scraperId, this.term);
+								//document.location = "asset://ui/overlay.html";
+							}.bind(dummy), 10);
+						}
 					}
 				}.bind(button), true);
-				button.innerHTML = scraper.title;
+				button.innerText = scraper.title;
 				hudContent.appendChild(button);
 			}
 		}
@@ -228,6 +279,148 @@ function getParameterByName(name, url) {
 		}
 
 		generateScraperList();
+
+			function overlayHelp()
+			{
+				var text = "<font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Introduction</font><div style='padding: 20px;'>Meta scraping is when meaningful data is automatically extracted from a regular website.<br /><br />The data being scraped could be a title, a description, a screenshot image URL, a YouTube trailer URL, etc.<br /><br />AArcade uses this scraped data to automatically decorate your shortcut cabinet to make it visually appear as the shortcut that it launches.<br /><br />Note that you could manually decorate your shortcuts, but meta scraping is <b>much</b> faster & hassle-free.</div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>How It Works</font><div style='padding: 20px;'>You simply go to a web page that contains information about your shortcut, such as its profile on an online store or wiki, using AArcade's embedded web browser.<br /><br />Then you tell AArcade to Meta Scrape the information off of the page, and it goes directly into your item's properties.<br /><br />Meta scraping lets you decorate your shortcuts with great images & videos with just a few clicks.</div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Instructions</font><div style='padding: 20px;'><ol style='margin: 0;'><li style='margin-bottom: 10px;'>Go up to any item and click its Meta Search button.</li><li style='margin-bottom: 10px;'>Choose the item property that you wish to scrape data into, customize your search terms (if needed), then click on the scraper you wish to use.</li><li style='margin-bottom: 10px;'>This will take you to a search results page for you to choose the correct item on the website.</li><li style='margin-bottom: 10px;'>Once you are looking at a scrapable page on the website, a Meta Scrape button will appear. Click it to scrape the fields chosen in step 2 & automatically save them into your item's properties.</ol></div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Downloading/Purchasing</font><div style='padding: 20px;'>In addition to scraping meta data, scrapers can also be used for sites that offer downloads / purchases of media items.<br /><br />When used for downloading/purchasing, a scraper opens the search results page in <u>your own native web browser</u> so you can download or checkout in your regular perferred way.<br /><br />These types of scrapers are accessible when trying to launch a shortcut that you do not have the target file of.</div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Addon Scrapers</font><div style='padding: 20px;'>Scrapers are small JavaScript files that tell AArcade how to extract meta information from the site they were created for.<br /><br />User addon scrapers can be created for *any* website and can function exactly as AArcade's bundled scrapers do. This makes AArcade's scraping system extremely adaptable & extendable for use on any website, even websites that haven't been created yet.<br /><br />Writing your own addon scraper requires some JavaScript knowledge and a general understanding of how HTML & websites work. Each scraper is designed to work only on the website it was created for.<br /><br />A full tutorial on how to write scrapers will be available soon. However, any valid scraper that is in the following folder will be available in AArcade:<br /><input type='text' size='57' value='Anarchy Arcade/aarcade_user/resource/ui/html/scrapers' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Technical Notes</font><div style='padding: 20px;'><ul style='margin: 0;'><li style='margin-bottom: 10px;'>New addon scrapers are only detected when AArcade starts up.</li><li style='margin-bottom: 10px;'>Scrapers are also able to perform logic on search results pages to automatically select what it determines is the correct result.</li><li style='margin-bottom: 10px;'>The human interaction of saying \"Yes, this is the correct item.\" is what makes AArcade's scraping far more accurate than auto-matching methods.</ul></div>";
+				createModalAlert("Scrapers & Meta Search", text, "");
+			}
+
+			var aaModalAlertMenu;
+			function createModalAlert(title, text, action)
+			{
+				modalWindowHeight = 700;
+
+				if( !!aaModalAlertMenu )
+				{
+					console.log("ERROR: A modal alert menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalAlertMenu.flashInterval )
+						{
+							aaModalAlertMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalAlertMenu), 100);
+
+							aaModalAlertMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = parseInt(window.innerHeight / 2.2) - (modalWindowHeight / 2) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="max-width: 700px; height: ' + modalWindowHeight + 'px; max-height: ' + modalWindowHeight + 'px; font-family: Arial;">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalAlertMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalAlertMenu.parentNode.parentNode.removeChild(aaModalAlertMenu.parentNode);
+					aaModalAlertMenu = undefined;
+
+					eval(action);
+				}, true);
+			}	
 		</script>
 	</body>
 </html>

@@ -78,7 +78,10 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Libretro Properties", "", true, true, "window.location='asset://ui/embeddedApps.html';", "aaapi.system.deactivateInputMode();");
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "window.location='asset://ui/embeddedApps.html';";
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Libretro Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
 
@@ -102,7 +105,7 @@
 			<table cellspacing="0" cellpadding="0">
 				<tr><td>
 					<div class="aaTextColorTwoColor aaTitleTextSizeFontSize">
-						All Detected DLLs
+						All Detected Cores
 					</div>
 				</td><td align="center">
 					<div id="coreTitle" class="aaThemeColorOneColor aaTitleTextSizeFontSize aaTitleText">
@@ -111,7 +114,7 @@
 				</td></tr>
 				<tr><td align="center">
 					<div class="aaTextSizeFontSize aaTextColorTwoColor">
-						<select id="dllList" size="20" class="aaTextSizeFontSize aaScrollBars helpNote" help="Remember, you only need to configure the core you want to enable & use!" style="width: 300px; height: 500px; border-radius: 10px;">
+						<select id="dllList" size="20" class="aaTextSizeFontSize aaScrollBars helpNote" help="Remember, you only need to configure the core you want to enable & use!<br />Addon cores are DLL files in: Anarchy Arcade/aarcade_user/libretro/cores" style="width: 300px; height: 500px; border-radius: 10px;">
 						</select>
 					</div>
 				</td><td valign="top" class="aaTextColorTwoColor" style="padding-left: 20px; min-width: 400px;" align="center">
@@ -252,7 +255,7 @@
 				<br />
 				<b>FFMPEG</b> is the <b>only</b> core that comes bundled with AArcade by default. It allows you to play your local video files on the in-game screens.<br />
 				<br />
-				AArcade is also compatible with many other Libretro cores.  You just have to setup them up as addons first.<br />
+				AArcade is also compatible with many other Libretro cores.  You just have to set them up as addons first.<br />
 				<br /><br />
 				<font class="aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize">Addon Cores</font><br /><br />
 				<font style="font-weight: bold;">NOTE:</font> Addon cores are 3rd party apps so you might have to look up their websites to find help or further instructions on how to use or configure them.<br />
@@ -589,7 +592,7 @@
 					var option = dllListElem.options[dllListElem.selectedIndex];
 					var core = option.core;
 					if( core.paths.length === 0 )
-						noCoreFoldersElem.style.display = "block";
+						noCoreFoldersElem.style.display = "table-row";
 
 				}.bind(tr), true);
 				folderActions.appendChild(removeFolderButton);
@@ -611,6 +614,7 @@
 
 			dllListElem.addEventListener("change", function(e)
 			{
+				console.log("Changed");
 				var option = this.options[this.selectedIndex];
 				var core = option.core;
 				coreTitleElem.innerHTML = core.file;

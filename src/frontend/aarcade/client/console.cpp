@@ -32,7 +32,12 @@ ConVar old_libretro_volume("old_libretro_volume", "1.0", FCVAR_HIDDEN, "Internal
 ConVar libretro_gui_gamepad("libretro_gui_gamepad", "0", FCVAR_ARCHIVE, "The starting state of the Libretro GUI on-screen gamepad.");
 ConVar auto_libretro("auto_libretro", "0", FCVAR_ARCHIVE, "Automatically run compatible shortcuts on the in-game screens with Libretro when selecting objects.");
 ConVar wait_for_libretro("wait_for_libretro", "1", FCVAR_ARCHIVE, "Allow AArcade to hang while it waits for Libretro instances to fully close.");
+ConVar cl_hovertitles("cl_hovertitles", "1", FCVAR_ARCHIVE, "Show the titles of items under your crosshair.");
+ConVar cl_toastmsgs("cl_toastmsgs", "1", FCVAR_ARCHIVE, "Show event notifications on the top-left of the screen.");
 ConVar workshop("workshop", "1", FCVAR_NONE);
+ConVar recent_model_id("recent_model_id", "acec221c", FCVAR_NONE, "Stores the most recently used model ID, so it can be quickly used again next time.");
+ConVar allow_weapons("allow_weapons", "0", FCVAR_ARCHIVE, "Allow weapons to be switched to & used.");
+ConVar process_batch_size("process_batch_size", "100", FCVAR_ARCHIVE, "Control how much of batch operations are processed between render cycles.");
 
 bool IsFileEqual(const char* inFileA, std::string inFileB)
 {
@@ -125,8 +130,64 @@ void DumpItem(const CCommand &args)
 }
 ConCommand dump_item("dump_item", DumpItem, "Usage: dump the item for the given item ID to the console");
 
+void SetStartWithWindows(const CCommand &args)
+{
+	if (args.ArgC() < 2)
+		return;
+
+	bool bValue = (Q_atoi(args[1]) == 1);
+	g_pAnarchyManager->SetStartWithWindows(bValue);
+}
+ConCommand set_start_with_windows("set_start_with_windows", SetStartWithWindows, "Usage: dump the item for the given item ID to the console", FCVAR_HIDDEN);
+
+void DisableWeapons(const CCommand &args)
+{
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	if (Q_strcmp(pPlayer->GetActiveWeapon()->GetName(), "weapon_physcannon"))
+	{
+		CBaseCombatWeapon *pWeapon = pPlayer->Weapon_OwnsThisType("weapon_physcannon");
+		if (pWeapon && pPlayer->GetActiveWeapon()->CanHolster())
+			engine->ClientCmd("phys_swap");
+	}
+
+	cvar->FindVar("r_drawviewmodel")->SetValue(false);
+	cvar->FindVar("cl_drawhud")->SetValue(false);
+	allow_weapons.SetValue(false);
+}
+ConCommand disable_weapons("disable_weapons", DisableWeapons, "Usage: disables weapons (also switches you to grav gun)");
+
+void EnableWeapons(const CCommand &args)
+{
+	cvar->FindVar("r_drawviewmodel")->SetValue(true);
+	cvar->FindVar("cl_drawhud")->SetValue(true);
+	allow_weapons.SetValue(true);
+}
+ConCommand enable_weapons("enable_weapons", EnableWeapons, "Usage: enables weapons (as well as POV models & the weapon HUD.)");
+
 void TestFunction( const CCommand &args )
 {
+	/*
+		return VarArgs("steam://run/%llu", Q_atoui64(this->SecurityFilter(fileLocation.c_str())));
+
+
+
+
+		std::string buf = engine->GetGameDirectory();
+		size_t found = buf.find_last_of("\\");
+		buf = buf.substr(0, found);
+		found = buf.find_last_of("\\");
+		buf = buf.substr(0, found);
+		found = buf.find_last_of("\\");
+		buf = buf.substr(0, found);
+		buf += "\\steam.exe";
+
+		std::string finalBuf = "\"";
+		finalBuf += buf;
+		finalBuf += "\" -applaunch ";
+		finalBuf += fileLocation;
+	*/
+
+
 	//SetScreenOverlayMaterial(IMaterial *pMaterial) = 0;
 	//virtual IMaterial	*GetScreenOverlayMaterial() = 0;
 	

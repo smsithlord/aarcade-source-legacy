@@ -441,6 +441,8 @@ void LocalDataSource::OnRequest(int request_id, const ResourceRequest& request, 
 	imageTypes.push_back(".bmp");
 	imageTypes.push_back(".tga");
 
+	std::string searchPath = (requestPath.find(":") != 1) ? "GAME" : "";
+
 	std::string ext = requestPath;
 	size_t found = ext.find_last_of(".");
 	if (found == std::string::npos)
@@ -467,9 +469,9 @@ void LocalDataSource::OnRequest(int request_id, const ResourceRequest& request, 
 		std::string localFile = requestPath;
 
 		// If the local file exists, send it.
-		if (filesystem->FileExists(localFile.c_str()))
+		if (filesystem->FileExists(localFile.c_str(), searchPath.c_str()))
 		{
-			FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb");
+			FileHandle_t fileHandle = filesystem->Open(localFile.c_str(), "rb", searchPath.c_str());
 
 			if (fileHandle)
 			{

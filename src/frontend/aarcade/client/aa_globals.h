@@ -46,6 +46,38 @@
 #define AA_LIBRARY_VERSION 1
 #endif
 
+#ifndef AA_IMPORT_INFO
+#define AA_IMPORT_INFO
+#include <string>
+#include <vector>
+enum aaImportType
+{
+	AAIMPORT_NONE = 0,
+	AAIMPORT_MODELS = 1
+};
+
+enum aaImportStatus
+{
+	AAIMPORTSTATUS_NONE = 0,
+	AAIMPORTSTATUS_WAITING_TO_START = 1,
+	AAIMPORTSTATUS_WORKING = 2,
+	AAIMPORTSTATUS_COMPLETE = 3,
+	AAIMPORTSTATUS_ABORTED = 4,
+	AAIMPORTSTATUS_WAITING_FOR_PROCESSING = 5,
+	AAIMPORTSTATUS_PROCESSING = 6,
+	AAIMPORTSTATUS_WAITING_FOR_ADDING = 7,
+	AAIMPORTSTATUS_ADDING = 8
+};
+
+struct importInfo_t {
+	unsigned int count;
+	aaImportType type;
+	aaImportStatus status;
+	std::vector<std::string> data;
+	std::vector<unsigned int> duplicates;
+};
+#endif
+
 /*
 #ifndef AA_LIBRETRO_PATH
 #define AA_LIBRETRO_PATH "D:\\Projects\\AArcade-Source\\game\\frontend\\libretro\\cores"

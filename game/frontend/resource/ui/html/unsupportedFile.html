@@ -54,25 +54,18 @@
 			}
 		</style>
 	</head>
-<body style="color: #fff; background-image: url('blankpaper.jpg');">
-	<br /><br /><br /><br />
+<body style="color: #fff; background-color: #000011; background-image: url('blankpaper.jpg');">
+
 	<div class="alertContainer">
 		<center>
-			<div class="alertTitle">
-				Unsupported Preview
-			</div><br />
-			<br />
-			<div class="alertDesc">
-				AArcade can't display that kind of file on the in-game screens.<br />
-				<div id="alertParam"></div>
-			</div>
+			<div class="alertTitle"><img src="bigshortcuticon.png" /><div id="alertParam"></div></div>
 		</center>
 	</div>
 
 	<script>
 		var alertParam = getParameterByName("file");
 		var alertParamElem = document.querySelector("#alertParam");
-		alertParamElem.innerHTML = "<br />" + alertParam;
+		alertParamElem.innerHTML = alertParam;
 	</script>
 </body>
 </html>

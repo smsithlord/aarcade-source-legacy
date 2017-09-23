@@ -153,10 +153,10 @@ std::string C_BackpackManager::DetectRequiredBackpackForModelFile(std::string mo
 
 	std::string modelBuf = modelFile;
 
-	DevMsg("Here model is: %s\n", modelBuf.c_str());
+	//DevMsg("Here model is: %s\n", modelBuf.c_str());
 	g_pFullFileSystem->RelativePathToFullPath(modelBuf.c_str(), "GAME", fullPath, AA_MAX_STRING, FILTER_NONE, &pathTypeQuery);
 	modelBuf = fullPath;
-	DevMsg("And now it is: %s\n", modelBuf.c_str());
+	//DevMsg("And now it is: %s\n", modelBuf.c_str());
 
 	// modelBuf is now a full file path to the BSP
 	bool bIsBackpack = false;
@@ -179,7 +179,7 @@ std::string C_BackpackManager::DetectRequiredBackpackForModelFile(std::string mo
 
 		//std::string backpackFolder = modelBuf.substr(customFolder.length());
 		//backpackFolder = backpackFolder.substr(0, backpackFolder.find_first_of("/\\"));
-		DevMsg("Magic backpack folder is: %s\n", modelBuf.c_str());
+		//DevMsg("Magic backpack folder is: %s\n", modelBuf.c_str());
 
 		C_Backpack* pBackpack = this->FindBackpackByFolder(modelBuf);
 		if (pBackpack)

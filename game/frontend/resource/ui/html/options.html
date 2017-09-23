@@ -260,6 +260,11 @@
 				"activeTabId": tabId
 			});
 			document.write(windowTabsHeaderHTML);
+
+			function configLibretro()
+			{
+				window.location='asset://ui/libretroConfig.html?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=libretro';");
+			}
 		</script>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
@@ -280,6 +285,7 @@
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="libretro">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+			<input class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" onclick="configLibretro();" help="Each Libretro core can be configured independently." value="Configure Libretro Cores" />
 		</div>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="kodi">
@@ -350,7 +356,29 @@
 				{
 					"weapons":
 					{
-						"title": "Show Hands/Weapons",
+						"title": "Allow Weapons",
+						"type": "toggle",
+						"help": "If you want to shoot stuff, you'll need to enable weapons. This will also turn on the game HUD & POV models.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("allow_weapons");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							if( this.value === "1" )//aaapi.system.consoleCommand("allow_weapons " + this.value);
+								aaapi.system.consoleCommand("enable_weapons");
+							else
+								aaapi.system.consoleCommand("disable_weapons");
+
+						}
+					},
+					/*"visible_hands":
+					{
+						"title": "Show Player Hands",
 						"type": "toggle",
 						"help": "You don't really need to SEE your hands, unless you're trying to shoot stuff.",
 						"valueTitles": {"0": "Hidden", "1": "Enabled"},
@@ -365,7 +393,7 @@
 							this.value = val;
 							aaapi.system.consoleCommand("r_drawviewmodel " + this.value);
 						}
-					},
+					},*/
 					"hdr":
 					{
 						"title": "Show HDR Lighting",
@@ -402,6 +430,24 @@
 							aaapi.system.consoleCommand("mat_fastspecular " + this.value);
 						}
 					},
+					"console":
+					{
+						"title": "Developer Console Output",
+						"type": "toggle",
+						"help": "WARNING - Turning this on can cause a performance impact, plus spam you with irrelevant notifications.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("developer");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("developer " + this.value);
+						}
+					},
 					"autoload":
 					{
 						"title": "AArcade Startup Behavior",
@@ -420,22 +466,22 @@
 							aaapi.system.consoleCommand("auto_load_map " + this.value);
 						}
 					},
-					"console":
+					"startup":
 					{
-						"title": "Developer Console Output",
+						"title": "Run AArcade When Windows Starts",
 						"type": "toggle",
-						"help": "WARNING - Turning this on can cause a performance impact, plus spam you with irrelevant notifications.",
+						"help": "This will automatically start AArcade when your computer starts up.<br /><br />Adds a single value to your registry at:<br /><font size='3'>HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/Run/AArcade</font>",
 						"valueTitles": {"0": "Disabled", "1": "Enabled"},
 						"value": null,
 						"getValue": function()
 						{
-							var val = aaapi.system.getConVarValue("developer");
+							var val = aaapi.system.checkStartWithWindows();
 							this.value = val;
 						},
 						"setValue": function(val)
 						{
 							this.value = val;
-							aaapi.system.consoleCommand("developer " + this.value);
+							aaapi.system.setStartWithWindows(this.value);
 						}
 					}
 				},
@@ -773,9 +819,10 @@
 				},
 				"ui":
 				{
+					/*
 					"hud":
 					{
-						"title": "HUD",
+						"title": "Game & Weapon HUD",
 						"type": "toggle",
 						"help": "Hiding the HUD is less clutter, but it also hides your crosshair!",
 						"valueTitles": {"0": "Hidden", "1": "Enabled"},
@@ -789,6 +836,42 @@
 						{
 							this.value = val;
 							aaapi.system.consoleCommand("cl_drawhud " + this.value);
+						}
+					},*/
+					"hovertitles":
+					{
+						"title": "Hover Titles",
+						"type": "toggle",
+						"help": "Show the title of items when you hover over their cabinets.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cl_hovertitles");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cl_hovertitles " + this.value);
+						}
+					},
+					"toast":
+					{
+						"title": "Event Notifications",
+						"type": "toggle",
+						"help": "Show important events in the top-left portion of the screen, such as when a new Web Browser is opened.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("cl_toastmsgs");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("cl_toastmsgs " + this.value);
 						}
 					},
 					"colorScheme":

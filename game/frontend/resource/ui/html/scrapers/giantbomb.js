@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "giantbomb",
 	"api_version": 0.1,
 	"title": "Giant Bomb",
+	"summary": "Retro & Modern Games",
+	"description": "Giant Bomb is a massive database of games from every era. Great for finding boxart, posters, screenshots, etc.",
 	"homepage": "http://www.giantbomb.com/",
 	"search": "http://www.giantbomb.com/search/?q=$TERM",
+	"can_acquire": false,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

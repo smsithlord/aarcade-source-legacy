@@ -1,0 +1,768 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//window.location='asset://ui/libraryBrowser.html?category=items';
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Open-With App Properties", "width: 600px;", false, true, uiBack, "window.location='asset://ui/overlay.html';");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "visual",
+						"title": "Visual"
+					},
+					{
+						"id": "other",
+						"title": "Other"
+					},
+					{
+						"id": "delete",
+						"title": "Delete"
+					}
+				]
+			});
+			document.write(windowTabsHeaderHTML);
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="The title of your open-with program.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Title:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="title" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr class="helpNote" help="The type of shortcuts that this open-with program is associated with.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Type:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<select fieldname="type" class="aaTextSizeFontSize" style="width: 100%;">
+							<option value="">Other</option>
+						</select>
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				<tr class="helpNote" help="The EXE file of your open-with program.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Executable:
+					</td>
+					<td class="aaKeyvalueTableValue">
+						<input fieldname="file" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('file');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+				<tr class="helpNote" help="Click the HELP button for more info.<br /><br /><ul style='padding: 0; margin: 0;'><li style='margin-bottom: 10px;'><font class='aaTextColorOneColor aaTitleTextSizeFontSize'>$FILE</font> - Replaced with the target file of the shortcut being opened, including its full path.</li><li style='margin-bottom: 10px;'><font class='aaTextColorOneColor aaTitleTextSizeFontSize'>$SHORTFILE</font> - Replaced with ONLY filename of the target file.</li><li style='margin-bottom: 10px;'><font class='aaTextColorOneColor aaTitleTextSizeFontSize'>$QUOTE</font> - Replaced with a &quot; symbol.</li></ul>">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Command Format:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="commandformat" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="commandFormatHelp();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("help.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+					</td>
+				</tr>
+				<!--
+				<tr>
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						File Paths:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="filepaths" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+				-->
+			</table>
+
+			<br /><br />
+
+			<div class="aaTextSizeFontSize aaScrollBars" style="font-family: Arial; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 10px;">
+				<form id="entryForm" style="margin: 0; padding: 0;" corefile="">
+			 		<table class="aaTextColorTwoColor" cellspacing="0" cellpadding="3" style="width: 100%;">
+			 			<tbody class="aaThemeColorOneShadedBackground" id="contentFoldersHeader">
+				 			<tr><td colspan="2">
+								<div style="text-align: center; padding: 10px;" class="aaTextSizeFontSize aaTextColorOneColor aaTitleText">
+									Associated Content Folders
+								</div>
+							</td></tr>
+						</tbody>
+			 			<tr id="noContentFolders"><td colspan="2">
+							<div style="text-align: center; padding: 10px;" class="aaTextSizeFontSize aaTextColorTwoColor">
+								<div style="display: inline-block; width: 300px;">
+									No content folders or file extensions specified yet.
+								</div>
+							</div>
+						</td></tr>
+						<tbody class="contentFolderEntry">
+			 			</tbody>
+			 			<tr><td colspan="2">
+			 				<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Add Another Content Folder" style="width: 100%;" onclick="addNewContentFolder();" />
+			 			</td></tr>
+			 		</table>
+			 		<input type="submit" value="Submit" style="position: absolute; pointer-events: none; visibility: hidden;" />
+			 	</form>
+		 	</div>
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="visual">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="The logo image you provide is used in various menus.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Logo Image:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="screen" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<!--<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="metaSearch('screen');">
+							<script>
+								document.write(arcadeHud.generateIconHTML("webicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>-->
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="other">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="A brief description.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Description:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="description" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr><tr class="helpNote" help="A website that has download information for this open-with app. Preferably from the developer's website.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Download Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="download" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr><tr class="helpNote" help="A website with general information about this open-with app. Preferably the developer's website.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Reference Website:
+					</td>
+					<td class="aaKeyValueTableValue">
+						<input fieldname="reference" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+					</td>
+					<td style="width: 1%; white-space: nowrap;">
+					</td>
+				</tr>
+			</table>
+		</div>
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextColorTwoColor aaTitleTextSizeFontSize" tabid="delete" style="text-align: center;">
+			This will delete the app profile for:<br />
+			<div id="deleteAppName" class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize"></div><br />
+			Are you sure?<br />
+			<input class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" onclick="deleteApp();" help="Shortcuts that use this Open-With app will no longer be able to launch with it." value="Yes - Delete App Profile" />
+		</div>
+
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			function addNewContentFolder()
+			{
+				/*
+				var option = dllListElem.options[dllListElem.selectedIndex];
+				var core = option.core;
+				if( !!!core.paths )
+					core.paths = [];
+
+				core.paths.push({"path": "", "extensions": ""});
+
+				if( core.paths.length === 1 )
+					noCoreFoldersElem.style.display = "none";
+				*/
+
+				var contentPathId = aaapi.system.generateUniqueId();
+				var contentPath = {"id": contentPathId, "path": "", "extensions": ""};
+				if( !!!app.filepaths )
+					app.filepaths = {};
+
+				app.filepaths[contentPathId] = contentPath;
+
+				var numContentFolders = Object.keys(app.filepaths).length;
+				if( numContentFolders === 1 )
+					noContentFoldersElem.style.display = "none";
+
+				appendFolderEntryElem(contentPath, true);
+
+				//updateDLL();
+			}
+
+			function appendFolderEntryElem(contentPath, doFocus)
+			{
+				var tbody, tr, tdLabel, tdValue, input, td, folderActions, removeFolderButton;
+				tbody = document.createElement("tbody");
+				tbody.className = "contentFolderEntry";
+
+				var focusElem, helpText, extensions;
+				for( var j = 0; j < 2; j++ )
+				{
+					tr = document.createElement("tr");
+					tr.className = "helpNote";
+					helpText = (j === 0) ? "Any files with a correct extension inside of this folder will be considered openable by this app." : "Any files with these extensions within a content folder will be considered openable by this app.<br /><br />Separate extensions with a comma, for example: avi, mpg, mpeg";
+					tr.setAttribute("help", helpText);
+					arcadeHud.assignHelp(tr);
+
+					tdLabel = document.createElement("td");
+					tdLabel.style.cssText = "font-weight: 900; padding-left: 10px;";
+					tdLabel.innerHTML = (j === 0) ? "Content Folder:" : "File Extensions:";
+					tr.appendChild(tdLabel);
+
+					tdValue = document.createElement("td");
+					tdValue.style.cssText = "padding-right: 10px;";
+
+					input = document.createElement("input");
+					input.type = "text";
+					input.size = "40";
+					input.placeholder = (j === 0) ? "Any (all folders accepted)" : "Any (all extensions accepted)";
+					input.style.cssText = "width: 100%;";
+
+					extensions = (!!contentPath.extensions) ? contentPath.extensions : "";
+					input.value = (j === 0) ? contentPath.path :extensions;
+					var fieldname = "filepaths/" + contentPath.id + "/";
+					fieldname += (j === 0) ? "path" : "extensions";
+					input.setAttribute("fieldname", fieldname);
+					input.originalValue = input.value;
+					input.addEventListener("blur", function()
+					{
+						if( this.originalValue !== this.value )
+							this.value = this.originalValue;
+					}.bind(input), true);
+
+					tdValue.appendChild(input);
+					tr.appendChild(tdValue);
+
+					tbody.appendChild(tr);
+
+					if( j === 0 )
+						focusElem = input;
+				}
+
+				tr = document.createElement("tr");
+				tr.contentPathId = contentPath.id;
+
+				td = document.createElement("td");
+				td.colSpan = 2;
+				td.align = "right";
+
+				folderActions = document.createElement("div");
+				folderActions.className = "contentFolderActions";
+
+				removeFolderButton = document.createElement("input");
+				removeFolderButton.type = "button";
+				removeFolderButton.className = "aaButton aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				removeFolderButton.value = "Remove Folder";
+				removeFolderButton.addEventListener("click", function(e)
+				{
+					var parent = this;
+					while( parent.tagName !== "TBODY" )
+						parent = parent.parentNode;
+
+					parent.parentNode.removeChild(parent);
+
+					delete app.filepaths[this.contentPathId];
+					aaapi.system.removeAppFilepath(app.info.id, this.contentPathId);
+
+					var numContentFolders = Object.keys(app.filepaths).length;
+					if( numContentFolders === 0 )
+						noContentFoldersElem.style.display = "table-row";
+
+				}.bind(tr), true);
+				folderActions.appendChild(removeFolderButton);
+				td.appendChild(folderActions);
+
+				tr.appendChild(td);
+				tbody.appendChild(tr);
+
+				var bottomFolder = document.querySelectorAll(".contentFolderEntry");
+				if( bottomFolder.length > 0 )
+					bottomFolder = bottomFolder[bottomFolder.length-1];
+				else
+					bottomFolder = contentFoldersHeader;
+
+				bottomFolder.parentNode.insertBefore(tbody, bottomFolder.nextSibling);
+				if( typeof doFocus === "boolean" && doFocus && !!focusElem )
+					focusElem.focus();
+			}
+
+			var noContentFoldersElem = document.querySelector("#noContentFolders");
+			var contentFoldersHeader = document.querySelector("#contentFoldersHeader");
+			var id = arcadeHud.getParameterByName("id");
+			if( !!!uiBack )
+				uiBack = "";
+
+			var app = aaapi.library.getLibraryApp(id);
+			console.log(JSON.stringify(app.filepaths));
+			document.querySelector("#deleteAppName").innerHTML = app.title;
+
+			// content folder entries
+			var numFilepaths = (app.filepaths) ? Object.keys(app.filepaths).length : 0;
+			if( numFilepaths === 0 )
+				noContentFoldersElem.style.display = "table-row";
+			else
+			{
+				noContentFoldersElem.style.display = "none";
+
+				// build the path entries
+				//var corePath;
+				//for( var i = core.paths.length-1; i >= 0; i-- )
+				for( var x in app.filepaths )
+				{
+					//corePath = core.paths[i];
+					appendFolderEntryElem(app.filepaths[x]);
+				}
+			}
+
+			var entryForm = document.querySelector("#entryForm");
+
+			function metaSearch(filedName)
+			{
+				document.location = "asset://ui/metaSearch.html?id=" + encodeURIComponent(id) + "&field=" + encodeURIComponent(filedName);
+				return;
+			}
+
+			function fileBrowse(fieldName)
+			{
+				var fieldElem = document.querySelector(".aaKeyValueTableValue > input[fieldname='" + fieldName + "'], .aaKeyValueTableValue > select[fieldname='" + fieldName + "']");
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					if(chosenFile !== "")
+					{
+						this.value = chosenFile;
+						this.focus();
+						entryForm.querySelector("input[type='submit']").click();//submit();
+
+						/*
+						// update the app
+						var args = [myInput.field, chosenFile];
+						var success = aaapi.library.updateApp(app.info.id, args);
+						if( success )
+						{
+							var i;
+							var max = args.length;
+							for( i = 0; i < max; i += 2)
+							{
+								if( myInput.field == "all" || args[i] === myInput.field )
+									app[args[i]] = args[i+1];
+							}
+
+							console.log("App updated!");
+
+							//aaapi.system.autoInspect(this.appId);
+						}
+						else
+							console.log("App update rejected!");
+						*/
+					}
+				}.bind(fieldElem));
+			}
+
+			// PREPARE FORM
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				var focusedFieldName = focusedElem.getAttribute("fieldname");
+				var focusedFieldValue = focusedElem.value;
+				if( !focusedFieldName )
+					focusedElem = null;
+
+				// DO WORK
+				if( !!focusedElem )
+				{
+					console.log("Entry form submitted with field " + focusedFieldName + " focused.");
+
+					var success = aaapi.library.updateApp(id, [focusedFieldName, focusedFieldValue]);
+					if( success )
+					{
+						focusedElem.style.webkitTransition = "initial";
+						focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+						focusedElem.offsetTop;
+						focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+						if( focusedFieldName.indexOf("filepaths") === -1 )
+							app[focusedFieldName] = focusedFieldValue;
+						else
+						{
+							var appContentPathId = focusedFieldName.substring(focusedFieldName.indexOf("/")+1);
+							appContentPathId = appContentPathId.substring(0, appContentPathId.indexOf("/"));
+
+							app.filepaths[appContentPathId][focusedFieldName.substring(focusedFieldName.lastIndexOf("/")+1)] = focusedFieldValue;
+							focusedElem.originalValue = focusedFieldValue;
+						}
+
+						console.log("App updated!");
+					}
+					else
+						console.log("App update rejected!");
+				}
+				else
+					console.log("Entry form submitted via button click.");
+
+				// done doing work
+				if( !!focusedElem )
+					focusedElem.blur();
+			}, true);
+
+			// PREPARE TYPES
+			var allTypes = aaapi.library.getAllLibraryTypes();
+			var allTypesSorted = [];
+
+			for( var x in allTypes )
+				allTypesSorted.push(allTypes[x]);
+
+			allTypesSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE APPS
+			var allApps = aaapi.library.getAllLibraryApps();
+			var allAppsSorted = [];
+
+			for( var x in allApps )
+				allAppsSorted.push(allApps[x]);
+
+			allAppsSorted.sort(function(a, b)
+			{
+				if( a.title.toLowerCase() < b.title.toLowerCase() )
+					return -1;
+				else if( a.title.toLowerCase() > b.title.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			});
+
+
+			// PREPARE THE APP
+			var fieldName;
+			var valueElems;
+			var dummyElem;
+			var dummyElems = document.querySelectorAll(".aaKeyValueTableValue > input, .aaKeyValueTableValue > select");
+
+			for( var i = 0; i < dummyElems.length; i++ )
+			{
+				dummyElem = dummyElems[i];
+				fieldName = dummyElem.getAttribute("fieldname");
+
+				if( fieldName === "type" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						var success = aaapi.library.updateApp(id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							app[fieldName] = fieldValue;
+							console.log("App updated!");
+						}
+						else
+							console.log("App update rejected!");
+					}, true);
+
+					// populate any TYPE lists
+					for( var j = 0; j < allTypesSorted.length; j++ )
+					{
+						if( !!allTypes[app.type] && allTypes[app.type].title !== "node" && allTypesSorted[j].title === "node" )
+							continue;
+
+						var optionElem = document.createElement("option");
+						optionElem.text = allTypesSorted[j].title;
+						optionElem.value = allTypesSorted[j].info.id;
+
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else if( fieldName === "app" )
+				{
+					dummyElem.addEventListener("change", function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						var fieldValue = elem.value;
+
+						var success = aaapi.library.updateApp(id, [fieldName, fieldValue]);
+						if( success )
+						{
+							elem.style.webkitTransition = "initial";
+							elem.classList.add("aaThemeColorOneBackgroundColor");
+							elem.offsetTop;
+							elem.style.webkitTransition = "background-color 0.5s ease-in-out";
+							elem.classList.remove("aaThemeColorOneBackgroundColor");
+
+							app[fieldName] = fieldValue;
+							console.log("App updated!");
+						}
+						else
+							console.log("App update rejected!");
+					}, true);
+
+					// populate any APP lists
+					for( var j = 0; j < allAppsSorted.length; j++ )
+					{
+						var optionElem = document.createElement("option");
+						optionElem.text = allAppsSorted[j].title;
+						optionElem.value = allAppsSorted[j].info.id;
+						dummyElem.appendChild(optionElem);
+					}
+				}
+				else
+				{
+					dummyElem.addEventListener('blur', function(e)
+					{
+						var elem = e.target;
+						var fieldName = elem.getAttribute("fieldname");
+						if( elem.value != app[fieldName] )
+							elem.value = (!!app[fieldName]) ? app[fieldName] : "";
+					}, true);
+				}
+
+				if( app.hasOwnProperty(fieldName) )
+					dummyElem.value = app[fieldName];
+			}
+
+			function deleteApp()
+			{
+				aaapi.library.deleteApp(app.info.id);
+				eval(uiBack);
+			}
+
+			function commandFormatHelp()
+			{
+				var text = "<font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Introduction</font><div style='padding: 20px;'>Some programs are able to accept command-line arguments to perform advanced features when used as an open-with app.<br /><br />For example, command-line arguments could be used to tell a program how to load a file & run it in fullscreen mode.<br /><br />Every program has their own unique command-line arguments built-in by their developers.<br /><br />You'll usually have to hunt down the developer's website to learn what command-line arguments their program supports.</div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Command Variables</font><div style='padding: 20px;'>In order for your program's command-line arguments to be useful, you'll need a way to insert variables into them.<br /><br />Variables provided by AArcade are:<br /><ul><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>$FILE</font> - Replaced with the target file of the shortcut being opened, including its full path.</li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>$SHORTFILE</font> - Replaced with ONLY filename of the target file.</li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>$QUOTE</font> - Replaced with a &quot; symbol.</li></ul></div><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Popular Command Formats</font><div style='padding: 20px;'><ul><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>DeSmuME</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Dolphin</font><br /><input type='text' size='57' value='/e $QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>ePSXe</font><br /><input type='text' size='57' value='-nogui -loadbin $QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>FCEUX</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Fusion</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>JNES</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Kawaks</font><br /><input type='text' size='57' value='$SHORTFILE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>M.A.M.E.</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE -autosave' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>PCSX2</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>PPSSPP</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Project64</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Snes9x</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>VisualBoyAdvance</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>VPinball8</font><br /><input type='text' size='57' value='-Play -$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>ZSNES</font><br /><input type='text' size='57' value='$QUOTE$FILE$QUOTE' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li></ul><br />NOTE: Command-line arguments might be different for older versions of these programs.</div>";
+				createModalAlert("Command Format Help", text, "");
+			}
+
+			var aaModalAlertMenu;
+			function createModalAlert(title, text, action)
+			{
+				modalWindowHeight = 700;
+
+				if( !!aaModalAlertMenu )
+				{
+					console.log("ERROR: A modal alert menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalAlertMenu.flashInterval )
+						{
+							aaModalAlertMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalAlertMenu), 100);
+
+							aaModalAlertMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = parseInt(window.innerHeight / 2.2) - (modalWindowHeight / 2) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="max-width: 700px; height: ' + modalWindowHeight + 'px; max-height: ' + modalWindowHeight + 'px;">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalAlertMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalAlertMenu.parentNode.parentNode.removeChild(aaModalAlertMenu.parentNode);
+					aaModalAlertMenu = undefined;
+
+					eval(action);
+				}, true);
+			}
+		</script>
+	</body>
+</html>

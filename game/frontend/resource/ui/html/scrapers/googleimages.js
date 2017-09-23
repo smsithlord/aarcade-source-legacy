@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "googleimages",
 	"api_version": 0.1,
 	"title": "Google Images",
+	"summary": "Image Search",
+	"description": "Great for finding boxart, posters, screenshots, etc.",
 	"homepage": "http://www.google.com/imghp",
 	"search": "http://www.google.com/search?tbm=isch&q=$TERM",
+	"can_acquire": false,
+	"allow_keywords": true,
 	"fields":
 	{
 		"all": 100,

@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "origin",
 	"api_version": 0.1,
 	"title": "Origin Store",
+	"summary": "PC Games",
+	"description": "The Origin Store is home to EA PC games.",
 	"homepage": "http://www.origin.com/",
 	"search": "http://www.origin.com/search?searchString=$TERM",
+	"can_acquire": true,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,
@@ -70,34 +74,35 @@ arcadeHud.addScraper({
 		response.reference = url;
 
 		// description
-		var descriptionElem = doc.querySelector("meta[property='og:description']");
-		response.description = descriptionElem.getAttribute("content");
+		var descriptionElem = doc.querySelector("origin-store-pdp-infoblock");
+		if( !!descriptionElem )
+			response.description = descriptionElem.getAttribute("body");
 
 		// title
-		var titleElem = doc.querySelector("meta[property='og:title']");
-		response.title = titleElem.getAttribute("content");
+		var titleElem = doc.querySelector("h1[origin-lineclamp='titleLines']");
+		if( !!titleElem )
+			response.title = titleElem.innerText;
 
 		// screen
 		var screenElem = doc.querySelector(".origin-store-blurimage-image");
-		response.screen = screenElem.getAttribute("ng-src");
-		
-		/*
-		var screenElem = doc.querySelector("img .origin-carouselimageitem-thumb");
-		response.screen = screenElem.getAttribute("ng-src");
-		*/
+		if( !!screenElem )
+			response.screen = screenElem.getAttribute("ng-src");
 
 		// marquee
-		var marqueeElem = doc.querySelector("meta[property='og:image']");
-		response.marquee = marqueeElem.getAttribute("content");
+		var marqueeElem = doc.querySelector("origin-socialmedia");
+		if( !!marqueeElem )
+			response.marquee = marqueeElem.getAttribute("image");
 
 		// preview
 		var previewElem = doc.querySelector(".origin-store-carousel-media-videoitem-videothumb");
-		//var extractedId = extractYouTubeId(previewElem.getAttribute("ng-src"));
-		var extractedId = previewElem.getAttribute("ng-src");
-		extractedId = extractedId.substring(0, extractedId.length - 6);
-		extractedId = extractedId.substring(extractedId.lastIndexOf("/") + 1);
-		if( extractedId != "")
-			response.preview = "http://www.youtube.com/watch?v=" + extractedId;
+		if( !!previewElem )
+		{
+			var extractedId = previewElem.getAttribute("ng-src");
+			extractedId = extractedId.substring(0, extractedId.length - 6);
+			extractedId = extractedId.substring(extractedId.lastIndexOf("/") + 1);
+			if( extractedId != "")
+				response.preview = "http://www.youtube.com/watch?v=" + extractedId;
+		}
 
 		// type
 		response.type = "pc";
@@ -109,9 +114,9 @@ arcadeHud.addScraper({
 		var validForScrape = false;
 		var redirect = false;
 		
-		var previewElem = doc.querySelector(".origin-store-carousel-media-videoitem-videothumb");
-		console.log(previewElem);
-		if( !!previewElem )
+		var testerLem = doc.querySelector("h1[origin-lineclamp='titleLines']");//doc.querySelector(".origin-store-carousel-media-videoitem-videothumb");
+		console.log(testerLem);
+		if( !!testerLem )
 			validForScrape = true;
 
 		callback({"validForScrape": validForScrape, "redirect": redirect});

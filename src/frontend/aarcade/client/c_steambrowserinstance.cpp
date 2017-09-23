@@ -493,6 +493,17 @@ void C_SteamBrowserInstance::OnBrowserInstanceURLChanged(const char* pchURL, con
 	}
 }
 
+
+void C_SteamBrowserInstance::OnMouseWheeled(int delta)
+{
+	if (!m_unHandle || g_pAnarchyManager->IsPaused())
+		return;
+
+	DevMsg("Web Browser instance mouse wheeled: %i\n", delta);
+	steamapicontext->SteamHTMLSurface()->MouseWheel(m_unHandle, 20 * delta);
+	//m_pWebView->InjectMouseWheel(20 * delta, 0);
+}
+
 void C_SteamBrowserInstance::OnBrowserInstanceChangedTitle(const char* pchTitle)
 {
 	m_title = (pchTitle == "") ? "Untitled" : pchTitle;

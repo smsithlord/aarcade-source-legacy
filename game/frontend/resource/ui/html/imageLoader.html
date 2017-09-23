@@ -145,7 +145,7 @@
 				this.sessionId = sessionId;
 			};
 
-			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId)
+			ImageLoader.prototype.loadImage = function(sessionId, channel, itemId)//, itemTypeTitle)
 			{
 				// check if we should reset our session
 				if( sessionId !== this.sessionId )
@@ -156,16 +156,19 @@
 					"sessionId": sessionId,
 					"channel": channel,	// the preferred image channel
 					"itemId": itemId,
+					//"itemTypeTitle": itemTypeTitle,
 					"fields":	// Unknown, Bad
 					{
 						"marquee_auto_cache": "Unknown",
 						"marquee_auto": "Unknown",
 						"marquee_cache": "Unknown",
 						"marquee": "Unknown",
+						//"marquee_legacy": "Unknown",
 						"screen_auto_cache": "Unknown",
 						"screen_auto": "Unknown",
 						"screen_cache": "Unknown",
 						"screen": "Unknown",
+						//"screen_legacy": "Unknown",
 						"preview_auto_cache": "Unknown",
 						"preview_auto": "Unknown",
 						"preview_cache": "Unknown",
@@ -221,11 +224,11 @@
 				// use channel-specific field priority to increase variety
 				var fieldPriority;
 				if( imageRequest.channel === "marquee" )
-					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto_cache", "file_auto", "file_cache", "file", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen"];
+					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "file_auto_cache", "file_auto", "file_cache", "file", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen"];//["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "marquee_legacy", "file_auto_cache", "file_auto", "file_cache", "file", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "screen_legacy"];
 				else if( imageRequest.channel === "screen" )
-					fieldPriority = ["screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee"];
+					fieldPriority = ["screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee"];//["screen_auto_cache", "screen_auto", "screen_cache", "screen", "screen_legacy", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file", "marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "marquee_legacy"];
 				else	// should never happen
-					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file"];
+					fieldPriority = ["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file"];//["marquee_auto_cache", "marquee_auto", "marquee_cache", "marquee", "marquee_legacy", "screen_auto_cache", "screen_auto", "screen_cache", "screen", "screen_legacy", "preview_auto_cache", "preview_auto", "preview_cache", "preview", "file_auto_cache", "file_auto", "file_cache", "file"];
 
 				var fieldName, fieldValue;
 				for( var i = 0; i < fieldPriority.length; i++ )
@@ -301,13 +304,37 @@
 								return fieldValue;
 							}
 						}
+						/*
+						else if( fieldVariation === "legacy" )
+						{
+							//itemId
+							//imageRequest.fields[fieldName]
+							// confirm this baseFieldValue probably is an image
+							if( imageRequest.itemTypeTitle !== "" )//arcadeHud.isImageExtension(baseFieldValue) )
+							{
+								fieldValue = "resource/imageRequest.fields.file;//baseFieldValue;
+
+								//if( fieldValue.indexOf(":") === 1 )
+								fieldValue = "asset://local/" + fieldValue;
+								
+								// generate the CRC to the cached version of this image
+								fieldValue = arcadeHud.generateCRC(fieldValue);
+
+								// construct the file path to the cached version
+								fieldValue = "asset://cache/" + fieldValue + ".jpg";
+								return fieldValue;
+							}
+						}
+						*/
 						else if( fieldVariation === "" )
 						{
 							// confirm this baseFieldValue probably is an image
 							if( arcadeHud.isImageExtension(baseFieldValue) )
 							{
 								fieldValue = baseFieldValue;
-								if( fieldValue.indexOf(":") === 1 )
+								console.log("Field value is: " + fieldValue);
+								//if( fieldValue.indexOf(":") === 1 )
+								if( fieldValue.toLowerCase().indexOf("http") !== 0 )
 									fieldValue = "asset://local/" + fieldValue;
 								return fieldValue;
 							}

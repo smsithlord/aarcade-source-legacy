@@ -17,6 +17,30 @@ C_InputListenerSteamBrowser::~C_InputListenerSteamBrowser()
 	//DevMsg("InputListenerSteamBrowser: Destructor\n");
 }
 
+void C_InputListenerSteamBrowser::OnMouseWheeled(int delta)
+{
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
+	//C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	//if (pHudBrowserInstance->HasFocus())//&& g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
+	//	pHudBrowserInstance->OnMouseWheeled(delta);
+	//else if (g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() != pHudBrowserInstance)
+	//{
+	C_SteamBrowserInstance* pBrowserInstance = dynamic_cast<C_SteamBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+	if ( pBrowserInstance )
+	{
+		//C_AwesomiumBrowserInstance* pOtherAwesomiumBrowserInstance = dynamic_cast<C_AwesomiumBrowserInstance*>(g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance());
+		//if (pOtherAwesomiumBrowserInstance)
+		//{
+		//if (!pBrowserInstance->HasFocus())
+		//	pBrowserInstance->Focus();	// make sure we are focused
+
+			pBrowserInstance->OnMouseWheeled(delta);
+		//}
+	}
+}
+
 void C_InputListenerSteamBrowser::OnMouseMove(float x, float y)
 {
 	if (g_pAnarchyManager->IsPaused())

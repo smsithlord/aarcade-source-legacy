@@ -40,7 +40,7 @@
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
-				<tr>
+				<tr class="helpNote" help="The title of the model. Useful when searching through your props.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Title:
 					</td>
@@ -76,7 +76,7 @@
 					</td>
 				</tr>
 				-->
-				<tr>
+				<tr class="helpNote" help="WARNING: You usually shouldn't change this!<br /><br />This is the actual MDL file that this model uses.<br /><br />It's only useful to change this to a different MDL if you have a lot of instances of the same broken model everywhere and don't want to replace them all one-by-one.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Model File:
 					</td>
@@ -98,7 +98,7 @@
 						-->
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="This image is used in various menus.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Thumbnail:
 					</td>
@@ -113,7 +113,7 @@
 						</div>
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="Your tags will be useful when selecting cabinets.<br /><br />Comma-separated tags, for example: console, retro, tabletop">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Tags:
 					</td>
@@ -132,8 +132,8 @@
 						Mount:
 					</td>
 					<td class="aaKeyValueTableValue">
-						<input fieldname="platforms/-KJvcne3IKMZQTaG7lPo/mountid" type="text" class="aaTextSizeFontSize" style="width: 100%;" disabled />
-						<!--<select fieldname="platforms/-KJvcne3IKMZQTaG7lPo/mountid" class="aaTextSizeFontSize" style="width: 100%;">
+						<input fieldname="platforms/-KJvcne3IKMZQTaG7lPo/mountids" type="text" class="aaTextSizeFontSize" style="width: 100%;" disabled />
+						<!--<select fieldname="platforms/-KJvcne3IKMZQTaG7lPo/mountids" class="aaTextSizeFontSize" style="width: 100%;">
 						</select>-->
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
@@ -149,7 +149,7 @@
 					<td style="width: 1%; white-space: nowrap;">
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="A URL where this model can be downloaded from. Usually a URL to GarrysMod.org, ModDb.com, or GameBanana.com, etc.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Download Website:
 					</td>
@@ -164,7 +164,7 @@
 						Preview Website:
 					</td>
 					<td class="aaKeyValueTableValue">
-						<input fieldname="preview" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						<input fieldname="preview" type="text" class="aaTextSizeFontSize" style="width: 100%;" disabled />
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
 					</td>
@@ -271,6 +271,7 @@
 				uiBack = "";
 
 			var model = aaapi.library.getLibraryModel(id);
+			console.log(JSON.stringify(model));
 			var entryForm = document.querySelector("#entryForm");
 
 			function fileBrowse(fieldName)
@@ -494,17 +495,20 @@
 				}
 
 				if( typeof val !== "undefined" )
-				{/*
-					console.log(dummyElem.tagName);
-					if( dummyElem.tagName === "SELECT" && fieldName.indexOf("mountid") === fieldName.length - 7 && dummyElem.options.length === 0 )
+				{
+					//console.log(dummyElem.tagName);
+					if( fieldName.indexOf("mountids") === fieldName.length - 8 )
 					{
-						//<option value="" selected disabled></option>
-						var option = document.createElement("option");
-						option.value = val;
-						option.
+						var mount = aaapi.system.getMount(val);
+						if( mount )
+						{
+							console.log(JSON.stringify(mount));
+							dummyElem.value = mount.title;
+						}
+						else
+							dummyElem.value = val;
 					}
 					else
-						*/
 						dummyElem.value = val;
 				}
 			}

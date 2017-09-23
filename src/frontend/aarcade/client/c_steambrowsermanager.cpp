@@ -19,12 +19,21 @@ C_SteamBrowserManager::C_SteamBrowserManager()
 	// NOTE: NO STEAM ERROR MANIFESTS HERE.  Fails before devmsg can print.
 	if (!steamapicontext->SteamHTMLSurface())
 	{
+		m_bSupported = false;
 		DevMsg("CRITICAL ERROR: Failed to acquire the SteamHTMLSurface! Make sure Steam is running!\n");
+		g_pAnarchyManager->ThrowEarlyError("Anarchy Arcade cannot connect to the Steamworks web browser.\nPlease restart Steam and try again.");
 	}
 	else if (!steamapicontext->SteamHTMLSurface()->Init())
+	{
+		m_bSupported = false;
 		DevMsg("CRITICAL ERROR: Failed to initialize the Steamworks browser!\n");
+		g_pAnarchyManager->ThrowEarlyError("Anarchy Arcade cannot connect to the Steamworks web browser.\nPlease restart Steam and try again.");
+	}
 	else
+	{
+		m_bSupported = true;
 		m_pInputListener = new C_InputListenerSteamBrowser();
+	}
 }
 
 C_SteamBrowserManager::~C_SteamBrowserManager()

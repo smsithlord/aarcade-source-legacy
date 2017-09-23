@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "themoviedb",
 	"api_version": 0.1,
 	"title": "TheMovieDb",
+	"summary": "Movies & TV",
+	"description": "TheMovieDb is a wiki-style database that is great for finding movie posters, wallpapers, & trailers.",
 	"homepage": "http://www.themoviedb.org/",
 	"search": "http://www.themoviedb.org/search?query=$TERM",
+	"can_acquire": false,
+	"allow_keywords": false,
 	"fields":
 	{
 		"all": 100,

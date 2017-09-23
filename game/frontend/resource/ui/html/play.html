@@ -56,14 +56,21 @@
 
 			// get the current mapHistory (or create an empty mapHistory)
 			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+/*
+			var sortedMapHistory = [];
+			var mapHistoryKeys = Object.keys(mapHistory);
+			for( var i = 0; i < mapHistoryKeys.length; i++ )
+				sortedMapHistory.push(mapHistory[////]);
 
+			sortedMapHistory.sort()
+*/
 			var worldContextContainer = document.querySelector("#worldContextContainer");
 			worldContextContainer.mapFileShort = null;
 
 			var mapz = aaapi.system.getAllMaps();
 
 			// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
-			var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp"];
+			var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
 
 			var maps = new Array();
 			for( var y in mapz )
@@ -72,8 +79,9 @@
 					maps.push(mapz[y]);
 			}
 
-			maps.sort(function(a, b)
+			function sortFilename(a, b)
 			{
+				// sm_ first, & alphabetical
 				if( b.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 && a.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 )
 					return 1;
 				else if( a.platforms[arcadeHud.platformId].file.indexOf("sm_") === 0 && b.platforms[arcadeHud.platformId].file.indexOf("sm_") !== 0 )
@@ -87,7 +95,38 @@
 					else
 						return 0;
 				}
-			});
+			}
+
+			function sortRecent(a, b)
+			{
+				// most recently visited, then alphabetical
+				// check for timestamps
+				var a_mapHistoryEntry = mapHistory[a.info.id];
+				var b_mapHistoryEntry = mapHistory[b.info.id];
+
+				if( !!a_mapHistoryEntry && !!a_mapHistoryEntry.timestamp && !!b_mapHistoryEntry && !!b_mapHistoryEntry.timestamp )
+				{
+
+					var a_time = a_mapHistoryEntry.timestamp;
+					var b_time = b_mapHistoryEntry.timestamp;
+					if( b_time > a_time )
+						return 1;
+					else if( a_time > b_time )
+						return -1;
+					else
+						return 0;
+				}
+				else if( !!b_mapHistoryEntry && !!b_mapHistoryEntry.timestamp && (!!!a_mapHistoryEntry || !!!a_mapHistoryEntry.timestamp) )
+					return 1;
+				else if( !!a_mapHistoryEntry && !!a_mapHistoryEntry.timestamp && (!!!b_mapHistoryEntry || b_mapHistoryEntry.timestamp) )
+					return -1;
+				else if( a.platforms[arcadeHud.platformId].file.toLowerCase() < b.platforms[arcadeHud.platformId].file.toLowerCase() )
+					return -1;
+				else if( a.platforms[arcadeHud.platformId].file.toLowerCase() > b.platforms[arcadeHud.platformId].file.toLowerCase() )
+					return 1;
+				else
+					return 0;
+			}
 
 			worldContextContainer.addEventListener("mouseover", function(e)
 			{
@@ -343,99 +382,141 @@
 					return false;
 			}
 
+			function generateMap(mapsList, x, containerElem)
+			{
+				var mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
+				var screenshotKeys = Object.keys(g_screenshots);
+				//var mapsList = maps;
+				var i, screenshots, screenshot;
+				//for( x = 0; x < mapsList.length; x++)
+				//{
+					mapName = mapsList[x].platforms[arcadeHud.platformId].file;
+					mapName = mapName.substring(0, mapName.length-4);
+
+					mapContainer = document.createElement("div");
+					mapContainer.className = "mapThumbContainer aaThemeColorOneHoverBorderColor aaThemeColorOneHoverShadedBackground";
+					mapContainer.style.cssText = "width: 240px; -webkit-transition: -webkit-transform 1s ease-in-out;";
+					mapContainer.map = mapsList[x];
+					mapContainer.addEventListener("click", function(e)
+					{
+						if( e.target.tagName !== "INPUT" )
+							playNow(this.map.platforms[arcadeHud.platformId].file.toLowerCase());
+							//console.log("Quick load it!");
+						//window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+					}.bind(mapContainer), true);
+
+					mapContainer.addEventListener("mouseover", function(e)
+					{
+						this.style.webkitTransform = "scale(1.2)";
+					}.bind(mapContainer), true);
+
+					mapContainer.addEventListener("mouseout", function(e)
+					{
+						this.style.webkitTransform = "initial";
+					}.bind(mapContainer), true);
+
+					mapImage = document.createElement("div");
+					mapImage.style.cssText = "width: 240px; height: 135px;";
+
+					screenshots = [];
+					for( i = 0; i < screenshotKeys.length; i++ )
+					{
+						screenshot = g_screenshots[screenshotKeys[i]];
+						//if( screenshot.map.file === mapName + ".bsp" )
+						//if( screenshot.map.id === mapsList[x].info.id )
+						if( compareIds(screenshot.map.id, mapsList[x].info.id) )
+							screenshots.push(screenshot);
+					}
+
+					if( screenshots.length > 0 )
+					{
+						var screenshot = screenshots[0];
+						var mapHistoryEntry = mapHistory[screenshot.map.id];
+						if( !!mapHistoryEntry && mapHistoryEntry.screenshotId !== "" && !!g_screenshots[mapHistoryEntry.screenshotId])
+							screenshot = g_screenshots[mapHistoryEntry.screenshotId];
+
+						mapImage.screenshot = screenshot;
+					}
+					else
+					{
+						var img = document.createElement("img");
+						img.style.cssText = "width: 240px; height: 135px;";
+						img.src = "asset://ui/map.jpg";
+						mapImage.appendChild(img);
+					}
+
+					mapContainer.appendChild(mapImage);
+
+
+					instancesButtonContainer = document.createElement("div");
+					instancesButtonContainer.className = "instancesButtonContainer helpNote";
+					instancesButtonContainer.setAttribute("help", "View advanced options for loading this map.");
+					instancesButtonContainer.style.cssText = "position: relative; float: left; bottom: 32px;";
+
+					instancesButton = document.createElement("input");
+					instancesButton.type = "button";
+					instancesButton.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneBorderColor aaTextColorOneColor";
+					instancesButton.style.cssText = "position: absolute; padding: 4px; border-radius: 4px; font-weight: bold; letter-spacing: 0.1em;";
+					instancesButton.value = html;
+					instancesButton.map = mapsList[x];
+					instancesButton.addEventListener("click", function(e)
+					{
+						e.stopImmediatePropagation();
+						window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
+						//aaapi.system.deleteScreenshot(this.shotId);
+						//window.location='asset://ui/welcome.html?tab=screenshots';
+					}.bind(instancesButton), true);
+
+					instancesButtonContainer.appendChild(instancesButton);
+					mapContainer.appendChild(instancesButtonContainer);
+
+					mapTitle = document.createElement("div");
+					mapTitle.className = "aaTitleTextSizeFontSize aaTitleText";
+					mapTitle.style.cssText = "text-align: left;";
+					mapTitleNode = document.createTextNode(mapsList[x].title);
+
+					mapTitle.appendChild(mapTitleNode);
+					mapContainer.appendChild(mapTitle);
+
+					if( !!!containerElem )
+						mapsContainer.appendChild(mapContainer);
+					else
+						containerElem.appendChild(mapContainer);
+					//count++;
+				//}
+			}
+
 				var iconSize = arcadeHud.themeSizes.IconSize;
 				var html = "Instances";//arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
-			var count = 0;
-			var x, mapName, mapContainer, mapImage, mapTitle, mapTitleNode;
-			var screenshotKeys = Object.keys(g_screenshots);
-			var x, i, screenshots, screenshot;
-			for( x = 0; x < maps.length; x++)
-			{
-				mapName = maps[x].platforms[arcadeHud.platformId].file;
-				mapName = mapName.substring(0, mapName.length-4);
+			//var count = 0;
 
-				mapContainer = document.createElement("div");
-				mapContainer.className = "mapThumbContainer aaThemeColorOneHoverBorderColor aaThemeColorOneHoverShadedBackground";
-				mapContainer.style.cssText = "width: 240px; -webkit-transition: -webkit-transform 1s ease-in-out;";
-				mapContainer.map = maps[x];
-				mapContainer.addEventListener("click", function(e)
-				{
-					if( e.target.tagName !== "INPUT" )
-						playNow(this.map.platforms[arcadeHud.platformId].file.toLowerCase());
-						//console.log("Quick load it!");
-					//window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
-				}.bind(mapContainer), true);
+			var recentContainer = document.createElement("div");
+			recentContainer.id = "recentContainer";
+			recentContainer.className = "aaThemeColorTwoShadedBackground aaThemeColorTwoBorderColor helpNote";
+			recentContainer.setAttribute("help", "These are your 4 most recently loaded maps.");
+			recentContainer.style.cssText = "border-style: solid; border-width: 2px; border-radius: 20px; padding: 20px; text-align: center;";
 
-				mapContainer.addEventListener("mouseover", function(e)
-				{
-					this.style.webkitTransform = "scale(1.2)";
-				}.bind(mapContainer), true);
+			/*var recentTitleContainer = document.createElement("div");
+			recentTitleContainer.id = "recentTitleContainer";
+			recentTitleContainer.className = "aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize";
+			recentTitleContainer.innerHTML = "Recently Visited<hr />";
+			recentContainer.appendChild(recentTitleContainer);*/
 
-				mapContainer.addEventListener("mouseout", function(e)
-				{
-					this.style.webkitTransform = "initial";
-				}.bind(mapContainer), true);
+			maps.sort(sortRecent);
+			for( var x = 0; x < maps.length && x < 4; x++)
+				generateMap(maps, x, recentContainer);
 
-				mapImage = document.createElement("div");
-				mapImage.style.cssText = "width: 240px; height: 135px;";
-
-				screenshots = [];
-				for( i = 0; i < screenshotKeys.length; i++ )
-				{
-					screenshot = g_screenshots[screenshotKeys[i]];
-					//if( screenshot.map.file === mapName + ".bsp" )
-					//if( screenshot.map.id === maps[x].info.id )
-					if( compareIds(screenshot.map.id, maps[x].info.id) )
-						screenshots.push(screenshot);
-				}
-
-				if( screenshots.length > 0 )
-				{
-					mapImage.screenshot = screenshots[0];
-				}
-				else
-				{
-					var img = document.createElement("img");
-					img.style.cssText = "width: 240px; height: 135px;";
-					img.src = "asset://ui/map.jpg";
-					mapImage.appendChild(img);
-				}
-
-				mapContainer.appendChild(mapImage);
-
-
-				instancesButtonContainer = document.createElement("div");
-				instancesButtonContainer.className = "instancesButtonContainer helpNote";
-				instancesButtonContainer.setAttribute("help", "View advanced options for loading this map.");
-				instancesButtonContainer.style.cssText = "position: relative; float: left; bottom: 32px;";
-
-				instancesButton = document.createElement("input");
-				instancesButton.type = "button";
-				instancesButton.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneBorderColor aaTextColorOneColor";
-				instancesButton.style.cssText = "position: absolute; padding: 4px; border-radius: 4px; font-weight: bold; letter-spacing: 0.1em;";
-				instancesButton.value = html;
-				instancesButton.map = maps[x];
-				instancesButton.addEventListener("click", function(e)
-				{
-					e.stopImmediatePropagation();
-					window.location = "asset://ui/playInstance.html?id=" + this.map.info.id;
-					//aaapi.system.deleteScreenshot(this.shotId);
-					//window.location='asset://ui/welcome.html?tab=screenshots';
-				}.bind(instancesButton), true);
-
-				instancesButtonContainer.appendChild(instancesButton);
-				mapContainer.appendChild(instancesButtonContainer);
-
-				mapTitle = document.createElement("div");
-				mapTitle.className = "aaTitleTextSizeFontSize aaTitleText";
-				mapTitleNode = document.createTextNode(maps[x].title);
-
-				mapTitle.appendChild(mapTitleNode);
-				mapContainer.appendChild(mapTitle);
-
-				mapsContainer.appendChild(mapContainer);
-				count++;
-			}
+			//recentContainer.appendChild(document.createElement("hr"));
+			mapsContainer.appendChild(recentContainer);
+/*
+			var allTitleContainer = document.createElement("div");
+			allTitleContainer.className = "aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize";
+			allTitleContainer.innerHTML = "All<hr />";
+			mapsContainer.appendChild(allTitleContainer);
+*/
+			maps.sort(sortFilename);
+			for( var x = 0; x < maps.length; x++)
+				generateMap(maps, x);
 
 			// cause the initially visible cards to load their thumbnails
 			deadSea(mapsContainer);
@@ -482,6 +563,10 @@
 						elem.style.display = "none";
 				}
 
+				if( searchVal === "" )
+					document.querySelector("#recentContainer").style.display = "block";
+				else
+					document.querySelector("#recentContainer").style.display = "none";
 
 				// cause the initially visible search result cards to load their thumbnails
 				deadSea(mapsContainer);

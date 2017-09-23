@@ -32,11 +32,17 @@
 			var activeTabId = arcadeHud.getParameterByName("activeTabId");
 			if( !activeTabId )
 			{
-				activeTabId = "items";
-
-				if( category === "models" )
+				if( category === "items" )
+					activeTabId = "items";
+				else if( category === "models" )
 					activeTabId = "props";
+				else if( category === "apps" )
+					activeTabId = "apps";
 			}
+			//else if( activeTabId === "apps" )
+			//{
+			//	category = "apps";
+			//}
 
 			if( nodestyle !== "" )
 				activeTabId = "nodes";
@@ -50,6 +56,10 @@
 					{
 						"id": "props",
 						"title": "Props"
+					},
+					{
+						"id": "apps",
+						"title": "Apps"
 					}/*,
 					{
 						"id": "cabinets",
@@ -62,10 +72,6 @@
 					{
 						"id": "nodes",
 						"title": "Nodes"
-					},
-					{
-						"id": "apps",
-						"title": "Apps"
 					},
 					{
 						"id": "types",
@@ -111,8 +117,10 @@
 						var targetTabId;
 						if (category === "items")
 							targetTabId = "items";
-						else
+						else if (category === "models")
 							targetTabId = "props";
+						else if (category === "apps")
+							targetTabId = "apps";
 
 						e.targetTabId = targetTabId;
 					}
@@ -140,31 +148,46 @@
 				// multi-purpose logic of generic methods
 				// TODO: Work... elsewhere.
 
-				var isNodes = "no";
+				var noTypesFilter = "no";
+				okButtonElem.value = "OK";
 				// tab-specific preparation
 				if( e.targetTabId === "props" )
 				{
-					browseInput.placeholder = "";
-					browseInput.readOnly = true;
+					noTypesFilter = "no";
+					browseInput.placeholder = "Click BROWSE to import a new MDL file...";
+					browseInput.readOnly = false;
+					browseInput.style.display = "inline-block";
 					setCategory("models");
 				}
 				else if( e.targetTabId === "items" )
 				{
-					browseInput.placeholder = "Paste URL or click BROWSE...";
+					noTypesFilter = "no";
+					browseInput.placeholder = "Paste URL or click BROWSE to create a new item...";
 					browseInput.readOnly = false;
+					browseInput.style.display = "inline-block";
 					setCategory("items");
+				}
+				else if( e.targetTabId === "apps" )
+				{
+					noTypesFilter = "yes";
+					browseInput.placeholder = "Click BROWSE to choose a new open-with executable...";
+					browseInput.readOnly = false;
+					browseInput.style.display = "inline-block";
+					okButtonElem.value = "Add New";
+					setCategory("apps");
 				}
 				else if( e.targetTabId === "nodes" )
 				{
-					isNodes = "yes";
+					noTypesFilter = "yes";
 					browseInput.placeholder = "";
 					browseInput.readOnly = true;
+					browseInput.style.display = "none";
 					setCategory("items", true);
 				}
 
 				// re-build the results
 				libraryTable.setAttribute("category", category);
-				libraryTable.setAttribute("isNodes", isNodes);
+				libraryTable.setAttribute("noTypesFilter", noTypesFilter);
 
 				activeTabId = e.targetTabId;
 				startLibrarySearch(shouldUpdateContext);
@@ -303,7 +326,7 @@
 				/*background-color: red;*/
 			}
 
-			#libraryTable[category='models'] #filterSelectCell, #libraryTable[category='models'] #auxButton, #libraryTable[category='models'] #browseButton #libraryTable[isNodes='yes'] #filterSelectCell, #libraryTable[isNodes='yes'] #auxButton, #libraryTable[isNodes='yes'] #browseButton, #libraryTable[isNodes='yes'] #browseInput
+			#libraryTable[category='models'] #filterSelectCell, #libraryTable[category='models'] #auxButton, #libraryTable[noTypesFilter='yes'] #filterSelectCell, #libraryTable[noTypesFilter='yes'] #auxButton, #libraryTable[noTypesFilter='yes'][category='props'] #browseButton, #libraryTable[noTypesFilter='yes'] #browseInput
 			{
 				display: none;
 			}
@@ -404,7 +427,7 @@
 				{
 					var selectedEntry = document.querySelector(".selectedEntry");
 					if( !!selectedEntry )
-							deselectLibraryEntry(selectedEntry);
+						deselectLibraryEntry(selectedEntry);
 				}
 			}
 
@@ -412,11 +435,37 @@
 			{
 				arcadeHud.browseForFile(function(chosenFile)
 				{
+					var categoryOverride = category;
+					if( categoryOverride !== "models" && chosenFile.toLowerCase().lastIndexOf(".mdl") === chosenFile.length - 4 )
+						categoryOverride = "models";
+
 					if(chosenFile !== "")
 					{
+						if( categoryOverride === "models" )
+						{
+							if( chosenFile.toLowerCase().indexOf(".mdl") !== chosenFile.length-4 )
+							{
+								console.log("ERROR: Models must be MDL files.\n");
+								createModalAlert("Oops!", "Models must be MDL files.", "");
+								chosenFile = "";
+							}
+							else
+							{
+								var relativeFile = aaapi.system.getRelativeAssetPath(chosenFile);
+								if( chosenFile === relativeFile )
+								{
+									console.log("ERROR: MDL must be in a mounted content folder.\n");
+									createModalAlert("Oops!", "The MDL file must be in a mounted content folder.", "");
+									chosenFile = "";
+								}
+								else
+									chosenFile = relativeFile;
+							}
+						}
+
 						this.value = chosenFile;
 						onEntryValueChange();
-						fileLocationFormElem.querySelector("input[type='submit']").click();//submit();
+						fileLocationFormElem.querySelector("input[type='submit']").click();
 					}
 				}.bind(inputElem));
 			}
@@ -448,8 +497,12 @@
 					itemValue = entry.file;
 				else if( category === "models" )
 					itemValue = entry.platforms[arcadeHud.platformId].file;
+				else if( category === "apps" )
+					itemValue = "";
 				entryValueInputElem.value = itemValue;
 				onEntryValueChange(true);
+
+				console.log(entryRow.entry.info.id)
 
 				libraryTable.classList.add("hasSelectedEntry");
 
@@ -539,7 +592,10 @@
 					else
 					{
 						if( activeTabId !== "nodes" || nodestyle === "" )
+						{
+							console.log(filterText);
 							response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterText);//, "nodestyle", "node_highrise_studio");
+						}
 						else
 						{
 							response = aaapi.library.findFirstLibraryEntry(category, "title", searchElem.value, "type", filterText, "nodestyle", nodestyle);
@@ -559,11 +615,11 @@
 				}
 
 				var libraryQueryId = response.queryId;
-
-				if( category !== "models" || !response.entry.dynamic )
+				if( category !== "models" || response.entry.dynamic != "1" )
 					appendEntry(response.entry);
 
-				libraryFetch(libraryQueryId, method, 40);
+				var amt = (category === "apps") ? 999 : 40;
+				libraryFetch(libraryQueryId, method, amt);
 			}
 
 			function chooseSelected(selectedEntry)
@@ -573,23 +629,112 @@
 				var searchText = searchElem.value;
 				var filterText = filterSelect.value;
 
-				if( !!selectedEntry )
+				var categoryOverride = category;					
+				if( !!selectedEntry )//&& selectedEntry.entry.info.id !== "1.#INF00" )
 				{
+					//console.log("herererer " + selectedEntry.entry.title);
+					//console.log(selectedEntry.entry.info.id);
 					// entry exists
-					if( category === "items" )
+					if( categoryOverride === "items" )
 					{
+						var oldTransform = localStorage.getItem("trans" + selectedEntry.entry.info.id);
+
+						if( !!!oldTransform )
+							oldTransform = {};
+						else
+							oldTransform = JSON.parse(oldTransform);
+
+						var modelId = oldTransform.modelId;
+						if( typeof modelId === 'undefined' )
+							modelId = "";
+
+						var scale = oldTransform.scale;
+						if( typeof scale === 'undefined' )
+							scale = "1.0";
+
+						var pitch = oldTransform.pitch;
+						if( typeof pitch === 'undefined' )
+							pitch = "0";
+
+						var yaw = oldTransform.yaw;
+						if( typeof yaw === 'undefined' )
+							yaw = "0";
+						
+						var roll = oldTransform.roll;
+						if( typeof roll === 'undefined' )
+							roll = "0";
+						
+						var offX = oldTransform.offX;
+						if( typeof offX === 'undefined' )
+							offX = "0";
+						
+						var offY = oldTransform.offY;
+						if( typeof offY === 'undefined' )
+							offY = "0";
+						
+						var offZ = oldTransform.offZ;
+						if( typeof offZ === 'undefined' )
+							offZ = "0";
+
 						// always spawn item for now.
-						aaapi.system.spawnEntry(category, selectedEntry.entry.info.id, searchText, filterText);
+						aaapi.system.spawnEntry(categoryOverride, selectedEntry.entry.info.id, searchText, filterText, modelId, scale, pitch, yaw, roll, offX, offY, offZ);
 					}
 					else
 					{
-						aaapi.system.spawnEntry(category, selectedEntry.entry.info.id, searchText, filterText);
+						//searchText = selectedEntry.entry.title;
+						//aaapi.system.setLibraryBrowserContext(categoryOverride, selectedEntry.entry.info.id, searchText, filterText);
+
+						
+						var oldTransform = localStorage.getItem("trans" + selectedEntry.entry.info.id);
+						
+						if( !!!oldTransform )
+							oldTransform = {};
+						else
+							oldTransform = JSON.parse(oldTransform);
+
+						var modelId = "";
+						//var modelId = oldTransform.modelId;
+						//if( typeof modelId === 'undefined' )
+						//	modelId = "";
+
+						var scale = oldTransform.scale;
+						if( typeof scale === 'undefined' )
+							scale = "1.0";
+
+						var pitch = oldTransform.pitch;
+						if( typeof pitch === 'undefined' )
+							pitch = "0";
+
+						var yaw = oldTransform.yaw;
+						if( typeof yaw === 'undefined' )
+							yaw = "0";
+						
+						var roll = oldTransform.roll;
+						if( typeof roll === 'undefined' )
+							roll = "0";
+						
+						var offX = oldTransform.offX;
+						if( typeof offX === 'undefined' )
+							offX = "0";
+						
+						var offY = oldTransform.offY;
+						if( typeof offY === 'undefined' )
+							offY = "0";
+						
+						var offZ = oldTransform.offZ;
+						if( typeof offZ === 'undefined' )
+							offZ = "0";
+
+						aaapi.system.spawnEntry(categoryOverride, selectedEntry.entry.info.id, searchText, filterText, modelId, scale, pitch, yaw, roll, offX, offY, offZ);
 					}
 				}
 				else if( entryValueInputElem.value !== "" )
 				{
+					if( categoryOverride !== "models" && entryValueInputElem.value.toLowerCase().lastIndexOf(".mdl") === entryValueInputElem.value.length - 4 )
+						categoryOverride = "models";
+
 					// entry does NOT exist yet
-					if( category === "items" )
+					if( categoryOverride === "items" )
 					{
 						var tunedVal = entryValueInputElem.value;
 						if( tunedVal.indexOf("https") === 0 )
@@ -617,8 +762,93 @@
 							createNewItemWizard();
 						}
 					}
+					else if( categoryOverride === "apps" )
+					{
+						var appFile = entryValueInputElem.value;
+
+						var foundLastSlash = appFile.lastIndexOf("/");
+						if( foundLastSlash === -1 )
+							foundLastSlash = appFile.lastIndexOf("\\");
+						if( foundLastSlash !== -1 )
+							appTitle = appFile.substring(foundLastSlash+1);
+						var foundLastDot = appTitle.lastIndexOf(".");
+						if( foundLastDot !== -1 )
+							appTitle = appTitle.substring(0, foundLastDot);
+
+						// first, check if an app that matches this one already exists...
+			 			var app = aaapi.library.findLibraryApp("file", appFile);
+			 			//if( !app )
+			 			//	app = aaapi.library.findLibraryApp("title", appTitle);
+
+			 			if( app )
+			 			{
+			 				console.log("App already exists!!");
+			 				window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
+			 			}
+			 			else
+			 			{
+							app = aaapi.library.createApp("title", appTitle, "file", appFile);
+							if( app )
+							{
+								window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
+							}
+						}
+					}
 					else
-						console.log("UNHANDLED CREATE NEW");
+					{
+						// first, check if an item that matches this one already exists...
+						var model = aaapi.library.findLibraryModel("file", entryValueInputElem.value);
+
+			 			if( !model )
+			 				model = aaapi.library.createModel("file", entryValueInputElem.value);
+
+			 			if( model )
+			 			{
+			 				//aaapi.system.setLibraryBrowserContext("models", model.info.id, "", "");
+			 				//aaapi.system.spawnEntry(model.info.id);
+			 				var oldTransform = localStorage.getItem("trans" + model.info.id);
+						
+							if( !!!oldTransform )
+								oldTransform = {};
+							else
+								oldTransform = JSON.parse(oldTransform);
+
+							var modelId = "";
+							//var modelId = oldTransform.modelId;
+							//if( typeof modelId === 'undefined' )
+							//	modelId = "";
+
+							var scale = oldTransform.scale;
+							if( typeof scale === 'undefined' )
+								scale = "1.0";
+
+							var pitch = oldTransform.pitch;
+							if( typeof pitch === 'undefined' )
+								pitch = "0";
+
+							var yaw = oldTransform.yaw;
+							if( typeof yaw === 'undefined' )
+								yaw = "0";
+							
+							var roll = oldTransform.roll;
+							if( typeof roll === 'undefined' )
+								roll = "0";
+							
+							var offX = oldTransform.offX;
+							if( typeof offX === 'undefined' )
+								offX = "0";
+							
+							var offY = oldTransform.offY;
+							if( typeof offY === 'undefined' )
+								offY = "0";
+							
+							var offZ = oldTransform.offZ;
+							if( typeof offZ === 'undefined' )
+								offZ = "0";
+
+							aaapi.system.spawnEntry("models", model.info.id, searchText, filterText, modelId, scale, pitch, yaw, roll, offX, offY, offZ);
+			 			}
+					}
 				}
 			}
 
@@ -626,6 +856,12 @@
 			{
 				document.location = "asset://ui/createItem.html?fileLocation=" + encodeURIComponent(entryValueInputElem.value);
 			}
+/*
+			function createNewModelWizard()
+			{
+				document.location = "asset://ui/createModel.html?fileLocation=" + encodeURIComponent(entryValueInputElem.value);
+			}
+			*/
 
 			function editSelected()
 			{
@@ -637,6 +873,10 @@
 				{
 					window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(libraryContainer.selectedEntry.entry.info.id);
 				}
+				//else if( category === "apps" )
+				//{
+					//window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(libraryContainer.selectedEntry.entry.info.id);
+				//}
 				else
 					console.log("UNHANDLED EDIT ENTRY");
 			}
@@ -686,7 +926,12 @@
 				// solution: what ever.
 				entryRow.addEventListener("dblclick", function(e)
 				{
-					chooseSelected(this);
+					if( category === "apps" )
+					{
+						window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(entryRow.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
+					}
+					else
+						chooseSelected(this);
 				}.bind(entryRow), true);	
 
 				var entryFilterCell = document.createElement("td");
@@ -764,6 +1009,11 @@
 					else if( category === "models" )
 					{
 						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+					else if( category === "apps" )
+					{
+						window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
+						//window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
 					}
 				}.bind(editButton), true);
 
@@ -844,6 +1094,7 @@
 					}
 					else
 					{
+						// OBSOLETE? we probably don't want this anymore, because it never gets used.
 						var fieldValueOption = document.createElement("option");
 						fieldValueOption.value = "";
 						fieldValueOption.text = "All Models";
@@ -907,10 +1158,10 @@
 					if( response.success )
 					{
 						var libraryEntry = response.entry;
-
-						if( category !== "models" || !libraryEntry.dynamic )
+//console.log(libraryEntry.dynamic);
+						if( category !== "models" || libraryEntry.dynamic != "1" )
 						{
-							if( this.count < this.amount && libraryEntry != 0 )
+							if( this.count < this.amount )//&& libraryEntry != 0 )
 							{
 								appendEntry(libraryEntry);
 								this.count++;
@@ -946,7 +1197,7 @@
 				var selectedEntry = document.querySelector(".selectedEntry");
 				if( !!selectedEntry )
 					chooseSelected(selectedEntry);
-				else if( category === "items" && entryValueInputElem.value !== "" )
+				else if( entryValueInputElem.value !== "" )
 					chooseSelected();
 
 				return false;
@@ -982,6 +1233,154 @@
 */
 			//setCategory(category);
 			libraryTable.setAttribute("category", category);
+
+			var aaModalAlertMenu;
+			function createModalAlert(title, text, action)
+			{
+				//modalWindowHeight = 700;
+
+				if( !!aaModalAlertMenu )
+				{
+					console.log("ERROR: A modal alert menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalAlertMenu.flashInterval )
+						{
+							aaModalAlertMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalAlertMenu), 100);
+
+							aaModalAlertMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				//var modalYPos = parseInt(window.innerHeight / 2.2) - (modalWindowHeight / 2) + "px";
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="">'//max-width: 700px; height: ' + modalWindowHeight + 'px; max-height: ' + modalWindowHeight + 'px;">';
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal; padding: 16px;' class='aaTitleTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalAlertMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				if( !!mainHelp && mainHelp !== "" )
+				{
+					var mainHelpElem = modalContainer.querySelector(".aaWindowPaneContentScrollable");
+					mainHelpElem.setAttribute("help", mainHelp);
+					arcadeHud.assignHelp(mainHelpElem);
+				}
+				*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalAlertMenu.parentNode.parentNode.removeChild(aaModalAlertMenu.parentNode);
+					aaModalAlertMenu = undefined;
+
+					eval(action);
+				}, true);
+			}
 		</script>
 	</body>
 </html>

@@ -41,7 +41,7 @@
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
-				<tr>
+				<tr class="helpNote" help="The title of your shortcut.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Title:
 					</td>
@@ -51,7 +51,7 @@
 					<td style="width: 1%; white-space: nowrap;">
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="The type of shortcut. This is useful when searching your library & makes open-with apps work better.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Type:
 					</td>
@@ -63,19 +63,24 @@
 					<td style="width: 1%; white-space: nowrap;">
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="Most files can be opened normally using Windows (default).<br /><br />You should only change this if you require advanced command-line launch options using an Open With app.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Open With:
 					</td>
 					<td class="aaKeyvalueTableValue">
 						<select fieldname="app" class="aaTextSizeFontSize" style="width: 100%;">
-							<option>Windows (default)</option>
+							<option value="">Windows (default)</option>
 						</select>
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
+						<div id="editAppButton" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: none;" onclick="editApp();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("editicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
 					</td>
 				</tr>
-				<tr>
+				<tr class="helpNote" help="This is what your shortcut will launch. It can be a local file, an internet URL, or a Steam AppID.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						File Target:
 					</td>
@@ -101,7 +106,7 @@
 		</div>
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="visual">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
-				<tr>
+				<tr class="helpNote" help="This image gets displayed on the cabinet's screen. It is also used in various menus.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Screen Image:
 					</td>
@@ -120,7 +125,7 @@
 							</script>
 						</div>
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="This image gets displayed on the cabinet's marquee surface & often on the sides panels of the cabinet as well. It is also used in various menus.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Marquee Image:
 					</td>
@@ -139,7 +144,7 @@
 							</script>
 						</div>
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="This is the preferred URL to load onto the cabinet's screen when the shortcut is first selected. It's usually a short preview video, or a scene from a movie on YouTube, etc.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Preview Website:
 					</td>
@@ -158,7 +163,7 @@
 		</div>
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="other">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
-				<tr>
+				<tr class="helpNote" help="This is a URL to a video stream where this item can be watched online. Useful if the shortcut is to a local file that is *also* available for online streaming because it will make the item work better when shared. Usually a YouTube or Netflix URL.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Stream Website:
 					</td>
@@ -172,7 +177,7 @@
 							</script>
 						</div>
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="This is a URL to a website that this shortcut's content can be obtained from. Useful when you share this item with friends who don't have the game/file installed yet. Usually a link to an online store or a developer's website.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Download Website:
 					</td>
@@ -186,7 +191,7 @@
 							</script>
 						</div>
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="This is a URL that has detailed information about this shortcut's content. Usually a URL to a database/wiki website such as TheMovieDb or the Steam Store, etc.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Reference Website:
 					</td>
@@ -200,7 +205,7 @@
 							</script>
 						</div>
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="A brief description of this shortcut's content.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Description:
 					</td>
@@ -209,7 +214,7 @@
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
 					</td>
-				</tr><tr>
+				</tr><tr class="helpNote" help="Your tags will be useful when searching your library.<br /><br />Comma-separated tags, for example: space, zombies, shooter">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Tags:
 					</td>
@@ -277,12 +282,22 @@
 						if( item.app !== "" )
 						{
 							var app = aaapi.library.getLibraryApp(item.app);
-							var x;
+							var x, testerPath;
+							var testerFile = chosenFile
+							testerFile = testerFile.replace(/\\/g, "/");
+							var lastSlash = testerFile.lastIndexOf("/");
+							if( lastSlash === -1 )
+								lastSlash = testerFile.lastIndexOf("\\");
+
 							for( x in app.filepaths )
 							{
-								if( chosenFile.indexOf(app.filepaths[x].path) === 0 )
+								testerPath = app.filepaths[x].path;
+								testerPath = testerPath.replace(/\\/g, "/");
+
+
+								if( testerFile.indexOf(testerPath) === 0 )
 								{
-									chosenFile = chosenFile.substring(app.filepaths[x].path.length);
+									chosenFile = chosenFile.substring(lastSlash+1);
 									break;
 								}
 							}
@@ -462,12 +477,27 @@
 						}
 						else
 							console.log("Item update rejected!");
+
+						var appElem = document.querySelector("select[fieldname='app']");
+						var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+						var editAppButtonElem = document.querySelector("#editAppButton");
+						if( !!!appElemSelectedOption.app )
+						{
+							editAppButtonElem.classList.remove("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "none";
+						}
+						else
+						{
+							editAppButtonElem.classList.add("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "inline-block";
+						}
 					}, true);
 
 					// populate any APP lists
 					for( var j = 0; j < allAppsSorted.length; j++ )
 					{
 						var optionElem = document.createElement("option");
+						optionElem.app = allAppsSorted[j];
 						optionElem.text = allAppsSorted[j].title;
 						optionElem.value = allAppsSorted[j].info.id;
 						dummyElem.appendChild(optionElem);
@@ -505,6 +535,31 @@
 							document.querySelector("#nodeText").style.display = "none";
 						}
 					}
+					else if( fieldName === "app" )
+					{
+						var appElem = document.querySelector("select[fieldname='app']");
+						var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+						var editAppButtonElem = document.querySelector("#editAppButton");
+
+						if( !!appElemSelectedOption.app )
+						{
+							editAppButtonElem.classList.add("aaKeyValuesRowButton");
+							editAppButtonElem.style.display = "inline-block";
+						}
+					}
+				}
+			}
+
+			function editApp()
+			{
+				var appElem = document.querySelector("select[fieldname='app']");
+				var appElemSelectedOption = appElem.options[appElem.selectedIndex];
+				var app = appElemSelectedOption.app;
+				if( app )
+				{
+					var ourUIBack = "window.location='asset://ui/editItem.html?id=" + id + "';";
+
+					window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent(ourUIBack);
 				}
 			}
 		</script>

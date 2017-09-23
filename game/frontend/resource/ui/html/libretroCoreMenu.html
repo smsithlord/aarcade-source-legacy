@@ -224,6 +224,22 @@
 			if( !!!tabId )
 				tabId = "";
 
+			var masterType = arcadeHud.getParameterByName("type");
+			if( !!!masterType || masterType === "" )
+			{
+				if( tabId === "gameOverride" )
+					masterType = "game";
+				else
+					masterType = "core";
+			}
+			else if( !!masterType && masterType !== "" )
+			{
+				if( masterType === "game" )
+					tabId = "gameOverride";
+				else
+					tabId = "settings";
+			}
+
 			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
 				"tabs": [
 					{
@@ -349,10 +365,6 @@
 			//var activeOverlay;
 			var activeOverlay = aaapi.system.getLibretroActiveOverlay();
 
-			var masterType = arcadeHud.getParameterByName("type");
-			if( !!!masterType )
-				masterType = "core";
-
 			var hudContentBodyElem = document.querySelector(".aaKeyValueTable");
 			//var noOptionsInfo = document.querySelector("#noOptionsInfo");
 			function generateCoreOptions(optionsType)
@@ -448,7 +460,7 @@
 
 				optionRowElem = document.createElement("tr");
 				optionRowElem.className = "helpNote";
-				optionRowElem.setAttribute("help", "Overlays are PNG's that are shown on top of fullscreen Libretro instances. They can be customized per-core OR per-game.<br /><br />Any PNG's in the following folder will be available in this list:<br />Anarchy Arcade/aarcade_user/resource/ui/html/overlays");
+				optionRowElem.setAttribute("help", "Overlays are PNG's that are shown on top of fullscreen Libretro instances.<br /><br />Click the help button for detailed info.");
 				arcadeHud.assignHelp(optionRowElem);
 				optionNameCellElem = document.createElement("td");
 				optionNameCellElem.className = "aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize";
@@ -524,14 +536,27 @@
 
 				optionSelectElem.addEventListener("change", function(e)
 				{
+					//console.log("tab id iszxx: " + tabId);
 					aaapi.system.libretroSetOverlay(masterType, this.options[this.selectedIndex].value);
-					window.location.reload();
+					//console.log("tab id is: " + tabId);
+					window.location = "asset://ui/libretroCoreMenu.html?type=" + masterType;
+					//window.location.reload();
 				}.bind(optionSelectElem), true);
 
 				optionValueCellElem.appendChild(optionSelectElem);
 
+				var optionExtraCellElem = document.createElement("td");
+				var buttonContainerElem = document.createElement("div");
+				buttonContainerElem.className = "aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor";
+				buttonContainerElem.style.cssText = "min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;";
+				buttonContainerElem.addEventListener("click", function(){ overlayHelp(); }, true);
+				buttonContainerElem.innerHTML = arcadeHud.generateIconHTML("help.png", 18, 18, "aaTextColorTwoHighColor");
+
+				optionExtraCellElem.appendChild(buttonContainerElem);
+
 				optionRowElem.appendChild(optionNameCellElem);
 				optionRowElem.appendChild(optionValueCellElem);
+				optionRowElem.appendChild(optionExtraCellElem);
 				hudContentBodyElem.appendChild(optionRowElem);
 				//console.log("yyaaaaaaaaaaar: " + arcadeHud.overlayId + ", " + activeOverlay.coreOverlayId);
 				//console.log(arcadeHud.overlayId);// === activeOverlay.coreOverlayId);
@@ -612,6 +637,8 @@
 
 				e.setPseudo();
 				initialTabSwitch = false;
+				tabId = e.targetTabId;
+				//console.log(tabId);
 			}
 
 			//generateCoreOptions(masterType);
@@ -653,7 +680,7 @@
 				if( elemVal === "" || elemVal !== arcadeHud.overlayId || arcadeHud.overlayId === "none" )//activeOverlay.coreOverlayId !== arcadeHud.overlayId)
 					return;
 
-				createModalConfirm("Adjust Overlay Screen", "<b>First</b> position this window exactly where you want the screen to be.<br /><b>Then</b> click <i>SAVE CHANGES</i> to apply.", "saveOverlayChanges('" + type + "');", "saveOverlayChanges('default');", "clearOverlayChanges('"+ type + "');", "");
+				createModalConfirm("Adjust Overlay Now", "<b>First</b> position this window exactly where you want the screen to be.<br /><b>Then</b> click <i>SAVE AS</i> to apply.", "saveOverlayChanges('" + type + "');", "saveOverlayChanges('default');", "clearOverlayChanges('"+ type + "');", "");
 			}
 
 			function createModalConfirm(title, text, saveAction, updateDefaultAction, clearAction, cancelAction)
@@ -742,10 +769,10 @@
 							<td>\
 							</td>\
 							<td style="width: 1%; white-space: nowrap;">\
-								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Save Changes" />\
-								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Update Default" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Save As Default" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Save As Override" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Clear Override" />\
 								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Maximize" />\
-								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Clear" />\
 								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />\
 							</td>\
 						</tr>\
@@ -761,7 +788,7 @@
 				aaModalMenu = modalContainer.querySelector(".aaWindow");
 
 				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
-				buttons[0].addEventListener("click", function(e)
+				buttons[1].addEventListener("click", function(e)
 				{
 					eval(saveAction);
 					window.location.reload();
@@ -770,7 +797,7 @@
 					//aaModalMenu = undefined;
 				}, true);
 
-				buttons[1].addEventListener("click", function(e)
+				buttons[0].addEventListener("click", function(e)
 				{
 					eval(updateDefaultAction);
 
@@ -778,7 +805,7 @@
 					aaModalMenu = undefined;
 				}, true);
 
-				buttons[2].addEventListener("click", function(e)
+				buttons[3].addEventListener("click", function(e)
 				{
 					aaModalMenu.style.top = 0;
 					aaModalMenu.style.left = 0;
@@ -786,7 +813,7 @@
 					aaModalMenu.style.height = window.innerHeight + "px";
 				}, true);
 
-				buttons[3].addEventListener("click", function(e)
+				buttons[2].addEventListener("click", function(e)
 				{
 					aaModalMenu.parentNode.parentNode.removeChild(aaModalMenu.parentNode);
 					aaModalMenu = undefined;
@@ -800,6 +827,148 @@
 					aaModalMenu = undefined;
 
 					eval(cancelAction);
+				}, true);
+			}
+
+			function overlayHelp()
+			{
+				var text = "<font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Overview</font><div style='padding: 20px;'>An overlay is a PNG that is used <b>only</b> when fullscreen viewing a cabinet that is running Libretro.<br /><br />It can be used for fun & decoration, but also to prevent aspect ratio stretching.<br /><br />Create your own overlays, or just find existing overlay PNG's on Google image search.</div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Addon Overlays</font><div style='padding: 20px;'><ol style='margin: 0;'><li style='margin-bottom: 10px;'>Put a PNG into the following folder:<br /><input type='text' size='57' value='Anarchy Arcade/aarcade_user/resource/ui/html/overlays' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'>The PNG now appears in the Libretro Core overlays list.</li></ol></div><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Overlay Adjustment</font><div style='padding: 20px;'>Overlays can be applied & adjusted on a per-core OR per-game basis.<br /><br />To adjust an overlay, just select it & click on the Adjust button. Then position a box on the screen where Libretro should render to.<br /><br />Note that only the <b>active</b> overlay can be adjusted.</div><br /><br /><font class='aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize'>Technical Notes</font><div style='padding: 20px;'><ul style='margin: 0;'><li style='margin-bottom: 10px;'>Overlay PNG's need to be 16:9 and have transparency where the screen is supposed to render to.</li><li style='margin-bottom: 10px;'>Another great place to find overlay images is the RetroArch GitHub:<br /><input type='text' size='57' value='https://github.com/libretro/arcade-overlays/tree/master/overlays' style='border: 0; background-color: inherit;' class='aaTextSizeFontSize aaTextColorTwoColor' readonly=true onclick='this.select();' /></li><li style='margin-bottom: 10px;'>Support for overlays that are not 16:9 will most likely be added to AArcade in the future. However, <b>all</b> overlays will <i>currently</i> <u>stretch</u> to 16:9 when used.</li></ul></div>";
+				createModalAlert("Overlay Help", text, "");
+			}
+
+			var aaModalAlertMenu;
+			function createModalAlert(title, text, action)
+			{
+				modalWindowHeight = 700;
+
+				if( !!aaModalAlertMenu )
+				{
+					console.log("ERROR: A modal alert menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalAlertMenu.flashInterval )
+						{
+							aaModalAlertMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalAlertMenu), 100);
+
+							aaModalAlertMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = parseInt(window.innerHeight / 2.2) - (modalWindowHeight / 2) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="max-width: 700px; height: ' + modalWindowHeight + 'px; max-height: ' + modalWindowHeight + 'px;">';
+				modalHTML += text;//"Are you sure?";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalAlertMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalAlertMenu.parentNode.parentNode.removeChild(aaModalAlertMenu.parentNode);
+					aaModalAlertMenu = undefined;
+
+					eval(action);
 				}, true);
 			}
 		</script>

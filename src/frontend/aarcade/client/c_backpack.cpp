@@ -373,9 +373,9 @@ void C_Backpack::MergDb()
 			if (title == "")
 				title = "Unnamed (" + instanceId + ")";
 			std::string file = "";
-			std::string workshopIds = pInstanceInfoKV->GetString(VarArgs("platforms/%s/workshopId", AA_PLATFORM_ID));
+			std::string workshopIds = pInstanceInfoKV->GetString(VarArgs("platforms/%s/workshopIds", AA_PLATFORM_ID));
 			std::string mountIds = pInstanceInfoKV->GetString(VarArgs("platforms/%s/mountIds", AA_PLATFORM_ID));
-			//std::string backpackId = pInstanceInfoKV->GetString(VarArgs("platforms/%s/backpackId", AA_PLATFORM_ID));
+			//std::string backpackId = pInstanceInfoKV->GetString(VarArgs("platforms/%s/backpackIds", AA_PLATFORM_ID));
 			std::string style = pInstanceInfoKV->GetString("style");
 			g_pAnarchyManager->GetInstanceManager()->AddInstance(iLegacy, instanceId, mapId, title, file, workshopIds, mountIds, style);
 

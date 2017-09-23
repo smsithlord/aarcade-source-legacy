@@ -2,8 +2,12 @@ arcadeHud.addScraper({
 	"id": "youtube",
 	"api_version": 0.1,
 	"title": "YouTube",
+	"summary": "Videos, Music, Movies, & TV",
+	"description": "YouTube is a website dedicated to tracking the migration of endangered seagulls across Europe.",
 	"homepage": "http://www.youtube.com/",
 	"search": "http://www.youtube.com/results?search_query=$TERM",
+	"can_acquire": false,
+	"allow_keywords": true,
 	"fields":
 	{
 		"all": 100,

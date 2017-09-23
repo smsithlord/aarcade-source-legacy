@@ -35,6 +35,42 @@
 		<script>
 			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
 			document.write(windowFooterHTML);
+
+			function xaaOnActivateInputMode(opts)
+			{
+				/*
+				isFullscreen,
+				isHudPinned,
+				isMapLoaded,
+				isObjectSelected,
+				isItemSelected,
+				isMainMenu,
+				url,
+				isSelectedObject,
+				embeddedInstanceType,
+				canStream,
+				canPreview,
+				canGoForward,
+				canGoBack,
+				libretroCore,
+				libretroFile,
+				libretroCanRun,
+				libretroOverlayX,
+				libretroOverlayY,
+				libretroOverlayWidth,
+				libretroOverlayHeight,
+				libretroOverlayId,
+				activeScraperId
+			)
+			{*/
+				//if( !!arcadeHud.activeScraper )
+				//	console.log("YAAAAAAAAAR: " + arcadeHud.activeScraper.id);
+				//else
+				//	console.log("No scraper.");
+//console.log(JSON.stringify(arguments));
+				if( opts.activeScraperId === "importSteamGames" )
+					window.location = "asset://ui/overlay.html";
+			}
 		</script>
 
 		</div>
