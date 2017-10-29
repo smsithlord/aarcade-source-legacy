@@ -1046,7 +1046,7 @@ function ArcadeHud()
 		this.dispatchHudLoadingMessages();
 
 
-		if( document.location.href === "asset://ui/imageLoader.html" || document.location.href === "asset://ui/hud.html" )
+		if( document.location.href === "asset://ui/imageLoader.html" || document.location.href === "asset://ui/hud.html" || document.location.href === "asset://ui/network.html" )
 			aaapi.system.specialReady();
 	}.bind(this));
 
@@ -1420,7 +1420,8 @@ ArcadeHud.prototype.onActivateInputMode = function(
 		libretroOverlayWidth,
 		libretroOverlayHeight,
 		libretroOverlayId,
-		activeScraperId
+		activeScraperId,
+		connectedToUniverse
 	)
 {
 	console.log("onActivateInputMode received.");
@@ -1434,6 +1435,7 @@ ArcadeHud.prototype.onActivateInputMode = function(
 	canStream = (canStream == "1") ? true : false;
 	canPreview = (canPreview == "1") ? true : false;
 	libretroCanRun = (libretroCanRun == "1") ? true : false;
+	connectedToUniverse = (connectedToUniverse == "1") ? true : false;
 
 	if( !!!activeScraperId )
 		activeScraperId = "";
@@ -1455,6 +1457,20 @@ ArcadeHud.prototype.onActivateInputMode = function(
 		if(typeof window.onIsMapLoaded === "function")
 			window.onIsMapLoaded(isMapLoaded);
 	}
+
+	// handle all aaOnlyIfUniverseConnected elems
+	var elems = document.querySelectorAll(".aaOnlyIfUniverseConnected");
+	var num = elems.length;
+	var i;
+	for( i = 0; i < num; i++ )
+		elems[i].style.display = (connectedToUniverse) ? "initial" : "none";
+
+	// handle all aaOnlyIfUniverseNotConnected elems
+	var elems = document.querySelectorAll(".aaOnlyIfUniverseNotConnected");
+	var num = elems.length;
+	var i;
+	for( i = 0; i < num; i++ )
+		elems[i].style.display = (!connectedToUniverse) ? "initial" : "none";
 
 
 //this.addressTabElem
@@ -2573,6 +2589,8 @@ ArcadeHud.prototype.metaScrapeCurrent = function()
 				{
 					console.log("Item updated!");
 
+					aaapi.network.sendEntryUpdate("Item", this.activeScraperItemId);
+
 					aaapi.system.autoInspect(this.activeScraperItemId);
 					aaapi.system.deactivateInputMode();
 				}
@@ -3405,6 +3423,62 @@ ArcadeHud.prototype.addCSSRules = function()
 	}
 };
 
+ArcadeHud.prototype.createNewApp = function(appFile, backURL)
+{
+	var foundLastSlash = appFile.lastIndexOf("/");
+	if( foundLastSlash === -1 )
+		foundLastSlash = appFile.lastIndexOf("\\");
+	if( foundLastSlash !== -1 )
+		appTitle = appFile.substring(foundLastSlash+1);
+
+	var foundLastDot = appTitle.lastIndexOf(".");
+	if( foundLastDot !== -1 )
+		appTitle = appTitle.substring(0, foundLastDot);
+
+	// first, check if an app that matches this one already exists...
+	var app = aaapi.library.findLibraryApp("file", appFile);
+	//if( !app )
+	//	app = aaapi.library.findLibraryApp("title", appTitle);
+
+	if( !!app )
+		console.log("App already exists!!");
+	else
+		app = aaapi.library.createApp("title", appTitle, "file", appFile);
+
+	if( !!app )
+	{
+		var url = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id);
+		if( !!backURL && backURL !== "" )
+			url += "&uiback=" + encodeURIComponent(backURL);
+		window.location = url;
+	}
+};
+
+ArcadeHud.prototype.createNewType = function(typeTitle, backURL, shouldRedirect)
+{
+	if( typeof shouldRedirect === undefined )
+		shouldRedirect = true;
+
+	// first, check if a type that matches this one already exists...
+	var type = aaapi.library.findLibraryType("title", typeTitle);
+
+	if( !!type )
+		console.log("Type already exists!!");
+	else
+		type = aaapi.library.createType("title", typeTitle);
+
+	if( shouldRedirect && !!type )
+	{
+		var url = "asset://ui/editType.html?id=" + encodeURIComponent(type.info.id);
+		if( !!backURL && backURL !== "" )
+			url += "&uiback=" + encodeURIComponent(backURL);
+		window.location = url;
+		return type;
+	}
+	else
+		return (!!type) ? type : undefined;
+};
+
 ArcadeHud.prototype.generateIconHTML = function(iconImage, width, height, cssClass, cssColorClass)
 {
 	var dummyElem = document.createElement("div");
@@ -3527,6 +3601,7 @@ ArcadeHud.prototype.generateCRC = function(data_in)
 
 ArcadeHud.prototype.generateYouTubeImageURL = function(youtubeid)
 {
+	//var url = "http://i.ytimg.com/vi/" + youtubeid + "/hqdefault.jpg";
 	var url = "http://img.youtube.com/vi/" + youtubeid + "/0.jpg";
 	return url;
 };

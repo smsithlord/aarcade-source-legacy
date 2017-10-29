@@ -11,6 +11,8 @@
 #include "ienginevgui.h"
 #include "c_toast.h"
 
+#include "materialsystem/materialsystem_config.h"
+
 //#include <regex>
 #include "../../sqlite/include/sqlite/sqlite3.h"
 #include "../public/sourcevr//isourcevirtualreality.h"
@@ -27,13 +29,21 @@ extern C_AnarchyManager* g_pAnarchyManager(&g_AnarchyManager);
 C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager")
 {
 	DevMsg("AnarchyManager: Constructor\n");
-
+	m_panoshotState = PANO_NONE;
 	m_pToastMessagesKV = new KeyValues("toast");
 	m_fNextToastExpiration = 0;
 	m_pHoverLabel = null;
 	m_iHoverEntityIndex = -1;
 	m_hoverTitle = "";
 	m_fHoverTitleExpiration = 0;
+
+	m_pPanoStuff = new panoStuff_t();
+
+	m_fNextPanoCompleteManage = 0;
+	m_fNextExtractOverviewCompleteManage = 0;
+	m_fNextWindowManage = 0;
+
+	m_pConnectedUniverse = null;
 
 	//m_bIgnoreNextFire = false;
 	m_tabMenuFile = "taskMenu.html";	// OBSOLETE!!
@@ -74,6 +84,9 @@ C_AnarchyManager::C_AnarchyManager() : CAutoGameSystemPerFrame("C_AnarchyManager
 	m_pInstanceManager = null;
 	m_dLastGenerateIdTime = 0;
 	m_lastGeneratedChars = "000000000000";
+
+	m_pBuildGhostConVar = null;
+	m_bAutoRes = true;
 
 	m_pNextLoadInfo = new nextLoadInfo_t();
 	m_pNextLoadInfo->instanceId = "";
@@ -149,11 +162,15 @@ bool C_AnarchyManager::Init()
 	std::string aarcadeUserFolder = engine->GetGameDirectory();
 	size_t found = aarcadeUserFolder.find_last_of("/\\");
 	aarcadeUserFolder = aarcadeUserFolder.substr(0, found + 1);
+
+	std::string aarcadeToolsFolder = aarcadeUserFolder;
+	aarcadeToolsFolder += std::string("bin");
+	m_aarcadeToolsFolder = aarcadeToolsFolder;
+
 	aarcadeUserFolder += std::string("aarcade_user");
 	m_aarcadeUserFolder = aarcadeUserFolder;
 
 	g_pFullFileSystem->CreateDirHierarchy("resource\\ui\\html", "DEFAULT_WRITE_PATH");
-
 	return true;
 }
 
@@ -532,6 +549,8 @@ void C_AnarchyManager::Shutdown()
 //	delete m_pLoadingManager;
 	//m_pLoadingManager = null;
 
+	delete m_pPanoStuff;
+
 	if (m_pInputManager)
 		m_pInputManager->DeactivateInputMode(true);
 
@@ -593,6 +612,9 @@ void C_AnarchyManager::Shutdown()
 	delete m_pImportInfo;
 	m_pImportInfo = null;
 
+	delete m_pConnectedUniverse;
+	m_pConnectedUniverse = null;
+
 	DevMsg("AnarchyManager: Finished Shutdown\n");
 
 	//g_pFullFileSystem->RemoveAllSearchPaths();	// doesn't make shutdown faster and causes warnings about failing to write cfg/server_blacklist.txt
@@ -648,6 +670,11 @@ void C_AnarchyManager::LevelShutdownPreEntity()
 	//engine->ClientCmd("r_drawothermodels 0;");	// FIXME: obsolete??
 
 	DevMsg("AnarchyManager: LevelShutdownPreEntity\n");
+
+	m_fNextExtractOverviewCompleteManage = 0;
+
+	m_pMetaverseManager->RestartNetwork(false);
+
 	m_pLibretroManager->LevelShutdownPreEntity();
 
 	m_bSuspendEmbedded = true;
@@ -778,6 +805,29 @@ void C_AnarchyManager::Update(float frametime)
 				break;
 
 			case AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT:
+				if (!cvar->FindVar("disable_multiplayer")->GetBool())
+				{
+					DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERNETWORK\n");
+					m_state = AASTATE_AWESOMIUMBROWSERMANAGERNETWORK;
+				}
+				else
+				{
+					DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERIMAGES\n");
+					m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGES;
+				}
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERNETWORK:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT\n");
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT:
+				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERNETWORKINIT\n");
+				m_state = AASTATE_AWESOMIUMBROWSERMANAGERNETWORKINIT;
+				break;
+
+			case AASTATE_AWESOMIUMBROWSERMANAGERNETWORKINIT:
 				DevMsg("Incrementing to state AASTATE_AWESOMIUMBROWSERMANAGERIMAGES\n");
 				m_state = AASTATE_AWESOMIUMBROWSERMANAGERIMAGES;
 				break;
@@ -802,8 +852,17 @@ void C_AnarchyManager::Update(float frametime)
 	switch (m_state)
 	{
 		case AASTATE_RUN:
-			if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything.
+			if (m_bPaused)	// FIXME: You might want to let the web manager do its core logic, but don't render anything. This is because Awesomimue queues API calls until the next update is called.
+			{
+				if (m_pAwesomiumBrowserManager)
+					m_pAwesomiumBrowserManager->Update();
+
+				// NOTE: NO logic is actually done in the metaverse manager's update method if the game is paused, but calling it here just for consistency sake.
+				if (m_pMetaverseManager)
+					m_pMetaverseManager->Update();
+
 				return;	// TODO: Nothing else but texture proxy & callback-induced code needs to worry about paused mode now.
+			}
 
 			//DevMsg("Float: %f\n", frametime);	// deltatime
 			//DevMsg("Float: %i\n", gpGlobals->framecount);	// numframes total
@@ -855,6 +914,11 @@ void C_AnarchyManager::Update(float frametime)
 
 			ManageHoverLabel();
 			ManageImportScans();
+			ManagePanoshot();
+			ManageExtractOverview();
+
+			if (m_fNextWindowManage > 0 && m_fNextWindowManage <= engine->Time())
+				ManageWindow();
 
 			//DevMsg("AnarchyManager: Update\n");
 			break;
@@ -922,6 +986,21 @@ void C_AnarchyManager::Update(float frametime)
 			m_pWindowManager->Init();
 
 			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERNETWORK:
+			m_pAwesomiumBrowserManager->CreateAwesomiumBrowserInstance("network", "asset://ui/network.html", "AArcade Network", true);
+			g_pAnarchyManager->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT:
+			m_pAwesomiumBrowserManager->Update();
+			//this->IncrementState();
+			break;
+
+		case AASTATE_AWESOMIUMBROWSERMANAGERNETWORKINIT:
+			DevMsg("Finished initing NETWORK.\n");
+			this->IncrementState();
 			break;
 
 		case AASTATE_AWESOMIUMBROWSERMANAGERIMAGES:
@@ -1025,7 +1104,17 @@ void C_AnarchyManager::ManageHoverLabel()
 						if (pItemKV)
 							hoverTitle = pItemKV->GetString("title");// std::string(pItemKV->GetString("title")) + " (slave)";
 					}
-				}
+				 }
+				 else if (!pShortcut && m_pConnectedUniverse && m_pConnectedUniverse->connected && m_pMetaverseManager->GetNumInstanceUsers() > 0)
+				 {
+					 C_DynamicProp* pDynamicProp = dynamic_cast<C_DynamicProp*>(pEntity);
+					 if (pDynamicProp)
+					 {
+						 user_t* pUser = m_pMetaverseManager->FindInstanceUser(pDynamicProp);
+						 if (pUser)
+							 hoverTitle = pUser->displayName;
+					 }
+				 }
 
 				m_fHoverTitleExpiration = engine->Time() + fHoverTitleDuration;
 				iHoverEntityIndex = iEntityIndex;
@@ -1119,7 +1208,7 @@ void C_AnarchyManager::PopToast()
 
 void C_AnarchyManager::AddToastMessage(std::string text)
 {
-	if (!m_pToastMsgsConVar->GetBool())
+	if (!m_pToastMsgsConVar->GetBool() || g_pAnarchyManager->IsPaused())
 		return;
 
 	float fToastDuration = 7.0;
@@ -1277,6 +1366,11 @@ void C_AnarchyManager::SpecialReady(C_AwesomiumBrowserInstance* pInstance)
 	*/
 	if (id == "hud" && AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT)	// is this too early??
 		g_pAnarchyManager->IncrementState();
+	else if (id == "network" && AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT)
+	{
+		m_pAwesomiumBrowserManager->SetNetworkAwesomiumBrowserInstance(pInstance);
+		g_pAnarchyManager->IncrementState();
+	}
 	else if (id == "images" && AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT)
 		g_pAnarchyManager->IncrementState();
 }
@@ -1341,13 +1435,13 @@ bool C_AnarchyManager::HandleUiToggle()
 			if (pInstance && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pInstance )
 			{
 				//if (pInstance->GetId() == "hud" && )// || pInstance->GetId() == "images" )
-				if (engine->IsInGame() || pInstance->GetId() != "hud" )
+				if (engine->IsInGame() || (pInstance->GetId() != "hud" && pInstance->GetId() != "network"))
 				{
 					m_pAwesomiumBrowserManager->DestroyAwesomiumBrowserInstance(pInstance);
 					m_pInputManager->SetEmbeddedInstance(null);
 					return true;
 				}
-				else if (!engine->IsInGame() && pInstance->GetId() == "hud" )
+				else if (!engine->IsInGame() && pInstance->GetId() == "hud" || pInstance->GetId() == "network")
 				{
 					g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 
@@ -1653,7 +1747,16 @@ bool C_AnarchyManager::LoadMapCommand(std::string mapId, std::string instanceId,
 	//std::string url = "asset://ui/loading.html?map=" + mapId + "&instance=" + instanceId;
 	//pHudInstance->SetUrl(url);
 
-	engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
+	if (g_pAnarchyManager->GetConnectedUniverse() && g_pAnarchyManager->GetConnectedUniverse()->connected && !m_pMetaverseManager->GetHasDisconnected())
+	{
+		if (instanceId != "")
+			cvar->FindVar("host_next_map")->SetValue(true);
+
+		m_pMetaverseManager->SendChangeInstanceNotification(instanceId, mapName);
+	}
+	else
+		engine->ClientCmd(VarArgs("map \"%s\"\n", mapName.c_str()));
+
 	return true;
 }
 
@@ -2878,6 +2981,9 @@ void C_AnarchyManager::HudStateNotify()
 	params.push_back(VarArgs("%f", fSizeY));
 	params.push_back(overlayId);
 	params.push_back(activeScraperId);
+
+	bool bIsConnectedToUniverse = (m_pConnectedUniverse) ? m_pConnectedUniverse->connected : false;
+	params.push_back(VarArgs("%i", bIsConnectedToUniverse));
 	
 	pHudBrowserInstance->DispatchJavaScriptMethod("arcadeHud", "onActivateInputMode", params);
 }
@@ -3211,24 +3317,24 @@ void C_AnarchyManager::TaskRemember()
 		std::vector<C_EmbeddedInstance*> embeddedInstances;
 		pShortcut->GetEmbeddedInstances(embeddedInstances);
 
-		C_EmbeddedInstance* pEmbeddedInstance;
-		C_EmbeddedInstance* testerInstance;
-		unsigned int i;
-		unsigned int size = embeddedInstances.size();
-		for (i = 0; i < size; i++)
-		{
-			pEmbeddedInstance = embeddedInstances[i];
-			if (pEmbeddedInstance->GetId() == "images")
-			{
-				testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
+		//C_EmbeddedInstance* pEmbeddedInstance;
+		//C_EmbeddedInstance* testerInstance;
+		//unsigned int i;
+		//unsigned int size = embeddedInstances.size();
+		//for (i = 0; i < size; i++)
+		//{
+			//pEmbeddedInstance = embeddedInstances[i];
+			//if (pEmbeddedInstance->GetId() == "images")
+			//{
+				C_EmbeddedInstance* testerInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pShortcut->GetItemId());
 				if (testerInstance && testerInstance->GetTexture())
 				{
 					//g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(testerInstance);
 					g_pAnarchyManager->DeselectEntity("", false);
-					break; // only put the 1st embedded instance on continous play
+					//break; // only put the 1st embedded instance on continous play
 				}
-			}
-		}
+			//}
+		//}
 	}
 }
 
@@ -3609,6 +3715,14 @@ void C_AnarchyManager::Disconnect()
 	//}
 }
 
+bool C_AnarchyManager::UseBuildGhosts()
+{
+	if (!m_pBuildGhostConVar)
+		m_pBuildGhostConVar = cvar->FindVar("build_ghosts");
+
+	return m_pBuildGhostConVar->GetBool();
+}
+
 bool C_AnarchyManager::CheckVideoCardAbilities()
 {
 	ITexture* pTestTexture = g_pMaterialSystem->CreateProceduralTexture("test", TEXTURE_GROUP_VGUI, AA_EMBEDDED_INSTANCE_WIDTH, AA_EMBEDDED_INSTANCE_HEIGHT, IMAGE_FORMAT_BGR888, 1);
@@ -3632,6 +3746,10 @@ bool C_AnarchyManager::CheckVideoCardAbilities()
 
 void C_AnarchyManager::AnarchyStartup()
 {
+	m_bAutoRes = cvar->FindVar("auto_res")->GetBool();
+	// manage window res RTFN, before going any further.
+	this->ManageWindow();
+
 	// check for black screen bug
 	if (!this->CheckVideoCardAbilities())
 	{
@@ -3639,6 +3757,36 @@ void C_AnarchyManager::AnarchyStartup()
 		return;
 	}
 
+	bool bNeedsConfigWrite = false;
+	ConVar* pClientIdConVar = cvar->FindVar("aamp_client_id");
+	std::string aampClientId = pClientIdConVar->GetString();
+	if (aampClientId == "")
+	{
+		aampClientId = this->GenerateUniqueId();
+		pClientIdConVar->SetValue(aampClientId.c_str());
+		bNeedsConfigWrite = true;
+	}
+
+	ConVar* pClientKeyConVar = cvar->FindVar("aamp_client_key");
+	std::string aampClientKey = pClientKeyConVar->GetString();
+	if (aampClientKey == "")
+	{
+		aampClientKey = this->GenerateUniqueId();
+		pClientKeyConVar->SetValue(aampClientKey.c_str());
+		bNeedsConfigWrite = true;
+	}
+
+	ConVar* pServerKeyConVar = cvar->FindVar("aamp_server_key");
+	std::string aampServerKey = pServerKeyConVar->GetString();
+	if (aampServerKey == "")
+	{
+		aampServerKey = this->GenerateUniqueId();
+		pServerKeyConVar->SetValue(aampServerKey.c_str());
+		bNeedsConfigWrite = true;
+	}
+
+	if ( bNeedsConfigWrite )
+		engine->ClientCmd("host_writeconfig");
 
 	DevMsg("AnarchyManager: AnarchyStartup\n");
 	m_bIncrementState = true;
@@ -3969,6 +4117,88 @@ void C_AnarchyManager::AddNextModel()
 	}
 }
 
+
+void C_AnarchyManager::ManageWindow()
+{
+	if (m_bAutoRes)
+	{
+		HWND myHWnd = FindWindow(null, "AArcade: Source");
+
+		const MaterialSystem_Config_t &config = materials->GetCurrentConfigForVideoCard();
+		if (!config.Windowed() || m_fNextWindowManage == 0)
+		{
+			int myWidth = config.m_VideoMode.m_Width;
+			int myHeight = config.m_VideoMode.m_Height;
+
+			RECT rcDesktop;
+			if (SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0))
+			{
+				RECT rcClient;
+				RECT rcWind;
+
+				GetClientRect(myHWnd, &rcClient);
+				GetWindowRect(myHWnd, &rcWind);
+
+				myWidth = rcDesktop.right - rcDesktop.left;
+				myHeight = rcDesktop.bottom - rcDesktop.top;
+			}
+
+			Msg("FORCING WINDOWED MODE...\n");
+			std::string myResCommand = VarArgs("mat_setvideomode %i %i 1;\n", myWidth, myHeight);
+			engine->ClientCmd(myResCommand.c_str());
+		}
+		else
+		{
+			int desktopWidth = 0;
+			int desktopHeight = 0;
+			int clientWidth = 0;
+			int clientHeight = 0;
+			int windowWidth = 0;
+			int windowHeight = 0;
+			int borderWidth = 0;
+			int borderTop = 0;
+
+			//int flags = SWP_NOMOVE | SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER;
+			int flags = SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOREPOSITION;
+
+			//int flags = 0x0002 | 0x0020 | 0x0001 | 0x0004 | 0x0200;
+			bool BringFlashToFront = false;
+
+			// Will we fit in the desktop?
+			RECT rcDesktop;
+			if (SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0))
+			{
+				RECT rcClient;
+				RECT rcWind;
+
+				GetClientRect(myHWnd, &rcClient);
+				GetWindowRect(myHWnd, &rcWind);
+
+				desktopWidth = rcDesktop.right - rcDesktop.left;
+				desktopHeight = rcDesktop.bottom - rcDesktop.top;
+				clientWidth = rcClient.right - rcClient.left;
+				clientHeight = rcClient.bottom - rcClient.top;
+				windowWidth = rcWind.right - rcWind.left;
+				windowHeight = rcWind.bottom - rcWind.top;
+
+				borderWidth = (windowWidth - clientWidth) / 2;
+				borderTop = (windowHeight - clientHeight) - borderWidth;
+
+				if (windowWidth > desktopWidth && windowHeight > desktopHeight)
+					flags &= ~0x0002;
+			}
+
+			// If we have moved...
+			RECT windowRect;
+			if (!(flags & SWP_NOMOVE) && GetWindowRect(myHWnd, &windowRect) && (windowRect.top != -borderTop || windowRect.left != -borderWidth))
+				SetWindowPos(myHWnd, null, -borderWidth, -borderTop, 0, 0, flags);
+		}
+	}
+
+	float fManageWindowInterval = 8.0;
+	m_fNextWindowManage = engine->Time() + fManageWindowInterval;
+}
+
 void C_AnarchyManager::ProcessAllModels()
 {
 	if (m_pImportInfo->status != AAIMPORTSTATUS_WAITING_FOR_PROCESSING)
@@ -4064,9 +4294,10 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 		g_pAnarchyManager->DeactivateObjectPlacementMode(true);
 
 		m_pInstanceManager->ApplyChanges(pShortcut);
+		m_pMetaverseManager->SendObjectUpdate(pShortcut);
 		m_pInstanceManager->ResetTransform();
 
-		return SelectEntity(pShortcut);
+		return false;// SelectEntity(pShortcut);
 	}
 	else
 	{
@@ -4153,6 +4384,18 @@ bool C_AnarchyManager::AttemptSelectEntity(C_BaseEntity* pTargetEntity)
 		}
 		else
 		{
+			C_DynamicProp* pProp = dynamic_cast<C_DynamicProp*>(pEntity);
+			if (pProp)
+			{
+				user_t* pUser = m_pMetaverseManager->FindInstanceUser(pProp);
+				if (pUser)
+				{
+					// its a player.
+					m_pMetaverseManager->InstanceUserClicked(pUser);
+					return false;
+				}
+			}
+			
 			if (m_pSelectedEntity)
 				return DeselectEntity();
 			else
@@ -4233,6 +4476,9 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 			continue;
 
 		if (pEmbeddedInstance->GetId() == "hud")
+			continue;
+
+		if (pEmbeddedInstance->GetId() == "network")
 			continue;
 
 		bool bImagesAndHandled = false;
@@ -4699,6 +4945,196 @@ std::string C_AnarchyManager::GetSteamGamesCode(std::string requestId)
 	//code = "document.location = 'http://www.aarcadeapicall.com.net.org/?doc=AAAPICALL' + encodeURIComponent(JSON.stringify({'tester': window.rgGames.length}));";
 }
 
+void C_AnarchyManager::ManageExtractOverview()
+{
+	if (m_fNextExtractOverviewCompleteManage == 0)
+		return;
+
+	// tick
+	if (m_fNextExtractOverviewCompleteManage < engine->Time())
+	{
+		float fInterval = 0.5;
+		m_fNextExtractOverviewCompleteManage = engine->Time() + fInterval;
+		if (g_pFullFileSystem->FileExists(VarArgs("screenshots/overviews/%s.tga", this->MapName()), "DEFAULT_WRITE_PATH"))
+		{
+			//g_pFullFileSystem->FileExists()
+			m_fNextExtractOverviewCompleteManage = 0;
+			m_pMetaverseManager->OverviewExtracted();
+		}
+	}
+}
+
+void C_AnarchyManager::ManagePanoshot()
+{
+	if (m_panoshotState == PANO_NONE)
+		return;
+
+	// tick
+	if (m_fNextPanoCompleteManage < engine->Time())
+	{
+		float fInterval = 0.5;
+		m_fNextPanoCompleteManage = engine->Time() + fInterval;
+
+		if (m_panoshotState == PANO_TAKE_SHOT_0 || m_panoshotState == PANO_TAKE_SHOT_1 || m_panoshotState == PANO_TAKE_SHOT_2 || m_panoshotState == PANO_TAKE_SHOT_3 || m_panoshotState == PANO_TAKE_SHOT_4 || m_panoshotState == PANO_TAKE_SHOT_5)
+			engine->ExecuteClientCmd("jpeg;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_0)
+			engine->ExecuteClientCmd("setang 0 0 0;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_1)
+			engine->ExecuteClientCmd("setang 0 -90 0;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_2)
+			engine->ExecuteClientCmd("setang 0 180 0;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_3)
+			engine->ExecuteClientCmd("setang 0 90 0;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_4)
+			engine->ExecuteClientCmd("setang 90 180 0;");
+		else if (m_panoshotState == PANO_ORIENT_SHOT_5)
+			engine->ExecuteClientCmd("setang -90 180 0;");
+		else if (m_panoshotState == PANO_COMPLETE)
+		{
+			engine->ClientCmd("setang 0 0 0; fov 90;");
+
+			// check that all 6 images exist
+			std::string mapName = this->MapName();
+			std::vector<std::string> panoshots;
+
+			bool bExisted;
+			FileFindHandle_t findHandle;
+			const char* pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("screenshots/%s*.jpg", mapName.c_str()), "DEFAULT_WRITE_PATH", &findHandle);
+			while (pFilename != NULL)
+			{
+				bExisted = false;
+
+				for (unsigned int i = 0; i < m_existingMapScreenshotsForPano.size(); i++)
+				{
+					if (m_existingMapScreenshotsForPano[i] == std::string(pFilename))
+					{
+						bExisted = true;
+						break;
+					}
+				}
+
+				if (!bExisted)
+				{
+					//DevMsg("Pushing %s\n", pFilename);
+					panoshots.push_back(std::string(pFilename));
+				}
+				//else
+				//	DevMsg("NOT pushing %s\n", pFilename);
+
+				//if (std::find(m_existingMapScreenshotsForPano.begin(), m_existingMapScreenshotsForPano.end(), std::string(pFilename)) == m_existingMapScreenshotsForPano.end())
+
+				pFilename = g_pFullFileSystem->FindNext(findHandle);
+			}
+			g_pFullFileSystem->FindClose(findHandle);
+
+			if (panoshots.size() == 6)
+			{
+				C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+				pHudBrowserInstance->SetUrl("asset://ui/panoview.html");
+				g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, true);
+
+				// always use the same file names
+				// screenshots/panoramic/pano/[image]
+				g_pFullFileSystem->CreateDirHierarchy("screenshots/panoramic/pano", "DEFAULT_WRITE_PATH");
+
+				/* DISABLED until the full panoramic screenshot system is implemented.
+				// determine a folder name to create
+				// screenshots/panoramic/[mapname][####]
+				g_pFullFileSystem->CreateDirHierarchy("screenshots/panoramic", "DEFAULT_WRITE_PATH");
+
+				unsigned int iGoodNumber = 0;
+				while (g_pFullFileSystem->FileExists(VarArgs("screenshots/panoramic/%s%04d", mapName.c_str(), iGoodNumber), "MOD"))
+				{
+				iGoodNumber++;
+				}
+				*/
+
+				std::vector<std::string> directions;
+				directions.push_back("front");
+				directions.push_back("right");
+				directions.push_back("back");
+				directions.push_back("left");
+				directions.push_back("bottom");
+				directions.push_back("top");
+
+				for (unsigned int i = 0; i < panoshots.size(); i++)
+				{
+					// read the screenshot
+					FileHandle_t fh = filesystem->Open(VarArgs("screenshots/%s", panoshots[i].c_str()), "rb", "DEFAULT_WRITE_PATH");
+					if (fh)
+					{
+						int file_len = filesystem->Size(fh);
+						unsigned char* pImageData = new unsigned char[file_len + 1];
+
+						filesystem->Read((void*)pImageData, file_len, fh);
+						pImageData[file_len] = 0; // null terminator
+
+						filesystem->Close(fh);
+
+						// write the screenshot
+						// ORDER: FORWARD, RIGHT, BACK, LEFT, BOTTOM, TOP
+						FileHandle_t fh2 = filesystem->Open(VarArgs("screenshots/panoramic/pano/%s.jpg", directions[i].c_str()), "wb", "DEFAULT_WRITE_PATH");
+						if (fh2)
+						{
+							filesystem->Write(pImageData, file_len, fh2);
+							filesystem->Close(fh2);
+						}
+
+						// cleanup
+						delete[] pImageData;
+
+						// SUCCESS!!
+
+						// delete the old screenshot
+						g_pFullFileSystem->RemoveFile(VarArgs("screenshots/%s", panoshots[i].c_str()), "DEFAULT_WRITE_PATH");
+
+						// restore previous settings
+						engine->ClientCmd(VarArgs("cl_drawhud %s; r_drawviewmodel %s; cl_hovertitles %s; cl_toastmsgs %s; developer %s;", m_pPanoStuff->hud.c_str(), m_pPanoStuff->weapons.c_str(), m_pPanoStuff->titles.c_str(), m_pPanoStuff->toast.c_str(), m_pPanoStuff->developer.c_str()));
+					}
+				}
+
+				m_panoshotState = PANO_NONE;
+				m_existingMapScreenshotsForPano.clear();
+			}
+		}
+
+		if (m_panoshotState != PANO_NONE && m_panoshotState != PANO_COMPLETE)
+			m_panoshotState = static_cast<panoshotState>(static_cast<int>(m_panoshotState)+1);
+	}
+}
+
+void C_AnarchyManager::Panoshot()
+{
+	if (m_panoshotState != PANO_NONE)
+		return;
+
+	m_existingMapScreenshotsForPano.clear();
+	//m_fNextPanoCompleteManage = 0;
+	float fInterval = 0.5;
+	m_fNextPanoCompleteManage = engine->Time() + fInterval;
+
+	// fill m_existingMapScreenshotsForPano with all existing screenshots for this map.
+	std::string mapName = this->MapName();
+
+	FileFindHandle_t findHandle;
+	const char* pFilename = g_pFullFileSystem->FindFirstEx(VarArgs("screenshots/%s*.jpg", mapName.c_str()), "DEFAULT_WRITE_PATH", &findHandle);
+	if (pFilename != NULL)
+	{
+		m_existingMapScreenshotsForPano.push_back(std::string(pFilename));
+		pFilename = g_pFullFileSystem->FindNext(findHandle);
+	}
+	g_pFullFileSystem->FindClose(findHandle);
+
+	m_pPanoStuff->hud = cvar->FindVar("cl_drawhud")->GetString();
+	m_pPanoStuff->weapons = cvar->FindVar("r_drawviewmodel")->GetString();
+	m_pPanoStuff->titles = cvar->FindVar("cl_hovertitles")->GetString();
+	m_pPanoStuff->toast = cvar->FindVar("cl_toastmsgs")->GetString();
+	m_pPanoStuff->developer = cvar->FindVar("developer")->GetString();
+
+	engine->ExecuteClientCmd("cl_drawhud 0; r_drawviewmodel 0; cl_hovertitles 0; cl_toastmsgs 0; developer 0; jpeg_quality 97; fov 106;");
+	m_panoshotState = PANO_ORIENT_SHOT_0;
+}
+
 void C_AnarchyManager::ShowEngineOptionsMenu()
 {
 	//// FIXME: If a map is loaded, input mode can be deactivated, but if at main menu that might be weird.
@@ -4715,7 +5151,7 @@ void C_AnarchyManager::DeactivateObjectPlacementMode(bool confirm)
 	{
 		if (confirm)
 		{
-			engine->ServerCmd(VarArgs("makenonghost %i;\n", pShortcut->entindex()), false);
+			engine->ServerCmd(VarArgs("makenonghost %i %i;\n", pShortcut->entindex(), this->UseBuildGhosts()), false);
 			/*
 			pShortcut->SetRenderColorA(255);
 			pShortcut->SetRenderMode(kRenderNormal);
@@ -4795,7 +5231,8 @@ void C_AnarchyManager::ActivateObjectPlacementMode(C_PropShortcutEntity* pShortc
 			//	category = "models";
 		}
 		m_pMetaverseManager->SetLibraryBrowserContext(category, std::string("automove"), "", "");
-		engine->ServerCmd(VarArgs("makeghost %i;\n", pShortcut->entindex()), false);
+
+		engine->ServerCmd(VarArgs("makeghost %i %i;\n", pShortcut->entindex(), g_pAnarchyManager->UseBuildGhosts()), false);
 		/*	// do this stuff server-side now
 		pShortcut->SetSolid(SOLID_NONE);
 		pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
@@ -5033,7 +5470,7 @@ void C_AnarchyManager::xCastSetLiveURL()
 				continue;
 
 			// ignore special instances
-			if (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "images")
+			if (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "network" || pEmbeddedInstance->GetId() == "images")
 				continue;
 
 			// check for an original item id
@@ -5270,6 +5707,49 @@ std::string C_AnarchyManager::GetHomeURL()
 	//uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
 	uri += "/resource/ui/html/anarchyPortal.html";
 	return uri;
+}
+
+void C_AnarchyManager::WaitForOverviewExtract()
+{
+	float fInterval = 0.5;
+	m_fNextExtractOverviewCompleteManage = engine->Time() + fInterval;
+}
+
+void C_AnarchyManager::ClearConnectedUniverse()
+{
+	delete m_pConnectedUniverse;
+	m_pConnectedUniverse = null;
+	/*
+	m_pConnectedUniverse->connected = false;
+
+	if (m_pConnectedUniverse->address != "")
+		m_pConnectedUniverse->address = "";
+
+	if (m_pConnectedUniverse->universe != "")
+		m_pConnectedUniverse->universe = "";
+
+	if (m_pConnectedUniverse->instance != "")
+		m_pConnectedUniverse->instance = "";
+
+	if (m_pConnectedUniverse->session != "")
+		m_pConnectedUniverse->session = "";
+		*/
+}
+
+void C_AnarchyManager::SetConnectedUniverse(bool bConnected, std::string address, std::string universeId, std::string instanceId, std::string sessionId, std::string lobbyId, bool bPublic, std::string lobbyPassword)
+{
+	if (m_pConnectedUniverse)
+		delete m_pConnectedUniverse;
+
+	m_pConnectedUniverse = new aampConnection_t();
+	m_pConnectedUniverse->connected = bConnected;
+	m_pConnectedUniverse->address = address;
+	m_pConnectedUniverse->universe = universeId;
+	m_pConnectedUniverse->instance = instanceId;
+	m_pConnectedUniverse->session = sessionId;
+	m_pConnectedUniverse->lobby = lobbyId;
+	m_pConnectedUniverse->isPublic = bPublic;
+	m_pConnectedUniverse->lobbyPassword = lobbyPassword;
 }
 
 void C_AnarchyManager::TestSQLite()

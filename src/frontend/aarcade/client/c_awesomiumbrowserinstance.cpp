@@ -44,6 +44,8 @@ C_AwesomiumBrowserInstance::C_AwesomiumBrowserInstance()
 	m_iLastVisibleFrame = -1;
 	m_URL = "";
 	m_iOriginalEntIndex = -1;
+	m_fLastMouseX = 0;
+	m_fLastMouseY = 0;
 }
 
 C_AwesomiumBrowserInstance::~C_AwesomiumBrowserInstance()
@@ -90,6 +92,11 @@ void C_AwesomiumBrowserInstance::Init(std::string id, std::string url, std::stri
 	{
 		iWidth = AA_THUMBNAIL_SIZE;
 		iHeight = AA_THUMBNAIL_SIZE;
+	}
+	else if (m_id == "network")
+	{
+		iWidth = AA_NETWORK_INSTANCE_WIDTH;
+		iHeight = AA_NETWORK_INSTANCE_HEIGHT;
 	}
 	
 	//m_pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
@@ -215,6 +222,9 @@ void C_AwesomiumBrowserInstance::OnMouseMove(float x, float y)
 
 	int iMouseX = x * width;
 	int iMouseY = y * height;
+	
+	m_fLastMouseX = x;
+	m_fLastMouseY = y;
 
 	Awesomium::WebView* pWebView = this->GetWebView();
 	if (pWebView)
@@ -794,7 +804,7 @@ void C_AwesomiumBrowserInstance::OnProxyBind(C_BaseEntity* pBaseEntity)
 	if (g_pAnarchyManager->GetSuspendEmbedded())
 		return;
 
-	if (m_id == "images")
+	if (m_id == "images" || m_id == "network" )
 		return;
 
 	/*
@@ -856,7 +866,7 @@ void C_AwesomiumBrowserInstance::Render()
 	if (g_pAnarchyManager->IsPaused())
 		return;
 
-	if (m_id == "images")
+	if (m_id == "images" || m_id == "network" )
 		return;
 	//DevMsg("Rendering texture: %s\n", m_pTexture->GetName());
 	//	DevMsg("Render Web Tab: %s\n", this->GetTexture()->Ge>GetId().c_str());
@@ -1040,6 +1050,12 @@ void C_AwesomiumBrowserInstance::SaveImageToCache(std::string fieldVal)
 C_EmbeddedInstance* C_AwesomiumBrowserInstance::GetParentSelectedEmbeddedInstance()
 {
 	return g_pAnarchyManager->GetAwesomiumBrowserManager()->GetSelectedAwesomiumBrowserInstance();
+}
+
+void C_AwesomiumBrowserInstance::GetLastMouse(float &fMouseX, float &fMouseY)
+{
+	fMouseX = m_fLastMouseX;
+	fMouseY = m_fLastMouseY;
 }
 
 C_InputListener* C_AwesomiumBrowserInstance::GetInputListener()

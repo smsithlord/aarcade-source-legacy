@@ -1,0 +1,369 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<style>
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			.categoryContainer
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-radius: 10px;
+			}
+
+			.categoryTitle
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.optionContainer
+			{
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				height: 25px;
+				border-radius: 10px;
+				background-color: rgba(10, 10, 10, 0.5);
+			}
+
+			.optionContainer:nth-child(even)
+			{
+				background-color: rgba(30, 30, 30, 0.3);
+			}
+
+			.optionTitle
+			{
+				float: left;
+				margin-left: 5px;
+			}
+
+			.optionsContainer
+			{
+				margin-left: 15px;
+				margin-right: 15px;
+				margin-bottom: 15px;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+				/*background-color: #ddd;*/
+	    		border-radius: 3px;
+	    		/*border: 1px solid #bbb;*/
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+	    		/*
+	    		border-top-color: #bbb;
+	    		border-left-color: #bbb;
+	    		border-bottom-color: #bbb;
+	    		border-right-color: #bbb;
+	    		*/
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Host Multiplayer", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<center>
+			<script>
+				document.write(arcadeHud.generateIconHTML("aarcadetv.png", 401, 171, "aaThemeColorOneColor"));
+			</script>
+			<br /><br />
+		</center>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 400px;">
+			Host your arcade & invite friends!<br />
+			<br />
+			They'll join you in their web browser, in top-down 2D mode.<br />
+			<br />
+			Hang out, chat, watch videos, and browse your arcade together!
+		</div>
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 400px;">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="The name of your lobby is used in your invite URL. Leave blank if you don't care.<br /><br />Keep it as short as you can.  Letters & numbers only, and must start with a letter.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Lobby Name:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="text" class="aaTextSizeFontSize" value="" placeholder="(automatic)" id="lobby" />
+					</td>
+				</tr>
+				<tr class="helpNote" help="Leave blank for no password.<br /><br />A password will keep random people out. However, multiplayer sessions are <u>never</u> <i>completely</i> private or encrypted.">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Lobby Password:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="password" class="aaTextSizeFontSize" value="" placeholder="(no password)" id="password" />
+					</td>
+				</tr>
+				<tr class="helpNote" help="Public lobbies are listed on the master server, while private & passworded lobbies are hidden.<br /><br />http://aarcade.tv/">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Public Lobby:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<div class="aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize" style="font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;">No</div>
+						<div id="isPrivate" class="inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground">
+							<div class="aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor"></div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<div style="float: right; padding-top: 10px;">
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Host Now" onclick="doHostNow();" help="Host your current arcade in online multiplayer." style="padding: 12px; padding-bottom: 6px; padding-top: 6px;" /> <input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Cancel" onclick="window.location = 'asset://ui/welcome.html';" help="Cancel & return to singleplayer." style="padding: 12px; padding-bottom: 6px; padding-top: 6px;" /><br />
+		</div>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var lobbyElem = document.querySelector("#lobby");
+			var passwordElem = document.querySelector("#password");
+			var isPublicElem = document.querySelector("#isPrivate");
+
+			var lobbyValue = aaapi.system.getConVarValue("aamp_lobby_id");
+			var passwordValue = aaapi.system.getConVarValue("aamp_lobby_password");
+
+			lobbyElem.value = lobbyValue;
+			passwordElem.value = passwordValue;
+
+			isPublicElem.inputOption = {
+				"title": "Yadda",
+				"type": "toggle",
+				"help": "Yadda yadda.",
+				"valueTitles": {"0": "No", "1": "Yes"},
+				"value": aaapi.system.getConVarValue("aamp_public"),
+				"getValue": function()
+				{
+					console.log("OBSOLETE!");
+					//var val = aaapi.system.getConVarValue("aamp_public");
+					//this.value = val;
+				},
+				"setValue": function(val)
+				{
+					this.value = val;
+					//aaapi.system.consoleCommand("aamp_public " + this.value);
+				}
+			};
+
+			function doToggleButton(toggleButton, isInitial)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( (!isInitial && valueTitleKeys[i] !== toggleButton.inputOption.value.toString()) || (isInitial && valueTitleKeys[i] === toggleButton.inputOption.value.toString()) )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+			isPublicElem.addEventListener("click", function(e)
+			{
+				doToggleButton(this, false);
+			}.bind(isPublicElem), true);
+
+			//setTimeout(function()
+			//{
+				if( isPublicElem.inputOption.value.toString() === "1" )
+					doToggleButton(isPublicElem, true);
+			//}.bind(isPublicElem), 100);
+
+			function doHostNow()
+			{
+				// first save our changes
+				var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
+				cmd += " aamp_lobby_id \"" + lobbyElem.value + "\";";
+				cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
+				aaapi.system.consoleCommand(cmd);
+
+				// then start hosting
+				window.location = 'asset://ui/hostSessionProgress.html';
+			}
+		</script>
+	</body>
+</html>

@@ -117,6 +117,7 @@ public:
 	std::string GetScraperField() { return m_scraperItemId; }
 	std::string GetOriginalItemId() { return m_originalItemId; }
 	int GetOriginalEntIndex() { return m_iOriginalEntIndex; }
+	void GetLastMouse(float &fMouseX, float &fMouseY);
 
 	// mutators	
 	void SetTitle(std::string title) { m_title = title; }
@@ -156,6 +157,8 @@ private:
 	STEAM_CALLBACK(C_SteamBrowserInstance, BrowserInstanceHideToolTip, HTML_HideToolTip_t, m_HideToolTip);
 	*/
 
+	float m_fLastMouseX;
+	float m_fLastMouseY;
 	bool m_bSteamworksCopying;
 	bool m_bCanGoBack;
 	bool m_bCanGoForward;

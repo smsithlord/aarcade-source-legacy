@@ -29,6 +29,8 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	m_pInputListener = new C_InputListenerAwesomiumBrowser();
 	m_pFocusedAwesomiumBrowserInstance = null;
 
+	m_pNetworkAwesomiumBrowserInstance = null;
+
 	/*
 	m_bSoundEnabled = true;
 	m_pSelectedSteamBrowserInstance = null;
@@ -74,6 +76,9 @@ C_AwesomiumBrowserManager::C_AwesomiumBrowserManager()
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", g_pAnarchyManager->GetAArcadeUserFolder().c_str()), "UI");
 
 	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\resource\\ui\\html", engine->GetGameDirectory()), "UI");
+
+	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\screenshots\\panoramic", g_pAnarchyManager->GetAArcadeUserFolder().c_str()), "UI");
+	g_pFullFileSystem->AddSearchPath(VarArgs("%s\\screenshots\\overviews", g_pAnarchyManager->GetAArcadeUserFolder().c_str()), "UI");
 
 	UiDataSource* pUiDataSource = new UiDataSource();
 	m_pWebSession->AddDataSource(WSLit("ui"), pUiDataSource);
@@ -287,8 +292,13 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 	unsigned int imageWidth = AA_THUMBNAIL_SIZE;
 	unsigned int imageHeight = AA_THUMBNAIL_SIZE;
 
+	unsigned int networkWidth = AA_NETWORK_INSTANCE_WIDTH;
+	unsigned int networkHeight = AA_NETWORK_INSTANCE_HEIGHT;
+
 	if (id == "images")
 		pWebView->Resize(imageWidth, imageHeight);
+	else if (id == "network")
+		pWebView->Resize(networkWidth, networkHeight);
 	else
 		pWebView->Resize(width, height);
 
@@ -297,7 +307,7 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 	pWebView->set_menu_listener(m_pMenuListener);
 	pWebView->set_process_listener(m_pProcessListener);
 
-	if (id == "hud" || id == "images")
+	if (id == "hud" || id == "images" || id == "network" )
 	{
 		pWebView->set_js_method_handler(m_pJSHandler);
 		this->CreateAaApi(pWebView);
@@ -343,6 +353,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getAllMaps"), true);
 	systemObject.SetCustomMethod(WSLit("getMap"), true);
 	systemObject.SetCustomMethod(WSLit("loadMap"), false);
+	systemObject.SetCustomMethod(WSLit("loadMapNow"), false);
 	systemObject.SetCustomMethod(WSLit("deactivateInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("forceInputMode"), false);
 	systemObject.SetCustomMethod(WSLit("hudMouseDown"), false);
@@ -388,11 +399,14 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("viewObjectInfo"), false);
 	systemObject.SetCustomMethod(WSLit("getEntityInfo"), true);
 	systemObject.SetCustomMethod(WSLit("getObjectInfo"), true);
+	systemObject.SetCustomMethod(WSLit("getObject"), true);
+	systemObject.SetCustomMethod(WSLit("getAllObjectInfos"), true);
 	systemObject.SetCustomMethod(WSLit("getTransformInfo"), true);
 	systemObject.SetCustomMethod(WSLit("adjustObjectOffset"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectRot"), false);
 	systemObject.SetCustomMethod(WSLit("adjustObjectScale"), false);
 	systemObject.SetCustomMethod(WSLit("goBack"), false);
+	systemObject.SetCustomMethod(WSLit("doCopy"), false);
 	systemObject.SetCustomMethod(WSLit("goForward"), false);
 	systemObject.SetCustomMethod(WSLit("reload"), false);
 	systemObject.SetCustomMethod(WSLit("goHome"), false);
@@ -451,6 +465,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	JSObject& libraryObject = result.ToObject();
 
 	// SUPER DUPER LIBRARY QUERY IN GENERALIZED ORDINARY GUY FORM
+	libraryObject.SetCustomMethod(WSLit("hasLibraryEntry"), true);
 	libraryObject.SetCustomMethod(WSLit("getFirstLibraryEntry"), true);
 	libraryObject.SetCustomMethod(WSLit("getNextLibraryEntry"), true);
 	libraryObject.SetCustomMethod(WSLit("findFirstLibraryEntry"), true);
@@ -472,13 +487,16 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	libraryObject.SetCustomMethod(WSLit("findLibraryItem"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryModel"), true);
 	libraryObject.SetCustomMethod(WSLit("findLibraryApp"), true);
+	libraryObject.SetCustomMethod(WSLit("findLibraryType"), true);
 	libraryObject.SetCustomMethod(WSLit("updateItem"), true);
 	libraryObject.SetCustomMethod(WSLit("updateApp"), true);
 	libraryObject.SetCustomMethod(WSLit("updateInstance"), true);
 	libraryObject.SetCustomMethod(WSLit("deleteInstance"), true);
 	libraryObject.SetCustomMethod(WSLit("updateModel"), true);
+	libraryObject.SetCustomMethod(WSLit("updateType"), true);
 	libraryObject.SetCustomMethod(WSLit("createItem"), true);
 	libraryObject.SetCustomMethod(WSLit("createApp"), true);
+	libraryObject.SetCustomMethod(WSLit("createType"), true);
 	libraryObject.SetCustomMethod(WSLit("createModel"), true);
 	libraryObject.SetCustomMethod(WSLit("saveItem"), true);
 	libraryObject.SetCustomMethod(WSLit("deleteApp"), false);
@@ -510,6 +528,30 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	callbacksObject.SetCustomMethod(WSLit("processNextModelCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("addNextModelCallback"), false);
 	callbacksObject.SetCustomMethod(WSLit("importNextSteamGameCallback"), false);
+
+	// NETWORK
+	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.network"));
+	if (!result.IsObject())
+		return;
+
+	JSObject& networkObject = result.ToObject();
+	networkObject.SetCustomMethod(WSLit("getConnectedSession"), true);
+	networkObject.SetCustomMethod(WSLit("getAllUserChat"), true);
+	networkObject.SetCustomMethod(WSLit("getAllUsers"), true);
+	networkObject.SetCustomMethod(WSLit("getNumUsers"), true);
+	networkObject.SetCustomMethod(WSLit("getSyncOverview"), true);
+	networkObject.SetCustomMethod(WSLit("hostSession"), false);
+	networkObject.SetCustomMethod(WSLit("objectUpdateReceived"), false);
+	networkObject.SetCustomMethod(WSLit("restartNetwork"), false);
+	networkObject.SetCustomMethod(WSLit("disconnected"), false);
+	networkObject.SetCustomMethod(WSLit("networkEvent"), false);
+	networkObject.SetCustomMethod(WSLit("followPlayer"), false);
+	networkObject.SetCustomMethod(WSLit("banPlayer"), false);
+	networkObject.SetCustomMethod(WSLit("syncPano"), false);
+	networkObject.SetCustomMethod(WSLit("unbanPlayer"), false);
+	networkObject.SetCustomMethod(WSLit("sendEntryUpdate"), false);
+	networkObject.SetCustomMethod(WSLit("sendLocalChatMsg"), false);
+	//networkObject.SetCustomMethod(WSLit("extractOverviewTGA"), false);
 
 	/*
 	result = pWebView->CreateGlobalJavascriptObject(WSLit("aaapi.metaverse"));
@@ -597,15 +639,17 @@ void C_AwesomiumBrowserManager::OnCreateWebViewDocumentReady(WebView* pWebView, 
 			pWebView->SetTransparent(true);
 
 		std::string initialURI = pBrowserInstance->GetInitialURL();
-		std::string uri;
-		if (id == "images")
-			uri = initialURI;	// this should never happen, so comment it out to avoid confusion
+		std::string uri = initialURI;
+		//if (id == "network")
+	//		uri = initialURI;
+		//else if (id == "images")
+		//	uri = initialURI;	// this should never happen, so comment it out to avoid confusion
 			//uri = "asset://ui/imageLoader.html";
-		else if (id == "hud")
-			uri = initialURI;
+		//else if (id == "hud")
+		//	uri = initialURI;
 			//uri = (initialURI == "") ? "asset://ui/default.html" : initialURI;	// this should never happen, so comment it out to avoid confusion
-		else
-			uri = initialURI;
+		//else
+	//		uri = initialURI;
 
 		DevMsg("Loading initial URL: %s\n", uri.c_str());
 		pWebView->LoadURL(WebURL(WSLit(uri.c_str())));
@@ -695,7 +739,7 @@ void C_AwesomiumBrowserManager::CloseAllInstances(bool bDeleteHudAndImages)
 	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
 	{
 		C_AwesomiumBrowserInstance* pInstance = it->second;
-		if (!bDeleteHudAndImages && (pInstance->GetId() == "hud" || pInstance->GetId() == "images"))
+		if (!bDeleteHudAndImages && (pInstance->GetId() == "hud" || pInstance->GetId() == "images" || pInstance->GetId() == "network"))
 			continue;
 
 		if (pInstance == m_pSelectedAwesomiumBrowserInstance)
@@ -747,6 +791,11 @@ void C_AwesomiumBrowserManager::Update()
 {
 	if (m_pWebCore)
 		m_pWebCore->Update();
+
+	// if we are paused, do NOTHING else.  However, the web core NEEDED to process its update so that network msgs can be properly ignored instead of being queued until the next update.
+	if (g_pAnarchyManager->IsPaused())
+		return;
+
 	/*
 	for (auto it = m_awesomiumBrowserInstances.begin(); it != m_awesomiumBrowserInstances.end(); ++it)
 	{
@@ -760,6 +809,7 @@ void C_AwesomiumBrowserManager::Update()
 		if (g_pAnarchyManager->GetCanvasManager()->IsPriorityEmbeddedInstance(it->second))
 			it->second->Update();
 	}
+
 
 //	if (m_pSelectedAwesomiumBrowserInstance)	// don't need
 	//	m_pSelectedAwesomiumBrowserInstance->Update();

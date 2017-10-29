@@ -1,0 +1,54 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Create 360&deg; Screenshot", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+
+			function takePano()
+			{
+				aaapi.system.consoleCommand("panoshot");
+				aaapi.system.deactivateInputMode();
+			}
+		</script>
+
+		
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+			<div style="max-width: 420px; padding: 10px; font-family: Arial;">
+				<b>IMPORTANT:</b>
+				<div style="padding: 10px;">
+					You must <b>stand perfectly still</b> & not move <u>at all</u> until the 360&deg; screenshot is complete.
+				</div>
+			</div>
+		</div>
+
+		<center>
+			<div class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" onclick="takePano();" style="margin-top: 16px; width: 80%;" help="The 360&deg; screenshot will be captured from your current position.">Begin</div>
+		</center>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+	</body>
+</html>

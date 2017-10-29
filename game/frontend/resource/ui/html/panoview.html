@@ -1,0 +1,119 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+		</style>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";
+//360&deg; Screenshot Complete
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Processing...", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+
+			function bytesToSize(bytes) {
+			   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+			   if (bytes == 0) return '0 Byte';
+			   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+			   return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+			};
+		</script>
+
+		<div id="fetchingStuff" style="display: block; font-family: Arial; font-weight: 900;" class="aaTextColorTwoColor aaTextSizeFontSize helpNote" help="AArcade is syncing 360 panoramic screenshot to the cloud.">	
+			<br />
+			<center>
+				<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+				<br />
+				PLEASE WAIT
+			</center>
+			<br />
+		</div>
+
+		<div id="postmortem" style="display: none;">
+			<center>
+				<div style="border-style: solid; border-width: 2px; display: inline-block;" class="aaThemeColorTwoInverseShadedBorderColor">
+					<img src="" id="panoFront" /><img src="" id="panoRight" /><img src="" id="panoBack" /><img src="" id="panoLeft" />
+				</div>
+			</center>
+
+			<br />
+
+			<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; font-family: Arial; padding: 20px;">
+				<div style="width: 380px; text-align: center;">
+					People in your web session can now see it in 3D mode.
+				</div>
+			</div>
+
+			<center>
+				<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="OK" onclick="aaapi.system.deactivateInputMode();" help="Continue playing Anarchy Arcade." /><br />
+			</center>
+		</div>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			aaapi.network.syncPano();
+
+			var syncListener = {
+				"panoSyncComplete": function(cachedPanoName, panoId)
+				{
+					console.log(cachedPanoName);
+					var cachedPano = localStorage.getItem(cachedPanoName);
+					if( !!!cachedPano )
+					{
+						console.log("ERROR: Could not find cached 360 panoramic image!");
+						return;
+					}
+
+					cachedPano = JSON.parse(cachedPano);
+
+					var titleElem = document.querySelector(".aaWindow .aaTitleText");
+					titleElem.innerHTML = "360&deg; Screenshot Complete";
+
+					document.querySelector("#postmortem").style.display = "block";
+					document.querySelector("#fetchingStuff").style.display = "none";
+
+					document.querySelector("#panoFront").src = cachedPano.binary.front;
+					document.querySelector("#panoRight").src = cachedPano.binary.right;
+					document.querySelector("#panoBack").src = cachedPano.binary.back;
+					document.querySelector("#panoLeft").src = cachedPano.binary.left;
+				}
+			};
+		</script>
+	</body>
+</html>

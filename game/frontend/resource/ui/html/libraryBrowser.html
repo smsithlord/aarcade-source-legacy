@@ -765,34 +765,7 @@
 					else if( categoryOverride === "apps" )
 					{
 						var appFile = entryValueInputElem.value;
-
-						var foundLastSlash = appFile.lastIndexOf("/");
-						if( foundLastSlash === -1 )
-							foundLastSlash = appFile.lastIndexOf("\\");
-						if( foundLastSlash !== -1 )
-							appTitle = appFile.substring(foundLastSlash+1);
-						var foundLastDot = appTitle.lastIndexOf(".");
-						if( foundLastDot !== -1 )
-							appTitle = appTitle.substring(0, foundLastDot);
-
-						// first, check if an app that matches this one already exists...
-			 			var app = aaapi.library.findLibraryApp("file", appFile);
-			 			//if( !app )
-			 			//	app = aaapi.library.findLibraryApp("title", appTitle);
-
-			 			if( app )
-			 			{
-			 				console.log("App already exists!!");
-			 				window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
-			 			}
-			 			else
-			 			{
-							app = aaapi.library.createApp("title", appTitle, "file", appFile);
-							if( app )
-							{
-								window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(app.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
-							}
-						}
+						arcadeHud.createNewApp(appFile, "window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
 					}
 					else
 					{

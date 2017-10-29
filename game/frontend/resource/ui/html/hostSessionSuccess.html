@@ -1,0 +1,81 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+	</head>
+	<body>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			if( !uiBack )
+				uiBack = "";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("You Are Online!", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+
+			function doCopyToClipboard()
+			{
+				aaapi.system.doCopy();
+				aaapi.system.deactivateInputMode();
+			}
+		</script>
+
+		<div id="bigHeader">
+			<script>
+				document.write(arcadeHud.generateIconHTML("aarcadetv.png", 401, 171, "aaThemeColorOneColor"));
+			</script>
+		</div>
+		
+		<br />
+
+		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+				<div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize">Invite Your Friends:</div>
+				<input id="sessionLinkInput" type="text" class="autoSelectAll aaTitleTextSizeFontSize" style="width: 100%;" value="" onmouseup="return false;" readonly />
+
+				<div style="padding: 10px; font-family: Arial; width: 350px;" class="aaTextColorTwoColor aaTextSizeFontSize">
+					Your friends join you in top-down 2D mode by going to that URL in their web browser!
+				</div>
+
+				<center>
+					<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Copy to Clipboard" onclick="doCopyToClipboard();" help="Use CTRL+V to paste it after you've copied it." style="margin: 10px; width: 94%;" /><br />
+				</center>
+		</div>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
+		</div>
+
+		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var autoSelectAllElems = document.querySelectorAll(".autoSelectAll");
+			for( var i = 0; i < autoSelectAllElems.length; i++ )
+				autoSelectAllElems[i].addEventListener("focus", function(e)
+				{
+					this.select();
+					e.preventDefault();
+				}.bind(autoSelectAllElems[i]), true);
+
+			var connectedSessionInfo = aaapi.network.getConnectedSession();
+			var liveSessionLink = "http://aarcade.tv/live/" + connectedSessionInfo.lobby;// + connectedSessionInfo.universe + "&instance=" + connectedSessionInfo.instance;
+
+			var sessionLinkInputElem = document.querySelector("#sessionLinkInput");
+			sessionLinkInputElem.value = liveSessionLink;
+			setTimeout(function()
+			{
+				this.select();
+			}.bind(sessionLinkInputElem), 1);
+		</script>
+	</body>
+</html>

@@ -353,6 +353,370 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		g_pAnarchyManager->OnStartupCallback();
 	}
+	else if (method_name == WSLit("hostSession"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->HostSession();
+	}
+	else if (method_name == WSLit("objectUpdateReceived"))
+	{
+
+		/*
+		0 - isLocalUserUpdate (bool)
+		1 - isFreshObject (bool)
+		2 - id (string)
+		3 - item (string)
+		4 - model (string)
+		5 - slave (bool)
+		6 - child (bool)
+		7 - parentObject (string)
+		8 - scale (float)
+		9 - origin (string)
+		10 - angles (string)
+		*/
+
+		g_pAnarchyManager->GetMetaverseManager()->ObjectUpdateReceived(args[0].ToBoolean(), args[1].ToBoolean(), WebStringToCharString(args[2].ToString()), WebStringToCharString(args[3].ToString()), WebStringToCharString(args[4].ToString()), args[5].ToBoolean(), args[6].ToBoolean(), WebStringToCharString(args[7].ToString()), Q_atof(WebStringToCharString(args[8].ToString())), WebStringToCharString(args[9].ToString()), WebStringToCharString(args[10].ToString()));
+	}
+	else if (method_name == WSLit("sendLocalChatMsg"))
+	{
+		std::string chatText = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->GetMetaverseManager()->SendLocalChatMsg(chatText);
+	}/*
+	else if (method_name == WSLit("extractOverviewTGA"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->ExtractOverviewTGA();
+	}*/
+	else if (method_name == WSLit("sendEntryUpdate"))
+	{
+		std::string mode = WebStringToCharString(args[0].ToString());
+		std::string id = WebStringToCharString(args[1].ToString());
+		g_pAnarchyManager->GetMetaverseManager()->SendEntryUpdate(mode, id);
+	}
+	else if (method_name == WSLit("followPlayer"))
+	{
+		std::string userId = WebStringToCharString(args[0].ToString());
+		user_t* pUser = g_pAnarchyManager->GetMetaverseManager()->GetInstanceUser(userId);
+		if (pUser)
+		{
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+			g_pAnarchyManager->GetMetaverseManager()->InstanceUserClicked(pUser);
+		}
+		else
+			DevMsg("WARNING: Could NOT find user to follow.\n");
+	}
+	else if (method_name == WSLit("banPlayer"))
+	{
+		std::string userId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->GetMetaverseManager()->BanSessionUser(userId);
+		/*
+		user_t* pUser = g_pAnarchyManager->GetMetaverseManager()->GetInstanceUser(userId);
+		if (pUser)
+		{
+			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+			g_pAnarchyManager->GetMetaverseManager()->InstanceUserClicked(pUser);
+		}
+		else
+			DevMsg("WARNING: Could NOT find user to follow.\n");*/
+	}
+	else if (method_name == WSLit("unbanPlayer"))
+	{
+		std::string userId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->GetMetaverseManager()->UnbanSessionUser(userId);
+	}
+	else if (method_name == WSLit("syncPano"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->SyncPano();
+	}
+	else if (method_name == WSLit("networkEvent"))
+	{
+		std::string eventType = WebStringToCharString(args[0].ToString());
+
+		//DevMsg("Network Event %s:\n\t", eventType.c_str());
+		if (eventType == "universeJoin")
+		{
+			std::string universeId = WebStringToCharString(args[1].ToString());
+
+			DevMsg("ID: %s\n", universeId.c_str());
+		}
+		else if (eventType == "universeCreate")
+		{
+			std::string universeId = WebStringToCharString(args[1].ToString());
+
+			DevMsg("ID: %s\n", universeId.c_str());
+		}
+		else if (eventType == "metaverseConnect")
+		{
+			std::string address = WebStringToCharString(args[1].ToString());
+
+			DevMsg("Address: %s\n", address.c_str());
+		}
+		else if (eventType == "userLogin")
+		{
+			std::string userId = WebStringToCharString(args[1].ToString());
+			std::string displayName = WebStringToCharString(args[2].ToString());
+
+			DevMsg("ID: %s\tDisplay Name: %s\n", userId.c_str(), displayName.c_str());
+		}
+		else if (eventType == "modelCreate")
+		{
+			std::string modelId = WebStringToCharString(args[1].ToString());
+			int iCurrent = args[2].ToInteger();
+			int iMax = args[3].ToInteger();
+
+			//DevMsg("ID: %s\tCurrent: %i\tMax: %i\n", modelId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Models", "aampProcessingModels", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "appCreate")
+		{
+			std::string appId = WebStringToCharString(args[1].ToString());
+			int iCurrent = args[2].ToInteger();
+			int iMax = args[3].ToInteger();
+
+			//DevMsg("ID: %s\tCurrent: %i\tMax: %i\n", appId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Apps", "aampProcessingApps", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "itemCreate")
+		{
+			std::string itemId = WebStringToCharString(args[1].ToString());
+			int iCurrent = args[2].ToInteger();
+			int iMax = args[3].ToInteger();
+
+			//DevMsg("ID: %s\tCurrent: %i\tMax: %i\n", itemId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Items", "aampProcessingItems", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "objectCreate")
+		{
+			std::string objectId = WebStringToCharString(args[1].ToString());
+			int iCurrent = args[2].ToInteger();
+			int iMax = args[3].ToInteger();
+
+			//DevMsg("ID: %s\tCurrent: %i\tMax: %i\n", objectId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Objects", "aampProcessingObjects", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "typeCreate")
+		{
+			std::string typeId = WebStringToCharString(args[1].ToString());
+			int iCurrent = args[2].ToInteger();
+			int iMax = args[3].ToInteger();
+
+			//DevMsg("ID: %s\tCurrent: %i\tMax: %i\n", typeId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Types", "aampProcessingTypes", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "mapCreate")
+		{
+			std::string mapId = WebStringToCharString(args[1].ToString());
+
+			DevMsg("ID: %s\n", mapId.c_str());
+		}
+		else if (eventType == "instanceCreate")
+		{
+			std::string instanceId = WebStringToCharString(args[1].ToString());
+
+			DevMsg("ID: %s\n", instanceId.c_str());
+		}
+		else if (eventType == "instanceObjectCreate")
+		{
+			std::string instanceId = WebStringToCharString(args[1].ToString());
+			std::string objectId = WebStringToCharString(args[2].ToString());
+			int iCurrent = args[3].ToInteger();
+			int iMax = args[4].ToInteger();
+
+			//DevMsg("INSTANCE: %s\tOBJECT: %s\tCurrent: %i\tMax: %i\n", instanceId.c_str(), objectId.c_str(), iCurrent, iMax);
+
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Verifying Objects", "aampSyncingObjects", "0", VarArgs("%i", iMax), VarArgs("%i", iCurrent), "");
+		}
+		else if (eventType == "instanceUserCreate")
+		{
+			std::string instanceId = WebStringToCharString(args[1].ToString());
+			std::string sessionId = WebStringToCharString(args[2].ToString());
+			std::string userId = WebStringToCharString(args[3].ToString());
+
+			DevMsg("INSTANCE: %s\tSESSION: %s\tUSER: %s\n", instanceId.c_str(), sessionId.c_str(), userId.c_str());
+		}
+		else if (eventType == "instanceUserAdded")
+		{
+			std::string userId = WebStringToCharString(args[1].ToString());
+			std::string sessionId = WebStringToCharString(args[2].ToString());
+			std::string displayName = WebStringToCharString(args[3].ToString());
+
+			g_pAnarchyManager->GetMetaverseManager()->InstanceUserAddedReceived(userId, sessionId, displayName);
+		}
+		else if (eventType == "instanceUserRemoved")
+		{
+			std::string userId = WebStringToCharString(args[1].ToString());
+			g_pAnarchyManager->GetMetaverseManager()->InstanceUserRemoved(userId);
+		}
+		//else if (eventType == "overviewComplete")
+		//{
+		//	g_pAnarchyManager->GetMetaverseManager()->OverviewSyncComplete();
+		//}
+		else if (eventType == "panoComplete")
+		{
+			std::string cachedPanoName = WebStringToCharString(args[1].ToString());
+			std::string panoId = WebStringToCharString(args[2].ToString());
+			g_pAnarchyManager->GetMetaverseManager()->PanoSyncComplete(cachedPanoName, panoId);
+		}
+		else if (eventType == "userSessionUpdated")
+		{
+			int iUpdateMask = args[1].ToInteger();
+			std::string userId = WebStringToCharString(args[2].ToString());
+			std::string sessionId = WebStringToCharString(args[3].ToString());
+			std::string displayName = WebStringToCharString(args[4].ToString());
+			std::string itemId = WebStringToCharString(args[5].ToString());
+			std::string objectId = WebStringToCharString(args[6].ToString());
+			std::string say = WebStringToCharString(args[7].ToString());
+			std::string bodyOrigin = WebStringToCharString(args[8].ToString());
+			std::string bodyAngles = WebStringToCharString(args[9].ToString());
+			std::string headOrigin = WebStringToCharString(args[10].ToString());
+			std::string headAngles = WebStringToCharString(args[11].ToString());
+			std::string mouseX = WebStringToCharString(args[12].ToString());
+			std::string mouseY = WebStringToCharString(args[13].ToString());
+			std::string webUrl = WebStringToCharString(args[14].ToString());
+			std::string avatarUrl = WebStringToCharString(args[15].ToString());
+
+			g_pAnarchyManager->GetMetaverseManager()->UserSessionUpdated(iUpdateMask, userId, sessionId, displayName, itemId, objectId, say, bodyOrigin, bodyAngles, headOrigin, headAngles, mouseX, mouseY, webUrl, avatarUrl);
+
+			//DevMsg("User session update detected!!\n");
+			/*
+			std::string instanceId = WebStringToCharString(args[1].ToString());
+			std::string sessionId = WebStringToCharString(args[2].ToString());
+			std::string userId = WebStringToCharString(args[3].ToString());
+
+			DevMsg("INSTANCE: %s\tSESSION: %s\tUSER: %s\n", instanceId.c_str(), sessionId.c_str(), userId.c_str());*/
+			/*
+			if (!this->IsMapLoaded() || !this->IsReady() || !m_pPhantomModeReady)
+				return;
+
+			//	DevMsg("Update the position for player %s\n", name);
+
+			PhantomPlayer_t* pPhantomPlayer = null;
+			C_DynamicProp* pEntity = null;
+
+			unsigned int i;
+			for (i = 0; i < m_phantomPlayers.size(); i++)
+			{
+				pEntity = null;
+
+				pPhantomPlayer = m_phantomPlayers[i];
+
+				if (!Q_strcmp(m_phantomPlayers[i]->id.c_str(), id))
+				{
+					pPhantomPlayer->name = name;
+
+					if (pPhantomPlayer->say != say && Q_strcmp(say, ""))
+					{
+						engine->ServerCmd(VarArgs("psay \"%s\" \"%s\";\n", pPhantomPlayer->name.c_str(), say), false);
+						//engine->ServerCmd(VarArgs("psay \"%s\" \"%s\";\n", pPhantomPlayer->name.c_str(), say), false);
+					}
+
+					pPhantomPlayer->say = say;
+					//			pPhantomPlayer->selectedKey = selectedKey;
+
+					// Handle follow behavior
+					if (pPhantomPlayer->selectedKey != selectedKey)
+					{
+						C_PropHotlinkEntity* pSelectedHotlink = this->GetPhantomObjectEntityByKey(selectedKey);
+
+						if (pSelectedHotlink)
+						{
+							if (pPhantomPlayer->bIsFollowed)
+								engine->ClientCmd(VarArgs("setmpfocusnow %i;\n", pSelectedHotlink->entindex()));
+						}
+					}
+
+					pPhantomPlayer->selectedKey = selectedKey;
+
+					if (pPhantomPlayer->iEntityIndex > 0)
+					{
+						C_BaseEntity* pBaseEntity = C_BaseEntity::Instance(pPhantomPlayer->iEntityIndex);
+
+						if (pBaseEntity)
+						{
+							pEntity = dynamic_cast<C_DynamicProp*>(pBaseEntity);
+
+							if (pEntity)
+							{
+								//						DevMsg("Phantom Update Index: %s\n", pEntity->entindex());	// THE ENTITY MIGHT NTO YET BE VALID!!!! so don't try to use it.
+								engine->ServerCmd(VarArgs("set_object_pos %i %f %f %f %f %f %f;\n", pPhantomPlayer->iEntityIndex, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z), false);
+								//engine->ServerCmd(VarArgs("set_object_pos %i %f %f %f %f %f %f;\n", pPhantomPlayer->iEntityIndex, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z), false);
+							}
+						}
+					}
+
+					break;
+				}
+
+				pPhantomPlayer = null;
+			}
+
+			// If we haven't been found yet, create us.
+			if (!pPhantomPlayer)
+			{
+				pPhantomPlayer = new PhantomPlayer_t();
+				pPhantomPlayer->iEntityIndex = 0;
+				pPhantomPlayer->bIsFollowed = false;
+				pPhantomPlayer->selectedKey = selectedKey;
+				pPhantomPlayer->id = id;
+				pPhantomPlayer->name = name;
+				pPhantomPlayer->say = say;
+
+				m_phantomPlayers.push_back(pPhantomPlayer);
+
+				engine->ServerCmd(VarArgs("create_phantom_object_pos \"%s\" %f %f %f %f %f %f \"%s\" \"%s\";\n", modelName, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, id, name), false);
+				//engine->ServerCmd(VarArgs("create_object_pos \"models/players/heads/flipflopfred.mdl\" %f %f %f %f %f %f \"%s\" \"%s\";\n", position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, id, name), false);
+			}
+			*/
+		}
+		else if (eventType == "hostReady")
+		{
+			DevMsg("Multiplayer server is ready.\n");
+
+			std::string address = std::string(WebStringToCharString(args[1].ToString()));
+			std::string universe = std::string(WebStringToCharString(args[2].ToString()));
+			std::string instance = std::string(WebStringToCharString(args[3].ToString()));
+			std::string session = std::string(WebStringToCharString(args[4].ToString()));
+			std::string lobby = std::string(WebStringToCharString(args[5].ToString()));
+			bool bIsPublic = bool(Q_atoi(WebStringToCharString(args[6].ToString())));
+			std::string lobbyPassword = std::string(WebStringToCharString(args[7].ToString()));
+			g_pAnarchyManager->SetConnectedUniverse(true, address, universe, instance, session, lobby, bIsPublic, lobbyPassword);
+
+			/*
+			std::vector<std::string> args;
+			args.push_back(address);
+			args.push_back(universe);
+			args.push_back(instance);
+			args.push_back(session);
+			*/
+
+			std::vector<std::string> args;
+			C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			pHudBrowserInstance->AddHudLoadingMessage("", "", "Complete", "complete", "", "", "", "");
+			pHudBrowserInstance->DispatchJavaScriptMethod("eventListener", "doneHostingSession", args);
+			g_pAnarchyManager->AddToastMessage("Online Session Ready");
+
+			
+		}
+		else
+			DevMsg("WARNING: Unhandled network event.\n");
+	}
+	else if (method_name == WSLit("disconnected"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->Disconnected();
+	}
+	else if (method_name == WSLit("restartNetwork"))
+	{
+		g_pAnarchyManager->GetMetaverseManager()->RestartNetwork();
+	}
 	else if (method_name == WSLit("importNextSteamGameCallback"))
 	{
 		g_pAnarchyManager->GetMetaverseManager()->ImportNextSteamGame();
@@ -441,6 +805,14 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			C_AwesomiumBrowserInstance* pHudInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
 			pHudInstance->SetUrl("asset://ui/welcome.html");
 		}
+	}
+	else if (method_name == WSLit("loadMapNow"))
+	{
+		cvar->FindVar("last_map_loaded")->SetValue(0);
+		engine->ClientCmd("host_writeconfig");
+
+		std::string map = WebStringToCharString(args[0].ToString());
+		engine->ClientCmd(VarArgs("map \"%s\"\n", map.c_str()));
 	}
 	else if (method_name == WSLit("deactivateInputMode"))
 	{
@@ -677,7 +1049,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 				KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(model);
 
 				std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelId, modelFile);
+				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelId, modelFile, g_pAnarchyManager->UseBuildGhosts());
 			}
 		}
 
@@ -904,6 +1276,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		{
 			pSteamBrowserInstance->GoForward();
 		}
+	}
+	else if (method_name == WSLit("doCopy"))
+	{
+		caller->Copy();
+		g_pAnarchyManager->AddToastMessage("Copied to your clipboard.  CTRL+V to paste.");
 	}
 	else if (method_name == WSLit("goBack"))
 	{
@@ -1255,7 +1632,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 			pEntity->PrecacheModel(modelFile.c_str());	// not needed.  handled server-side?
 			pEntity->SetModel(modelFile.c_str());	// not needed.  handled server-side?
-			engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\" 1;\n", pEntity->entindex(), modelId.c_str(), modelId.c_str(), modelFile.c_str()), false);
+			engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\" %i;\n", pEntity->entindex(), modelId.c_str(), modelId.c_str(), modelFile.c_str(), g_pAnarchyManager->UseBuildGhosts()), false);
 			//engine->ServerCmd(VarArgs("makeghost %i;\n", pEntity->entindex()), false);	// might be over-kill, all we're trying to do is make sure it stays non-solid
 			//pEntity->SetSolid(SOLID_NONE);
 		}
@@ -1275,7 +1652,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 					active = model->FindKey("local", true);
 
 				std::string modelFile = active->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID));
-				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelFile);
+				g_pAnarchyManager->GetInstanceManager()->ChangeModel(pEntity, modelFile, g_pAnarchyManager->UseBuildGhosts());
 			}
 		}
 		*/
@@ -1707,11 +2084,24 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Spawning Objects", "spawningobjects", "0", VarArgs("%i", g_pAnarchyManager->GetInstanceManager()->GetUnspawnedWithinRangeEstimate()), "+", "spawnNextObjectCallback");
 		else
 		{
-			//pHudBrowserInstance->SetUrl("asset://ui/default.html");
-			g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
-
 			ConVar* pConVar = cvar->FindVar("engine_no_focus_sleep");
 			pConVar->SetValue(g_pAnarchyManager->GetOldEngineNoFocusSleep().c_str());
+
+			// Map has successfully loaded, so remember that.
+			cvar->FindVar("last_map_loaded")->SetValue(1);
+			engine->ClientCmd("host_writeconfig");
+
+			//pHudBrowserInstance->SetUrl("asset://ui/default.html");
+			ConVar* pHostNextMapConVar = cvar->FindVar("host_next_map");
+			if (pHostNextMapConVar->GetBool())
+			{
+				pHostNextMapConVar->SetValue(false);
+				pHudBrowserInstance->SetUrl("asset://ui/hostSessionProgress.html");
+			}
+			else
+			{
+				g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
+			}
 		}
 	}
 	else if (method_name == WSLit("fileBrowse"))
@@ -2019,6 +2409,7 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 
 		//g_pAnarchyManager->GetMetaverseManager()->GetDefaultFields();
+		// FIXME: Why are all the other fields disabled here?  Probably because modelFile is the only value available at the places in the UI where models can be created??
 		//std::string title = pDataKV->GetString("title");
 		std::string modelFile = pDataKV->GetString("file");
 		//std::string screen = pDataKV->GetString("screen");
@@ -2102,6 +2493,61 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		JSObject app;
 		AddSubKeys(pActiveKV, app);
 		return app;
+	}
+	else if (method_name == WSLit("createType"))
+	{
+		KeyValues* pDataKV = new KeyValues("data");
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				pDataKV->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+		}
+
+		//g_pAnarchyManager->GetMetaverseManager()->GetDefaultFields();	// FIXME: Make this default fields thing actually be used more widely than JUST for items!!
+		std::string title = pDataKV->GetString("title");
+		/*
+		std::string titleformat = pDataKV->GetString("titleformat");
+		std::string fileformat = pDataKV->GetString("fileformat");
+		std::string priority = pDataKV->GetString("priority");
+		*/
+		pDataKV->deleteThis();
+
+		std::string typeId = g_pAnarchyManager->GenerateUniqueId();
+
+		KeyValues* pTypeKV = new KeyValues("type");
+		pTypeKV->SetInt("generation", 3);
+
+		KeyValues* pActiveKV = pTypeKV->FindKey("local", true);
+		pActiveKV->SetString("info/owner", "local");
+		pActiveKV->SetString("info/id", typeId.c_str());
+		pActiveKV->SetString("info/created", VarArgs("%llu", g_pAnarchyManager->GetTimeNumber()));
+
+		pActiveKV->SetString("title", title.c_str());
+
+		/*
+		pActiveKV->SetString("titleformat", titleformat.c_str());
+		pActiveKV->SetString("fileformat", fileformat.c_str());
+		pActiveKV->SetString("priority", priority.c_str());
+		*/
+
+		g_pAnarchyManager->GetMetaverseManager()->AddType(pTypeKV);
+		g_pAnarchyManager->GetMetaverseManager()->SaveType(pTypeKV);
+
+		g_pAnarchyManager->AddToastMessage("New Type Profile Created");
+
+		JSObject type;
+		AddSubKeys(pActiveKV, type);
+		return type;
 	}
 	else if (method_name == WSLit("getAllLibraryApps"))
 	{
@@ -2410,6 +2856,148 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 		response.SetProperty(WSLit("nodeInfo"), nodeInfo);
 		return response;
+	}
+	else if (method_name == WSLit("getAllUserChat"))
+	{
+		JSArray userChats;
+		aampConnection_t* pConnection = g_pAnarchyManager->GetConnectedUniverse();
+		if (pConnection && pConnection->connected)
+		{
+			// go through ALL users & grab the last thing they've said
+			std::vector<user_t*> users;
+			g_pAnarchyManager->GetMetaverseManager()->GetAllInstanceUsers(users);
+
+			for (unsigned int i = 0; i < users.size(); i++)
+			{
+				JSObject chatEntry;
+				chatEntry.SetProperty(WSLit("userId"), WSLit(users[i]->userId.c_str()));
+				chatEntry.SetProperty(WSLit("displayName"), WSLit(users[i]->displayName.c_str()));
+				chatEntry.SetProperty(WSLit("say"), WSLit(users[i]->say.c_str()));
+				userChats.Push(chatEntry);
+			}
+		}
+		
+		return userChats;
+	}
+	else if (method_name == WSLit("getAllUsers"))
+	{
+		JSArray responseUsers;
+
+		aampConnection_t* pConnection = g_pAnarchyManager->GetConnectedUniverse();
+		if (pConnection && pConnection->connected)
+		{
+			// go through ALL users & grab the last thing they've said
+			std::vector<user_t*> users;
+			g_pAnarchyManager->GetMetaverseManager()->GetAllInstanceUsers(users);
+
+			for (unsigned int i = 0; i < users.size(); i++)
+			{
+				JSObject user;
+				user.SetProperty(WSLit("userId"), WSLit(users[i]->userId.c_str()));
+				user.SetProperty(WSLit("sessionId"), WSLit(users[i]->sessionId.c_str()));
+				user.SetProperty(WSLit("followingId"), WSLit(users[i]->followingId.c_str()));
+				user.SetProperty(WSLit("displayName"), WSLit(users[i]->displayName.c_str()));
+				user.SetProperty(WSLit("itemId"), WSLit(users[i]->itemId.c_str()));
+				user.SetProperty(WSLit("objectId"), WSLit(users[i]->objectId.c_str()));
+				user.SetProperty(WSLit("say"), WSLit(users[i]->say.c_str()));
+				if (users[i]->entity)
+				{
+					user.SetProperty(WSLit("exists"), WSLit("1"));
+					user.SetProperty(WSLit("bodyOrigin"), WSLit(VarArgs("%.10f %.10f %.10f", users[i]->bodyOrigin.x, users[i]->bodyOrigin.y, users[i]->bodyOrigin.z)));
+					user.SetProperty(WSLit("bodyAngles"), WSLit(VarArgs("%.10f %.10f %.10f", users[i]->bodyAngles.x, users[i]->bodyAngles.y, users[i]->bodyAngles.z)));
+					user.SetProperty(WSLit("headOrigin"), WSLit(VarArgs("%.10f %.10f %.10f", users[i]->headOrigin.x, users[i]->headOrigin.y, users[i]->headOrigin.z)));
+					user.SetProperty(WSLit("headAngles"), WSLit(VarArgs("%.10f %.10f %.10f", users[i]->headAngles.x, users[i]->headAngles.y, users[i]->headAngles.z)));
+				}
+				else
+					user.SetProperty(WSLit("exists"), WSLit("0"));
+				if (g_pAnarchyManager->GetMetaverseManager()->GetFollowingId() == users[i]->userId)
+					user.SetProperty(WSLit("followed"), WSLit("1"));
+				else
+					user.SetProperty(WSLit("followed"), WSLit("0"));
+				if (g_pAnarchyManager->GetMetaverseManager()->GetLocalUser() != users[i] )//!g_pAnarchyManager->GetConnectedUniverse() || g_pAnarchyManager->GetConnectedUniverse()->user != users[i]->userId)
+					user.SetProperty(WSLit("local"), WSLit("0"));
+				else
+					user.SetProperty(WSLit("local"), WSLit("1"));
+				user.SetProperty(WSLit("mouseX"), WSLit(users[i]->mouseX.c_str()));
+				user.SetProperty(WSLit("mouseY"), WSLit(users[i]->mouseY.c_str()));
+				user.SetProperty(WSLit("webUrl"), WSLit(users[i]->webUrl.c_str()));
+				user.SetProperty(WSLit("avatarUrl"), WSLit(users[i]->avatarUrl.c_str()));
+				responseUsers.Push(user);
+			}
+		}
+
+		return responseUsers;
+	}
+	else if (method_name == WSLit("getConnectedSession"))
+	{
+		JSObject response;
+		aampConnection_t* pConnection = g_pAnarchyManager->GetConnectedUniverse();
+		if (pConnection && pConnection->connected)
+		{
+			response.SetProperty(WSLit("server"), WSLit(pConnection->address.c_str()));
+			response.SetProperty(WSLit("universe"), WSLit(pConnection->universe.c_str()));
+			response.SetProperty(WSLit("instance"), WSLit(pConnection->instance.c_str()));
+			response.SetProperty(WSLit("session"), WSLit(pConnection->session.c_str()));
+			response.SetProperty(WSLit("lobby"), WSLit(pConnection->lobby.c_str()));
+			response.SetProperty(WSLit("isPublic"), JSValue(pConnection->isPublic));
+			response.SetProperty(WSLit("lobbyPassword"), WSLit(pConnection->lobbyPassword.c_str()));
+			return response;
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("getNumUsers"))
+	{
+		return JSValue((int)g_pAnarchyManager->GetMetaverseManager()->GetNumInstanceUsers());
+	}
+	else if (method_name == WSLit("getSyncOverview"))
+	{
+		if (cvar->FindVar("sync_overview")->GetBool())
+		{
+			KeyValues* pOverviewKV = new KeyValues("overview");
+			if (pOverviewKV->LoadFromFile(g_pFullFileSystem, VarArgs("resource/overviews/%s.txt", g_pAnarchyManager->MapName()), "GAME"))
+			{
+				JSObject response;
+				response.SetProperty(WSLit("map"), WSLit(g_pAnarchyManager->MapName()));
+				response.SetProperty(WSLit("pos_x"), WSLit(VarArgs("%i", pOverviewKV->GetInt("pos_x"))));
+				response.SetProperty(WSLit("pos_y"), WSLit(VarArgs("%i", pOverviewKV->GetInt("pos_y"))));
+				response.SetProperty(WSLit("scale"), WSLit(VarArgs("%.10f", pOverviewKV->GetFloat("scale"))));
+
+				pOverviewKV->deleteThis();
+				return response;
+			}
+
+			pOverviewKV->deleteThis();
+		}
+		
+		return JSValue(0);
+	}
+	else if (method_name == WSLit("hasLibraryEntry"))
+	{
+		std::string category = WebStringToCharString(args[0].ToString());
+		std::string id = WebStringToCharString(args[1].ToString());
+
+		// get the first entry
+		KeyValues* pEntry;
+		if (category == "instances")
+		{
+			instance_t* pInstance = g_pAnarchyManager->GetInstanceManager()->FindInstance(id);
+			return JSValue(!!pInstance);
+		}
+		else if (category == "items")
+			pEntry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(id);
+		else if (category == "models")
+			pEntry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryModel(id);
+		else if (category == "types")
+			pEntry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryType(id);
+		else if (category == "apps")
+			pEntry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryApp(id);
+		else if (category == "maps")
+			pEntry = g_pAnarchyManager->GetMetaverseManager()->GetLibraryMap(id);
+
+		pEntry = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pEntry);
+
+		return JSValue(!!pEntry);
 	}
 	else if (method_name == WSLit("getFirstLibraryEntry"))
 	{
@@ -2829,6 +3417,40 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		else
 			return JSValue(0);
 	}
+	else if (method_name == WSLit("findLibraryType"))
+	{
+		// build the search info
+		KeyValues* pSearchInfo = new KeyValues("search");	// this gets deleted by the metaverse manager!!
+
+		unsigned int numArgs = args.size();
+		if (numArgs == 0)
+			return JSValue(0);
+		else
+		{
+			std::string fieldName;
+			std::string fieldValue;
+			for (unsigned int i = 0; i < numArgs - 1; i = i + 2)
+			{
+				fieldName = WebStringToCharString(args[i].ToString());
+				fieldValue = WebStringToCharString(args[i + 1].ToString());
+				//DevMsg("Using %s equals %s as search field.\n", fieldName.c_str(), fieldValue.c_str());
+				pSearchInfo->SetString(fieldName.c_str(), fieldValue.c_str());
+			}
+		}
+
+		// start the search
+		KeyValues* pType = g_pAnarchyManager->GetMetaverseManager()->FindLibraryType(pSearchInfo);
+
+		if (pType)
+		{
+			KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pType);
+			JSObject type;
+			AddSubKeys(active, type);
+			return type;
+		}
+		else
+			return JSValue(0);
+	}
 	else if (method_name == WSLit("saveItem"))
 	{
 		// construct a new KeyValues for the item
@@ -2898,6 +3520,35 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	{
 		std::string id = g_pAnarchyManager->GenerateUniqueId();
 		return WSLit(id.c_str());
+	}
+	else if (method_name == WSLit("updateType"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		KeyValues* pTypeKV = g_pAnarchyManager->GetMetaverseManager()->GetLibraryType(id);
+		KeyValues* pActiveKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(pTypeKV);
+		if (pActiveKV)
+		{
+			// now loop through our updated fields
+			std::string field;
+			std::string value;
+			JSArray update = args[1].ToArray();
+			unsigned int max = update.size();
+			for (unsigned int i = 0; i < max; i += 2)
+			{
+				field = WebStringToCharString(update.At(i).ToString());
+				value = WebStringToCharString(update.At(i + 1).ToString());
+
+				// update field with value
+				pActiveKV->SetString(field.c_str(), value.c_str());
+			}
+
+			// now save the item's changes
+			g_pAnarchyManager->GetMetaverseManager()->SaveType(pTypeKV);
+			return JSValue(true);
+		}
+		else
+			return JSValue(0);
 	}
 	else if (method_name == WSLit("updateModel"))
 	{
@@ -3090,6 +3741,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 				//g_pAnarchyManager->GetCanvasManager()->RefreshItemTextures(id, "marquee");
 				//g_pAnarchyManager->GetInputManager()->DeactivateInputMode(true);
 			}
+
+			//if (g_pAnarchyManager->GetConnectedUniverse() && g_pAnarchyManager->GetConnectedUniverse()->connected)
+			//g_pAnarchyManager->GetMetaverseManager()->SendItemUpdate(id);
 
 			return JSValue(true);
 		}
@@ -3391,6 +4045,97 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		}
 
 		return response;
+	}
+	else if (method_name == WSLit("getObject"))
+	{
+		std::string id = WebStringToCharString(args[0].ToString());
+
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(id);
+		if (pObject)
+		{
+			JSObject responseObject;
+			responseObject.SetProperty(WSLit("id"), WSLit(pObject->objectId.c_str()));
+			responseObject.SetProperty(WSLit("item"), WSLit(pObject->itemId.c_str()));
+			responseObject.SetProperty(WSLit("model"), WSLit(pObject->modelId.c_str()));
+			responseObject.SetProperty(WSLit("slave"), JSValue(pObject->slave));
+			responseObject.SetProperty(WSLit("scale"), JSValue(pObject->scale));
+
+			// origin
+			char buf[AA_MAX_STRING];
+			Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", pObject->origin.x, pObject->origin.y, pObject->origin.z);
+			responseObject.SetProperty(WSLit("origin"), WSLit(buf));
+
+			// angles
+			Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", pObject->angles.x, pObject->angles.y, pObject->angles.z);
+			responseObject.SetProperty(WSLit("angles"), WSLit(buf));
+
+			responseObject.SetProperty(WSLit("child"), JSValue(pObject->child));
+
+			C_PropShortcutEntity* pParentShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(pObject->parentEntityIndex));
+			std::string parentObjectId = (pParentShortcut) ? pParentShortcut->GetObjectId() : "";
+			responseObject.SetProperty(WSLit("parentObject"), WSLit(parentObjectId.c_str()));
+
+			return responseObject;
+		}
+		else
+			return JSValue(0);
+	}
+	else if (method_name == WSLit("getAllObjectInfos"))
+	{
+		//JSObject response;
+		JSArray responseObjects;
+
+		std::map<std::string, object_t*> objects = g_pAnarchyManager->GetInstanceManager()->GetObjectsMap();
+		std::map<std::string, object_t*>::iterator it = objects.begin();
+		while (it != objects.end())
+		{
+			JSObject responseObject;
+			object_t* pObject = it->second;
+			responseObject.SetProperty(WSLit("objectId"), WSLit(pObject->objectId.c_str()));
+			responseObject.SetProperty(WSLit("itemId"), WSLit(pObject->itemId.c_str()));
+			responseObject.SetProperty(WSLit("modelId"), WSLit(pObject->modelId.c_str()));
+
+			/*
+			KeyValues* pObjectInfo = null;
+			KeyValues* pItemInfo = null;
+			KeyValues* pModelInfo = null;
+
+			g_pAnarchyManager->GetMetaverseManager()->GetObjectInfo(pObject, pObjectInfo, pItemInfo, pModelInfo);
+			if (pObjectInfo)
+			{
+				JSObject object;
+				AddSubKeys(pObjectInfo, object);
+				responseObject.SetProperty(WSLit("object"), object);
+
+				pObjectInfo->deleteThis();
+			}
+
+			if (pItemInfo)
+			{
+				JSObject item;
+				AddSubKeys(pItemInfo, item);
+				responseObject.SetProperty(WSLit("item"), item);
+
+				pItemInfo->deleteThis();
+			}
+
+			if (pModelInfo)
+			{
+				JSObject model;
+				AddSubKeys(pModelInfo, model);
+				responseObject.SetProperty(WSLit("model"), model);
+
+				pModelInfo->deleteThis();
+			}
+			*/
+
+			responseObjects.Push(responseObject);
+			it++;
+		}
+
+		//response.SetProperty(WSLit("objects"), responseObjects);
+		//response.SetProperty(WSLit("success"), JSValue(true));
+		return responseObjects;
 	}
 	else if (method_name == WSLit("getBackpack"))
 	{
@@ -3794,7 +4539,7 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 
 
 			// ignore special instances
-			bHiddenTask = (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "images");
+			bHiddenTask = (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "images" || pEmbeddedInstance->GetId() == "network");
 			bPresetHiddenTask = bHiddenTask;
 
 			//if (pEmbeddedInstance->GetId() == "hud" || pEmbeddedInstance->GetId() == "images")
@@ -6282,7 +7027,9 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 	}
 	else if (method_name == WSLit("getInstance"))
 	{
-		std::string instanceId = WebStringToCharString(args[0].ToString());
+		std::string instanceId = (args.size() > 0 ) ? WebStringToCharString(args[0].ToString()) : "";
+		if (instanceId == "")
+			instanceId = g_pAnarchyManager->GetInstanceId();
 
 		JSObject response;
 

@@ -27,8 +27,8 @@ void RemoveGlowEffect(const CCommand &args)
 ConCommand removegloweffect("removegloweffect", RemoveGlowEffect, "Removes a glow around the entity.", FCVAR_HIDDEN);
 */
 
-ConVar build_ghosts("build_ghosts", "1", FCVAR_ARCHIVE, "Set to 1 to make objects transparent while spawning them.");
-
+ConVar build_ghosts("build_ghosts", "0", FCVAR_ARCHIVE, "Set to 1 to make objects transparent while spawning them.");
+ConVar scale_collisions("scale_collisions", "1", FCVAR_NONE, "Set to 0 to disable collision scaling, if your arcades are failing to load.");
 void AddGlowEffect(const CCommand &args)
 {
 	CBaseEntity* pEntity = CBaseEntity::Instance(Q_atoi(args[1]));
@@ -212,26 +212,48 @@ void SpawnShortcut(const CCommand &args)
 	pShortcut->KeyValue("slave", args[12]);
 
 	int iParentEntityIndex = Q_atoi(args[13]);
-	bool bShouldGhost = (Q_atoi(args[14])) ? true : false;
+	bool bShouldGhost = (Q_atoi(args[14]) != 0);
+	bool bIsNewObject = (Q_atoi(args[15]) != 0);
 
 	pShortcut->Precache();
 	DispatchSpawn(pShortcut);
 	pShortcut->Activate();
 
-	pShortcut->SetSolid(SOLID_VPHYSICS);
-
-	pShortcut->SetModelScale(Q_atof(args[11]), 0);
-
-	IPhysicsObject* pPhysics = pShortcut->VPhysicsGetObject();
-	if (!pPhysics && pShortcut->CreateVPhysics())
-		pPhysics = pShortcut->VPhysicsGetObject();
-
-	if (pPhysics)
+	if (!bIsNewObject)
 	{
-		if (pShortcut->GetSpawnFlags() == 8)
-			pPhysics->EnableMotion(false);
-		else
-			pPhysics->EnableMotion(true);
+		pShortcut->SetSolid(SOLID_VPHYSICS);
+
+		IPhysicsObject* pPhysics = pShortcut->VPhysicsGetObject();
+		if (!pPhysics && pShortcut->CreateVPhysics())
+			pPhysics = pShortcut->VPhysicsGetObject();
+
+		if (pPhysics)
+		{
+			if (pShortcut->GetSpawnFlags() == 8)
+				pPhysics->EnableMotion(false);
+			else
+				pPhysics->EnableMotion(true);
+		}
+	}
+	else
+	{
+		pShortcut->SetSolid(SOLID_NONE);
+
+		if (bShouldGhost)
+		{
+			pShortcut->SetRenderMode(kRenderTransColor);
+			pShortcut->SetRenderColorA(160);
+		}
+	}
+
+	pShortcut->SetMoveType(MOVETYPE_NONE);
+
+	float fScale = Q_atof(args[11]);
+	if (fScale != 1.0)
+	{
+		pShortcut->SetModelScale(fScale, 0);
+		if (pShortcut->VPhysicsGetObject() && scale_collisions.GetBool())
+			UTIL_CreateScaledPhysObject(pShortcut->GetBaseAnimating(), fScale);
 	}
 
 	if (iParentEntityIndex >= 0)
@@ -240,9 +262,6 @@ void SpawnShortcut(const CCommand &args)
 		if (pParentEntity)
 			pShortcut->SetParent(pParentEntity, -1, false);
 	}
-
-	if (bShouldGhost)
-		engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
 
 //	pShortcut->SetModelScale(Q_atof(args[9]), 0);
 	/*	// from server-side code...
@@ -639,25 +658,43 @@ void SwitchModel(const CCommand &args)
 		}
 
 		if (pHotlink)
+		{
 			pHotlink->SetModelId(std::string(modelId));
 
-		UTIL_SetModel(pEntity, TheModel);
-		pEntity->SetModel(TheModel);
+			if (pHotlink->VPhysicsGetObject())
+				pHotlink->VPhysicsDestroyObject();
 
-		if (args.ArgC() > 4 && Q_atoi(args[4]) == 1)
-		{
+			UTIL_SetModel(pHotlink, TheModel);
+			pHotlink->SetModel(TheModel);
+			pHotlink->SetSolid(SOLID_NONE);
+			//pHotlink->SetSize(pHotlink->WorldAlignMins(), pHotlink->WorldAlignMaxs());
+
 			/*
-			pEntity->SetSolid(SOLID_NONE);
-			pEntity->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
-			//SetRenderMode(kRenderTransTexture);
-			pEntity->SetRenderMode(kRenderTransColor);
-			pEntity->SetRenderColorA(160);
+			if (pHotlink->CreateVPhysics())
+			{
+				IPhysicsObject *pPhysics = pHotlink->VPhysicsGetObject();
+				if (pPhysics)
+					pPhysics->EnableMotion(false);
+			}
 			*/
 
-			engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pEntity->entindex()));	// lazy way to make transparent & stuff
-		}
+			if (args.ArgC() > 4 && Q_atoi(args[4]) == 1)
+			{
+				/*
+				pEntity->SetSolid(SOLID_NONE);
+				pEntity->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+				//SetRenderMode(kRenderTransTexture);
+				pEntity->SetRenderMode(kRenderTransColor);
+				pEntity->SetRenderColorA(160);
+				*/
 
-		pEntity->NetworkStateChanged();
+				pHotlink->SetRenderMode(kRenderTransColor);
+				pHotlink->SetRenderColorA(160);
+				//engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pEntity->entindex()));	// lazy way to make transparent & stuff
+			}
+
+			pEntity->NetworkStateChanged();
+		}
 	}
 }
 
@@ -894,15 +931,33 @@ void RemoveObject(const CCommand &args)
 	//CPropShortcutEntity
 	//CDynamicProp* pProp = NULL;
 	//pProp = dynamic_cast<CDynamicProp*>(CBaseEntity::Instance(Q_atoi(args[1])));
-	CPropShortcutEntity* pProp = dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(Q_atoi(args[1])));
-	if (!pProp)
-	{
-		DevMsg("Invalid entindex specified for \"remove\" command!\n");
-		return;
-	}
 
-	inputdata_t emptyDummy;
-	pProp->InputKillHierarchy(emptyDummy);
+	int iIndex = Q_atoi(args[1]);
+
+	CPropShortcutEntity* pShortcut = dynamic_cast<CPropShortcutEntity*>(CBaseEntity::Instance(iIndex));
+	if (pShortcut)
+	{
+		pShortcut->SetSolid(SOLID_NONE);
+		pShortcut->VPhysicsDestroyObject();
+
+		inputdata_t emptyDummy;
+		pShortcut->InputKillHierarchy(emptyDummy);
+	}
+	else
+	{
+		CDynamicProp* pProp = dynamic_cast<CDynamicProp*>(CBaseEntity::Instance(iIndex));
+		if (!pProp)
+		{
+			DevMsg("Invalid entindex specified for \"remove\" command: %i\n", iIndex);
+			return;
+		}
+
+		pProp->SetSolid(SOLID_NONE);
+		pProp->VPhysicsDestroyObject();
+
+		inputdata_t emptyDummy;
+		pProp->InputKillHierarchy(emptyDummy);
+	}
 }
 ConCommand removeobject("removeobject", RemoveObject, "Deletes an object from the game.");
 
@@ -982,13 +1037,16 @@ void SetObjectIds(const CCommand &args)
 		return;
 	}
 
+	if (pProp->VPhysicsGetObject())
+		pProp->VPhysicsDestroyObject();
+
 	pProp->PrecacheModel(modelFile.c_str());
 	pProp->SetModel(modelFile.c_str());	// This might need to be done server-side (maybe in addition)
 	// does physics need to be adjusted for the new model??
 	pProp->SetItemId(itemId);
 	pProp->SetModelId(modelId);
 
-	if (args.ArgC() > 5 && Q_atoi(args[5]) == 1)
+	if (args.ArgC() > 5 && Q_atoi(args[5]) != 0)
 	{
 		/*
 		pProp->SetSolid(SOLID_NONE);
@@ -998,7 +1056,10 @@ void SetObjectIds(const CCommand &args)
 		pProp->SetRenderColorA(160);
 		*/
 
-		engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pProp->entindex()));	// lazy way to make transparent & stuff
+		pProp->SetRenderMode(kRenderTransColor);
+		pProp->SetRenderColorA(160);
+		
+		//engine->ServerCommand(UTIL_VarArgs("makeghost %i;\n", pProp->entindex()));	// lazy way to make transparent & stuff
 	}
 		//engine->ServerCommand(UTIL_VarArgs("makeghost %i 0;\n", pShortcut->entindex()));	// lazy way to make transparent & stuff
 
@@ -1006,14 +1067,49 @@ void SetObjectIds(const CCommand &args)
 }
 ConCommand setobjectids("setobjectids", SetObjectIds, "");
 
+void SetObjectPos(const CCommand &args)
+{
+	int iEntityIndex = Q_atoi(args.Arg(1));
+
+	edict_t *pEntityEdict = INDEXENT(iEntityIndex);
+	if (pEntityEdict && !pEntityEdict->IsFree())
+	{
+		CDynamicProp* pEntity = (CDynamicProp*)GetContainingEntity(pEntityEdict);
+		Vector origin = Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)));// + 10.0
+		QAngle angles = QAngle(Q_atof(args.Arg(5)), Q_atof(args.Arg(6)), Q_atof(args.Arg(7)));
+
+		// initialize the values we'll spline between
+		///*
+		Vector vStartPos = pEntity->GetAbsOrigin();
+		//float flInterpStartTime = gpGlobals->curtime;
+		pEntity->SetAbsVelocity(vec3_origin);
+		pEntity->SetLerpSync(origin, angles);
+		//*/
+
+		/*
+		UTIL_SetOrigin(pEntity, origin, true);
+		pEntity->SetAbsAngles(angles);
+
+		Vector vel = Vector(0, 0, 0);
+		pEntity->Teleport(&origin, &angles, &vel);
+		*/
+	}
+}
+ConCommand set_object_pos("set_object_pos", SetObjectPos, "For internal use only.");
+
 void MakeGhost(const CCommand &args)
 {
 	CBaseEntity* pShortcut = CBaseEntity::Instance(Q_atoi(args[1]));
-	pShortcut->SetSolid(SOLID_NONE);
-	pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
-	//SetRenderMode(kRenderTransTexture);
-	if (build_ghosts.GetBool())
+	//pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));	// FIXME: This should be dynamic!!
+	pShortcut->SetSolid(SOLID_NONE);	// ALWAYS make non-solid
+
+	if (pShortcut->VPhysicsGetObject())
+		pShortcut->VPhysicsDestroyObject();
+
+	bool bShouldGhost = (Q_atoi(args[2]) != 0);
+	if ( bShouldGhost )
 	{
+	//SetRenderMode(kRenderTransTexture);
 		pShortcut->SetRenderMode(kRenderTransColor);
 		pShortcut->SetRenderColorA(160);
 	}
@@ -1024,25 +1120,398 @@ ConCommand makeghost("makeghost", MakeGhost, "Interal use only.", FCVAR_HIDDEN);
 void MakeNonGhost(const CCommand &args)
 {
 	CBaseEntity* pShortcut = CBaseEntity::Instance(Q_atoi(args[1]));
-	pShortcut->SetRenderColorA(255);
-	pShortcut->SetRenderMode(kRenderNormal);
+
+	bool bShouldGhost = (Q_atoi(args[2]) != 0);
+	if (bShouldGhost)
+	{
+		pShortcut->SetRenderColorA(255);
+		pShortcut->SetRenderMode(kRenderNormal);
+	}
 
 	// make the prop solid
-	pShortcut->SetSolid(SOLID_VPHYSICS);
-	pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
-	pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
-
-	if (pShortcut->CreateVPhysics())
+	//pShortcut->SetSolid(SOLID_VPHYSICS);
+	pShortcut->SetSize(pShortcut->WorldAlignMins(), pShortcut->WorldAlignMaxs());
+	//pShortcut->SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
+	
+	pShortcut->SetMoveType(MOVETYPE_NONE);
+	//pShortcut->SetMoveType(MOVETYPE_VPHYSICS);
+	/*
+	if (pShortcut->VPhysicsGetObject())
 	{
+		//VPhysicsGetObject()->EnableCollisions(false);
+		pShortcut->VPhysicsDestroyObject();
+	}
+	*/
+	if (!pShortcut->VPhysicsGetObject() && pShortcut->CreateVPhysics())
+	{
+		pShortcut->SetSolid(SOLID_VPHYSICS);
+
 		IPhysicsObject *pPhysics = pShortcut->VPhysicsGetObject();
 		if (pPhysics)
 		{
 			pPhysics->EnableMotion(false);
+
+			float fScale = pShortcut->GetBaseAnimating()->GetModelScale();
+			if (fScale != 1.0f && scale_collisions.GetBool())
+				UTIL_CreateScaledPhysObject(pShortcut->GetBaseAnimating(), fScale);
 		}
 	}
 	pShortcut->NetworkStateChanged();
 }
 ConCommand makenonghost("makenonghost", MakeNonGhost, "Interal use only.", FCVAR_HIDDEN);
+
+//#include <vector>
+CBaseEntity* GetEntSpawnPoint(void)
+{
+	// Added for Anarchy Arcade BEGIN
+	CBaseEntity *pSpot = NULL;
+
+	//ConVar* SpawnPositionVar = cvar->FindVar("spawn_position");
+	//int SpawnPosition = SpawnPositionVar->GetInt();
+	int SpawnPosition = 420;
+
+	std::vector<CBaseEntity*> potentials;
+
+	int count = 0;
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_start");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_start");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_counterterrorist");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_counterterrorist");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_terrorist");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_terrorist");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_deathmatch");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_deathmatch");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_allies");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_allies");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_axis");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_axis");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_fof");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_fof");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_coop");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_coop");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_teamspawn");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_teamspawn");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_rebel");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_rebel");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_combine");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_combine");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_nmrih");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_nmrih");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_american");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_american");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_british");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_british");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "emp_imp_commander");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "emp_imp_commander");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "emp_nf_commander");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "emp_nf_commander");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_es_spawn");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_es_spawn");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_hidden_spawn");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_hidden_spawn");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_marine_spawn");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_marine_spawn");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_mi6");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_mi6");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "info_player_janus");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "info_player_janus");
+	}
+
+	pSpot = gEntList.FindEntityByClassname(NULL, "ins_spawnpoint");
+	while (pSpot && count < SpawnPosition)
+	{
+		potentials.push_back(pSpot);
+		count++;
+
+		pSpot = gEntList.FindEntityByClassname(pSpot, "ins_spawnpoint");
+	}
+
+	if (count > 0)
+		pSpot = potentials[potentials.size() - 1];
+	else
+	{
+		if (!pSpot)
+		{
+			Msg("ERROR: NO SPAWN POINTS COULD BE FOUND!\n");
+			return NULL;
+		}
+
+		/*
+		pSpot = gEntList.FindEntityByClassname(pSpot, "prop_physics");
+
+		if ( !pSpot )
+		pSpot = gEntList.FindEntityByClassname(pSpot, "prop_dynamioc");
+
+		if (!pSpot)
+		pSpot = gEntList.FindEntityByClassname(pSpot, "prop_static");
+
+		if (!pSpot)
+		{
+		Msg("ERROR: NO SPAWN POINTS COULD BE FOUND!\n");
+		return NULL;
+		}
+		*/
+	}
+
+	//g_pLastSpawn = pSpot;
+	//m_flSlamProtectTime = gpGlobals->curtime + 0.5;
+
+	return pSpot;
+}
+
+void CreateAvatarObject(const CCommand &args)
+{
+	//CBaseEntity* pSafeSpawnEntity = GetEntSpawnPoint();
+	CBaseEntity *pSafeSpawnEntity = dynamic_cast<CBaseEntity*>(UTIL_GetLocalPlayer());
+	if (!pSafeSpawnEntity)
+	{
+		DevMsg("ERROR: No spawn positions found!\n");
+		return;
+	}
+
+	/*
+		1 - modelFile
+		2 - origin X
+		3 - origin Y
+		4 - origin Z
+		5 - angles P
+		6 - angles Y
+		7 - angles R
+		8 - userId
+	*/
+
+	char id[256];
+	//char avatarName[256];
+	strcpy(id, args.Arg(8));
+	//strcpy(avatarName, args.Arg(9));
+
+	Vector origin = Vector(Q_atof(args.Arg(2)), Q_atof(args.Arg(3)), Q_atof(args.Arg(4)));
+	QAngle angles = QAngle(Q_atof(args.Arg(5)), Q_atof(args.Arg(6)), Q_atof(args.Arg(7)));
+
+	char modelFile[256];
+	strcpy(modelFile, args.Arg(1));
+
+	//CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	//Vector playerOrigin = pPlayer->GetAbsOrigin();
+
+	// Now spawn it
+	CDynamicProp* pProp = dynamic_cast<CDynamicProp*>(CreateEntityByName("prop_dynamic"));
+	//pProp->KeyValue("targetname", entityName.c_str());
+
+	// Pass in standard key values
+	char buf[512];
+
+	Vector safeOrigin = pSafeSpawnEntity->GetAbsOrigin();
+	QAngle safeAngles = pSafeSpawnEntity->GetAbsAngles();
+
+	// Pass in standard key values
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", safeOrigin.x, safeOrigin.y, safeOrigin.z);
+	pProp->KeyValue("origin", buf);
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", safeAngles.x, safeAngles.y, safeAngles.z);
+	pProp->KeyValue("angles", buf);
+
+	pProp->KeyValue("fademindist", "-1");
+	pProp->KeyValue("fadescale", "1");
+	pProp->KeyValue("MaxAnimTime", "10");
+	pProp->KeyValue("MinAnimTime", "5");
+	pProp->KeyValue("modelscale", "1.0");
+	pProp->KeyValue("renderamt", "255");
+	pProp->KeyValue("rendercolor", "255 255 255");
+	pProp->KeyValue("solid", "0");
+	pProp->KeyValue("DisableBoneFollowers", "0");
+	pProp->KeyValue("disablereceiveshadows", "0");
+	pProp->KeyValue("disableshadows", "0");
+	pProp->KeyValue("ExplodeDamage", "0");
+	pProp->KeyValue("skin", "0");
+	pProp->KeyValue("ExplodeRadius", "0");
+	pProp->KeyValue("fademaxdist", "0");
+	pProp->KeyValue("maxdxlevel", "0");
+	pProp->KeyValue("mindxlevel", "0");
+
+	pProp->KeyValue("PerformanceMode", "0");
+	pProp->KeyValue("pressuredelay", "0");
+	pProp->KeyValue("spawnflags", "0");
+	pProp->KeyValue("RandomAnimation", "0");
+	pProp->KeyValue("renderfx", "0");
+	pProp->KeyValue("rendermode", "0");
+	pProp->KeyValue("SetBodyGroup", "0");
+	pProp->KeyValue("StartDisabled", "0");
+
+	pProp->KeyValue("model", modelFile);
+	//pProp->SetAvatarName(avatarName);
+
+	if (DispatchSpawn(pProp) > -1)
+	{
+		// snap it to position
+		/*
+		UTIL_SetOrigin(pProp, origin, true);
+		pProp->SetAbsAngles(angles);
+		Vector vel = Vector(0, 0, 0);
+		pProp->Teleport(&origin, &angles, &vel);
+
+		Vector vStartPos = pProp->GetAbsOrigin();
+		pProp->SetAbsVelocity(vec3_origin);
+		pProp->SetLerpSync(origin, angles);
+		*/
+
+		// finish spawning
+		pProp->VPhysicsInitNormal(SOLID_NONE, 0, false);
+		pProp->SetCollisionGroup(COLLISION_GROUP_NONE);
+
+		CBasePlayer* pRequestingPlayer = UTIL_GetCommandClient();
+
+		edict_t *pClient = engine->PEntityOfEntIndex(pRequestingPlayer->entindex());
+
+		engine->ClientCommand(pClient, "avatar_object_created %i \"%s\";\n", pProp->entindex(), id);
+	}
+}
+ConCommand create_avatar_object("create_avatar_object", CreateAvatarObject, "For internal use only.");
 
 void SetScale(const CCommand &args)
 {
@@ -1052,7 +1521,12 @@ void SetScale(const CCommand &args)
 	if (pEntity)
 	{
 		CPropShortcutEntity* pShortcutEntity = dynamic_cast<CPropShortcutEntity*>(pEntity);
-		pShortcutEntity->SetModelScale(flScale, 0.0f);
+		if (pShortcutEntity->VPhysicsGetObject() && scale_collisions.GetBool() )
+		{
+			UTIL_CreateScaledPhysObject(pShortcutEntity->GetBaseAnimating(), flScale);
+		}
+		else
+			pShortcutEntity->SetModelScale(flScale, 0.0f);
 	}
 }
 ConCommand setscale("setscale", SetScale, "Interal use only.", FCVAR_HIDDEN);

@@ -622,9 +622,9 @@ void C_LibretroManager::CloseAllInstances()
 	{
 		C_LibretroInstance* pInstance = it->second;
 
-		if (pInstance->GetId() == "hud" || pInstance->GetId() == "images")
+		if (pInstance->GetId() == "hud" || pInstance->GetId() == "images" || pInstance->GetId() == "network")
 		{
-			DevMsg("ERROR: Libretro Browser instance detected that is NOT of type Awesomium Browser!!\n");
+			DevMsg("ERROR: Libretro Browser instance detected that is NOT of type Awesomium Browser!!\n");	// bad error msg, mostly incorrect.
 			continue;
 		}
 

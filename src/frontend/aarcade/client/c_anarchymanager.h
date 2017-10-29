@@ -33,14 +33,17 @@ enum aaState
 	AASTATE_AWESOMIUMBROWSERMANAGERHUD = 7,
 	AASTATE_AWESOMIUMBROWSERMANAGERHUDWAIT = 8,
 	AASTATE_AWESOMIUMBROWSERMANAGERHUDINIT = 9,
-	AASTATE_AWESOMIUMBROWSERMANAGERIMAGES = 10,
-	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT = 11,
-	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT = 12,
-	AASTATE_LIBRARYMANAGER = 13,
-	AASTATE_MOUNTMANAGER = 14,
-	AASTATE_WORKSHOPMANAGER = 15,
-	AASTATE_INSTANCEMANAGER = 16,
-	AASTATE_RUN = 17
+	AASTATE_AWESOMIUMBROWSERMANAGERNETWORK = 10,
+	AASTATE_AWESOMIUMBROWSERMANAGERNETWORKWAIT = 11,
+	AASTATE_AWESOMIUMBROWSERMANAGERNETWORKINIT = 12,
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGES = 13,
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESWAIT = 14,
+	AASTATE_AWESOMIUMBROWSERMANAGERIMAGESINIT = 15,
+	AASTATE_LIBRARYMANAGER = 16,
+	AASTATE_MOUNTMANAGER = 17,
+	AASTATE_WORKSHOPMANAGER = 18,
+	AASTATE_INSTANCEMANAGER = 19,
+	AASTATE_RUN = 20
 };
 
 enum launchErrorType_t {
@@ -54,10 +57,49 @@ enum launchErrorType_t {
 	APP_PATH_NOT_FOUND = 7
 };
 
+enum panoshotState {
+	PANO_NONE,
+	PANO_ORIENT_SHOT_0,
+	PANO_TAKE_SHOT_0,
+	PANO_ORIENT_SHOT_1,
+	PANO_TAKE_SHOT_1,
+	PANO_ORIENT_SHOT_2,
+	PANO_TAKE_SHOT_2,
+	PANO_ORIENT_SHOT_3,
+	PANO_TAKE_SHOT_3,
+	PANO_ORIENT_SHOT_4,
+	PANO_TAKE_SHOT_4,
+	PANO_ORIENT_SHOT_5,
+	PANO_TAKE_SHOT_5,
+	PANO_ORIENT_SHOT_6,
+	PANO_TAKE_SHOT_6,
+	PANO_COMPLETE
+};
+
+struct panoStuff_t {
+	std::string weapons;
+	std::string hud;
+	std::string titles;
+	std::string toast;
+	std::string developer;
+};
+
 struct nextLoadInfo_t {
 	std::string instanceId;
 	std::string position;
 	std::string rotation;
+};
+
+struct aampConnection_t {
+	bool connected;
+	std::string address;
+	std::string universe;
+	std::string instance;
+	std::string user;
+	std::string session;
+	std::string lobby;
+	std::string lobbyPassword;
+	bool isPublic;
 };
 
 class C_AnarchyManager : public CAutoGameSystemPerFrame
@@ -100,6 +142,7 @@ public:
 
 	// Called after rendering
 	virtual void PostRender();
+	bool UseBuildGhosts();
 
 	bool CheckVideoCardAbilities();
 
@@ -110,6 +153,8 @@ public:
 	void ProcessAllModels();
 	void ProcessNextModel();
 	void AddNextModel();
+
+	void ManageWindow();
 
 	bool CheckStartWithWindows();
 	bool SetStartWithWindows(bool bValue);
@@ -230,6 +275,9 @@ public:
 
 	std::string GetSteamGamesCode(std::string requestId);
 
+	void Panoshot();
+	void ManagePanoshot();
+
 	// helpers
 	void GenerateUniqueId(char* result);
 	const char* GenerateUniqueId();
@@ -254,6 +302,10 @@ public:
 
 	void SetNextLoadInfo(std::string instanceId = "", std::string position = "", std::string rotation = "");
 	std::string GetHomeURL();
+	void ClearConnectedUniverse();
+
+	void WaitForOverviewExtract();
+	void ManageExtractOverview();
 
 	// accessors
 	bool GetSuspendEmbedded() { return m_bSuspendEmbedded; }
@@ -281,10 +333,13 @@ public:
 	std::string GetLegacyFolder() { return m_legacyFolder; }
 	std::string GetWorkshopFolder() { return m_workshopFolder; }
 	std::string GetAArcadeUserFolder() { return m_aarcadeUserFolder; }
+	std::string GetAArcadeToolsFolder() { return m_aarcadeToolsFolder; }
 	std::string GetOldEngineNoFocusSleep() { return m_oldEngineNoFocusSleep; }
 	C_BaseEntity* GetLastHoverGlowEntity() { return m_pHoverGlowEntity; }
 	std::string GetTabMenuFile() { return m_tabMenuFile; }
 	//bool GetIgnoreNextFire() { return m_bIgnoreNextFire; }
+	aampConnection_t* GetConnectedUniverse() { return m_pConnectedUniverse; }
+	panoshotState GetPanoshotState() { return m_panoshotState; }
 
 	// mutators
 	void SetLastNearestObjectToPlayerLook(object_t* pObject) { m_pLastNearestObjectToPlayerLook = pObject; }
@@ -294,14 +349,25 @@ public:
 	void SetLegacyFolder(std::string val) { m_legacyFolder = val; }
 	void SetWorkshopFolder(std::string val) { m_workshopFolder = val; }
 	void SetAArcadeUserFolder(std::string val) { m_aarcadeUserFolder = val; }
+	void SetAArcadeToolsFolder(std::string val) { m_aarcadeToolsFolder = val; }
 	void SetOldEngineNoFocusSleep(std::string val) { m_oldEngineNoFocusSleep = val; }
 	void SetTabMenuFile(std::string url) { m_tabMenuFile = url; }
 	//void SetIgnoreNextFire(bool bValue) { m_bIgnoreNextFire = bValue; }
+	void SetConnectedUniverse(bool bConnected, std::string address, std::string universeId, std::string instanceId, std::string sessionId, std::string lobbyId, bool bPublic, std::string lobbyPassword);
 	
 protected:
 	void ScanForLegacySave(std::string path, std::string searchPath, std::string workshopIds, std::string mountIds, C_Backpack* pBackpack);
 
 private:
+	panoStuff_t* m_pPanoStuff;
+	float m_fNextExtractOverviewCompleteManage;
+	float m_fNextPanoCompleteManage;
+	std::vector<std::string> m_existingMapScreenshotsForPano;
+	panoshotState m_panoshotState;
+	float m_fNextWindowManage;
+	bool m_bAutoRes;
+	ConVar* m_pBuildGhostConVar;
+	aampConnection_t* m_pConnectedUniverse;
 	unsigned int m_uProcessBatchSize;
 	unsigned int m_uProcessCurrentCycle;
 	unsigned int m_uValidProcessedModelCount;
@@ -361,6 +427,7 @@ private:
 	C_BaseEntity* m_pSelectedEntity;
 
 	std::string m_aarcadeUserFolder;
+	std::string m_aarcadeToolsFolder;
 	std::string m_legacyFolder;
 	std::string m_workshopFolder;
 	std::string m_oldEngineNoFocusSleep;

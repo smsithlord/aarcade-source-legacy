@@ -88,6 +88,7 @@ public:
 	int GetState() { return m_iState; }
 	C_InputListener* GetInputListener();
 	std::string GetOriginalItemId() { return m_originalItemId; }
+	void GetLastMouse(float &fMouseX, float &fMouseY);
 
 	// mutators	
 	//void SetState(int val) { m_iState = val; }
@@ -98,6 +99,9 @@ public:
 	void SetOriginalEntIndex(int val) { m_iOriginalEntIndex = val; }
 
 private:
+	float m_fLastMouseX;
+	float m_fLastMouseY;
+
 	std::string m_URL;
 	std::string m_imagesSessionId;
 	int m_iNumImagesLoading;

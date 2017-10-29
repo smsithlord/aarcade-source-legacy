@@ -53,7 +53,8 @@ void CPropShortcutEntity::Spawn()
 	Precache();
 	SetModel( UTIL_VarArgs("%s", this->GetModelName()) );	// We should figure out what our model is going to be before we get to this line.
 
-	SetSolid( SOLID_NONE );
+	//SetSolid( SOLID_NONE );
+	//SetSolid(SOLID_VPHYSICS);
 	SetMoveType(MOVETYPE_NONE);
 	//SetSolid( SOLID_VPHYSICS );
 	

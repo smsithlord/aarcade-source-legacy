@@ -37,6 +37,12 @@ int C_SteamBrowserInstance::KeyCode_VGUIToVirtualKey(vgui::KeyCode code)
 	return g_pInputSystem->ButtonCodeToVirtualKey(code);
 }
 
+void C_SteamBrowserInstance::GetLastMouse(float &fMouseX, float &fMouseY)
+{
+	fMouseX = m_fLastMouseX;
+	fMouseY = m_fLastMouseY;
+}
+
 ///*
 //-----------------------------------------------------------------------------
 // Purpose: return the bitmask of any modifier keys that are currently down
@@ -85,6 +91,8 @@ C_SteamBrowserInstance::C_SteamBrowserInstance()
 	m_title = "";
 	m_id = "";
 	m_iOriginalEntIndex = -1;
+	m_fLastMouseX = 0;
+	m_fLastMouseY = 0;
 
 //	if (!steamapicontext->SteamHTMLSurface()->Init())
 	//	DevMsg("CRITICAL ERROR: Failed to initialize the Steamworks browser!\n");
@@ -617,6 +625,9 @@ void C_SteamBrowserInstance::OnMouseMove(float x, float y)
 
 	int goodX = (width * x) / 1;
 	int goodY = (height * y) / 1;
+	m_fLastMouseX = x;
+	m_fLastMouseY = y;
+
 	steamapicontext->SteamHTMLSurface()->MouseMove(m_unHandle, goodX, goodY);
 }
 

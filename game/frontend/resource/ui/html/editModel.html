@@ -81,9 +81,10 @@
 						Model File:
 					</td>
 					<td class="aaKeyvalueTableValue">
-						<input fieldname="platforms/-KJvcne3IKMZQTaG7lPo/file" type="text" class="aaTextSizeFontSize" style="width: 100%;" />
+						<input fieldname="platforms/-KJvcne3IKMZQTaG7lPo/file" type="text" class="aaTextSizeFontSize" style="width: 100%;" disabled />
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
+						<div style="display: none;">
 						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse('platforms/-KJvcne3IKMZQTaG7lPo/file');">
 							<script>
 								document.write(arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor"));
@@ -96,6 +97,7 @@
 							</script>
 						</div>
 						-->
+						</div>
 					</td>
 				</tr>
 				<tr class="helpNote" help="This image is used in various menus.">
@@ -365,6 +367,7 @@
 
 						//field = focusedFieldValue;
 						console.log("Model updated!");
+						aaapi.network.sendEntryUpdate("Model", id);
 					}
 					else
 						console.log("Model update rejected!");

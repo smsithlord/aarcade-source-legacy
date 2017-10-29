@@ -87,7 +87,7 @@ public:
 	std::string CreateBlankInstance(int iLegacy = 0, KeyValues* pInstanceKV = null, std::string instanceId = "", std::string mapId = "", std::string title = "", std::string file = "", std::string workshopIds = "", std::string mountIds = "", std::string style = "", C_Backpack* pBackpack = null);
 	void CreateObject(KeyValues* pObjectKV, std::string objectId, std::string itemId, std::string modelId, std::string position, std::string rotation, float scale, int slave, int child);
 
-	void SpawnObject(object_t* object, bool bShouldGhost = false);
+	void SpawnObject(object_t* object);
 	object_t* AddObject(std::string objectId, std::string itemId, std::string modelId, Vector origin, QAngle angles, float scale, bool slave, unsigned int created = 0, std::string owner = "", unsigned int removed = 0, std::string remover = "", unsigned int modified = 0, std::string modifier = "", bool isChild = false, int entindex = -1);
 	object_t* GetInstanceObject(std::string objectId);
 	unsigned int GetInstanceObjectCount();
@@ -116,6 +116,7 @@ public:
 	// accessors
 	int GetUnspawnedWithinRangeEstimate() { return m_iUnspawnedWithinRangeEstimate; }
 	std::string GetIncomingNodeId() { return m_incomingNodeId; }
+	std::map<std::string, object_t*> GetObjectsMap() { return m_objects; }
 
 	// mutators
 	void SetIncomingNodeId(std::string nodeId) { m_incomingNodeId = nodeId; }

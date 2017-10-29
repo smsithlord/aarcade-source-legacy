@@ -430,6 +430,24 @@
 							aaapi.system.consoleCommand("mat_fastspecular " + this.value);
 						}
 					},
+					"buildghosts":
+					{
+						"title": "Use Transparency When Moving Objects",
+						"type": "toggle",
+						"help": "Transparency can make it easy to see what you're doing, but some models become COMPLETELY invisible when this is on.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("build_ghosts");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("build_ghosts " + this.value);
+						}
+					},
 					"console":
 					{
 						"title": "Developer Console Output",

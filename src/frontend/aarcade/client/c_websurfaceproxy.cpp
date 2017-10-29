@@ -533,7 +533,7 @@ void CWebSurfaceProxy::OnBind(C_BaseEntity *pC_BaseEntity)
 						//	bInstanceTextureReady = (pLibretroInstance->GetInfo()->state == 5);
 
 							//if (g_pAnarchyManager->GetSelectedEntity() && !testerInstance && selectedInstance && (pShortcut->GetSlave() || itemId == ""))//g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
-						if (!testerInstance && (selectedInstance || displayInstance) && (pShortcut->GetSlave() || itemId == ""))
+						if (!testerInstance && (selectedInstance || displayInstance) && (pShortcut->GetSlave() || itemId == "") && g_pAnarchyManager->GetPanoshotState() == PANO_NONE)
 						{
 							//	DevMsg("Swapped slave in!\n");
 							testerInstance = (selectedInstance) ? selectedInstance : displayInstance;

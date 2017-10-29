@@ -65,9 +65,24 @@
 					<td valign="top" style="width: 1px;">
 
 			<!-- World Info, Leave -->
-			<!--
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Leave World" onclick="aaapi.system.disconnect();" help="Leave this world & return to the main menu." />
-			-->
+			
+			<div class="aaOnlyIfMapLoaded">
+				<!-- Host Session -->
+				<div class="aaOnlyIfMapLoaded aaOnlyIfUniverseNotConnected" style="display: none;">
+					<div class="aaTextSizeFontSize aaTextColorTwoColor" style="display: none; font-family: Arial; font-weight: bold; text-align: center; white-space: nowrap;">Singleplayer</div>
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Host" onclick="window.location='asset://ui/hostSession.html';" help="Host your arcade as a multiplayer server." />
+					<hr class="aaThemeColorOneBackgroundColor aaThemeColorOneBorderColor" />
+				</div>
+				
+				<!-- Session Info-->
+				<div class="aaOnlyIfMapLoaded aaOnlyIfUniverseConnected" style="display: none;">
+					<div class="aaTextSizeFontSize aaTextColorTwoColor" style="display: none; font-family: Arial; font-weight: bold; text-align: center; white-space: nowrap;">Multiplayer</div>
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Online" id="sessionButton" onclick="viewSession();" help="You are currently in an ONLINE session." />
+					<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Disconnect" onclick="askDisconnectSession();" help="Disconnect from the online session & return to local singleplayer mode." /><!--<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Chat" onclick="window.location = 'asset://ui/chatbox.html';" help="Chat with users in the session." />-->
+					<hr class="aaThemeColorOneBackgroundColor aaThemeColorOneBorderColor" />
+				</div>
+			</div>
+
 			<table style="width: 100%;" cellspacing="0" cellpadding="0">
 				<tr><td>
 					<!--
@@ -91,6 +106,11 @@
 				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Library" onclick="goToLibrary();" help="Browse & manage your personal library." /><br />
 			</div>
 
+			<!-- Panoramic Viewer
+			<div class="aaOnlyIfMapLoaded">
+				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Panoramic Viewer" onclick="window.location = 'panoview.html';" help="Browse & manage your personal library." /><br />
+			</div> -->
+
 			<!-- Multiplayer
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Multiplayer" onclick="" help="" disabled /><br />
 			 -->
@@ -98,11 +118,14 @@
 			<!-- Options -->
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Options" onclick="window.location='asset://ui/options.html';" help="Configure AArcade & the Source engine." /><br />
 
+			<!-- tester
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Tester" onclick="aaapi.network.extractOverviewTGA();" help="Tetser" /><br /> -->
+
 			<!-- Addons -->
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Addons" onclick="window.location='asset://ui/addons.html';" help="Manage your workshop & other addons, or import Steam games, maps & models, or legacy content." /><br />
 
 			<!-- Feedback -->
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Feedback" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade." /><br />
+			<!-- <input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Feedback" onclick="window.location='asset://ui/feedback.html';" help="Ask for help, report a bug, make a suggestion, or leave a review of AArcade." /><br /> -->
 
 			<div class="aaOnlyIfMapLoaded">
 				<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Pause" onclick="doPause();" help="Pause AArcade so it doesn't hurt your performance in other games." /><br />
@@ -110,6 +133,8 @@
 
 			<!-- Quit -->
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Quit" onclick="aaapi.system.quit();" help="Shutdown Anarchy Arcade and return to Windows." />
+
+			<!--<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Disconnect" onclick="aaapi.system.disconnect();" help="Leave this universe & return to a local session." />-->
 
 					</td>
 					<td valign="top" id="extraPanel" style="max-width: 1280px; display: none;">
@@ -144,6 +169,10 @@
 										"id": "tasks",
 										"title": "Tasks"
 									},
+									/*{
+										"id": "players",
+										"title": "Players"
+									},*/
 									{
 										"id": "screenshots",
 										"title": "Screenshots"
@@ -378,6 +407,8 @@
 							<div id="hiddenTasks" style="display: none;">
 							</div>
 						</div>
+
+						
 
 						<div class="aaTabContent aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="screenshots">
 							<div id="screenshotList" class="aaOnlyIfMapLoaded" style="padding: 10px;"></div>
@@ -903,7 +934,14 @@
 			if( menuSettings["taskMenu_hiddenTasks"] !== hiddenWindowsTasksContainer.style.display )
 				toggleCategory(toggleHiddenTasksButton, "hiddenTasks");
 
-			if( tasks.length <= 2 )
+			var numExpectedHiddenTasks = 0;
+			for( var i = 0; i < tasks.length; i++ )
+			{
+				if( tasks[i].isHiddenTask && !tasks[i].isWindowsTask )
+					numExpectedHiddenTasks++;
+			}
+
+			if( tasks.length <= numExpectedHiddenTasks )
 			{
 				//document.querySelector("#closeAllButton").style.display = "none";	// obsolete
 				document.querySelector("#noTasksOpen").style.display = "block";
@@ -1657,6 +1695,221 @@
 				}
 			}
 
+			function disconnectSession()
+			{
+				aaapi.network.restartNetwork();
+				setTimeout(function()
+				{
+					window.location.reload();
+				}, 100);
+			}
+
+			function viewSession()
+			{
+				window.location = 'asset://ui/online.html?uiback=' + encodeURIComponent("window.location='asset://ui/welcome.html';");
+			}
+
+			function yesDisconnectSession()
+			{
+				disconnectSession();
+			}
+
+			function noDisconnectSession()
+			{
+				console.log("nope");
+			}
+
+			function askDisconnectSession()
+			{
+				createModalPrompt("Are You Sure?", "This will end your online session & return you to singleplayer mode.", "yesDisconnectSession();", "noDisconnectSession();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+			//Backup Library (' + formatBytes(aaapi.system.getDbSize()) + ')
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				//modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				/*
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";*/
+						//	<div class='aaTextSizeFontSize aaTitleText aaThemeColorOneColor' style='white-space: normal;'>Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>\
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+				//modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+				//modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Disconnect" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				//modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+/*
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedSaveNewNode(this.value);
+					}
+				}.bind(nodeNameInput), true);
+*/
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+
+			var sessionButtonElem = document.querySelector("#sessionButton");
+			var numUsers = aaapi.network.getNumUsers();
+			var sessionButtonText = "Online (" + numUsers + ")";
+			sessionButtonElem.value = sessionButtonText;
 		</script>
 
 	</body>

@@ -51,6 +51,8 @@ void C_PropShortcutEntity::Initialize()
 		// THIS IS THE OBJECT THE CURRENT USER IS SPAWNING!!
 		//Precache();
 		//SetModel("models\\cabinets\\two_player_arcade.mdl");// VarArgs("%s", this->GetModelName()));
+
+		/*
 		std::string modelId = (pSpawningObject->modelId != "") ? pSpawningObject->modelId : pSpawningObject->itemId;// g_pAnarchyManager->GenerateLegacyHash("models/cabinets/two_player_arcade.mdl");
 		std::string modelFile;
 
@@ -62,19 +64,23 @@ void C_PropShortcutEntity::Initialize()
 			modelFile = "models\\icons\\missing.mdl";
 
 		SetModel(modelFile.c_str());
+
 		SetSolid(SOLID_NONE);
 		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 		//SetRenderMode(kRenderTransTexture);
 		SetRenderMode(kRenderTransColor);
 		SetRenderColorA(160);
+		*/
 		g_pAnarchyManager->ActivateObjectPlacementMode(this);
 	}
 	else
 	{
+		/*
 		// This is a regular object that already existed or somebody else spawned
 		//Precache();
 		SetModel("models\\icons\\missing.mdl");// VarArgs("%s", this->GetModelName()));
 		//SetSolid(SOLID_NONE);
+
 		SetSolid(SOLID_VPHYSICS);
 		SetSize(-Vector(100, 100, 100), Vector(100, 100, 100));
 		SetMoveType(MOVETYPE_VPHYSICS);
@@ -90,6 +96,8 @@ void C_PropShortcutEntity::Initialize()
 				pPhysics->EnableMotion(false);
 			}
 		}
+
+		*/
 	}
 
 	//this->ConfirmNotError();

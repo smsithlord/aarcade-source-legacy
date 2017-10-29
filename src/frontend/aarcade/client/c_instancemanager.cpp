@@ -84,7 +84,7 @@ void C_InstanceManager::ResetObjectChanges(C_PropShortcutEntity* pShortcut)
 		//engine->ServerCmd(VarArgs("setobjectids %i \"%s\" \"%s\" \"%s\"; setcabpos %i %f %f %f %f %f %f; setscale %i %f;", pShortcut->entindex(), pObject->itemId.c_str(), modelId.c_str(), modelFile.c_str(), pShortcut->entindex(), pObject->origin.x, pObject->origin.y, pObject->origin.z, pObject->angles.x, pObject->angles.y, pObject->angles.z, pShortcut->entindex(), pObject->scale), false);
 		
 		// undo build mode FX
-		engine->ServerCmd(VarArgs("makenonghost %i;\n", pShortcut->entindex()), false);
+		engine->ServerCmd(VarArgs("makenonghost %i %i;\n", pShortcut->entindex(), g_pAnarchyManager->UseBuildGhosts()), false);
 		/*
 		pShortcut->SetRenderColorA(255);
 		pShortcut->SetRenderMode(kRenderNormal);
@@ -141,7 +141,7 @@ void C_InstanceManager::ModelFileChanged(std::string modelId)
 					if (pBaseEntity)
 					{
 						pShortcut = dynamic_cast<C_PropShortcutEntity*>(pBaseEntity);
-						this->ChangeModel(pBaseEntity, modelId, modelFile, false);
+						this->ChangeModel(pBaseEntity, modelId, modelFile, false);// g_pAnarchyManager->UseBuildGhosts());
 					}
 				}
 			}
@@ -361,7 +361,7 @@ std::string C_InstanceManager::CreateBlankInstance(int iLegacy, KeyValues* pInst
 	return instanceId;
 }
 
-void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
+void C_InstanceManager::SpawnObject(object_t* object)
 {
 	auto it = std::find(m_unspawnedObjects.begin(), m_unspawnedObjects.end(), object);
 	if (it != m_unspawnedObjects.end())
@@ -386,8 +386,10 @@ void C_InstanceManager::SpawnObject(object_t* object, bool bShouldGhost)
 
 	//if( !g_pFullFileSystem->FileExists(modelFile.c_str(), "GAME")
 
-	int ghost = (bShouldGhost) ? 1 : 0;
-	std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i %i %i\n", object->objectId.c_str(), object->itemId.c_str(), goodModelId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave, object->parentEntityIndex, ghost);
+	//int ghost = (bShouldGhost) ? 1 : 0;
+	bool bShouldGhost = g_pAnarchyManager->UseBuildGhosts();
+	bool bIsNewObject = (g_pAnarchyManager->GetMetaverseManager()->GetSpawningObject() == object);
+	std::string msg = VarArgs("spawnshortcut \"%s\" \"%s\" \"%s\" \"%s\" %.10f %.10f %.10f %.10f %.10f %.10f %.10f %i %i %i %i\n", object->objectId.c_str(), object->itemId.c_str(), goodModelId.c_str(), modelFile.c_str(), object->origin.x, object->origin.y, object->origin.z, object->angles.x, object->angles.y, object->angles.z, object->scale, object->slave, object->parentEntityIndex, bShouldGhost, bIsNewObject);
 	engine->ServerCmd(msg.c_str(), false);
 }
 
@@ -546,6 +548,7 @@ void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity, bool
 				auto it = m_objects.find(pVictimEntity->GetObjectId());
 				if (it != m_objects.end())
 				{
+					g_pAnarchyManager->GetMetaverseManager()->SendObjectRemoved(it->second);
 					delete it->second;
 					m_objects.erase(it);
 				}
@@ -554,7 +557,7 @@ void C_InstanceManager::RemoveEntity(C_PropShortcutEntity* pShortcutEntity, bool
 	}
 	victims.clear();
 
-	if (pObjectsKV && !bBulkRemove)
+	if (pObjectsKV && bBulkRemove)
 	{
 		// save out the instance KV
 		g_pAnarchyManager->GetMetaverseManager()->SaveSQL(null, "instances", m_pInstanceKV->GetString("info/local/id"), m_pInstanceKV);
@@ -1222,8 +1225,8 @@ void C_InstanceManager::ChangeModel(C_BaseEntity* pEntity, std::string modelId, 
 
 	m_pRecentModelIdConVar->SetValue(modelId.c_str());
 
-	int iMakeGhost = (bMakeGhost) ? 1 : 0;
-	engine->ServerCmd(VarArgs("switchmodel \"%s\" \"%s\" %i %i;\n", modelId.c_str(), modelFile.c_str(), pEntity->entindex(), iMakeGhost));
+	//int iMakeGhost = (bMakeGhost) ? 1 : 0;
+	engine->ServerCmd(VarArgs("switchmodel \"%s\" \"%s\" %i %i;\n", modelId.c_str(), modelFile.c_str(), pEntity->entindex(), bMakeGhost));
 }
 
 void C_InstanceManager::RemoveInstance(instance_t* pInstance)

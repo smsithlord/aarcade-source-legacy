@@ -24,6 +24,13 @@ C_MetaverseManager::C_MetaverseManager()
 	m_spawningAngles.y = 0;
 	m_spawningAngles.z = 0;
 
+	m_bHasDisconnected = false;
+
+	m_bHostSessionNow = false;
+	m_pLocalUser = null;
+
+	m_fPresenceLastSynced = 0;
+
 	m_pImportSteamGamesKV = null;
 	m_pImportSteamGamesSubKV = null;
 
@@ -933,6 +940,27 @@ bool C_MetaverseManager::ConvertLibraryVersion(unsigned int uOld, unsigned int u
 
 void C_MetaverseManager::Update()
 {
+	if (m_bHasDisconnected && !g_pAnarchyManager->IsPaused() && !engine->IsPaused())
+	{
+		this->RestartNetwork();
+		return;
+	}
+
+	// handle any pending user updates
+	auto it = m_pendingUserUpdates.begin();
+	if (it != m_pendingUserUpdates.end())
+	{
+		if (this->ProcessUserSessionUpdate(it->second))
+			m_pendingUserUpdates.erase(it);
+	}
+
+	if (m_bHostSessionNow)
+		this->HostSessionNow();
+
+	// thats all we do if we're paused.
+	if (g_pAnarchyManager->IsPaused() || engine->IsPaused() )
+		return;
+
 	// FIXME: all this spawning object stuff should be done in instance manager, not here....
 	if (m_pSpawningObjectEntity)
 	{
@@ -1034,6 +1062,153 @@ void C_MetaverseManager::Update()
 		if (abs(pTransform->scale - currentScale) > 0.04)
 			g_pAnarchyManager->GetMetaverseManager()->SetObjectScale(g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity(), pTransform->scale);
 	}
+
+	//C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (g_pAnarchyManager->GetConnectedUniverse() && g_pAnarchyManager->GetConnectedUniverse()->connected) // && pNetworkBrowserInstance
+	{
+		//uint64 currentTime = g_pAnarchyManager->GetTimeNumber();
+		//uint64 presenceSyncInterval = 300;
+
+		float fCurrentTime = engine->Time();
+		float fPresenceSyncInterval = 0.5;
+
+		if (m_fPresenceLastSynced == 0 || fCurrentTime - m_fPresenceLastSynced >= fPresenceSyncInterval)
+		{
+			m_fPresenceLastSynced = fCurrentTime;
+			//g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("network");
+			this->PerformLocalPlayerUpdate();
+		}
+	}
+
+	if (m_avatarDeathList.size() > 0)
+	{
+		C_DynamicProp* pVictimProp = m_avatarDeathList.back();
+		m_avatarDeathList.pop_back();
+
+		engine->ServerCmd(VarArgs("removeobject %i;\n", pVictimProp->entindex()), false);
+	}
+}
+
+void C_MetaverseManager::PerformLocalPlayerUpdate()
+{
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	/*
+	0 - instance
+	1 - say
+	2 - bodyOrigin
+	3 - bodyAngles
+	4 - headOrigin
+	5 - headAngles
+	6 - item
+	7 - object
+	8 - mouseX
+	9 - mouseY
+	10 - webURL
+	*/
+
+	//user_t* pUser = this->GetInstanceUser(cvar->FindVar("aamp_client_id"));
+
+	if (!m_pLocalUser)
+		return;
+
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	QAngle playerBodyAngles = pPlayer->GetAbsAngles();
+	Vector playerBodyOrigin = pPlayer->GetAbsOrigin();
+	QAngle playerHeadAngles = pPlayer->EyeAngles();
+	Vector playerHeadOrigin;
+	pPlayer->EyeVectors(&playerHeadOrigin);
+
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerBodyOrigin.x, playerBodyOrigin.y, playerBodyOrigin.z);
+	std::string bodyOrigin = buf;
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerBodyAngles.x, playerBodyAngles.y, playerBodyAngles.z);
+	std::string bodyAngles = buf;
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerHeadOrigin.x, playerHeadOrigin.y, playerHeadOrigin.z);
+	std::string headOrigin = buf;
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerHeadAngles.x, playerHeadAngles.y, playerHeadAngles.z);
+	std::string headAngles = buf;
+
+	std::string object;
+	std::string item;
+	std::string model;
+	std::string webUrl;
+	std::string mouseX = "0";
+	std::string mouseY = "0";
+
+	C_PropShortcutEntity* pSelectedShortcut = null;
+	C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->GetDisplayInstance();//g_pAnarchyManager->GetCanvasManager()->GetFirstInstanceToDisplay()
+	if (pEmbeddedInstance)
+		pSelectedShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(pEmbeddedInstance->GetOriginalEntIndex()));
+
+	if (!pSelectedShortcut)
+	{
+		// If no shortcut determined from display instance, try the selected entity
+		pSelectedShortcut = dynamic_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity());
+	}
+
+	if (pSelectedShortcut)
+	{
+		if (!pEmbeddedInstance)
+			pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance("auto" + pSelectedShortcut->GetItemId());
+
+
+		object = pSelectedShortcut->GetObjectId();
+		item = pSelectedShortcut->GetItemId();
+		model = pSelectedShortcut->GetModelId();
+
+		if (pEmbeddedInstance)
+		{
+			webUrl = pEmbeddedInstance->GetURL();
+
+			float fMouseX;
+			float fMouseY;
+			pEmbeddedInstance->GetLastMouse(fMouseX, fMouseY);
+
+			mouseX = VarArgs("%.10f", fMouseX);
+			mouseY = VarArgs("%.10f", fMouseY);
+		}
+		else
+		{
+			webUrl = "";
+			mouseX = "0";
+			mouseY = "0";
+		}
+
+	}
+
+	std::vector<std::string> args;
+	args.push_back(g_pAnarchyManager->GetInstanceId());
+	args.push_back(m_say);
+	args.push_back(bodyOrigin);
+	args.push_back(bodyAngles);
+	args.push_back(headOrigin);
+	args.push_back(headAngles);
+	args.push_back(item);
+	args.push_back(object);
+	args.push_back(mouseX);
+	args.push_back(mouseY);
+	args.push_back(webUrl);
+
+	// update our local user object too, so we can be treated just like all other users in the menus...
+	m_pLocalUser->say = m_say;
+	m_pLocalUser->bodyAngles = playerBodyAngles;
+	m_pLocalUser->bodyOrigin = playerBodyOrigin;
+	m_pLocalUser->headAngles = playerHeadAngles;
+	m_pLocalUser->headOrigin = playerHeadOrigin;
+	m_pLocalUser->itemId = item;
+	m_pLocalUser->sessionId = g_pAnarchyManager->GetConnectedUniverse()->session;
+	m_pLocalUser->objectId = object;
+	m_pLocalUser->mouseX = mouseX;
+	m_pLocalUser->mouseY = mouseY;
+	m_pLocalUser->webUrl = webUrl;
+
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "localUserUpdate", args);
 }
 
 //void C_MetaverseManager::ImportSteamGame(std::string name, std::string appid)
@@ -1759,10 +1934,11 @@ void C_MetaverseManager::UpdateScrapersJS()
 	}
 
 	// generate code
-	std::string code = "";
+	std::string code = "";//"if( !!arcadeHud) { ";
 	unsigned int max = scraperList.size();
 	for (unsigned int i = 0; i < max; i++)
 		code += "arcadeHud.loadHeadScript(\"scrapers/" + scraperList[i] + "\");\n";
+	//code += " } else console.log('ERROR: arcadeHud object was NOT ready to receive the scraper list.');";
 
 	// open up scrapers.js and replace it.  this path is greated when AArcade is started.
 	FileHandle_t fh = filesystem->Open("resource\\ui\\html\\scrapers.js", "w", "DEFAULT_WRITE_PATH");
@@ -3568,6 +3744,180 @@ KeyValues* C_MetaverseManager::FindLibraryApp(KeyValues* pSearchInfo)
 		return null;
 }
 
+KeyValues* C_MetaverseManager::FindLibraryType(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it)
+{
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	//unsigned int i, numTokens;
+	bool bFoundMatch;
+	while (it != m_types.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(potential);
+
+		// active has the potential type data
+		// pSearchInfo has the search criteria
+		bool bGood = false;
+		for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+		{
+			fieldName = searchField->GetName();
+			if (fieldName == "title")
+			{
+				if (!Q_strcmp(searchField->GetString(), ""))
+					bGood = true;
+				else
+				{
+					potentialBuf = active->GetString("title");
+					std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+					searchBuf = searchField->GetString();
+					std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+					/*
+					searchTokens.clear();
+					g_pAnarchyManager->Tokenize(searchBuf, searchTokens, " ");
+					numTokens = searchTokens.size();
+
+					for (i = 0; i < numTokens; i++)
+					{
+					if (searchTokens[i].length() < 2)
+					continue;
+
+					if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+					{
+					bFoundMatch = true;
+					break;
+					}
+					}
+					*/
+
+					if (potentialBuf.find(searchBuf) != std::string::npos)
+						bGood = true;
+					else
+						bGood = false;
+				}
+			}
+			else
+			{
+				potentialBuf = active->GetString(fieldName.c_str());
+				std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+				searchBuf = searchField->GetString();
+				std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+				if (potentialBuf == searchBuf)
+					bGood = true;
+				else
+					bGood = false;
+			}
+
+			if (!bGood)
+				break;
+		}
+
+		if (bGood)
+		{
+			bFoundMatch = true;
+			break;
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::FindLibraryType(KeyValues* pSearchInfo)
+{
+	//DevMsg("C_MetaverseManager: FindLibraryType with ONLY pSearchinfo!!\n");
+	KeyValues* potential;
+	KeyValues* active;
+	KeyValues* searchField;
+	std::string fieldName, potentialBuf, searchBuf;
+	char charBuf[AA_MAX_STRING];
+	std::vector<std::string> searchTokens;
+	unsigned int i, numTokens;
+	bool bFoundMatch = false;
+	std::map<std::string, KeyValues*>::iterator it = m_types.begin();
+	while (it != m_types.end())
+	{
+		bFoundMatch = false;
+		potential = it->second;
+		active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(potential);
+		// active has the potential type data
+		// pSearchInfo has the search criteria
+		for (searchField = pSearchInfo->GetFirstSubKey(); searchField; searchField = searchField->GetNextKey())
+		{
+			fieldName = searchField->GetName();
+			/*
+			if (fieldName == "title")
+			{
+			potentialBuf = searchField->GetString();	// FIXME: Does this work? seems to work... but how?
+			std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+			searchBuf = pSearchInfo->GetString(fieldName.c_str());
+			searchTokens.clear();
+			g_pAnarchyManager->Tokenize(searchBuf, searchTokens, ", ");
+			numTokens = searchTokens.size();
+
+			for (i = 0; i < numTokens; i++)
+			{
+			if (searchTokens[i].length() < 2)
+			continue;
+
+			if (potentialBuf.find(searchTokens[i]) != std::string::npos)
+			{
+			bFoundMatch = true;
+			break;
+			}
+			}
+
+			if (bFoundMatch)
+			break;
+			}
+			else
+			{*/
+			potentialBuf = active->GetString(fieldName.c_str());
+			std::transform(potentialBuf.begin(), potentialBuf.end(), potentialBuf.begin(), ::tolower);
+
+			searchBuf = searchField->GetString();
+			std::transform(searchBuf.begin(), searchBuf.end(), searchBuf.begin(), ::tolower);
+
+			if (potentialBuf == searchBuf)
+			{
+				//	DevMsg("Found match with %s = %s\n", potentialBuf.c_str(), searchBuf.c_str());
+				bFoundMatch = true;
+				break;
+			}
+			//}
+		}
+
+		if (bFoundMatch)
+			break;
+		else
+			it++;
+	}
+
+	// Do this here because we MUST handle the deletion for findNext and findFirst, so this usage should match!!
+	pSearchInfo->deleteThis();
+
+	if (bFoundMatch)
+		return it->second;
+	else
+		return null;
+}
+
 KeyValues* C_MetaverseManager::FindFirstLibraryModel(KeyValues* pSearchInfo)
 {
 	// remember this search query
@@ -4283,6 +4633,15 @@ KeyValues* C_MetaverseManager::GetLibraryApp(std::string id)
 {
 	std::map<std::string, KeyValues*>::iterator it = m_apps.find(id);
 	if (it != m_apps.end())
+		return it->second;
+	else
+		return null;
+}
+
+KeyValues* C_MetaverseManager::GetLibraryMap(std::string id)
+{
+	std::map<std::string, KeyValues*>::iterator it = m_maps.find(id);
+	if (it != m_maps.end())
 		return it->second;
 	else
 		return null;
@@ -5015,6 +5374,23 @@ void C_MetaverseManager::GetObjectInfo(object_t* pObject, KeyValues* &pObjectInf
 	pObjectInfo->SetBool("slave", pObject->slave);
 	pObjectInfo->SetFloat("scale", pObject->scale);
 
+	// origin
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", pObject->origin.x, pObject->origin.y, pObject->origin.z);
+	std::string origin = buf;
+	pObjectInfo->SetString("origin", origin.c_str());
+
+	// angles
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", pObject->angles.x, pObject->angles.y, pObject->angles.z);
+	std::string angles = buf;
+	pObjectInfo->SetString("angles", angles.c_str());
+
+	pObjectInfo->SetBool("child", pObject->child);
+
+	C_PropShortcutEntity* pParentShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(pObject->parentEntityIndex));
+	std::string parentObjectId = (pParentShortcut) ? pParentShortcut->GetObjectId() : "";
+	pObjectInfo->SetString("parentObject", parentObjectId.c_str());
+
 	KeyValues* pItemKV = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(pObject->itemId));
 	if (pItemKV)
 	{
@@ -5093,6 +5469,1259 @@ void C_MetaverseManager::GetObjectInfo(object_t* pObject, KeyValues* &pObjectInf
 		//pModelInfo->SetString("mountIds", "TBD");
 		
 		//pModelInfo->SetString("file", pModelKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
+	}
+}
+
+void C_MetaverseManager::UserInfoReceived(HTTPRequestCompleted_t* pResult, bool bIOFailure)
+{
+	//C_AwesomiumBrowserInstance* pNetworkInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	//if (!pNetworkInstance)
+	//	return;
+
+	//uint8* pBuf = new uint8(pResult->m_unBodySize);
+	void* pBuf = malloc(pResult->m_unBodySize);
+	steamapicontext->SteamHTTP()->GetHTTPResponseBodyData(pResult->m_hRequest, (uint8*)pBuf, pResult->m_unBodySize);
+
+	std::string avatarURL = VarArgs("%s", (unsigned char*)pBuf);
+	free(pBuf);
+	//delete[] pBuf;
+	steamapicontext->SteamHTTP()->ReleaseHTTPRequest(pResult->m_hRequest);
+
+	size_t found = avatarURL.find("\"avatarfull\": \"");
+	if (found != std::string::npos)
+		avatarURL = avatarURL.substr(found + 15);
+
+	found = avatarURL.find("\"");
+	if (found != std::string::npos)
+		avatarURL = avatarURL.substr(0, found);
+
+	cvar->FindVar("avatar_url")->SetValue(avatarURL.c_str());
+	m_bHostSessionNow = true;
+}
+
+void C_MetaverseManager::HostSessionNow()
+{
+	m_bHostSessionNow = false;
+
+	// if we need to extract the overview, now's the time.
+	bool bShouldHostNow = true;
+	if (cvar->FindVar("sync_overview")->GetBool())
+	{
+		// 1. resource/overviews/[mapname].txt must exist
+		// 2. materials/overviews/[mapname].vtf must exist
+		if (g_pFullFileSystem->FileExists(VarArgs("resource/overviews/%s.txt", g_pAnarchyManager->MapName()), "GAME") && g_pFullFileSystem->FileExists(VarArgs("materials/overviews/%s.vtf", g_pAnarchyManager->MapName()), "GAME"))
+		{
+			bShouldHostNow = false;
+			this->ExtractOverviewTGA();
+		}
+	}
+
+	if ( bShouldHostNow)
+		this->ReallyHostNow();
+}
+
+void C_MetaverseManager::ReallyHostNow()
+{
+	C_AwesomiumBrowserInstance* pNetworkInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkInstance)
+		return;
+
+	std::vector<std::string> args;
+	args.push_back(cvar->FindVar("avatar_url")->GetString());
+	args.push_back("");
+	args.push_back(cvar->FindVar("aamp_server_key")->GetString());
+	args.push_back(g_pAnarchyManager->GetInstanceId());
+	args.push_back(cvar->FindVar("aamp_client_id")->GetString());
+	args.push_back(cvar->FindVar("aamp_client_key")->GetString());
+	const char *buf = steamapicontext->SteamFriends()->GetPersonaName();;
+
+	std::string personaName = buf;
+	if (personaName == "")
+		personaName = "Human Player";
+
+	args.push_back(personaName);
+	//args.push_back(cvar->FindVar("aamp_display_name")->GetString());
+
+	args.push_back(cvar->FindVar("aamp_lobby_id")->GetString());
+	args.push_back(cvar->FindVar("aamp_public")->GetString());
+	args.push_back(cvar->FindVar("aamp_lobby_password")->GetString());
+
+	pNetworkInstance->DispatchJavaScriptMethod("aampNetwork", "hostSession", args);
+}
+
+void C_MetaverseManager::HostSession()
+{
+	//DevMsg("Do it from here now!\n");
+	C_AwesomiumBrowserInstance* pNetworkInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkInstance)
+		return;
+
+	m_bHasDisconnected = false;
+
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->AddHudLoadingMessage("", "", "Connecting to server...", "connectingToServer", "", "", "", "");
+
+
+	if (!Q_strcmp(cvar->FindVar("avatar_url")->GetString(), ""))
+	{
+		CSteamID sid = steamapicontext->SteamUser()->GetSteamID();
+		HTTPRequestHandle requestHandle = steamapicontext->SteamHTTP()->CreateHTTPRequest(k_EHTTPMethodGET, VarArgs("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=03125303B0E40F94D4A758C0F730F546&steamids=%llu", sid.ConvertToUint64()));
+
+		SteamAPICall_t hAPICall;
+		steamapicontext->SteamHTTP()->SendHTTPRequest(requestHandle, &hAPICall);
+		m_UserInfoCallback.Set(hAPICall, this, &C_MetaverseManager::UserInfoReceived);
+	}
+	else
+		this->HostSessionNow();
+}
+
+void C_MetaverseManager::ForgetAvatarDeathList()
+{
+	m_avatarDeathList.clear();
+}
+
+void C_MetaverseManager::RestartNetwork(bool bCleanupAvatars)
+{
+	//DevMsg("Do it from here now!\n");
+	C_AwesomiumBrowserInstance* pNetworkInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkInstance)
+		return;
+
+	this->RemoveAllInstanceUsers();
+
+	if (!bCleanupAvatars)
+		this->ForgetAvatarDeathList();
+
+	m_bHasDisconnected = false;
+	g_pAnarchyManager->ClearConnectedUniverse();
+	m_say = "";
+	m_followingUserId = "";
+	m_pLocalUser = null;
+	pNetworkInstance->SetUrl("asset://ui/network.html");
+}
+
+void C_MetaverseManager::SendObjectRemoved(object_t* object)
+{
+	if (!g_pAnarchyManager->GetConnectedUniverse() || !g_pAnarchyManager->GetConnectedUniverse()->connected)
+		return;
+
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	/*
+	0 - object (string)
+	1 - instance (string)
+	2 - item (string)
+	3 - model (string)
+	4 - slave (int)
+	5 - child (int)
+	6 - parentObject (string)
+	7 - scale (number)
+	8 - origin (string)
+	9 - angles (string)
+	*/
+
+	std::vector<std::string> args;
+	args.push_back(object->objectId);
+	args.push_back(g_pAnarchyManager->GetInstanceId());
+	args.push_back(object->itemId);
+	args.push_back(object->modelId);
+	args.push_back(VarArgs("%i", object->slave));
+	args.push_back(VarArgs("%i", object->child));
+
+	std::string parentObjectId;
+	C_PropShortcutEntity* pParentShortcut = null;
+	if (object->parentEntityIndex >= 0)
+	{
+		pParentShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(object->parentEntityIndex));
+		if (pParentShortcut)
+			parentObjectId = pParentShortcut->GetObjectId();
+	}
+	args.push_back(parentObjectId);
+
+	args.push_back(VarArgs("%.10f", object->scale));
+
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->origin.x, object->origin.y, object->origin.z);
+	std::string origin = buf;
+	args.push_back(origin);
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->angles.x, object->angles.y, object->angles.z);
+	std::string angles = buf;
+	args.push_back(angles);
+
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "localObjectRemove", args);
+}
+
+void C_MetaverseManager::SendLocalChatMsg(std::string chatText)
+{
+	m_say = chatText;
+	g_pAnarchyManager->AddToastMessage(VarArgs("You say: %s", chatText.c_str()));
+}
+
+void C_MetaverseManager::InstanceUserClicked(user_t* pUser)
+{
+	if (m_followingUserId == pUser->userId)
+	{
+		// we were already followed
+		if (pUser->entity)
+			engine->ServerCmd(VarArgs("removehovergloweffect %i", pUser->entity->entindex()), false);
+
+		m_followingUserId = "";
+		g_pAnarchyManager->AddToastMessage(VarArgs("Stopped following %s.", pUser->displayName.c_str()));
+	}
+	else
+	{
+		// if we are already following a user, unfollow!
+		if (m_followingUserId != "")
+		{
+			user_t* pFollowedUser = this->GetInstanceUser(m_followingUserId);
+			if (pFollowedUser)
+			{
+				if (pFollowedUser->entity)
+					engine->ServerCmd(VarArgs("removehovergloweffect %i", pFollowedUser->entity->entindex()), false);
+			}
+		}
+
+		if (pUser->entity)
+			engine->ServerCmd(VarArgs("addhovergloweffect %i", pUser->entity->entindex()), false);
+
+		m_followingUserId = pUser->userId;
+		g_pAnarchyManager->AddToastMessage(VarArgs("Started following %s.", pUser->displayName.c_str()));
+
+		this->SyncToUser(pUser->objectId, "");
+	}
+}
+
+void C_MetaverseManager::AvatarObjectCreated(int iEntIndex, std::string userId)
+{
+	C_DynamicProp* pProp = dynamic_cast<C_DynamicProp*>(C_BaseEntity::Instance(iEntIndex));
+	if (!pProp)
+	{
+		DevMsg("ERROR: Could not obtain avatar prop.\n");
+		return;
+	}
+
+	user_t* pUser = this->GetInstanceUser(userId);
+	if (!pUser)
+	{
+		DevMsg("ERROR: Could not obtain the user for the avatar.\n");
+		return;
+	}
+
+	if (pUser->entity)
+	{
+		DevMsg("ERROR: User already has an entity.\n");
+		return;
+	}
+
+	pUser->entity = pProp;
+	///*
+	float fPlayerHeight = 60.0f;
+	C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	float fFudgeHeight = pLocalPlayer->GetAbsOrigin().z + fPlayerHeight;
+	//fFudgeHeight += pLocalPlayer->EyePosition().z;
+
+	engine->ServerCmd(VarArgs("set_object_pos %i %f %f %f %f %f %f;\n", pUser->entity->entindex(), pUser->bodyOrigin.x, pUser->bodyOrigin.y, fFudgeHeight, pUser->bodyAngles.x, pUser->bodyAngles.y, pUser->bodyAngles.z), false);
+	//*/
+}
+
+void C_MetaverseManager::SendEntryUpdate(std::string mode, std::string entryId)
+{
+	if (!g_pAnarchyManager->GetConnectedUniverse() || !g_pAnarchyManager->GetConnectedUniverse()->connected)
+		return;
+
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	std::vector<std::string> args;
+	if (mode == "Item")
+	{
+		KeyValues* pEntryKV = this->GetActiveKeyValues(this->GetLibraryItem(entryId));
+
+		if (!pEntryKV)
+		{
+			DevMsg("FATAL ERROR: Could not get entry to send update for!\n");
+			return;
+		}
+
+		/*
+			0 - mode (string)
+			1 - item (string)
+			2 - app (string)
+			3 - description (string)
+			4 - download (string)
+			5 - file (string)
+			6 - marquee (string)
+			7 - preview (string)
+			8 - reference (string)
+			9 - screen (string)
+			10 - stream (string)
+			11 - title (string)
+			12 - type (string)
+		*/
+
+		args.push_back(mode);
+		args.push_back(entryId);
+		args.push_back(pEntryKV->GetString("app"));
+		args.push_back(pEntryKV->GetString("description"));
+		args.push_back(pEntryKV->GetString("download"));
+		args.push_back(pEntryKV->GetString("file"));
+		args.push_back(pEntryKV->GetString("marquee"));
+		args.push_back(pEntryKV->GetString("preview"));
+		args.push_back(pEntryKV->GetString("reference"));
+		args.push_back(pEntryKV->GetString("screen"));
+		args.push_back(pEntryKV->GetString("stream"));
+		args.push_back(pEntryKV->GetString("title"));
+		args.push_back(pEntryKV->GetString("type"));
+	}
+	else if (mode == "Model")
+	{
+		KeyValues* pEntryKV = this->GetActiveKeyValues(this->GetLibraryModel(entryId));
+
+		if (!pEntryKV)
+		{
+			DevMsg("FATAL ERROR: Could not get entry to send update for!\n");
+			return;
+		}
+
+		/*
+			0 - mode
+			1 - model (string)
+			2 - dynamic (int)
+			3 - keywords (string)
+			4 - file (string)
+			5 - mountIds (string)
+			6 - workshopIds (string)
+			7 - title (string)
+			8 - screen (string)
+			9 - preview (string)
+			10 - download (string)
+		*/
+
+		args.push_back(mode);
+		args.push_back(entryId);
+		args.push_back(pEntryKV->GetString("dynamic"));
+		args.push_back(pEntryKV->GetString("keywords"));
+		args.push_back(pEntryKV->GetString(VarArgs("platforms/%s/file", AA_PLATFORM_ID)));
+		args.push_back(pEntryKV->GetString(VarArgs("platforms/%s/mountIds", AA_PLATFORM_ID)));
+		args.push_back(pEntryKV->GetString(VarArgs("platforms/%s/workshopIds", AA_PLATFORM_ID)));
+		args.push_back(pEntryKV->GetString("title"));
+		args.push_back(pEntryKV->GetString("screen"));
+		args.push_back(pEntryKV->GetString("preview"));
+		args.push_back(pEntryKV->GetString(VarArgs("platforms/%s/download", AA_PLATFORM_ID)));
+	}
+	else if (mode == "App")
+	{
+		KeyValues* pEntryKV = this->GetActiveKeyValues(this->GetLibraryApp(entryId));
+
+		if (!pEntryKV)
+		{
+			DevMsg("FATAL ERROR: Could not get entry to send update for!\n");
+			return;
+		}
+
+		/*
+			0 - mode
+			1 - app (string)
+			2 - title (string)
+			3 - file (string)
+			4 - commandFormat (string)
+			5 - type (string)
+			6 - download (string)
+			7 - reference (string)
+			8 - screen (string)commandFormat
+			9 - description (string)
+			10 - filepaths (string)
+		*/
+
+		args.push_back(mode);
+		args.push_back(entryId);
+		args.push_back(pEntryKV->GetString("title"));
+		args.push_back(pEntryKV->GetString("file"));
+		args.push_back(pEntryKV->GetString("commandformat"));
+		args.push_back(pEntryKV->GetString("type"));
+		args.push_back(pEntryKV->GetString("download"));
+		args.push_back(pEntryKV->GetString("reference"));
+		args.push_back(pEntryKV->GetString("screen"));
+		args.push_back(pEntryKV->GetString("description"));
+		args.push_back(pEntryKV->GetString("filepaths"));
+	}
+	else if (mode == "Type")
+	{
+		KeyValues* pEntryKV = this->GetActiveKeyValues(this->GetLibraryType(entryId));
+
+		if (!pEntryKV)
+		{
+			DevMsg("FATAL ERROR: Could not get entry to send update for!\n");
+			return;
+		}
+
+		/*
+			0 - mode
+			1 - type (string)
+			2 - fileformat (string)
+			3 - titleformat (string)
+			4 - title (string)
+			5 - priority (string)
+		*/
+
+		args.push_back(mode);
+		args.push_back(entryId);
+		args.push_back(pEntryKV->GetString("fileformat"));
+		args.push_back(pEntryKV->GetString("titleformat"));
+		args.push_back(pEntryKV->GetString("title"));
+		args.push_back(pEntryKV->GetString("priority"));
+	}
+
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "localEntryUpdate", args);
+
+}
+
+void C_MetaverseManager::SendObjectUpdate(C_PropShortcutEntity* pShortcut)
+{
+	if (!g_pAnarchyManager->GetConnectedUniverse() || !g_pAnarchyManager->GetConnectedUniverse()->connected)
+		return;
+	
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	std::string objectId = pShortcut->GetObjectId();
+	object_t* object = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(objectId);
+	if (!object)
+	{
+		DevMsg("FATAL ERROR: This shortcut has no object data struct here!\n");
+		return;
+	}
+
+	/*
+		0 - object (string)
+		1 - instance (string)
+		2 - item (string)
+		3 - model (string)
+		4 - slave (int)
+		5 - child (int)
+		6 - parentObject (string)
+		7 - scale (number)
+		8 - origin (string)
+		9 - angles (string)
+	*/
+
+	std::vector<std::string> args;
+	args.push_back(object->objectId);
+	args.push_back(g_pAnarchyManager->GetInstanceId());
+	args.push_back(object->itemId);
+	args.push_back(object->modelId);
+	args.push_back(VarArgs("%i", object->slave));
+	args.push_back(VarArgs("%i", object->child));
+
+	std::string parentObjectId;
+	C_PropShortcutEntity* pParentShortcut = null;
+	if (object->parentEntityIndex >= 0)
+	{
+		pParentShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(object->parentEntityIndex));
+		if (pParentShortcut)
+			parentObjectId = pParentShortcut->GetObjectId();
+	}
+	args.push_back(parentObjectId);
+
+	args.push_back(VarArgs("%.10f", object->scale));
+	
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->origin.x, object->origin.y, object->origin.z);
+	std::string origin = buf;
+	args.push_back(origin);
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", object->angles.x, object->angles.y, object->angles.z);
+	std::string angles = buf;
+	args.push_back(angles);
+	
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "localObjectUpdate", args);
+}
+
+user_t* C_MetaverseManager::GetInstanceUser(std::string userId)
+{
+	auto it = m_users.find(userId);
+	if (it != m_users.end())
+		return it->second;
+
+	return null;
+}
+
+void C_MetaverseManager::GetAllInstanceUsers(std::vector<user_t*>& users)
+{
+	auto it = m_users.begin();
+	while (it != m_users.end())
+	{
+		users.push_back(it->second);
+		it++;
+	}
+}
+
+user_t* C_MetaverseManager::FindInstanceUser(C_DynamicProp* pProp)
+{
+	auto it = m_users.begin();
+	while (it != m_users.end())
+	{
+		if (it->second->entity == pProp)
+			return it->second;
+		else
+			it++;
+	}
+
+	return null;
+}
+
+void C_MetaverseManager::RemoveInstanceUser(std::string userId)
+{
+	auto it = m_users.find(userId);
+	if (it != m_users.end())
+	{
+		user_t* pUser = it->second;
+
+		//if (g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
+		//	DevMsg("ERROR: Could not remove entity for user because game is paused!\n");
+		//else
+			this->RemoveInstanceUser(pUser);
+
+		m_users.erase(it);
+	}
+}
+
+void C_MetaverseManager::RemoveInstanceUser(user_t* pUser)
+{
+	//DevMsg("Removing %s...\n", pUser->displayName.c_str());
+
+	if (pUser->entity)
+	{
+		m_avatarDeathList.push_back(pUser->entity);
+		pUser->entity = null;
+	}
+
+	// check if we have a pending user update.
+	auto it = m_pendingUserUpdates.find(pUser->userId);
+	if (it != m_pendingUserUpdates.end())
+	{
+		delete it->second;
+		m_pendingUserUpdates.erase(it);
+	}
+
+	//CDynamicProp* pProp = pUser->entity;
+	////if (pProp)
+	//{
+	//	engine->ServerCmd(VarArgs("removeobject %i;\n", pProp->entindex()), false);
+	//}
+
+	delete pUser;
+}
+
+void C_MetaverseManager::RemoveAllInstanceUsers()
+{
+	std::vector<user_t*> victims;
+	auto it = m_users.begin();
+	while (it != m_users.end())
+	{
+		victims.push_back(it->second);
+		it++;
+	}
+
+	for (unsigned int i = 0; i < victims.size(); i++)
+		this->RemoveInstanceUser(victims[i]);
+
+	m_users.clear();
+}
+
+unsigned int C_MetaverseManager::GetNumInstanceUsers()
+{
+	return m_users.size();
+}
+
+void C_MetaverseManager::InstanceUserRemoved(std::string userId)
+{
+	user_t* pUser = this->GetInstanceUser(userId);
+
+	if (m_followingUserId == userId)
+	{
+		m_followingUserId = "";
+		g_pAnarchyManager->AddToastMessage(VarArgs("Stopped following %s.", pUser->displayName.c_str()));
+	}
+
+	g_pAnarchyManager->AddToastMessage(VarArgs("%s has LEFT the session.", pUser->displayName.c_str()));
+	this->RemoveInstanceUser(userId);
+}
+
+void C_MetaverseManager::InstanceUserAddedReceived(std::string userId, std::string sessionId, std::string displayName)
+{
+	// does this user exist?
+	user_t* pUser = this->GetInstanceUser(userId);
+	if (pUser)
+	{
+		DevMsg("ERROR: User already exists.\n");
+		return;
+	}
+	else
+	{
+		user_t* pUser = new user_t();
+		//pUser->instanceId = instanceId;
+		pUser->sessionId = sessionId;
+		pUser->userId = userId;
+		pUser->displayName = displayName;
+		pUser->entity = null;
+		pUser->sessionId = (g_pAnarchyManager->GetConnectedUniverse()) ? g_pAnarchyManager->GetConnectedUniverse()->session : "";
+		pUser->needsEntity = true;
+
+		m_users[userId] = pUser;
+
+		if (!Q_strcmp(cvar->FindVar("aamp_client_id")->GetString(), userId.c_str()))
+		{
+			m_pLocalUser = pUser;
+			pUser->avatarUrl = std::string(cvar->FindVar("avatar_url")->GetString());
+		}
+		else
+			g_pAnarchyManager->AddToastMessage(VarArgs("%s has JOINED the session.", displayName.c_str()));
+	}
+}
+
+void C_MetaverseManager::SyncToUser(std::string objectId, std::string oldObjectId)
+{
+	if (oldObjectId != "")
+	{
+		// 1. find any embedded instance that uses the OLD objectId
+		// 2. close all matches.  if a match is the currently selected shortcut, de-select it 1st.
+
+		object_t* pOldObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(oldObjectId);
+		if (pOldObject)
+		{
+			std::string oldItemId = pOldObject->itemId;
+			std::string oldTabId = "auto" + oldItemId;
+			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(oldTabId);
+			if (pEmbeddedInstance)
+			{
+				// we have found the victim.  the only reason ever to NOT close it right away is if it's the selected entity for us.
+				//if (g_pAnarchyManager->GetInputManager()->GetInputMode() && g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance() == pEmbeddedInstance)
+				C_PropShortcutEntity* pOldShortcut = dynamic_cast<C_PropShortcutEntity*>(g_pAnarchyManager->GetSelectedEntity());
+				if (pOldShortcut && pOldShortcut->entindex() == pEmbeddedInstance->GetOriginalEntIndex())
+				{
+					g_pAnarchyManager->DeselectEntity();
+				}
+				else
+					pEmbeddedInstance->Close();
+			}
+		}
+	}
+
+	if (objectId != "")
+	{
+		// 1. find the object
+		// 2. put it on continuous play (without selecting it 1st) :S
+
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(objectId);
+		if (pObject)
+		{
+			C_PropShortcutEntity* pShortcut = dynamic_cast<C_PropShortcutEntity*>(C_BaseEntity::Instance(pObject->entityIndex));
+
+			// only if shortcut is an item
+			if (pShortcut && pShortcut->GetItemId() != pShortcut->GetModelId() && pShortcut->GetItemId() != "" && pShortcut->GetModelId() != "")
+			{
+				//g_pAnarchyManager->AttemptSelectEntity(pShortcut);
+
+				// FIXME: This is redundant code.  It's also in the selectEntity method!
+				// TODO: Generalize this into a method of g_pAnarchymanager!!
+
+				std::string tabTitle = "auto" + pShortcut->GetItemId();
+				C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetCanvasManager()->FindEmbeddedInstance(tabTitle);// this->GetWebManager()->FindWebTab(tabTitle);
+				if (!pEmbeddedInstance)
+				{
+					std::string itemId = pShortcut->GetItemId();
+					KeyValues* item = g_pAnarchyManager->GetMetaverseManager()->GetLibraryItem(itemId);
+					if (item)
+					{
+						KeyValues* active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
+
+						bool bDoAutoInspect = true;
+
+						std::string gameFile = "";
+						std::string coreFile = "";
+						bool bShouldLibretroLaunch = (g_pAnarchyManager->DetermineLibretroCompatible(item, gameFile, coreFile) && g_pAnarchyManager->GetLibretroManager()->GetInstanceCount() == 0);
+
+						// auto-libretro
+						if (cvar->FindVar("auto_libretro")->GetBool() && bShouldLibretroLaunch && g_pFullFileSystem->FileExists(gameFile.c_str()))
+						{
+							C_LibretroInstance* pLibretroInstance = g_pAnarchyManager->GetLibretroManager()->CreateLibretroInstance();
+							pLibretroInstance->Init(tabTitle, VarArgs("%s - Libretro", active->GetString("title", "Untitled")), pShortcut->entindex());
+							DevMsg("Setting game to: %s\n", gameFile.c_str());
+							pLibretroInstance->SetOriginalGame(gameFile);
+							pLibretroInstance->SetOriginalItemId(itemId);
+							pLibretroInstance->SetOriginalEntIndex(pShortcut->entindex());	// probably NOT needed?? (or maybe so, from here.)
+							if (!pLibretroInstance->LoadCore(coreFile))	// FIXME: elegantly revert back to autoInspect if loading the core failed!
+								DevMsg("ERROR: Failed to load core: %s\n", coreFile.c_str());
+							pEmbeddedInstance = pLibretroInstance;
+							bDoAutoInspect = false;
+						}
+
+						if (bDoAutoInspect)
+						{
+							std::string uri = "file://";
+							uri += engine->GetGameDirectory();
+							uri += "/resource/ui/html/autoInspectItem.html?id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
+
+							C_SteamBrowserInstance* pSteamBrowserInstance = g_pAnarchyManager->GetSteamBrowserManager()->CreateSteamBrowserInstance();
+							pSteamBrowserInstance->Init(tabTitle, uri, "Newly selected item...", null, pShortcut->entindex());
+							pSteamBrowserInstance->SetOriginalItemId(itemId);	// FIXME: do we need to do this for original entindex too???
+							pSteamBrowserInstance->SetOriginalEntIndex(pShortcut->entindex());	// probably NOT needed?? (or maybe so, from here.)
+
+							pEmbeddedInstance = pSteamBrowserInstance;
+						}
+
+						if (pEmbeddedInstance)
+							g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(pEmbeddedInstance);
+					}
+				}
+				else
+					g_pAnarchyManager->GetCanvasManager()->SetDisplayInstance(pEmbeddedInstance);
+			}
+		}
+	}
+}
+
+user_update_t* C_MetaverseManager::FindPendingUserUpdate(std::string userId)
+{
+	auto it = m_pendingUserUpdates.find(userId);
+	if (it != m_pendingUserUpdates.end())
+		return it->second;
+
+	return null;
+}
+
+void C_MetaverseManager::UserSessionUpdated(int iUpdateMask, std::string userId, std::string sessionId, std::string displayName, std::string itemId, std::string objectId, std::string say, std::string bodyOrigin, std::string bodyAngles, std::string headOrigin, std::string headAngles, std::string mouseX, std::string mouseY, std::string webUrl, std::string avatarUrl)
+{
+	//user_t* pUser = this->GetInstanceUser(userId);
+	//if (!pUser)
+	//{
+		// FIXME: This should be handled very differently after pendingUserUpdates is fully implemented!  User joined / exited messages would be nice to just be special regular session updates in that case, and ALL user session events could be added to the pending list instead.  User IDs will remain constant between user sessions, even if they leave & rejoin.
+
+
+
+
+		/*
+		// TODO: This should call UserJoined, and the InstanceUserAdded should do absolutely nothing.
+		DevMsg("User session updated for user not yet added to the session: hasOrigin(%i) hasAngles(%i)\n", iUpdateMask & 0x40, iUpdateMask & 0x80);
+
+		pUser = new user_t();
+		//pUser->instanceId = instanceId;
+		pUser->sessionId = sessionId;
+		pUser->userId = userId;
+		pUser->displayName = displayName;
+		pUser->entity = null;
+		pUser->needsEntity = true;
+
+		m_users[userId] = pUser;
+		*/
+		//g_pAnarchyManager->AddToastMessage(VarArgs("%s has JOINED the session.", displayName.c_str()));
+
+	//	return;	// just return, for now.
+	//}
+
+	// find the pending update for this user, if one exists.
+	bool bIsPendingUpdate = true;
+	user_update_t* pUserUpdate = this->FindPendingUserUpdate(userId);
+	if (!pUserUpdate)
+	{
+		bIsPendingUpdate = false;
+		pUserUpdate = new user_update_t();	// create a new update for this user if one doesn't exist already.
+	}
+
+	// populate our update
+	if (iUpdateMask & 0x1)
+		pUserUpdate->userId = userId;
+
+	if (iUpdateMask & 0x2)
+		pUserUpdate->sessionId = sessionId;
+
+	if (iUpdateMask & 0x4)
+		pUserUpdate->displayName = displayName;
+
+	if (iUpdateMask & 0x8)
+		pUserUpdate->itemId = itemId;
+
+	if (iUpdateMask & 0x10)
+		pUserUpdate->objectId = objectId;
+
+	if (iUpdateMask & 0x20)
+		pUserUpdate->say = say;
+
+	if (iUpdateMask & 0x40)
+		pUserUpdate->bodyOrigin = bodyOrigin;
+
+	if (iUpdateMask & 0x80)
+		pUserUpdate->bodyAngles = bodyAngles;
+
+	if (iUpdateMask & 0x100)
+		pUserUpdate->headOrigin = headOrigin;
+
+	if (iUpdateMask & 0x200)
+		pUserUpdate->headAngles = headAngles;
+
+	if (iUpdateMask & 0x400)
+		pUserUpdate->mouseX = mouseX;
+
+	if (iUpdateMask & 0x800)
+		pUserUpdate->mouseY = mouseY;
+
+	if (iUpdateMask & 0x1000)
+		pUserUpdate->webUrl = webUrl;
+
+	if (iUpdateMask & 0x2000)
+		pUserUpdate->avatarUrl = avatarUrl;
+
+	// set/update our update mask
+	pUserUpdate->updateMask |= iUpdateMask;
+
+	// now we have a valid user update to process (if we are allowed)
+	if (!bIsPendingUpdate && !engine->IsPaused() && !g_pAnarchyManager->IsPaused() && !g_pAnarchyManager->GetInputManager()->GetMainMenuMode() && this->m_pendingUserUpdates.size() == 0)
+		this->ProcessUserSessionUpdate(pUserUpdate);
+	else
+		m_pendingUserUpdates[userId] = pUserUpdate;
+}
+
+bool C_MetaverseManager::ProcessUserSessionUpdate(user_update_t* pUserUpdate)
+{
+	if (g_pAnarchyManager->IsPaused() || engine->IsPaused() )//g_pAnarchyManager->GetInputManager()->GetMainMenuMode())
+	{
+		//DevMsg("Mark\n");
+		//DevMsg("ERROR: ProcessUserSessionUpdate called while AArcade was paused!!\n");
+		//delete pUserUpdate;
+		return false;
+	}
+
+	user_t* pUser = this->GetInstanceUser(pUserUpdate->userId);
+	if (!pUser)
+	{
+		DevMsg("ERROR: User NOT found for session update processing: %s\n", pUserUpdate->userId.c_str());
+		//delete pUserUpdate;
+		return false;
+	}
+
+	if (pUserUpdate->updateMask & 0x20)
+	{
+		if (pUserUpdate->say != "")
+			g_pAnarchyManager->AddToastMessage(VarArgs("%s says: %s", pUser->displayName.c_str(), pUserUpdate->say.c_str()));
+
+		pUser->say = pUserUpdate->say;
+	}
+
+	if (pUserUpdate->updateMask & 0x40 || pUserUpdate->updateMask & 0x80 || pUserUpdate->updateMask & 0x100 || pUserUpdate->updateMask & 0x200)
+	{
+		if (pUserUpdate->bodyOrigin != "")
+			UTIL_StringToVector(pUser->bodyOrigin.Base(), pUserUpdate->bodyOrigin.c_str());
+
+		if (pUserUpdate->bodyAngles != "")
+			UTIL_StringToVector(pUser->bodyAngles.Base(), pUserUpdate->bodyAngles.c_str());
+
+		if (pUserUpdate->headOrigin != "")
+			UTIL_StringToVector(pUser->headOrigin.Base(), pUserUpdate->headOrigin.c_str());
+
+		if (pUserUpdate->headAngles != "")
+			UTIL_StringToVector(pUser->headAngles.Base(), pUserUpdate->headAngles.c_str());
+
+		if (pUser->entity)
+		{
+			float fPlayerHeight = 60.0f;
+			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+			float fFudgeHeight = pLocalPlayer->GetAbsOrigin().z + fPlayerHeight;
+			//fFudgeHeight += pLocalPlayer->EyePosition().z;
+
+			engine->ServerCmd(VarArgs("set_object_pos %i %f %f %f %f %f %f;\n", pUser->entity->entindex(), pUser->bodyOrigin.x, pUser->bodyOrigin.y, fFudgeHeight, pUser->bodyAngles.x, pUser->bodyAngles.y, pUser->bodyAngles.z), false);
+		}
+		else if (pUser->needsEntity)
+		{
+			pUser->needsEntity = false;
+
+			/*
+			1 - modelFile
+			2 - origin X
+			3 - origin Y
+			4 - origin Z
+			5 - angles P
+			6 - angles Y
+			7 - angles R
+			8 - userId
+			*/
+			std::vector<std::string> modelNames;
+			modelNames.push_back("models/players/heads/cowboycarl.mdl");
+			modelNames.push_back("models/players/heads/flipflopfred.mdl");
+			modelNames.push_back("models/players/heads/hackerhaley.mdl");
+			modelNames.push_back("models/players/heads/ninjanancy.mdl");
+			modelNames.push_back("models/players/heads/zombiejoe.mdl");
+
+			unsigned int index = rand() % modelNames.size();	// non-uniform, but who cares :S
+			std::string modelName = modelNames[index];
+
+			float fPlayerHeight = 60.0f;
+			C_BasePlayer* pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+			Vector localPlayerOrigin = pLocalPlayer->GetAbsOrigin();
+			float fFudgeHeight = localPlayerOrigin.z + fPlayerHeight;
+			//float x = localPlayerOrigin.x;//pUser->bodyOrigin.x
+			//float y = localPlayerOrigin.y;//pUser->bodyOrigin.y
+			float x = pUser->bodyOrigin.x;
+			float y = pUser->bodyOrigin.y;
+			float z = fFudgeHeight;// localPlayerOrigin.z;//pUser->bodyOrigin.z
+
+			// FIXME: Need to make this use same logic as choosing a player spawn point, in case the local player is inside of a wall when a new player joins.
+
+			engine->ServerCmd(VarArgs("create_avatar_object \"%s\" %f %f %f %f %f %f \"%s\";\n", modelName.c_str(), x, y, z, pUser->bodyAngles.x, pUser->bodyAngles.y, pUser->bodyAngles.z, pUserUpdate->userId.c_str()), false);
+			//g_pAnarchyManager->AddToastMessage(VarArgs("%s has JOINED the session.", pUser->displayName.c_str()));
+		}
+		// else there's no entity to do anything with yet.
+	}
+
+	if (pUserUpdate->updateMask & 0x4 && pUserUpdate->displayName != pUser->displayName && pUserUpdate->displayName != "" )	// FIXME: We probably don't need to include this with every update anymore. :)
+	{
+		std::string goodName = (pUserUpdate->displayName != "") ? pUserUpdate->displayName : "Human Player";
+		pUser->displayName = goodName;
+
+		g_pAnarchyManager->AddToastMessage(VarArgs("%s changed their name to %s.", pUser->displayName.c_str(), goodName.c_str()));
+	}
+
+	if (pUserUpdate->updateMask & 0x10)
+	{
+		object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(pUserUpdate->objectId);
+		if (pObject)
+		{
+			KeyValues* pItemKV = this->GetActiveKeyValues(this->GetLibraryItem(pObject->itemId));
+			if (pItemKV)
+			{
+				std::string msg = VarArgs("%s tuned into %s", pUser->displayName.c_str(), pItemKV->GetString("title"));
+				g_pAnarchyManager->AddToastMessage(msg);
+			}
+		}
+
+		if (m_followingUserId == pUser->userId)
+			this->SyncToUser(pUserUpdate->objectId, pUser->objectId);
+
+		pUser->objectId = pUserUpdate->objectId;
+	}
+
+	if (pUserUpdate->updateMask & 0x2000 && pUserUpdate->avatarUrl != "")
+	{
+		pUser->avatarUrl = pUserUpdate->avatarUrl;
+	}
+
+	/*
+	var maskMap = {
+	"userId": 0x1,
+	"sessionId": 0x2,
+	"displayName": 0x4,
+	"item": 0x8,
+	"object": 0x10,
+	"say": 0x20,
+	"bodyOrigin": 0x40,
+	"bodyAngles": 0x80,
+	"headOrigin": 0x100,
+	"headAngles": 0x200,
+	"mouseX": 0x400,
+	"mouseY": 0x800,
+	"web": 0x1000,
+	"avatar": 0x2000
+	};
+	*/
+
+	delete pUserUpdate;	// after an update is processed, it is dead.
+	return true;
+}
+
+void C_MetaverseManager::SendChangeInstanceNotification(std::string instanceId, std::string map)
+{
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	std::vector<std::string> args;
+	args.push_back(instanceId);
+	args.push_back(map);
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "localUserChangeInstance", args);
+}
+
+void C_MetaverseManager::BanSessionUser(std::string userId)
+{
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	std::vector<std::string> args;
+	args.push_back(userId);
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "banUser", args);
+}
+
+void C_MetaverseManager::UnbanSessionUser(std::string userId)
+{
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	std::vector<std::string> args;
+	args.push_back(userId);
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "unbanUser", args);
+}
+
+//#include "../public/bitmap/tgaloader.h"
+
+void C_MetaverseManager::OverviewExtracted()
+{
+	DevMsg("Overview extracted!!\n");
+	this->ReallyHostNow();
+	/*
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	KeyValues* pOverviewKV = new KeyValues("overview");
+	if (pOverviewKV->LoadFromFile(g_pFullFileSystem, VarArgs("resource/overviews/%s.txt", g_pAnarchyManager->MapName()), "GAME"))
+	{
+		std::vector<std::string> args;
+		args.push_back(VarArgs("%s.tga", g_pAnarchyManager->MapName()));
+		args.push_back(VarArgs("%i", pOverviewKV->GetInt("pos_x")));
+		args.push_back(VarArgs("%i", pOverviewKV->GetInt("pos_y")));
+		args.push_back(VarArgs("%.10f", pOverviewKV->GetFloat("scale")));
+
+		pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "syncOverview", args);
+	}
+	*/
+}
+
+void C_MetaverseManager::ExtractOverviewTGA()
+{
+	g_pAnarchyManager->AddToastMessage("Extracting map overview VTF and converting...");
+
+	std::string mapName = g_pAnarchyManager->MapName();
+	//std::string textureName = "overviews/" + mapName;
+
+	//ITexture* pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+
+	//std::string goodTextureName = pTexture->GetName();
+
+	bool bShouldHostNow = true;
+
+	// read the screenshot
+	FileHandle_t fh = filesystem->Open(VarArgs("materials/overviews/%s.vtf", mapName.c_str()), "rb", "GAME");
+	if (fh)
+	{
+		int file_len = filesystem->Size(fh);
+		unsigned char* pImageData = new unsigned char[file_len + 1];
+
+		filesystem->Read((void*)pImageData, file_len, fh);
+		pImageData[file_len] = 0; // null terminator
+
+		filesystem->Close(fh);
+
+		// write the screenshot
+		// ORDER: FORWARD, RIGHT, BACK, LEFT, BOTTOM, TOP
+		//FileHandle_t fh2 = filesystem->Open(VarArgs("screenshots/panoramic/pano/%s.jpg", directions[i].c_str()), "wb", "DEFAULT_WRITE_PATH");
+
+		g_pFullFileSystem->CreateDirHierarchy("screenshots/overviews", "DEFAULT_WRITE_PATH");
+
+		//std::string textureFile = VarArgs("screenshots/overviews/%s.vtf", mapName.c_str());
+		FileHandle_t fh2 = filesystem->Open(VarArgs("screenshots/overviews/%s.vtf", mapName.c_str()), "wb", "DEFAULT_WRITE_PATH");
+		if (fh2)
+		{
+			filesystem->Write(pImageData, file_len, fh2);
+			filesystem->Close(fh2);
+
+			// cleanup
+			delete[] pImageData;
+
+			std::string toolsFolder = g_pAnarchyManager->GetAArcadeToolsFolder();
+			std::string userFolder = g_pAnarchyManager->GetAArcadeUserFolder();
+
+			/*
+			std::string command = VarArgs("\"%s\\vtf2tga.exe\" -i \"%s\\screenshots\\overviews\\%s.vtf\" -o \"%s\\screenshots\\overviews\\%s.tga\"", toolsFolder.c_str(), userFolder.c_str(), mapName.c_str(), userFolder.c_str(), mapName.c_str());
+			DevMsg("%s\n", command.c_str());
+			system(command.c_str());
+			*/
+
+			FileHandle_t launch_file = filesystem->Open("Arcade_Launcher.bat", "w", "EXECUTABLE_PATH");
+			if (launch_file)
+			{
+				std::string executable = VarArgs("%s\\vtf2tga.exe", toolsFolder.c_str());
+				std::string goodExecutable = "\"" + executable + "\"";
+				filesystem->FPrintf(launch_file, "%s:\n", goodExecutable.substr(1, 1).c_str());
+				filesystem->FPrintf(launch_file, "cd \"%s\"\n", goodExecutable.substr(1, goodExecutable.find_last_of("/\\", goodExecutable.find("\"", 1)) - 1).c_str());
+				filesystem->FPrintf(launch_file, "START \"Launching item...\" %s -i \"%s\\screenshots\\overviews\\%s.vtf\" -o \"%s\\screenshots\\overviews\\%s.tga\"", goodExecutable.c_str(), userFolder.c_str(), mapName.c_str(), userFolder.c_str(), mapName.c_str());
+				filesystem->Close(launch_file);
+				system("Arcade_Launcher.bat");
+
+				g_pAnarchyManager->WaitForOverviewExtract();
+				bShouldHostNow = false;
+
+				/*
+				std::string masterCommands = VarArgs(" -i \"%s\\screenshots\\overviews\\%s.vtf\" -o \"%s\\screenshots\\overviews\\%s.tga\"", userFolder.c_str(), mapName.c_str(), userFolder.c_str(), mapName.c_str());
+
+				char pCommands[AA_MAX_STRING];
+				Q_strcpy(pCommands, masterCommands.c_str());
+
+				// start the program up
+				STARTUPINFO si;
+				PROCESS_INFORMATION pi;
+
+				// set the size of the structures
+				ZeroMemory(&si, sizeof(si));
+				si.cb = sizeof(si);
+				ZeroMemory(&pi, sizeof(pi));
+
+				CreateProcess(VarArgs("%s\\vtf2tga.exe", toolsFolder.c_str()),   // the path
+				pCommands,        // Command line
+				NULL,           // Process handle not inheritable
+				NULL,           // Thread handle not inheritable
+				FALSE,          // Set handle inheritance to FALSE
+				0,//CREATE_DEFAULT_ERROR_MODE,              //0 // No creation flags
+				NULL,           // Use parent's environment block
+				VarArgs("%s", toolsFolder.c_str()),           // Use parent's starting directory
+				&si,            // Pointer to STARTUPINFO structure
+				&pi);
+				*/
+
+
+
+
+
+
+
+				//Error("Usage: vtf2tga -i <input vtf> [-o <output tga>] [-mip]\n");
+				//g_pFullFileSystem->RemoveFile(VarArgs("screenshots/%s", panoshots[i].c_str()), "DEFAULT_WRITE_PATH");
+			}
+		}
+	}
+
+	if (bShouldHostNow)
+		this->ReallyHostNow();
+
+	//g_pFullFileSystem->Save
+
+	//FileHandle_t* pFile = g_pFullFileSystem->Open
+	//g_pFullFileSystem->FindFirstEx(VarArgs("materials/%s", textureName.c_str()), "GAME", 
+	//std::string textureName = "canvas_hud";// "maps/" + mapName;
+	//textureName += "/c-1344_1152_112";
+
+//	ITexture* pTexture = g_pMaterialSystem->FindTexture(textureName.c_str(), TEXTURE_GROUP_VGUI, false, 1);
+	//pTexture->Download();
+
+	//IVTFTexture* pVTFTexture = CreateVTFTexture();
+	//pVTFTexture->Init()
+	//pVTFTexture->
+	//IVTFTexture::ImageData()
+	//int numRes1 = pTexture->GetResourceTypes(NULL, 0);
+	//pTexture->GetResourceData()
+	//DevMsg("Texture Name: %s\n", pTexture->GetName());
+
+	/*
+	int iWidth = pTexture->GetActualWidth();
+	int iHeight = pTexture->GetActualHeight();
+	int iDepth = pTexture->GetActualDepth();
+	ImageFormat format = pTexture->GetImageFormat();
+	int size = ImageLoader::GetMemRequired(iWidth, iHeight, iDepth, format, false);
+	ImageLoader::Load(&imageData, "D:\Projects\AArcade-Source\game\aarcade_user\crap\overviews\de_dust2.vtf", iWidth, iHeight, format, 1.0, false);
+	*/
+
+	/*
+	int iInfoWidth = 0;
+	int iInfoHeight = 0;
+	ImageFormat infoFormat;
+	float fGamma;
+	if (TGALoader::GetInfo(textureName.c_str(), &iInfoWidth, &iInfoHeight, &infoFormat, &fGamma))
+		DevMsg("Fetched stuff is: %i %i\n", iInfoWidth, iInfoHeight);
+	else
+		DevMsg("Could not fetch.\n");
+
+	//clientdll->WriteSaveGameScreenshotOfSize("testerJoint.jpg", iWidth, iHeight, false, false);
+	//#include "../public/bitmap/tgawriter.h"
+	//TGAWriter::WriteToBuffer()
+	DevMsg("Texture Loaded: %i\n", g_pMaterialSystem->IsTextureLoaded(textureName.c_str()));
+
+	DevMsg("Width: %i\n", pTexture->GetActualWidth());
+
+	size_t byteSize = 0;
+	void* result = pTexture->GetResourceData(1, &byteSize);
+	DevMsg("Resource Data Gotten: %i (%u)\n", (int)(result != null), byteSize);
+	*/
+
+}
+
+//void C_MetaverseManager::OverviewSyncComplete()
+//{
+//	this->ReallyHostNow();
+	/*
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	std::vector<std::string> args;
+	pHudBrowserInstance->DispatchJavaScriptMethod("syncListener", "overviewSyncComplete", args);
+	*/
+//}
+
+void C_MetaverseManager::PanoSyncComplete(std::string cachedPanoName, std::string panoId)
+{
+	//PanoSyncComplete
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	std::vector<std::string> args;
+	args.push_back(cachedPanoName);
+	args.push_back(panoId);
+	pHudBrowserInstance->DispatchJavaScriptMethod("syncListener", "panoSyncComplete", args);
+}
+
+void C_MetaverseManager::SyncPano()
+{
+	if (!g_pAnarchyManager->GetConnectedUniverse() || !g_pAnarchyManager->GetConnectedUniverse()->connected)
+		return;
+
+	C_AwesomiumBrowserInstance* pNetworkBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->GetNetworkAwesomiumBrowserInstance();
+	if (!pNetworkBrowserInstance)
+		return;
+
+	C_BasePlayer* pPlayer = C_BasePlayer::GetLocalPlayer();
+	QAngle playerBodyAngles = pPlayer->GetAbsAngles();
+	Vector playerBodyOrigin = pPlayer->GetAbsOrigin();
+
+	char buf[AA_MAX_STRING];
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerBodyOrigin.x, playerBodyOrigin.y, playerBodyOrigin.z);
+	std::string bodyOrigin = buf;
+
+	Q_snprintf(buf, sizeof(buf), "%.10f %.10f %.10f", playerBodyAngles.x, playerBodyAngles.y, playerBodyAngles.z);
+	std::string bodyAngles = buf;
+
+	std::vector<std::string> args;
+	args.push_back(bodyOrigin);
+	args.push_back(bodyAngles);
+	args.push_back(VarArgs("%i", ScreenWidth()));
+	args.push_back(VarArgs("%i", ScreenHeight()));
+	pNetworkBrowserInstance->DispatchJavaScriptMethod("aampNetwork", "syncPano", args);
+}
+
+void C_MetaverseManager::ObjectUpdateReceived(bool bIsLocalUserUpdate, bool bIsFreshObject, std::string id, std::string item, std::string model, bool bSlave, bool bChild, std::string parentObject, float fScale, std::string in_origin, std::string in_angles)
+{
+	Vector origin;
+	UTIL_StringToVector(origin.Base(), in_origin.c_str());
+
+	QAngle angles;
+	UTIL_StringToVector(angles.Base(), in_angles.c_str());
+
+	// does this object exist?
+	object_t* pObject = g_pAnarchyManager->GetInstanceManager()->GetInstanceObject(id);
+	if (!pObject)
+	{
+		DevMsg("Update for NEW object\n");
+	}
+	else
+	{
+		if (bIsLocalUserUpdate && bIsFreshObject)
+		{
+			//C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+			//pHudBrowserInstance->AddHudLoadingMessage()
+			//pHudBrowserInstance->AddHudLoadingMessage("progress", "", "Syncing Objects", "syncobjects", "", VarArgs("%u", m_pImportInfo->count), VarArgs("%u", m_uLastProcessedModelIndex + 1), "processNextModelCallback");
+			DevMsg("Update for existing starter object\n");
+		}
+		else
+			DevMsg("Update for existing object\n");
 	}
 }
 

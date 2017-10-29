@@ -24,6 +24,48 @@ struct addDefaultLibraryContext_t {
 	unsigned int numTypes;
 };
 
+struct user_t {
+	std::string userId;
+	std::string sessionId;
+
+	std::string followingId;	// todo: implement this on the Firebase-side stuff.
+	// todo: implement some generic fields that can be primarily used for Twitch channel ID, Twitch user Id, Steam ID, maybe Twitter ID, etc.
+	//std::string instanceId;
+	std::string displayName;
+	std::string itemId;
+	std::string objectId;
+	std::string say;
+	Vector bodyOrigin;//std::string bodyOrigin;
+	QAngle bodyAngles;//std::string bodyAngles;
+	Vector headOrigin;//std::string headOrigin;
+	QAngle headAngles;//std::string headAngles;
+	std::string mouseX;
+	std::string mouseY;
+	std::string webUrl;
+	std::string avatarUrl;
+	C_DynamicProp* entity;
+	bool needsEntity;
+};
+
+struct user_update_t {
+	int updateMask;
+	std::string userId;
+	std::string sessionId;
+	std::string displayName;
+	std::string itemId;
+	std::string objectId;
+	std::string say;
+	std::string bodyOrigin;
+	std::string bodyAngles;
+	std::string headOrigin;
+	std::string headAngles;
+	std::string mouseX;
+	std::string mouseY;
+	std::string webUrl;
+	std::string avatarUrl;
+};
+
+
 class C_MetaverseManager
 {
 public:
@@ -48,6 +90,7 @@ public:
 	unsigned int GetLibraryDbSize();
 
 	void Update();
+	void PerformLocalPlayerUpdate();
 
 	//void ImportSteamGame(std::string name, std::string appid);
 	void ImportSteamGames(KeyValues* kv);
@@ -135,6 +178,9 @@ public:
 	KeyValues* FindNextLibraryApp();
 	KeyValues* FindLibraryApp(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
 	KeyValues* FindLibraryApp(KeyValues* pSearchInfo);
+	KeyValues* FindLibraryType(KeyValues* pSearchInfo, std::map<std::string, KeyValues*>::iterator& it);
+	KeyValues* FindLibraryType(KeyValues* pSearchInfo);
+
 
 	std::string FindFirstLibraryEntry(KeyValues*& response, const char* category, KeyValues* pSearchInfo);
 	KeyValues* FindNextLibraryEntry(const char* queryId, const char* category);	// TODO: get rid of category and store that info in the search context (just like pSearchInfo is.)
@@ -155,6 +201,7 @@ public:
 //	KeyValues* GetFirstLibraryApp();
 //	KeyValues* GetNextLibraryApp();
 	KeyValues* GetLibraryApp(std::string id);
+	KeyValues* GetLibraryMap(std::string id);
 
 	KeyValues* GetScreenshot(std::string id);
 	void AddScreenshot(KeyValues* pScreenshotKV);
@@ -186,8 +233,6 @@ public:
 
 	KeyValues* GetActiveKeyValues(KeyValues* entry);
 
-	//KeyValues* FindLibraryType(std::string term);
-
 	//void DetectMapClose();
 
 	void SetLibraryBrowserContext(std::string category, std::string id, std::string search, std::string filter);
@@ -206,7 +251,53 @@ public:
 	// if this function returns non-null, the CALLER is responsible for cleaning up the KVs!
 	void GetObjectInfo(object_t* pObject, KeyValues* &pObjectInfo, KeyValues* &pItemInfo, KeyValues* &pModelInfo);
 
+	void HostSession();
+	void HostSessionNow();
+	void ReallyHostNow();
+	void Disconnected() { m_bHasDisconnected = true; }
+	bool GetHasDisconnected() { return m_bHasDisconnected; }
+	void RestartNetwork(bool bCleanupAvatars = true);
+	void ForgetAvatarDeathList();
+
+	void InstanceUserAddedReceived(std::string userId, std::string sessionId, std::string displayName);
+	void InstanceUserRemoved(std::string userId);
+
+	void SyncToUser(std::string objectId, std::string oldObjectId);
+
+	void UserSessionUpdated(int iUpdateMask, std::string userId, std::string sessionId, std::string displayName, std::string itemId, std::string objectId, std::string say, std::string bodyOrigin, std::string bodyAngles, std::string headOrigin, std::string headAngles, std::string mouseX, std::string mouseY, std::string webUrl, std::string avatarUrl);
+	user_update_t* FindPendingUserUpdate(std::string userId);
+	bool ProcessUserSessionUpdate(user_update_t* pUserUpdate);
+
+	void BanSessionUser(std::string userId);
+	void UnbanSessionUser(std::string userId);
+	void SyncPano();
+	void PanoSyncComplete(std::string cachedPanoName, std::string panoId);
+	//void OverviewSyncComplete();
+
+	void ExtractOverviewTGA();
+	void OverviewExtracted();
+
+	void ObjectUpdateReceived(bool bIsLocalUserUpdate, bool bIsFreshObject, std::string id, std::string item, std::string model, bool bSlave, bool bChild, std::string parentObject, float fScale, std::string in_origin, std::string in_angles);
+	void SendChangeInstanceNotification(std::string instanceId, std::string map);
+	void SendObjectUpdate(C_PropShortcutEntity* pShortcut);
+	void SendObjectRemoved(object_t* pObject);
+	void SendEntryUpdate(std::string mode, std::string entryId);
+	void AvatarObjectCreated(int iEntIndex, std::string userId);
+
+	void SendLocalChatMsg(std::string chatText);
+
+	void InstanceUserClicked(user_t* pUser);
+
+	user_t* GetInstanceUser(std::string userId);
+	user_t* FindInstanceUser(C_DynamicProp* pProp);
+	void GetAllInstanceUsers(std::vector<user_t*>& users);
+	unsigned int GetNumInstanceUsers();
+	void RemoveInstanceUser(std::string userId);
+	void RemoveInstanceUser(user_t* pUser);
+	void RemoveAllInstanceUsers();
+
 	// accessors
+	std::string GetFollowingId() { return m_followingUserId; }
 	// FIXME: All of these spawning stuff should be in INSTANCE MANAGER not here!!
 	int GetSpawningRotationAxis() { return m_iSpawningRotationAxis; }
 	C_PropShortcutEntity* GetSpawningObjectEntity() { return m_pSpawningObjectEntity; }
@@ -217,6 +308,7 @@ public:
 	KeyValues* GetPreviousAppSearchInfo() { return m_pPreviousAppSearchInfo; }
 	std::string GetPreviousLocaLocalItemLegacyWorkshopIds() { return m_previousLocaLocalItemLegacyWorkshopIds; }
 	std::string GetLoadingScreenshotId() { return m_loadingScreenshotId; }
+	user_t* GetLocalUser() { return m_pLocalUser; }
 
 	// these should only be used for grabbing iterators!!
 	std::map<std::string, KeyValues*> GetMapsMap() { return m_maps; }
@@ -231,8 +323,20 @@ public:
 	void SetSpawningObject(object_t* pObject) { m_pSpawningObject = pObject; }
 	void SetPreviousLocaLocalItemLegacyWorkshopIds(std::string value) { m_previousLocaLocalItemLegacyWorkshopIds = value; }	// SHOULDN'T EVER BE USED EXCEPT FOR IN CASE OF HACKMERGENCY
 	void SetLoadingScreenshotId(std::string val) { m_loadingScreenshotId = val; }
+
+	void UserInfoReceived(HTTPRequestCompleted_t *pResult, bool bIOFailure);
+	CCallResult<C_MetaverseManager, HTTPRequestCompleted_t> m_UserInfoCallback;
 	
 private:
+	bool m_bHasDisconnected;
+	user_t* m_pLocalUser;
+	bool m_bHostSessionNow;
+	std::map<std::string, user_update_t*> m_pendingUserUpdates;
+	std::vector<C_DynamicProp*> m_avatarDeathList;
+	std::string m_followingUserId;
+	std::map<std::string, user_t*> m_users;
+	std::string m_say;
+	float m_fPresenceLastSynced;
 	//unsigned int m_uProcessBatchSize;
 	//unsigned int m_uProcessCurrentCycle;
 	unsigned int m_uNumSteamGamesToImport;

@@ -5,8 +5,9 @@
 		<script>
 			// if auto_load_map is 1, then auto-load what we want.
 			var autoLoadMapVal = aaapi.system.getConVarValue("auto_load_map");
+			var lastMapLoadedVal = aaapi.system.getConVarValue("last_map_loaded");
 			//console.log("Test val: " + (autoLoadMapVal == "1"));
-			if( autoLoadMapVal == "1" )
+			if( autoLoadMapVal == "1" && lastMapLoadedVal == "1" )
 			{
 				// get the current mapHistory (or create an empty mapHistory)
 				var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};

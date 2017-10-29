@@ -199,7 +199,7 @@ void C_CanvasManager::CleanupTextures()
 
 bool C_CanvasManager::IsPriorityEmbeddedInstance(C_EmbeddedInstance* pEmbeddedInstance)
 {
-	if (pEmbeddedInstance->GetId() == "images")
+	if (pEmbeddedInstance->GetId() == "images" || pEmbeddedInstance->GetId() == "network")
 		return false;
 
 	//if (pEmbeddedInstance == (C_EmbeddedInstance*)g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud") || pEmbeddedInstance == g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance())
@@ -730,7 +730,7 @@ void C_CanvasManager::SetDifferentDisplayInstance(C_EmbeddedInstance* pEmbeddedI
 	for (unsigned int i = 0; i < embeddedInstances.size(); i++)
 	{
 		testId = embeddedInstances[i]->GetId();
-		if (testId == "hud" || testId == "images" || embeddedInstances[i] == pEmbeddedInstance)
+		if (testId == "hud" || testId == "images" || testId == "network" || embeddedInstances[i] == pEmbeddedInstance)
 			continue;
 
 		m_pDisplayInstance = embeddedInstances[i];
@@ -749,7 +749,7 @@ C_EmbeddedInstance* C_CanvasManager::GetFirstInstanceToDisplay()
 	for (unsigned int i = 0; i < embeddedInstances.size(); i++)
 	{
 		testId = embeddedInstances[i]->GetId();
-		if (testId == "hud" || testId == "images")
+		if (testId == "hud" || testId == "images" || testId == "network")
 			continue;
 
 		return embeddedInstances[i];

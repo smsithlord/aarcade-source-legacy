@@ -39,6 +39,7 @@ public:
 	virtual C_InputListener* GetInputListener() { return null; }
 	virtual std::string GetOriginalItemId() { return ""; }
 	virtual int GetOriginalEntIndex() { return -1; }
+	virtual void GetLastMouse(float &fMouseX, float &fMouseY) { fMouseX = 0; fMouseY = 0; }
 	
 	// mutators
 	virtual void SetOriginalItemId(std::string itemId) {};

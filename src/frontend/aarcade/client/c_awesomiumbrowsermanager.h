@@ -65,8 +65,10 @@ public:
 	C_AwesomiumBrowserInstance* GetFocusedAwesomiumBrowserInstance() { return m_pFocusedAwesomiumBrowserInstance; }
 	C_AwesomiumBrowserInstance* GetSelectedAwesomiumBrowserInstance() { return m_pSelectedAwesomiumBrowserInstance; }
 	C_InputListenerAwesomiumBrowser* GetInputListener() { return m_pInputListener; }
+	C_AwesomiumBrowserInstance* GetNetworkAwesomiumBrowserInstance() { return m_pNetworkAwesomiumBrowserInstance; }
 
 	// mutators	
+	void SetNetworkAwesomiumBrowserInstance(C_AwesomiumBrowserInstance* pInstance) { m_pNetworkAwesomiumBrowserInstance = pInstance; }
 
 private:
 	C_InputListenerAwesomiumBrowser* m_pInputListener;
@@ -89,6 +91,8 @@ private:
 	C_AwesomiumBrowserInstance* m_pSelectedAwesomiumBrowserInstance;
 	//std::map<C_AwesomiumBrowserInstance*, Awesomium::WebView*> m_webViews;
 	std::map<std::string, C_AwesomiumBrowserInstance*> m_awesomiumBrowserInstances;
+
+	C_AwesomiumBrowserInstance* m_pNetworkAwesomiumBrowserInstance;
 
 	/*
 	bool m_bSoundEnabled;

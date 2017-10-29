@@ -65,6 +65,16 @@
 						</select>
 					</td>
 					<td style="width: 1%; white-space: nowrap;">
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="editType();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("editicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="createNewType();">
+							<script>
+								document.write(arcadeHud.generateIconHTML("plusicon.png", 18, 18, "aaTextColorTwoHighColor"));
+							</script>
+						</div>
 					</td>
 				</tr>
 				<tr class="helpNote" help="The EXE file of your open-with program.">
@@ -472,6 +482,8 @@
 						}
 
 						console.log("App updated!");
+
+						aaapi.network.sendEntryUpdate("App", id);
 					}
 					else
 						console.log("App update rejected!");
@@ -550,6 +562,8 @@
 
 							app[fieldName] = fieldValue;
 							console.log("App updated!");
+
+							aaapi.network.sendEntryUpdate("App", id);
 						}
 						else
 							console.log("App update rejected!");
@@ -562,6 +576,7 @@
 							continue;
 
 						var optionElem = document.createElement("option");
+						optionElem.type = allTypesSorted[j];
 						optionElem.text = allTypesSorted[j].title;
 						optionElem.value = allTypesSorted[j].info.id;
 
@@ -587,6 +602,8 @@
 
 							app[fieldName] = fieldValue;
 							console.log("App updated!");
+
+							aaapi.network.sendEntryUpdate("App", id);
 						}
 						else
 							console.log("App update rejected!");
@@ -761,6 +778,236 @@
 					aaModalAlertMenu = undefined;
 
 					eval(action);
+				}, true);
+			}
+
+			function editType()
+			{
+				var typeElem = document.querySelector("select[fieldname='type']");
+				var typeElemSelectedOption = typeElem.options[typeElem.selectedIndex];
+				var type = typeElemSelectedOption.type;
+				if( type )
+				{
+					var ourUIBack = "window.location='asset://ui/editApp.html?id=" + id + "';";
+
+					window.location = "asset://ui/editType.html?id=" + encodeURIComponent(type.info.id) + "&uiback=" + encodeURIComponent(ourUIBack);
+				}
+			}
+
+			function createNewType()
+			{
+				createModalPrompt('Create New Type', 'Type Title:', 'canceledCreateNewType();');
+			}
+
+			function canceledCreateNewType()
+			{
+				console.log("Noperz.");
+			}
+
+			function confirmedCreateNewType(typeTitle)
+			{
+				var createdType = arcadeHud.createNewType(typeTitle, null, false);
+				if( !!!createdType )
+					console.log("ERROR creating new type!");
+				else
+				{
+					// Set the item's type to the createdType.info.id value, then reload this page.
+
+					var success = aaapi.library.updateApp(id, ["type", createdType.info.id]);
+					if( success )
+					{
+						allTypes[createdType.info.id] = createdType;
+						var typeInputElem = document.querySelector("select[fieldname='type']");
+
+						// 1. Add the new TYPE to the list.
+						var optionElem = document.createElement("option");
+						optionElem.type = createdType;
+						optionElem.text = createdType.title;
+						optionElem.value = createdType.info.id;
+						typeInputElem.appendChild(optionElem);
+
+						// 2. Select the new TYPE that just got added to the list.
+						typeInputElem.selectedIndex = typeInputElem.options.length - 1;
+						
+						// 3. Do the regular "changed" color animation on it.
+						typeInputElem.style.webkitTransition = "initial";
+						typeInputElem.classList.add("aaThemeColorOneBackgroundColor");
+						typeInputElem.offsetTop;
+						typeInputElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+						typeInputElem.classList.remove("aaThemeColorOneBackgroundColor");
+						
+						console.log("App updated!");
+						aaapi.network.sendEntryUpdate("App", id);	// Note: The act of updating the app on the network will auto-handle the new type on the network for us too.
+					}
+					else
+						console.log("App update rejected!");
+				}
+			}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					/*
+					var isChild = false;
+					var childNode = e.target;
+					while(!!childNode)
+					{
+						childNode = childNode.parentNode;
+						if( childNode === e.currentTarget )
+						{
+							isChild = true;
+							break;
+						}
+					}
+					*/
+
+					if( e.currentTarget !== e.target )
+					{
+						// the modal window itself is clicked
+						/*
+						if( !isChild )
+						{
+							console.log("propo stopped");
+							e.preventDefault();
+							e.stopImmediatePropagation();//Immediate
+						}
+						*/
+						return;
+					}
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + ";", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+				modalHTML += "<form id='nodeNameForm' style='margin: 0;'>";
+				modalHTML += text + "<br />";
+				modalHTML += "<input id='nodeNameInput' type='text' class='aaTitleTextSizeFontSize' />";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="submit" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Save" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				modalHTML += "</form>";
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var nodeNameInput = document.body.querySelector("#nodeNameInput");
+				nodeNameInput.focus();
+				var nodeNameForm = document.body.querySelector("#nodeNameForm");
+				nodeNameForm.addEventListener("submit", function(e)
+				{
+					e.preventDefault();
+
+					if( this.value === "" )
+						this.focus();
+					else
+					{
+						aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+						aaModalPromptMenu = undefined;
+
+						confirmedCreateNewType(this.value);
+					}
+				}.bind(nodeNameInput), true);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				/*
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+				*/
+
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
 				}, true);
 			}
 		</script>

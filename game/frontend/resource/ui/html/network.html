@@ -1,0 +1,2292 @@
+<html>
+	<head>
+		<title>Network</title>
+		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
+		<script src="asset://ui/hud.js"></script>
+		<script src="asset://ui/tga.js"></script>
+
+		<script src="scripts/metaverse.js?b=906"></script>
+		<script src="scripts/md5.min.js"></script>
+		<script src="https://cdn.firebase.com/js/client/2.3.2/firebase.js"></script>
+
+		<script>
+			var g_quickConnectInfo;
+			var lobbyIndex = 0;
+			var tga = new TGA();
+
+			function pad(num)
+			{
+				var size = 4;
+				var goodNum = "000" + num;
+				return goodNum.substr(goodNum.length-size);
+			}
+
+			var panoIndex = pad(0);
+			var cachedPanoName = "cachedPano" + panoIndex;
+			while( localStorage[cachedPanoName] !== undefined )
+			{
+				localStorage.removeItem(cachedPanoName);
+
+				panoIndex = pad(parseInt(panoIndex) + 1);
+				cachedPanoName = "cachedPano" + panoIndex;
+			}
+
+
+			function onPanoAdded()
+			{
+				aaapi.system.addToastMessage("360 screenshot synced to the universe.");
+				//aaapi.network.networkEvent("panoComplete");
+			}
+
+			function onKicked(user)
+			{
+				aaapi.system.addToastMessage("You have lost your connection to the server.");
+				aaapi.network.disconnected();
+				//aaapi.network.restartNetwork();
+				delete metaverse.universeRef;
+			}
+
+			var g_userBans = localStorage.getItem("userBans");
+			if( !!g_userBans )
+				g_userBans = JSON.parse(g_userBans);
+			else
+				g_userBans = {};
+
+			var g_avatarURL = "";
+			var verbose = false;
+			var metaverse = new Metaverse(eventHandler);
+			var defaultAddress = metaverse.quickJoinAddress;
+			var defaultUniverse = "-Kup2PfwTmkeeEtKNd7p";
+			function eventHandler(eventName, eventData)
+			{
+				console.log(eventName + ": " + JSON.stringify(eventData));
+			}
+
+			var pendingInstanceEntries = {};	// the stuff we spawn in mid-game
+
+			var uniqueModels;
+			var uniqueObjects;
+			
+			function isOwnInitialObject(id)
+			{
+				return (!!uniqueObjects[id]);
+			}
+
+			var uniqueItems;
+			var uniqueTypes;
+			var uniqueApps;
+			var freshObjects;	// this gets filled up then turned into undefined.
+			var numUniqueObjects;
+			var isHostInitComplete = false;
+			function onEntryChanged(mode, entry, fields, isNew)
+			{
+				var category = mode.toLowerCase() + "s";
+				if( !!!entry )
+					return;
+
+				var isOwnNewEntry = false;
+				if( !!pendingInstanceEntries[entry.info.id] )
+				{
+					delete pendingInstanceEntries[entry.info.id];
+					isOwnNewEntry = true;
+				}
+
+				// Object mode needs to check for the case of us quick hosting...
+				var isQuickHostObject = false;
+				if( mode === "Object" && !isHostInitComplete && freshObjects !== undefined )
+				{
+					if( numUniqueObjects === undefined )
+						numUniqueObjects = Object.keys(uniqueObjects).length;
+					
+					if( !!uniqueObjects[entry.info.id] && !!!freshObjects[entry.info.id] )
+					{
+						freshObjects[entry.info.id] = true;
+						isQuickHostObject = true;
+
+						if( Object.keys(freshObjects).length === numUniqueObjects )
+						{
+							console.log("Finished Receiving Object Data");
+
+							delete uniqueModels;
+							delete uniqueObjects;
+							delete uniqueItems;
+							delete uniqueTypes;
+							delete uniqueApps;
+							delete numUniqueObjects;
+							delete freshObjects;
+
+							// We are all finished "going live" and ready to invite people to the session.
+							isHostInitComplete = true;
+						}
+					}
+				}
+
+				if( (!isOwnNewEntry && Object.keys(fields).length > 0) || isQuickHostObject)
+				{
+					if( mode === "Object" )
+					{
+						if( !isQuickHostObject )
+						{
+							aaapi.network.objectUpdateReceived((entry.info.owner === metaverse.localUser.id), isQuickHostObject, entry.info.id, entry.item, entry.model, entry.slave, entry.child, entry.parentObject, entry.scale, entry.origin, entry.angles);
+						}
+						else if( isHostInitComplete )
+						{
+							var uniqueModelKeys = Object.keys(uniqueModels);
+							var uniqueAppKeys = Object.keys(uniqueApps);
+							var uniqueTypeKeys = Object.keys(uniqueTypes);
+							var uniqueItemKeys = Object.keys(uniqueItems);
+							var uniqueObjectKeys = Object.keys(uniqueObjects);
+							
+							aaapi.network.networkEvent("modelCreate", "", uniqueModelKeys.length, uniqueModelKeys.length);
+							
+							aaapi.network.networkEvent("appCreate", "", uniqueAppKeys.length, uniqueAppKeys.length);
+
+							aaapi.network.networkEvent("typeCreate", "", uniqueTypeKeys.length, uniqueTypeKeys.length);
+
+							aaapi.network.networkEvent("itemCreate", "", uniqueItemKeys.length, uniqueItemKeys.length);
+
+							aaapi.network.networkEvent("objectCreate", "", uniqueObjectKeys.length, uniqueObjectKeys.length);
+
+							aaapi.network.networkEvent("instanceObjectCreate", "", "", uniqueObjectKeys.length, uniqueObjectKeys.length);
+
+							onHostReady();
+						}
+
+						if( !isQuickHostObject )
+						{
+							if( isNew )
+								console.log("New " + mode.toLowerCase() + " added: " + JSON.stringify(Object.keys(fields)));
+							else
+								console.log(mode + " changed: " + JSON.stringify(fields));
+						}
+					}
+					else
+					{
+						console.log("UNHANDLED " + mode.toLowerCase() + " update: " + JSON.stringify(Object.keys(fields)));
+					}
+				}
+			}
+
+			function onUserSessionUpdated(userId, userSession, oldSession, fields)
+			{
+				var fieldKeys = Object.keys(fields);
+				if( fieldKeys.length < 1 || !!!userSession.transform || !!!userSession.transform.body || !!!userSession.transform.body.origin || userSession.transform.body.origin === "" )
+				{
+					//console.log("Received empty session from user: " + userId);
+					return;
+				}
+
+				var updateMask = 0x0;
+				var maskMap = {
+					"userId": 0x1,
+					"sessionId": 0x2,
+					"displayName": 0x4,
+					"item": 0x8,
+					"object": 0x10,
+					"say": 0x20,
+					"bodyOrigin": 0x40,
+					"bodyAngles": 0x80,
+					"headOrigin": 0x100,
+					"headAngles": 0x200,
+					"mouseX": 0x400,
+					"mouseY": 0x800,
+					"web": 0x1000,
+					"avatar": 0x2000
+				};
+
+				var updateData = {};
+				updateData.userId = userId;
+				updateMask |= maskMap["userId"];
+				updateData.sessionId = userSession.id;
+				updateMask |= maskMap["sessionId"];
+
+				for( var x in metaverse.defaultSession )
+				{
+					if( !!fields[x] )
+					{
+						updateData[x] = fields[x];
+
+						if( x === "transform" )
+						{
+							updateMask |= maskMap["bodyOrigin"];
+							updateMask |= maskMap["bodyAngles"];
+							updateMask |= maskMap["headOrigin"];
+							updateMask |= maskMap["headAngles"];
+
+							// overwrite with full transform
+							updateData.transform = userSession.transform;
+						}
+						else if( x === "mouse" )
+						{
+							updateMask |= maskMap["mouseX"];
+							updateMask |= maskMap["mouseY"];
+						}
+						else
+							updateMask |= maskMap[x];
+					}
+					else
+						updateData[x] = metaverse.defaultSession[x];
+				}
+
+				aaapi.network.networkEvent("userSessionUpdated", updateMask, updateData.userId, updateData.sessionId, updateData.displayName, updateData.item.id, updateData.object.id, updateData.say.text, updateData.transform.body.origin, updateData.transform.body.angles, updateData.transform.head.origin, updateData.transform.head.angles, updateData.mouse.x, updateData.mouse.y, updateData.web.url, updateData.avatar.url);
+			}
+
+			function onInstanceUserAdded(userId, userSession)
+			{
+				//console.log("A user has joined the session.");
+
+				aaapi.network.networkEvent("instanceUserAdded", userId, userSession.id, userSession.displayName);
+
+				// send our display name
+				//aaapi.network.networkEvent("userSessionUpdated", 0x4, userId, "", updateData.displayName, "", "", "", "", "", "", "", "", "", "");
+			}
+
+			function onInstanceUserRemoved(user)
+			{
+				//console.log("A user has left the session.");
+				aaapi.network.networkEvent("instanceUserRemoved", user.id);
+			}
+
+			function generateTypeData(uniqueType)
+			{
+				var typeData = {
+					"fileformat": uniqueType.fileformat,
+					"titleformat": uniqueType.titleformat,
+					"title": uniqueType.title,
+					"priority": parseInt(uniqueType.priority)
+				};
+
+				if( !!!typeData.fileformat || typeData.fileformat === "" )
+					typeData.fileformat = metaverse.defaultType.fileformat.default;
+
+				if( !!!typeData.titleformat || typeData.titleformat === "" )
+					typeData.titleformat = metaverse.defaultType.titleformat.default;
+
+				if( !!!typeData.title || typeData.title === "" )
+					typeData.title = "Unnamed Type";
+
+				if( typeof typeData.priority !== "number" || isNaN(typeData.priority) )
+					typeData.priority = parseInt(metaverse.defaultType.priority.default);
+
+				return typeData;
+			}
+
+			function generateModelData(uniqueModel)
+			{
+				var modelData = {
+					"title": uniqueModel.title,
+					"keywords": uniqueModel.keywords,
+					"dynamic": parseInt(uniqueModel.dynamic),
+					"screen": uniqueModel.screen,
+					"preview": uniqueModel.preview,
+					"platforms":
+					{
+						"-KJvcne3IKMZQTaG7lPo":
+						{
+							"id": arcadeHud.platformId,
+							"download": uniqueModel.platforms[arcadeHud.platformId].download,
+							"file": uniqueModel.platforms[arcadeHud.platformId].file,
+							"mountIds": uniqueModel.platforms[arcadeHud.platformId].mountids,
+							"workshopIds": uniqueModel.platforms[arcadeHud.platformId].workshopids
+						}
+					}
+				};
+
+				if( !!!modelData.title || modelData.title === "" )
+					modelData.title = "Unnamed Model";
+
+				if( !!!modelData.keywords )
+					modelData.keywords = "";
+
+				if( typeof modelData.dynamic !== "number" || isNaN(modelData.dynamic) )
+					modelData.dynamic = parseInt(metaverse.defaultModel.dynamic.default);
+
+				if( !!!modelData.screen )
+					modelData.screen = "";
+
+				if( !!!modelData.preview )
+					modelData.preview = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].download || modelData.platforms[arcadeHud.platformId].download === "" )
+					modelData.platforms[arcadeHud.platformId].download = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].file || modelData.platforms[arcadeHud.platformId].file === "" )
+					modelData.platforms[arcadeHud.platformId].file = "models\\icons\\missing.mdl";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].mountIds || modelData.platforms[arcadeHud.platformId].mountIds === "" )
+					modelData.platforms[arcadeHud.platformId].mountIds = "";
+
+				if( !!!modelData.platforms[arcadeHud.platformId].workshopIds || modelData.platforms[arcadeHud.platformId].workshopIds === "" )
+					modelData.platforms[arcadeHud.platformId].workshopIds = "";
+
+				// mute local file locations
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["screen"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = modelData[privateFields[i]];
+					if( privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							modelData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return modelData;
+			}
+
+			function generateAppData(uniqueApp)
+			{
+				var appData = {
+					"title": uniqueApp.title,
+					"file": uniqueApp.file,
+					"commandformat": uniqueApp.commandformat,
+					"type": uniqueApp.type,
+					"download": uniqueApp.download,
+					"reference": uniqueApp.reference,
+					"screen": uniqueApp.screen,
+					"description": uniqueApp.description,
+					"filepaths": 
+					{
+						/*
+						PATH_ID:
+						{
+							"id": PATH_ID,
+							"path": PATH,
+							"extensions": EXTENSIONS
+						}
+						*/
+					}
+				};
+
+				// add filepaths
+				var filePath;
+				var appDataFilePath;
+				var filePathKeys = Object.keys(uniqueApp.filepaths);
+				for( var i = 0; i < filePathKeys.length; i++ )
+				{
+					filePath = uniqueApp.filepaths[filePathKeys[i]];
+
+					appDataFilePath = {
+						"id": filePath.id,
+						"path": "X:/Path/",//filePath.path,	muted
+						"extensions": filePath.extensions
+					};
+
+					if( !!!appDataFilePath.path || appDataFilePath.path === "" )
+						appDataFilePath.path = metaverse.defaultApp.filepaths.path.default;
+
+					if( !!!appDataFilePath.extensions || appDataFilePath.extensions === "" )
+						appDataFilePath.extensions = metaverse.defaultApp.filepaths.extensions.default;
+
+					appData.filepaths[filePath.id] = appDataFilePath;
+				}
+
+				if( !!!appData.title || appData.title === "" )
+					appData.title = "Unnamed App";
+
+				if( !!!appData.file || appData.file === "" )
+					appData.file = metaverse.defaultApp.file.default;
+
+				if( !!!appData.commandformat || appData.commandformat === "" )
+					appData.commandformat = metaverse.defaultApp.commandformat.default;
+
+				if( !!!appData.type || appData.type === "" )
+					appData.type = metaverse.defaultApp.type.default;
+
+				if( !!!appData.download || appData.download === "" )
+					appData.download = metaverse.defaultApp.download.default;
+
+				if( !!!appData.reference || appData.reference === "" )
+					appData.reference = metaverse.defaultApp.reference.default;
+
+				// mute local file locations
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["file", "screen"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = appData[privateFields[i]];
+					if( !!privateData && privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							appData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return appData;
+			}
+
+			function generateItemData(uniqueItem)
+			{
+				var itemData = {
+					"title": uniqueItem.title,
+					"description": uniqueItem.description,
+					"file": uniqueItem.file,
+					"type": uniqueItem.type,
+					"app": uniqueItem.app,
+					"reference": uniqueItem.reference,
+					"preview": uniqueItem.preview,
+					"download": uniqueItem.download,
+					"stream": uniqueItem.stream,
+					"screen": uniqueItem.screen,
+					"marquee": uniqueItem.marquee//,
+					//"model": uniqueItem.model
+				};
+
+				if( !!!itemData.title || itemData.title === "" )
+					itemData.title = metaverse.defaultItem.title.default;
+
+				if( !!!itemData.description || itemData.description === "" )
+					itemData.description = metaverse.defaultItem.description.default;
+
+				if( !!!itemData.file || itemData.file === "" )
+					itemData.file = metaverse.defaultItem.file.default;
+
+				if( !!!itemData.type || itemData.type === "" )
+					itemData.type = metaverse.defaultItem.type.default;
+
+				if( !!!itemData.app || itemData.app === "" )
+					itemData.app = metaverse.defaultItem.app.default;
+
+				if( !!!itemData.reference || itemData.reference === "" )
+					itemData.reference = metaverse.defaultItem.reference.default;
+
+				if( !!!itemData.preview || itemData.preview === "" )
+					itemData.preview = metaverse.defaultItem.preview.default;
+
+				if( !!!itemData.download || itemData.download === "" )
+					itemData.download = metaverse.defaultItem.download.default;
+
+				if( !!!itemData.stream || itemData.stream === "" )
+					itemData.stream = metaverse.defaultItem.stream.default;
+
+				if( !!!itemData.screen || itemData.screen === "" )
+					itemData.screen = metaverse.defaultItem.screen.default;
+
+				if( !!!itemData.marquee || itemData.marquee === "" )
+					itemData.marquee = metaverse.defaultItem.marquee.default;
+
+				// mute local file locations for: file, screen, & marquee
+				var lastFoundSlash;
+				var privateData;
+				var privateFields = ["file", "screen", "marquee"];
+				for( var i = 0; i < privateFields.length; i++ )
+				{
+					privateData = itemData[privateFields[i]];
+					if( privateData.indexOf(":") === 1 )
+					{
+						lastFoundSlash = privateData.lastIndexOf("/");
+						if( lastFoundSlash < 0 )
+							lastFoundSlash = privateData.lastIndexOf("\\");
+
+						if( lastFoundSlash >= 0 )
+						{
+							privateData = privateData.substring(lastFoundSlash+1);
+							itemData[privateFields[i]] = privateData;
+						}
+					}
+				}
+
+				return itemData;
+			}
+
+			function metaverseConnect(address, callback)
+			{
+				metaverse.connect(metaverse.quickJoinAddress, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not connect to " + metaverse.quickJoinAddress);
+						return;
+					}
+					else
+						callback();
+				}.bind(metaverse));
+			}
+
+			function universeJoin(universe, userId, callback)
+			{
+				metaverse.joinUniverse(universe, userId, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not join universe " + universe);
+						return;
+					}
+					else
+						callback();
+				}.bind(metaverse));
+			}
+
+			function universeNewUser(user, passcode, callback, failCallback)
+			{
+				metaverse.createUser({
+					"username": user,
+					"passcode": passcode/*,
+					"displayName": displayName*/
+				}, function(data)
+				{
+					if( !!!data )
+					{
+						console.log("ERROR: Failed to create user.");
+						failCallback();
+					}
+					else
+					{
+						callback();
+					}
+				}, user);
+			}
+
+			function universeLogin(user, passcode, displayName, callback, failCallback)
+			{
+				//console.log(user + " " + passcode);
+				metaverse.logIn(user, passcode, function(error)
+				{
+					if( !!error )
+					{
+						console.log("ERROR: Could not login to universe.");
+						failCallback();
+						return;
+					}
+					else
+						callback();
+				}.bind(metaverse), user, displayName, g_avatarURL);	// last param is userId override. Steam users have same username as userId. (For now at least.  By including the userId given by steam as the userId override, this is future-proofed for when users are actually able to change their usernames to easier-to-remember stuff.)
+			}
+
+			function onHostReady()
+			{
+				function obtainLobby(lobbyIndex)
+				{
+					var goodLobby = g_quickConnectInfo.lobby;
+					if( typeof lobbyIndex === "undefined" )
+						lobbyIndex = 1;
+					else
+						lobbyIndex++;
+
+					if( lobbyIndex > 1 )
+						goodLobby += lobbyIndex;
+
+					var lobbyRef = metaverse.rootRef.child("lobbies").child(goodLobby);
+
+					lobbyRef.once("value", function(snapshot)
+					{
+						var lobbyVal = snapshot.val();
+						if( !!lobbyVal && lobbyVal.owner !== g_quickConnectInfo.user )
+							obtainLobby.call(this, lobbyIndex);
+						else
+						{
+							var updatePayload = {};
+							updatePayload["id"] = goodLobby;
+							updatePayload["universe"] = g_quickConnectInfo.universe;
+							updatePayload["instance"] = g_quickConnectInfo.instance;
+							updatePayload["isPublic"] = g_quickConnectInfo.isPublic;
+							updatePayload["owner"] = g_quickConnectInfo.user;
+
+							metaverse.rootRef.child("lobbies").child(goodLobby).update(updatePayload);
+						
+							g_quickConnectInfo.lobby = goodLobby;
+							aaapi.network.networkEvent("hostReady", g_quickConnectInfo.address, g_quickConnectInfo.universe, g_quickConnectInfo.instance, metaverse.sessionRef.key(), g_quickConnectInfo.lobby, g_quickConnectInfo.isPublic, g_quickConnectInfo.lobbyPassword);
+							//onLobbyObtained.call(this);
+						}
+					}.bind(this));
+				}
+
+				obtainLobby();
+			}
+		</script>
+
+		<script>
+			var aampNetwork = {
+				"isHost": false,
+				"dictionary":
+				{
+					"models":
+					{
+						"toLocalId":
+						{
+
+						},
+						"toRemoteId":
+						{
+
+						}
+					}
+				},
+				"unbanUser": function(userId)
+				{
+					delete g_userBans[userId];
+					localStorage.setItem("userBans", JSON.stringify(g_userBans));
+					metaverse.unbanUser(userId);
+				},
+				"banUser": function(userId)
+				{
+					var user = metaverse.users[userId];
+					var displayName = (!!user && !!user.session && !!user.session.displayName && user.session.displayName !== "") ? user.session.displayName : "Unnamed User";
+
+					g_userBans[userId] = {
+						"id": userId,
+						"displayName": displayName,
+						"date": new Date().getTime(),
+						"creator": metaverse.localUser.id,
+						"duration": 0,
+						"reason": ""
+					};
+
+					localStorage.setItem("userBans", JSON.stringify(g_userBans));
+					metaverse.banUser(userId);
+				},
+				"syncPano": function(bodyOrigin, bodyAngles, shotWidth, shotHeight)
+				{
+					var panosLoaded = 0;
+					var panoImage;
+					var panoName;
+					var panoRes = 512;
+
+					function drawImageOnContext(panoImage)
+					{
+						var context = panoImage.getContext("2d");
+						var totalWidth = (shotWidth / (shotHeight * 1.0)) * panoImage.height;
+						var dif = totalWidth - panoImage.height;
+						context.drawImage(panoImage.image, -(dif / 2.0), 0, totalWidth, panoImage.height);
+					}
+
+					var panoImages = document.querySelectorAll(".panoImage");
+					for( var i = 0; i < panoImages.length; i++ )
+					{
+						panoImage = panoImages[i];
+						panoImage.width = panoRes;
+						panoImage.height = panoRes;
+						panoName = panoImage.getAttribute("panoName");
+/*
+						if( i === panoImages.length - 2 )
+						{
+							panoImage.style.left = 2.0 * panoRes + "px";
+						}
+
+						if( i === panoImages.length - 1 )
+						{
+							panoImage.style.left = panoRes + "px";
+							panoImage.style.top = -2.0 * panoRes + "px";
+						}
+*/
+						panoIndex = panoImage.getAttribute("panoIndex");
+
+						var image = new Image();
+						panoImage.image = image;
+						/*
+						var payload = {
+							"panoImage": panoImage,
+							"image": image
+						};*/
+
+						image.onload = function()
+						{
+							panosLoaded++;
+							drawImageOnContext(this);
+
+							if( panosLoaded === 6 )
+								onAllPanosLoaded();
+						}.bind(panoImage);
+
+						image.src = "pano/" + panoName + ".jpg?r=" + Math.random() + "r" + Math.random() + "r" + Math.random();
+					}
+
+						//var data = panoImage.toDataURL("image/jpeg", 0.75);
+						//console.log(bytesToSize(data.length * 6));
+						//document.querySelector("#results").value = bytesToSize(data.length * 6);
+
+					function onAllPanosLoaded(panoId)
+					{
+						var tinyFactor = (1/6.0);
+
+						var panoImagesRaw = document.querySelectorAll(".panoImage");
+						var panoImages = {};
+						for( var i = 0; i < panoImagesRaw.length; i++ )
+						{
+							panoImages[panoImagesRaw[i].getAttribute("panoName")] = panoImagesRaw[i];
+						}
+
+						var jpegQuality = 0.8;
+						if( !!!panoId )
+						{
+							var payload = {
+								"date": Firebase.ServerValue.TIMESTAMP,
+								"binary":
+								{
+									"front": panoImages.front.toDataURL("image/jpeg", jpegQuality),
+									"right": panoImages.right.toDataURL("image/jpeg", jpegQuality),
+									"back": panoImages.back.toDataURL("image/jpeg", jpegQuality),
+									"left": panoImages.left.toDataURL("image/jpeg", jpegQuality),
+									"bottom": panoImages.bottom.toDataURL("image/jpeg", jpegQuality),
+									"top": panoImages.top.toDataURL("image/jpeg", jpegQuality)
+								},
+								"body":
+								{
+									"origin": bodyOrigin,
+									"angles": bodyAngles
+								}
+							};
+
+							metaverse.syncPano(null, payload, function(panoId)
+							{
+								console.log("Finished syncing pano image.");
+
+								// now make a tiny version for locally caching as a preview to the host.
+								var panoImages = document.querySelectorAll(".panoImage");
+								for( var i = 0; i < panoImages.length; i++ )
+								{
+									panoImage = panoImages[i];
+									panoImage.width = panoRes * tinyFactor;
+									panoImage.height = panoRes * tinyFactor;
+									drawImageOnContext(panoImage);
+								}
+
+								setTimeout(function()
+								{
+									onAllPanosLoaded(panoId);
+								}, 100);
+							});
+						}
+						else
+						{
+							var payload = {
+								"id": panoId,
+								"date": 0,
+								"binary":
+								{
+									"front": panoImages.front.toDataURL("image/jpeg", jpegQuality),
+									"right": panoImages.right.toDataURL("image/jpeg", jpegQuality),
+									"back": panoImages.back.toDataURL("image/jpeg", jpegQuality),
+									"left": panoImages.left.toDataURL("image/jpeg", jpegQuality)
+								},
+								"body":
+								{
+									"origin": bodyOrigin,
+									"angles": bodyAngles
+								}
+							};
+
+							// https://stackoverflow.com/questions/2998784/how-to-output-integers-with-leading-zeros-in-javascript
+							function pad(num)
+							{
+								var size = 4;
+								var goodNum = "000" + num;
+								return goodNum.substr(goodNum.length-size);
+							}
+
+							var panoIndex = pad(0);
+							var cachedPanoName = "cachedPano" + panoIndex;
+							while( localStorage[cachedPanoName] !== undefined )
+							{
+								panoIndex = pad(parseInt(panoIndex) + 1);
+								cachedPanoName = "cachedPano" + panoIndex;
+							}
+
+							localStorage.setItem(cachedPanoName, JSON.stringify(payload));
+
+							//console.log("TINY PANO COMPLETE: " + cachedPanoName);
+							aaapi.network.networkEvent("panoComplete", cachedPanoName, panoId);
+						}
+					}
+				},
+				"localUserChangeInstance": function(instanceId, map)
+				{
+					metaverse.sendInstanceUserUpdate(instanceId, "", "", "", "", "", "", "", "", "", "");
+
+					setTimeout(function()
+					{
+						aaapi.system.loadMapNow(map);
+					}, 500);
+				},
+				"localUserUpdate": function(instance, say, bodyOrigin, bodyAngles, headOrigin, headAngles, item, object, mouseX, mouseY, webURL)
+				{
+					metaverse.sendInstanceUserUpdate(instance, say, bodyOrigin, bodyAngles, headOrigin, headAngles, item, object, mouseX, mouseY, webURL, g_avatarURL);
+				},
+				"localEntryUpdate": function(mode)
+				{
+					// NOTE: The rest of the arguments are in arguments array.
+					if( mode === "Item" )
+					{
+						var item = arguments[1];
+						var app = arguments[2];
+						var description = arguments[3];
+						var download = arguments[4];
+						var file = arguments[5];
+						var marquee = arguments[6];
+						var preview = arguments[7];
+						var reference = arguments[8];
+						var screen = arguments[9];
+						var stream = arguments[10];
+						var title = arguments[11];
+						var type = arguments[12];
+
+						var isNewItem = (!!!metaverse.library.items[item]);
+						if( isNewItem )
+						{
+							console.log("NOT syncing item to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						var updateTypes = {};
+						if( type !== "" )
+							updateTypes[type] = true;
+
+						// CHECK ORDER: app, type(s)
+						function appCheckComplete()
+						{
+							function typesCheckComplete()
+							{
+								function sendItemUpdate(item, app, description, download, file, marquee, preview, reference, screen, stream, title, type)
+								{
+									pendingInstanceEntries[item] = true;	// so we know to ignore our 1st update received from it.
+									metaverse.sendItemUpdate(item, app, description, download, file, marquee, preview, reference, screen, stream, title, type, function()
+									{
+										if(isNewItem)
+											aaapi.system.addToastMessage("Added item " + title + " to the universe.");
+										else
+											aaapi.system.addToastMessage("Item updated in the universe.");
+
+										if( verbose )
+											console.log("Updated metaverse item.");
+									}.bind(this));
+								}
+
+								// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+								sendItemUpdate.call(this, item, app, description, download, file, marquee, preview, reference, screen, stream, title, type);
+							}
+
+							function processNextTypeCheck()
+							{
+								var updateTypesKeys = Object.keys(updateTypes);
+								if( updateTypesKeys.length === 0 )
+								{
+									typesCheckComplete.call(this);
+									return;
+								}
+	/*
+								if( updateTypes[updateTypesKeys[0]] === "" )
+								{
+									delete updateTypes[updateTypesKeys[0]];
+									processNextTypeCheck.call(this);
+								}*/
+								//var type = updateTypes[updateTypesKeys[0]];
+
+								// TYPE
+								var fetchType = "Type";
+								var category = fetchType.toLowerCase() + "s";
+								var id = updateTypesKeys[0];
+
+								if( verbose )
+									console.log("Fetching " + fetchType);
+
+								metaverse.fetchEntry(fetchType, id, function(data)
+								{
+									if( !!!data )
+									{
+										if( verbose )
+											console.log("Entry does not exist on server.");
+
+										var entry;
+										if( category === "types" )
+											entry = aaapi.library.getLibraryType(id);
+
+										if( !!!entry )
+										{
+											console.log("ERROR: Could not get local entry info.");
+											return;
+										}
+
+										// search for a twin-brother
+										metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+										{
+											if( !!twinId )
+											{
+												console.log("Twin FOUND w/ ID: " + twinId);
+												console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+											}
+											else
+											{
+												if( verbose )
+													console.log("No twin exists on the server. Time to create it.");
+
+												var entryData;
+												if( category === "types" )
+												{
+													entryData = generateTypeData(entry);
+												}
+
+												metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+												//{
+												//	if( !!!entryId )
+												//	{
+												//		console.log("Failed to create entry.");
+												//	}
+												//	else
+												//	{
+														delete updateTypes[entry.info.id];
+														aaapi.system.addToastMessage("Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+														processNextTypeCheck.call(this);
+												//	}
+												//}.bind(this));
+											}
+										}.bind(this));
+									}
+									else
+									{
+										//console.log(JSON.stringify(modelData));
+										delete updateTypes[id];
+										processNextTypeCheck.call(this);
+									}
+								}.bind(this));
+							}
+
+							processNextTypeCheck.call(this);
+						}
+
+						if( !!!app || app === "" )
+						{
+							// No app is used by this item
+							appCheckComplete.call(this);
+						}
+						else
+						{
+							// APP
+							var fetchType = "App";
+							var category = fetchType.toLowerCase() + "s";
+							var id = app;
+
+							if( verbose )
+								console.log("Fetching " + fetchType);
+
+							metaverse.fetchEntry(fetchType, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "apps" )
+										entry = aaapi.library.getLibraryApp(id);
+									//console.log(JSON.stringify(entry));
+
+									if( !!!entry )
+									{
+										console.log("ERROR: Could not get local entry info.");
+										return;
+									}
+
+									// search for a twin-brother
+									metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "apps" )
+											{
+												entryData = generateAppData(entry);
+
+												// Detect any types this app references that should be processed.
+												if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+													updateTypes[entryData.type] = true;
+											}
+
+											metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													aaapi.system.addToastMessage("Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+													appCheckComplete.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									//console.log(JSON.stringify(modelData));
+									appCheckComplete.call(this);
+								}
+							}.bind(this));
+						}
+					}
+					else if( mode === "Model" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var model = arguments[1];
+						var dynamic = parseInt(arguments[2]);
+						var keywords = arguments[3];
+						var file = arguments[4];
+						var mountIds = arguments[5];
+						var workshopIds = arguments[6];
+						var title = arguments[7];
+						var screen = arguments[8];
+						var preview = arguments[9];
+						var download = arguments[10];
+
+						var isNewEntry = (!!!metaverse.library[category][model]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						function sendModelUpdate(model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download)
+						{
+							pendingInstanceEntries[model] = true;	// so we know to ignore our 1st update received from it.
+							console.log("Send update for model");
+							metaverse.sendModelUpdate(model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download, function()
+							{
+								if(isNewEntry)
+									aaapi.system.addToastMessage("Added " + mode.toLowerCase() + " " + title + " to the universe.");
+								else
+									aaapi.system.addToastMessage(mode + " updated in the universe.");
+
+								if( verbose )
+									console.log("Updated metaverse " + mode.toLowerCase() + ".");
+							}.bind(this));
+						}
+
+						// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+						sendModelUpdate.call(this, model, dynamic, keywords, file, mountIds, workshopIds, title, screen, preview, download);
+					}
+					else if( mode === "Type" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var type = arguments[1];
+						var fileformat = arguments[2];
+						var titleformat = arguments[3];
+						var title = arguments[4];
+						var priority = parseInt(arguments[5]);
+
+						var isNewEntry = (!!!metaverse.library[category][type]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						function sendTypeUpdate(type, fileformat, titleformat, title, priority)
+						{
+							pendingInstanceEntries[type] = true;	// so we know to ignore our 1st update received from it.
+							metaverse.sendTypeUpdate(type, fileformat, titleformat, title, priority, function()
+							{
+								if(isNewEntry)
+									aaapi.system.addToastMessage("Added " + mode.toLowerCase() + " " + title + " to the universe.");
+								else
+									aaapi.system.addToastMessage(mode + " updated in the universe.");
+
+								if( verbose )
+									console.log("Updated metaverse " + mode.toLowerCase() + ".");
+							}.bind(this));
+						}
+
+						// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+						sendTypeUpdate.call(this, type, fileformat, titleformat, title, priority);
+					}
+					else if( mode === "App" )
+					{
+						var category = mode.toLowerCase() + "s";
+
+						var app = arguments[1];
+						var title = arguments[2];
+						var file = arguments[3];
+						var commandformat = arguments[4];
+						var type = arguments[5];
+						var download = arguments[6];
+						var reference = arguments[7];
+						var screen = arguments[8];
+						var description = arguments[9];
+						var filepaths = arguments[10];
+
+						var isNewEntry = (!!!metaverse.library[category][app]);
+						if( isNewEntry )
+						{
+							console.log("NOT syncing entry to universe. (It is not referenced anywhere.)");
+							return;
+						}
+
+						var updateTypes = {};
+						if( type !== "" )
+							updateTypes[type] = true;
+
+						function typesCheckComplete()
+						{
+							function sendAppUpdate(app, title, file, commandformat, type, download, reference, screen, description, filepaths)
+							{
+								pendingInstanceEntries[app] = true;	// so we know to ignore our 1st update received from it.
+								metaverse.sendAppUpdate(app, title, file, commandformat, type, download, reference, screen, description, filepaths, function()
+								{
+									if(isNewEntry)
+										aaapi.system.addToastMessage("Added " + mode.toLowerCase() + " " + title + " to the universe.");
+									else
+										aaapi.system.addToastMessage(mode + " updated in the universe.");
+
+									if( verbose )
+										console.log("Updated metaverse " + mode.toLowerCase() + ".");
+								}.bind(this));
+							}
+
+							// This is our LAST CHANCE to re-assign IDs for items, types, & apps.
+							sendAppUpdate.call(this, app, title, file, commandformat, type, download, reference, screen, description, filepaths);
+						}
+
+						function processNextTypeCheck()
+						{
+							var updateTypesKeys = Object.keys(updateTypes);
+							if( updateTypesKeys.length === 0 )
+							{
+								typesCheckComplete.call(this);
+								return;
+							}
+
+							// TYPE
+							var fetchType = "Type";
+							var category = fetchType.toLowerCase() + "s";
+							var id = updateTypesKeys[0];
+
+							if( verbose )
+								console.log("Fetching " + fetchType);
+
+							metaverse.fetchEntry(fetchType, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "types" )
+										entry = aaapi.library.getLibraryType(id);
+
+									if( !!!entry )
+									{
+										console.log("ERROR: Could not get local entry info.");
+										return;
+									}
+
+									// search for a twin-brother
+									metaverse.findTwinEntry(fetchType, "title", entry.title, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "types" )
+											{
+												entryData = generateTypeData(entry);
+											}
+
+											metaverse.createLibraryEntry(fetchType, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													delete updateTypes[entry.info.id];
+													aaapi.system.addToastMessage("Added " + fetchType.toLowerCase() + " " + entryData.title + " to the universe.");
+													processNextTypeCheck.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									delete updateTypes[id];
+									processNextTypeCheck.call(this);
+								}
+							}.bind(this));
+						}
+
+						processNextTypeCheck.call(this);
+					}
+				},
+				"localObjectRemove": function(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+				{
+					function sendRemove(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+					{
+						metaverse.sendInstanceObjectRemove(object, instance, item, model, slave, child, parentObject, scale, origin, angles, function()
+						{
+							aaapi.system.addToastMessage("Removed an object to the universe.");
+
+							if( verbose )
+								console.log("Removed metaverse object.");
+						}.bind(this));
+					}
+
+
+					// This is our LAST CHANCE to re-assign IDs for items, models, types, & apps.
+					sendRemove.call(this, object, instance, item, model, slave, child, parentObject, scale, origin, angles);
+
+					//console.log("Hang on to ur butts...");
+					// NOTE: If possible, delay all of this until an objectChanged callback.
+					// delete listeners on the object w/ bookkeeping
+					// delete the object itself from library/objects
+				},
+				"localObjectUpdate": function(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+				{
+					// we must determine if modelId or itemId are changing PRIOR to sending the object update, that way we can make sure the model, item, type, & apps required exist prior to putting the object onto the Firebase server.
+
+					var isNewObject = (!!!metaverse.library.objects[object]);
+
+					// CHECK ORDER: model, item, app, type(s)
+					var updateTypes = {};	// contains keys of type IDs with dummy bool values
+					function modelCheckComplete()
+					{
+						function itemCheckComplete()
+						{
+							function appCheckComplete()
+							{
+								function typesCheckComplete()
+								{
+									function sendObjectUpdate(object, instance, item, model, slave, child, parentObject, scale, origin, angles)
+									{
+										pendingInstanceEntries[object] = true;	// so we know to ignore our 1st update received from it.
+
+										var goodItem = (item !== model) ? item : "";	// fixme: this should be done prior to calling sendObjectUpdate.
+										metaverse.sendInstanceObjectUpdate(object, instance, goodItem, model, slave, child, parentObject, scale, origin, angles, function()
+										{
+											if(isNewObject)
+												aaapi.system.addToastMessage("Added an object to the universe.");
+
+											if( verbose )
+												console.log("Updated metaverse object.");
+										}.bind(this));
+									}
+
+									// This is our LAST CHANCE to re-assign IDs for items, models, types, & apps.
+									sendObjectUpdate.call(this, object, instance, item, model, slave, child, parentObject, scale, origin, angles);
+								}
+
+								function processNextTypeCheck()
+								{
+									var updateTypesKeys = Object.keys(updateTypes);
+									if( updateTypesKeys.length === 0 )
+									{
+										typesCheckComplete.call(this);
+										return;
+									}
+/*
+									if( updateTypes[updateTypesKeys[0]] === "" )
+									{
+										delete updateTypes[updateTypesKeys[0]];
+										processNextTypeCheck.call(this);
+									}*/
+
+									//var type = updateTypes[updateTypesKeys[0]];
+
+									// TYPE
+									var type = "Type";
+									var category = type.toLowerCase() + "s";
+									var id = updateTypesKeys[0];
+
+									if( verbose )
+										console.log("Fetching " + type);
+
+									metaverse.fetchEntry(type, id, function(data)
+									{
+										if( !!!data )
+										{
+											if( verbose )
+												console.log("Entry does not exist on server.");
+
+											var entry;
+											if( category === "types" )
+												entry = aaapi.library.getLibraryType(id);
+
+											if( !!!entry )
+											{
+												console.log("ERROR: Could not get local entry info.");
+												return;
+											}
+
+											// search for a twin-brother
+											metaverse.findTwinEntry(type, "title", entry.title, function(twinId)
+											{
+												if( !!twinId )
+												{
+													console.log("Twin FOUND w/ ID: " + twinId);
+													console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+												}
+												else
+												{
+													if( verbose )
+														console.log("No twin exists on the server. Time to create it.");
+
+													var entryData;
+													if( category === "types" )
+													{
+														entryData = generateTypeData(entry);
+													}
+
+													metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+													//{
+													//	if( !!!entryId )
+													//	{
+													//		console.log("Failed to create entry.");
+													//	}
+													//	else
+													//	{
+															delete updateTypes[entry.info.id];
+															aaapi.system.addToastMessage("Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+															processNextTypeCheck.call(this);
+													//	}
+													//}.bind(this));
+												}
+											}.bind(this));
+										}
+										else
+										{
+											delete updateTypes[id];
+											processNextTypeCheck.call(this);
+										}
+									}.bind(this));
+								}
+
+								processNextTypeCheck.call(this);
+							}
+
+							if( item === "" || item === model )
+								appCheckComplete.call(this);
+							else
+							{
+								var app = (!!metaverse.library.items[item]) ? metaverse.library.items[item].current.app : "";
+								if( !!!app || app === "" )
+								{
+									// No app is used by this item
+									appCheckComplete.call(this);
+								}
+								else
+								{
+									// APP
+									var type = "App";
+									var category = type.toLowerCase() + "s";
+									var id = app;
+
+									if( verbose )
+										console.log("Fetching " + type);
+
+									metaverse.fetchEntry(type, id, function(data)
+									{
+										if( !!!data )
+										{
+											if( verbose )
+												console.log("Entry does not exist on server.");
+
+											var entry;
+											if( category === "apps" )
+												entry = aaapi.library.getLibraryApp(id);
+
+											if( !!!entry )
+											{
+												console.log("ERROR: Could not get local entry info.");
+												return;
+											}
+
+											// search for a twin-brother
+											metaverse.findTwinEntry(type, "title", entry.title, function(twinId)
+											{
+												if( !!twinId )
+												{
+													console.log("Twin FOUND w/ ID: " + twinId);
+													console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+												}
+												else
+												{
+													if( verbose )
+														console.log("No twin exists on the server. Time to create it.");
+
+													var entryData;
+													if( category === "apps" )
+													{
+														entryData = generateAppData(entry);
+
+										//console.log(JSON.stringify(entry));
+
+														// Detect any types this app references that should be processed.
+														if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+															updateTypes[entryData.type] = true;
+													}
+
+													metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+													//{
+													//	if( !!!entryId )
+													//	{
+													//		console.log("Failed to create entry.");
+													//	}
+													//	else
+													//	{
+															aaapi.system.addToastMessage("Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+															appCheckComplete.call(this);
+													//	}
+													//}.bind(this));
+												}
+											}.bind(this));
+										}
+										else
+										{
+											//console.log(JSON.stringify(modelData));
+											appCheckComplete.call(this);
+										}
+									}.bind(this));
+								}
+							}
+						}
+
+						if( item === model )
+							itemCheckComplete.call(this);
+						else
+						{
+							// ITEM
+							var type = "Item";
+							var category = type.toLowerCase() + "s";
+							var id = item;
+
+							if( verbose )
+								console.log("Fetching " + type);
+
+							metaverse.fetchEntry(type, id, function(data)
+							{
+								if( !!!data )
+								{
+									if( verbose )
+										console.log("Entry does not exist on server.");
+
+									var entry;
+									if( category === "items" )
+										entry = aaapi.library.getLibraryItem(id);
+
+									if( !!!entry )
+									{
+										//console.log("ERROR: Could not get local entry info.");
+										itemCheckComplete.call(this);
+										return;
+									}
+
+									// search for a twin-brother for the model
+
+									metaverse.findTwinEntry(type, "file", entry.file, function(twinId)
+									{
+										if( !!twinId )
+										{
+											console.log("Twin FOUND w/ ID: " + twinId);
+											console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+										}
+										else
+										{
+											if( verbose )
+												console.log("No twin exists on the server. Time to create it.");
+
+											var entryData;
+											if( category === "items" )
+											{
+												entryData = generateItemData(entry);
+
+												// Detect any types this app references that should be processed.
+												if( !!entryData.type && entryData.type !== "" && !!!updateTypes[entryData.type] )
+													updateTypes[entryData.type] = true;
+											}
+
+											metaverse.createLibraryEntry(type, entryData, entry.info.id);//, function(entryId)
+											//{
+											//	if( !!!entryId )
+											//	{
+											//		console.log("Failed to create entry.");
+											//	}
+											//	else
+											//	{
+													aaapi.system.addToastMessage("Added " + type.toLowerCase() + " " + entryData.title + " to the universe.");
+													itemCheckComplete.call(this);
+											//	}
+											//}.bind(this));
+										}
+									}.bind(this));
+								}
+								else
+								{
+									//this.library[category][id] = {"current": data};
+									//console.log(JSON.stringify(data));
+									itemCheckComplete.call(this);
+								}
+							}.bind(this));
+						}
+					}
+
+					// MODEL
+					if( verbose )
+						console.log("Fetching model");
+
+					metaverse.fetchEntry("Model", model, function(modelData)
+					{
+						if( !!!modelData )
+						{
+							if( verbose )
+								console.log("Model does not exist on server.");
+
+							uniqueModel = aaapi.library.getLibraryModel(model);
+							if( !!!uniqueModel )
+							{
+								console.log("ERROR: Could not get local model info.");
+								return;
+							}
+
+							// search for a twin-brother for the model
+							metaverse.findTwinEntry("Model", "platforms/" + arcadeHud.platformId + "/file", uniqueModel.platforms[arcadeHud.platformId].file, function(twinId)
+							{
+								if( !!twinId )
+								{
+									console.log("Twin FOUND w/ ID: " + twinId);
+									console.log("UNFINISHED CODE BLOCK ACCESSED! TELL SMITH LARZO!");
+								}
+								else
+								{
+									if( verbose )
+										console.log("No twin exists on the server. Time to create it.");
+
+									var modelData = generateModelData(uniqueModel);
+									metaverse.createLibraryEntry("Model", modelData, uniqueModel.info.id);//, function(modelId)
+									//{
+									//	if( !!!modelId )
+									//	{
+									//		console.log("Failed to create model.");
+									//	}
+									//	else
+									//	{
+											aaapi.system.addToastMessage("Added model " + modelData.title + " to the universe.");
+											modelCheckComplete.call(this);
+									//	}
+									//}.bind(this));
+								}
+							}.bind(this));
+						}
+						else
+						{
+							//console.log(JSON.stringify(modelData));
+							modelCheckComplete.call(this);
+						}
+					}.bind(this));
+				},
+				"hostSession": function(avatarUrl, address, universe, instance, user, passcode, displayName, lobby, isPublic, lobbyPassword)
+				{
+					g_avatarURL = avatarUrl;
+					//console.log(g_avatarURL);
+
+					if( metaverse.status !== "Offline" )
+					{
+						// WARNING: Reset method needs to be updated to actually work fully.
+						metaverse.reset();
+					}
+
+					window.isQuickHosting = true;
+
+					this.isHost = true;
+
+					g_quickConnectInfo = {
+						"address": address,
+						"universe": universe,
+						"instance": instance,
+						"user": user,
+						"passcode": passcode,
+						"displayName": displayName,
+						"lobby": lobby,
+						"isPublic": isPublic,
+						"lobbyPassword": lobbyPassword
+					};
+
+					if( !!!g_quickConnectInfo.address )
+						g_quickConnectInfo.address = defaultAddress;
+
+					if( !!!g_quickConnectInfo.universe )
+						g_quickConnectInfo.universe = defaultUniverse;
+
+					if( !!!g_quickConnectInfo.instance )
+						g_quickConnectInfo.instance = "";
+
+					if( !!!g_quickConnectInfo.user )
+						g_quickConnectInfo.user = "";
+
+					if( !!!g_quickConnectInfo.passcode )
+						g_quickConnectInfo.passcode = "";
+
+					if( !!!g_quickConnectInfo.displayName )
+						g_quickConnectInfo.displayName = "Human Player";
+
+					if( !!!g_quickConnectInfo.lobby )
+						g_quickConnectInfo.lobby = "lobby";
+
+					// make lobby name nice
+					g_quickConnectInfo.lobby.replace(/[^0-9a-z]/gi, '');
+					var myNumbers = "0123456789";
+					if( !!g_quickConnectInfo.lobby[0] && myNumbers.indexOf(g_quickConnectInfo.lobby[0]) >= 0 )
+						g_quickConnectInfo.lobby = "";
+
+					if( g_quickConnectInfo.lobby === "" )
+						g_quickConnectInfo.lobby = "lobby";
+
+					g_quickConnectInfo.isPublic = (!!parseInt(g_quickConnectInfo.isPublic));
+
+					if( !!!g_quickConnectInfo.lobbyPassword )
+						g_quickConnectInfo.lobbyPassword = "";
+
+					//this.quickConnectInfo = quickConnectInfo;
+
+					function doJoinUniverse()
+					{
+						universeJoin(g_quickConnectInfo.universe, g_quickConnectInfo.user, function()
+						{
+							if( metaverse.status === "Universe Ready" )
+							{
+								if( g_quickConnectInfo.user !== "" && g_quickConnectInfo.passcode !== "" )
+								{
+									aaapi.network.networkEvent("universeJoin", metaverse.universe);
+
+									universeLogin(g_quickConnectInfo.user, g_quickConnectInfo.passcode, g_quickConnectInfo.displayName, function()
+									{
+										onLoggedIn.call(this);
+									}.bind(this), function()
+									{
+										universeNewUser(g_quickConnectInfo.user, g_quickConnectInfo.passcode, function()
+										{
+											aaapi.network.networkEvent("userCreate", g_quickConnectInfo.user, g_quickConnectInfo.displayName);
+
+											universeLogin(g_quickConnectInfo.user, g_quickConnectInfo.passcode, g_quickConnectInfo.displayName, function()
+											{
+												onLoggedIn.call(this);
+											}.bind(this), function()
+											{
+												console.log("Failed to login to newly created user.");
+											}.bind(this));
+										}.bind(this), function()
+										{
+											console.log("Negatory");
+										}.bind(this));
+									}.bind(this));
+								}
+							}
+							else
+							{
+								console.log("Failed to connect to universe.");
+							}
+						}.bind(this));
+					}
+
+					function onLoggedIn()
+					{
+						// volatile
+						metaverse.universeRef.onDisconnect().remove();
+
+						metaverse.rootRef.child("lobbies").child(g_quickConnectInfo.lobby).onDisconnect().remove();
+
+						aaapi.network.networkEvent("userLogin", g_quickConnectInfo.user, g_quickConnectInfo.displayName);
+						// Now it's time to add/update EVERYTHING that this arcade uses:
+						// 	map
+						//	models
+						// 	items
+						//	instance
+
+						var worldInfo = aaapi.system.getWorldInfo();
+						var instanceInfo = worldInfo.instance;
+						var mapInfo = worldInfo.map;
+						
+						function onMapReady()
+						{
+							var objectInfos = aaapi.system.getAllObjectInfos();
+
+							// get all the models used & add them to the db
+							// BETTER YET, update EVERYTHING in a collective update.
+							uniqueModels = {};
+							uniqueObjects = {};
+							uniqueItems = {};
+							uniqueTypes = {};
+							uniqueApps = {};
+
+							var objectInfo;
+							for( var i = 0; i < objectInfos.length; i++ )
+							{
+								objectInfo = objectInfos[i];
+
+								if( !!!uniqueObjects[objectInfo.objectId] )
+								{
+									var object = aaapi.system.getObject(objectInfo.objectId);
+									uniqueObjects[objectInfo.objectId] = object;
+								}
+
+								if( !!!uniqueItems[objectInfo.itemId] )
+								{
+									var item = aaapi.library.getLibraryItem(objectInfo.itemId);
+
+									if( !!item )
+									{
+										uniqueItems[objectInfo.itemId] = item;
+
+										if( !!!uniqueTypes[item.type] )
+										{
+											var curtype = aaapi.library.getLibraryType(item.type);
+											if( !!curtype )
+												uniqueTypes[curtype.info.id] = curtype;
+										}
+
+										if( !!!uniqueApps[item.app] )
+										{
+											var app = aaapi.library.getLibraryApp(item.app);
+											if( !!app )
+												uniqueApps[app.info.id] = app;
+										}
+									}
+								}
+
+								if( !!!uniqueModels[objectInfo.modelId] )
+								{
+									var model = aaapi.library.getLibraryModel(objectInfo.modelId);
+									uniqueModels[objectInfo.modelId] = model;
+								}
+							}
+
+							var uniqueObjectKeys = Object.keys(uniqueObjects);
+							var uniqueObjectKeysIndex = 0;
+							freshObjects = {};
+
+							var uniqueItemKeys = Object.keys(uniqueItems);
+							var uniqueItemKeysIndex = 0;
+
+							var uniqueTypeKeys = Object.keys(uniqueTypes);
+							var uniqueTypeKeysIndex = 0;
+
+							var uniqueAppKeys = Object.keys(uniqueApps);
+							var uniqueAppKeysIndex = 0;
+
+							var uniqueModelKeys = Object.keys(uniqueModels);
+							var uniqueModelKeysIndex = 0;
+
+							function onProcessModelsComplete()
+							{
+								function onProcessAppsComplete()
+								{
+									function onProcessTypesComplete()
+									{										
+										function onProcessItemsComplete()
+										{								
+											function onProcessObjectsComplete()
+											{
+												function onProcessInstanceComplete()
+												{
+													function onProcessInstanceObjectsComplete()
+													{
+														function onOverviewSynced()
+														{
+															metaverse.addInstanceUser(g_quickConnectInfo.instance, metaverse.sessionRef.key(),metaverse.localUser.id, function(userId)
+															{
+																if( !!!userId )
+																{
+																	console.log("Failed to join session.");
+																}
+																else
+																{
+																	aaapi.network.networkEvent("instanceUserCreate", g_quickConnectInfo.instance, metaverse.sessionRef.key(), userId);
+
+																	// if we had ZERO starting objects, we are finished HERE.
+																	if( !isHostInitComplete && uniqueObjectKeys.length === 0 )
+																	{
+
+																		console.log("Finished Receiving Object Data");
+
+																		delete uniqueModels;
+																		delete uniqueObjects;
+																		delete uniqueItems;
+																		delete uniqueTypes;
+																		delete uniqueApps;
+																		delete numUniqueObjects;
+																		delete freshObjects;
+
+																		// We are all finished "going live" and ready to invite people to the session.
+																		isHostInitComplete = true;
+																		onHostReady();
+																	}
+
+																	//console.log("Receiving Object Data...");
+																}
+															}.bind(this));
+														}
+
+														var overviewInfo = aaapi.network.getSyncOverview();
+														//console.log(overviewInfo);
+														if( !!!overviewInfo)
+															onOverviewSynced.call(this);
+														else
+														{
+															tga.open(overviewInfo.map + ".tga", function() {
+																var elem = tga.getCanvas();//elem.style.width = "1024px";
+
+																var jpegQuality = 0.8;
+																var payload = {
+																	"date": Firebase.ServerValue.TIMESTAMP,
+																	"binary": elem.toDataURL("image/jpeg", jpegQuality),
+																	"pos_x": overviewInfo.pos_x,
+																	"pos_y": overviewInfo.pos_y,
+																	"scale": overviewInfo.scale
+																};
+
+																metaverse.syncOverview(g_quickConnectInfo.instance, payload, function()
+																{
+																	console.log("Finished syncing overview image.");
+																	//aaapi.network.networkEvent("overviewComplete");
+																	onOverviewSynced.call(this);
+																}.bind(this));
+															}.bind(this));
+														}
+													}
+
+													function processNextInstanceObject()
+													{
+														if( uniqueObjectKeysIndex >= uniqueObjectKeys.length )
+														{
+															console.log("Added " + uniqueObjectKeys.length + " object(s) to the instance.");
+															onProcessInstanceObjectsComplete.call(this);
+															return;
+														}
+
+														var uniqueObject = uniqueObjects[uniqueObjectKeys[uniqueObjectKeysIndex]];
+//console.log(uniqueObject.id);
+														metaverse.addInstanceObject(g_quickConnectInfo.instance, uniqueObject.id);//, function(objectId)
+														//{
+														//	if( !!!objectId )
+														//	{
+														//		console.log("Failed to add object to instance.");
+														//	}
+														//	else
+														//	{
+																uniqueObjectKeysIndex++;
+
+															//	aaapi.network.networkEvent("instanceObjectCreate", g_quickConnectInfo.instance, objectId, uniqueObjectKeysIndex, uniqueObjectKeys.length);
+																processNextInstanceObject.call(this);
+															//}
+														//}, uniqueObject.id);
+													}
+
+													uniqueObjectKeysIndex = 0;
+													processNextInstanceObject.call(this);
+												}
+
+												var instanceData = {
+													"map": instanceInfo.mapId,
+													"title": instanceInfo.title,
+													"password": (g_quickConnectInfo.lobbyPassword !== "") ? metaverse.encodePasscode(g_quickConnectInfo.lobbyPassword) : "",
+													"platforms":
+													{
+														"-KJvcne3IKMZQTaG7lPo":
+														{
+															"id": arcadeHud.platformId,
+															"mountIds": instanceInfo.mountIds,
+															"workshopIds": instanceInfo.workshopIds
+														}
+													}
+												};
+
+												if( !!!instanceData.map || instanceData.map === "" )
+													instanceData.map = metaverse.defaultInstance.map.default;
+
+												if( !!!instanceData.title || instanceData.title === "" )
+													instanceData.title = metaverse.defaultInstance.title.default;
+
+												if( !!!instanceData.platforms[arcadeHud.platformId].mountIds || instanceData.platforms[arcadeHud.platformId].mountIds === "" )
+													instanceData.platforms[arcadeHud.platformId].mountIds = "";
+
+												if( !!!instanceData.platforms[arcadeHud.platformId].workshopIds || instanceData.platforms[arcadeHud.platformId].workshopIds === "" )
+													instanceData.platforms[arcadeHud.platformId].workshopIds = "";
+
+												//console.log(JSON.stringify(instanceData));
+
+												metaverse.createLibraryEntry("Instance", instanceData, g_quickConnectInfo.instance);//, function(instanceId)
+												//{
+												//	if( !!!instanceId )
+												//	{
+												//		console.log("Failed to create instance.");
+												//	}
+												//	else
+												//	{
+												//		aaapi.network.networkEvent("instanceCreate", instanceId);
+														onProcessInstanceComplete.call(this);
+												//	}
+												//}.bind(this));
+											}
+
+											function processNextObject()
+											{
+												if( uniqueObjectKeysIndex >= uniqueObjectKeys.length )
+												{
+													console.log("Processed " + uniqueObjectKeys.length + " unique object(s).");
+													onProcessObjectsComplete.call(this);
+													return;
+												}
+
+												var uniqueObject = uniqueObjects[uniqueObjectKeys[uniqueObjectKeysIndex]];
+
+												var goodItem = (uniqueObject.item !== uniqueObject.model) ? uniqueObject.item : "";//(!!uniqueObject.model && uniqueObject.model !== "") ? uniqueObject.item : "";
+												var goodModel = uniqueObject.model;//(!!uniqueObject.model && uniqueObject.model !== "") ? uniqueObject.model : uniqueObject.item;
+												var objectData = {
+													"instance": g_quickConnectInfo.instance,
+													"item": goodItem,
+													"model": goodModel,
+													"slave": parseInt(uniqueObject.slave),
+													"child": parseInt(uniqueObject.child),
+													"parentObject": uniqueObject.parentObject,
+													"scale": uniqueObject.scale,
+													"origin": uniqueObject.origin,
+													"angles": uniqueObject.angles
+												};
+
+												if( !!!objectData.instance || objectData.instance === "" )
+													objectData.instance = metaverse.defaultObject.item.default;
+
+												if( !!!objectData.item || objectData.item === "" )
+													objectData.item = metaverse.defaultObject.item.default;
+
+												if( !!!objectData.model || objectData.model === "" )
+													objectData.model = metaverse.defaultObject.model.default;
+
+												if( !!!objectData.slave || objectData.slave === "" )
+													objectData.slave = metaverse.defaultObject.slave.default;
+
+												if( !!!objectData.child || objectData.child === "" )
+													objectData.child = metaverse.defaultObject.child.default;
+
+												if( !!!objectData.parentObject || objectData.parentObject === "" )
+													objectData.parentObject = metaverse.defaultObject.parentObject.default;
+
+												if( !!!objectData.scale || objectData.scale === "" )
+													objectData.scale = metaverse.defaultObject.scale.default;
+
+												if( !!!objectData.origin || objectData.origin === "" )
+													objectData.origin = metaverse.defaultObject.origin.default;
+
+												if( !!!objectData.angles || objectData.angles === "" )
+													objectData.angles = metaverse.defaultObject.angles.default;
+//console.log(JSON.stringify(objectData));
+												metaverse.createLibraryEntry("Object", objectData, uniqueObject.id);//, function(objectId)
+												//{
+												//	if( !!!objectId )
+												//	{
+												//		console.log("Failed to create object.");
+												//	}
+												//	else
+												//	{
+														uniqueObjectKeysIndex++;
+
+													//	aaapi.network.networkEvent("objectCreate", objectId, uniqueObjectKeysIndex, uniqueObjectKeys.length);
+														processNextObject.call(this);
+												//	}
+												//}.bind(this));
+											}
+
+											processNextObject.call(this);
+										}
+
+										function processNextItem()
+										{
+											if( uniqueItemKeysIndex >= uniqueItemKeys.length )
+											{
+												console.log("Processed " + uniqueItemKeys.length + " unique item(s).");
+												onProcessItemsComplete.call(this);
+												return;
+											}
+
+											var uniqueItem = uniqueItems[uniqueItemKeys[uniqueItemKeysIndex]];
+
+											
+
+											/*if( !!!itemData.model || itemData.model === "" )
+												itemData.model = metaverse.defaultItem.model.default;*/
+
+											//metaverse.createLibraryObject("Item", itemData, function(itemId)
+											var itemData = generateItemData(uniqueItem);
+
+											metaverse.createLibraryEntry("Item", itemData, uniqueItem.info.id);//, function(itemId)
+											//{
+											//	if( !!!itemId )
+											//	{
+											//		console.log("Failed to create item.");
+											//	}
+											//	else
+											//	{
+													uniqueItemKeysIndex++;
+
+											//		aaapi.network.networkEvent("itemCreate", itemId, uniqueItemKeysIndex, uniqueItemKeys.length);
+													processNextItem.call(this);
+											//	}
+											//}.bind(this));
+										}
+
+										processNextItem.call(this);
+									}
+
+									function processNextType()
+									{
+										if( uniqueTypeKeysIndex >= uniqueTypeKeys.length )
+										{
+											console.log("Processed " + uniqueTypeKeys.length + " unique type(s).");
+											onProcessTypesComplete.call(this);
+											return;
+										}
+
+										var uniqueType = uniqueTypes[uniqueTypeKeys[uniqueTypeKeysIndex]];
+
+										var typeData = generateTypeData(uniqueType);
+
+										metaverse.createLibraryEntry("Type", typeData, uniqueType.info.id);//, function(typeId)
+										//{
+										//	if( !!!typeId )
+										//	{
+										//		console.log("Failed to create type.");
+										//	}
+										//	else
+										//	{
+												uniqueTypeKeysIndex++;
+
+										//		aaapi.network.networkEvent("typeCreate", typeId, uniqueTypeKeysIndex, uniqueTypeKeys.length);
+												processNextType.call(this);
+										//	}
+										//}.bind(this));
+									}
+
+									processNextType.call(this);
+								}
+
+								function processNextApp()
+								{
+									if( uniqueAppKeysIndex >= uniqueAppKeys.length )
+									{
+										console.log("Processed " + uniqueAppKeys.length + " unique app(s).");
+										onProcessAppsComplete.call(this);
+										return;
+									}
+
+									var uniqueApp = uniqueApps[uniqueAppKeys[uniqueAppKeysIndex]];
+
+									var appData = generateAppData(uniqueApp);
+
+									//console.log(JSON.stringify(uniqueApp));
+
+									// Detect any types this app references that should be processed.
+									if( !!appData.type && appData.type !== "" && !!!uniqueTypes[appData.type] )
+									{
+										var curtype = aaapi.library.getLibraryType(appData.type);
+										if( !!curtype )
+											uniqueTypes[curtype.info.id] = curtype;
+									}
+
+									metaverse.createLibraryEntry("App", appData, uniqueApp.info.id);//, function(appId)
+									//{
+									//	if( !!!appId )
+									//	{
+									//		console.log("Failed to create app.");
+									//	}
+									//	else
+									//	{
+											uniqueAppKeysIndex++;
+
+									//		aaapi.network.networkEvent("appCreate", appId, uniqueAppKeysIndex, uniqueAppKeys.length);
+											processNextApp.call(this);
+									//	}
+									//}.bind(this));
+								}
+
+								processNextApp.call(this);
+							}
+
+							function processNextModel()
+							{
+								if( uniqueModelKeysIndex >= uniqueModelKeys.length )
+								{
+									console.log("Processed " + uniqueModelKeys.length + " unique model(s).");
+									onProcessModelsComplete.call(this);
+									return;
+								}
+
+								var uniqueModel = uniqueModels[uniqueModelKeys[uniqueModelKeysIndex]];
+
+								var modelData = generateModelData(uniqueModel);
+
+								metaverse.createLibraryEntry("Model", modelData, uniqueModel.info.id);//, function(modelId)
+								//{
+								//	if( !!!modelId )
+								//	{
+								//		console.log("Failed to create model.");
+								//	}
+								//	else
+								//	{
+										uniqueModelKeysIndex++;
+
+								//		aaapi.network.networkEvent("modelCreate", modelId, uniqueModelKeysIndex, uniqueModelKeys.length);
+										processNextModel.call(this);
+								//	}
+								//}.bind(this));
+							}
+
+							processNextModel.call(this);
+						}
+
+						metaverse.doesMapExist(g_quickConnectInfo.universe, mapInfo.info.id, function(doesExist)
+						{
+							if( doesExist )
+								onMapReady.call(this);
+							else
+							{
+								// add the map
+								var mapData = {
+									"title": mapInfo.title,
+									"keywords": mapInfo.keywords,
+									"platforms":
+									{
+										"-KJvcne3IKMZQTaG7lPo":
+										{
+											"id": "-KJvcne3IKMZQTaG7lPo",
+											"download": "",
+											"file": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].file,
+											"mountIds": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].mountIds,
+											"workshopIds": mapInfo.platforms["-KJvcne3IKMZQTaG7lPo"].workshopIds
+										}
+									}
+								};
+
+								metaverse.createLibraryEntry("Map", mapData, mapInfo.info.id);//, function(mapId)
+								//{
+								//	if( !!!mapId )
+								//	{
+								//		console.log("could not create map.");
+								//	}
+								//	else
+								//	{
+								//		aaapi.network.networkEvent("mapCreate", mapId);
+										onMapReady.call(this);
+								//	}
+								//}.bind(this));
+							}
+						}.bind(this));
+					}
+/*
+					// get the client's IP
+					//var userInfo = //https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={key}&steamids=76561197960361544
+					var xmlHttp = new XMLHttpRequest();
+					xmlHttp.onreadystatechange = function()
+					{ 
+						if (xmlHttp.readyState == 4)
+						{
+							if(xmlHttp.status == 200)
+							{
+								var response = JSON.parse(xmlHttp.responseText);
+								var responsePlayers = response.players;
+								var responsePlayer = responsePlayers[0];
+								console.log(responsePlayer.avatarFull);
+								g_avatarURL = responsePlayer.avatarFull;
+							}
+							else
+							{
+								console.log("ERROR: Failed to get local user avatar.");
+							}
+						}
+					}
+					
+					xmlHttp.open("GET", "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=&steamids=" + steamId, true);
+					xmlHttp.send(null);
+*/
+					metaverseConnect(g_quickConnectInfo.address, function()
+					{
+						if(metaverse.status === "Select Universe")
+						{
+							aaapi.network.networkEvent("metaverseConnect", g_quickConnectInfo.address);
+
+							if( g_quickConnectInfo.universe !== "" )
+							{
+								// check if the universe already exists
+								metaverse.doesUniverseExist(g_quickConnectInfo.universe, function(doesExist)
+								{
+									if( doesExist )
+										doJoinUniverse.call(this);
+									else
+									{
+										// create the universe
+										metaverse.createUniverse("Unnamed Universe", g_quickConnectInfo.universe, g_userBans, g_quickConnectInfo.isPublic, function(universeId)
+										{
+											if( !!!universeId )
+											{
+												console.log("ERROR: Failed to create player universe.");
+												return;
+											}
+											else
+											{
+												aaapi.network.networkEvent("universeCreate", universeId);
+												doJoinUniverse.call(this);
+											}
+										}.bind(this));
+									}
+								}.bind(this));
+							}
+						}
+					}.bind(this));
+				},
+				/*"quickConnectInfo": {
+					"address": metaverse.quickJoinAddress,
+					"universe": "",
+					"instance": "",
+					"user": "",
+					"passcode": "",
+					"displayName": "Human Player"
+				},*/
+				"isBusy": false
+			};
+
+			// stim
+			//var stim = {"address":"https://metaverse.firebaseio.com/","universe":"-Kup2PfwTmkeeEtKNd7p","instance":"-pU5xeu00WdShT3r0946","user":"abfab36c","passcode":"-pVuHIPSoL8pwnTrr5GF", "displayName": "Human Player"};
+			//aampNetwork.hostSession(stim.address, stim.universe, stim.instance, stim.user, stim.passcode, stim.displayName);
+			console.log("Loaded network tab.");
+		</script>
+
+	</head>
+	<body>
+		<h1>wubalubadubdub</h1>
+		<div id="panoContainer" style="position: relative; white-space: nowrap;">
+			<canvas class="panoImage" panoName="front"></canvas><canvas class="panoImage" panoName="right"></canvas><canvas class="panoImage" panoName="back"></canvas><canvas class="panoImage" panoName="left"></canvas><br /><canvas class="panoImage" panoName="bottom" style="position: relative;"></canvas><canvas class="panoImage" panoName="top" style="position: relative;"></canvas>
+		</div>
+	</body>
+</html>

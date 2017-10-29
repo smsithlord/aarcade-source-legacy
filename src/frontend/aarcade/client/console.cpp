@@ -18,6 +18,7 @@
 //ConVar default_width( "default_width", "256", FCVAR_ARCHIVE);	// obsolete
 //ConVar default_height( "default_height", "256", FCVAR_ARCHIVE);	// obsolete
 ConVar auto_load_map("auto_load_map", "1", FCVAR_ARCHIVE);
+ConVar last_map_loaded("last_map_loaded", "0", FCVAR_ARCHIVE);
 ConVar broadcast_mode("broadcast_mode", "0", FCVAR_NONE);	// ALWAYS start off.
 ConVar broadcast_game("broadcast_game", "Anarchy Arcade", FCVAR_NONE);	// ALWAYS start on Anarchy Arcade.
 ConVar broadcast_auto_game("broadcast_auto_game", "1", FCVAR_ARCHIVE);
@@ -35,9 +36,20 @@ ConVar wait_for_libretro("wait_for_libretro", "1", FCVAR_ARCHIVE, "Allow AArcade
 ConVar cl_hovertitles("cl_hovertitles", "1", FCVAR_ARCHIVE, "Show the titles of items under your crosshair.");
 ConVar cl_toastmsgs("cl_toastmsgs", "1", FCVAR_ARCHIVE, "Show event notifications on the top-left of the screen.");
 ConVar workshop("workshop", "1", FCVAR_NONE);
+ConVar aampPublic("aamp_public", "1", FCVAR_ARCHIVE);
+ConVar aampLobbyPassword("aamp_lobby_password", "", FCVAR_ARCHIVE);
+ConVar aampLobbyId("aamp_lobby_id", "", FCVAR_ARCHIVE);
+ConVar aampClientId("aamp_client_id", "", FCVAR_ARCHIVE);
+ConVar aampClientKey("aamp_client_key", "", FCVAR_ARCHIVE);
+ConVar aampServerKey("aamp_server_key", "", FCVAR_ARCHIVE);
+ConVar disable_multiplayer("disable_multiplayer", "0", FCVAR_NONE);
+ConVar avatarUrl("avatar_url", "", FCVAR_HIDDEN, "");
+ConVar sync_overview("sync_overview", "1", FCVAR_ARCHIVE, "");
+ConVar host_next_map("host_next_map", "0", FCVAR_NONE);
 ConVar recent_model_id("recent_model_id", "acec221c", FCVAR_NONE, "Stores the most recently used model ID, so it can be quickly used again next time.");
 ConVar allow_weapons("allow_weapons", "0", FCVAR_ARCHIVE, "Allow weapons to be switched to & used.");
 ConVar process_batch_size("process_batch_size", "100", FCVAR_ARCHIVE, "Control how much of batch operations are processed between render cycles.");
+ConVar auto_res("auto_res", "1", FCVAR_ARCHIVE, "Automatically manage window size and position. NOTE: Requires restart to take effect.");
 
 bool IsFileEqual(const char* inFileA, std::string inFileB)
 {
@@ -163,6 +175,55 @@ void EnableWeapons(const CCommand &args)
 	allow_weapons.SetValue(true);
 }
 ConCommand enable_weapons("enable_weapons", EnableWeapons, "Usage: enables weapons (as well as POV models & the weapon HUD.)");
+
+void Panoshot(const CCommand &args)
+{
+	g_pAnarchyManager->Panoshot();
+	/*
+	engine->ExecuteClientCmd("disable_weapons; jpeg_quality 97; fov 106; setang 0 0 0; jpeg;");
+	engine->ExecuteClientCmd("setang 0 -90 0; jpeg;");
+	engine->ExecuteClientCmd("setang 0 180 0; jpeg;");
+	engine->ExecuteClientCmd("setang 0 90 0; jpeg;");
+	engine->ExecuteClientCmd("setang 90 180 0; jpeg;");
+	engine->ExecuteClientCmd("setang -90 180 0; jpeg;");
+	engine->ExecuteClientCmd("setang 0 0 0; fov 90;");
+	*/
+
+	//engine->ExecuteClientCmd("disable_weapons; jpeg_quality 97; fov 106; setang 0 0 0; jpeg; setang 0 -90 0; jpeg; setang 0 180 0; jpeg; setang 0 90 0; jpeg; setang 90 180 0; jpeg; setang -90 180 0; jpeg; setang 0 0 0; fov 90;");
+}
+ConCommand panoshot("panoshot", Panoshot, "Usage: takes a panoramic screenshot.");
+
+void ChatMessage(const CCommand &args)
+{
+	C_AwesomiumBrowserInstance* pHudBrowserInstance = g_pAnarchyManager->GetAwesomiumBrowserManager()->FindAwesomiumBrowserInstance("hud");
+	pHudBrowserInstance->SetUrl("asset://ui/chatbox.html");
+	g_pAnarchyManager->GetInputManager()->ActivateInputMode(true, false, pHudBrowserInstance);
+}
+ConCommand chat_message("chat_message", ChatMessage, "Usage: show the chat msg menu.");
+
+/*
+void TestLink(const CCommand &args)
+{
+	aampConnection_t* pConnection = g_pAnarchyManager->GetConnectedUniverse();
+	if (!pConnection || !pConnection->connected)
+	{
+		DevMsg("No online universe connected.");
+	}
+	else
+	{
+		DevMsg("http://www.anarchyarcade.com/session.html?universe=%s&instance=%s", pConnection->universe.c_str(), pConnection->instance.c_str());//pConnection->address.c_str(), 
+	}
+}
+ConCommand testlink("testlink", TestLink, "Usage: gives a link to the currently connected session.");
+*/
+
+void AvatarObjectCreated(const CCommand &args)
+{
+	int iEntIndex = Q_atoi(args[1]);
+	std::string userId = args[2];
+	g_pAnarchyManager->GetMetaverseManager()->AvatarObjectCreated(iEntIndex, userId);
+}
+ConCommand avatar_object_created("avatar_object_created", AvatarObjectCreated, "Usage: interal use only.");
 
 void TestFunction( const CCommand &args )
 {
