@@ -11,7 +11,11 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Import Steam Games", "", false, true, "window.location='asset://ui/import.html';", "aaapi.system.deactivateInputMode();");
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			//if( !uiBack )
+			//	uiBack = "window.location='asset://ui/import.html';";
+
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Import Steam Games", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
 
@@ -20,7 +24,7 @@
 				<div style="text-align: left; font-family: Arial;" class="aaTitleTextSizeFontSize aaTextColorTwoColor">
 					<ol style="margin: 0;">
 						<li>Continue to your Steam Profile.</li>
-						<li>Click the Meta Scrape button that appears.</li>
+						<li>Click the big <b>IMPORT STEAM GAMES</b> button that appears.</li>
 					</ol>
 				</div>
 			</div>
@@ -28,7 +32,7 @@
 			<br />
 
 			<!-- Continue -->
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Continue" onclick="aaapi.system.beginImportSteamGames();" help="Continue to your Steam games list." />
+			<input type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor helpNote" value="Continue" onclick="aaapi.system.beginImportSteamGames();" help="Continue to your Steam games list." style="float: right; padding-left: 24px; padding-right: 24px;" />
 
 		</center>
 

@@ -111,6 +111,7 @@
 				font-weight: bold;
 				font-family: Arial;
 				text-align: center;
+				-webkit-transition: all 1s ease-in-out;
 
 				/*
 				border: 3px solid rgba(0, 0, 0, 1.0);
@@ -131,7 +132,8 @@
 				font-size: 20px;
 				white-space: nowrap;
 				/*background-color: rgba(150, 150, 150, 0.5);*/
-				background-color: rgba(0, 0, 255, 0.9);
+				/*background-color: rgba(0, 0, 255, 0.9);*/
+				-webkit-transition: all 1s ease-in-out;
 				border-radius: 0 10px 10px 0 !important;
 				border: 2px solid #000;
 				border-left: 0;
@@ -322,9 +324,9 @@
 			</div>
 		</div>
 
-		<div id="hudSideScrapeContainer">
+		<div id="hudSideScrapeContainer" style="left: 0px;">
 			<div class="hudSideContainerRow">
-				<div id="hudMetaScrapeButton" class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneLowHoverBackgroundColor hudSideScrapeContainerButton helpNote" style="border-radius: 10px; width: 200px;" onclick="arcadeHud.metaScrapeCurrent(); document.querySelector('#hudSideScrapeContainer').style.display = 'none';" help="Search for web images and video to decorate this item.">
+				<div id="hudMetaScrapeButton" class="aaTitleTextSizeFontSize aaTextColorOneColor aaThemeColorOneHoverBackgroundColor hudSideScrapeContainerButton helpNote" style="border-radius: 10px; width: 200px;" onclick="arcadeHud.metaScrapeCurrent(); document.querySelector('#hudSideScrapeContainer').style.display = 'none';" help="Apply the images, videos, & meta into from this page to your shortcut.">
 					<table style="width: 100%; height: 100%;">
 						<tr><td style="white-space: nowrap;">
 							<div class="aaTitleTextSizeFontSize" style="vertical-align: middle; display: inline-block;">
@@ -334,7 +336,7 @@
 								</script>
 							</div>
 
-							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="display: inline;">Meta Scrape</div>
+							<div class="aaTitleTextSizeFontSize aaTextColorOneColor buttonText" style="display: inline;" id="dynamicScrapeButton">Meta Scrape</div>
 						</td></tr>
 					</table>
 				</div>

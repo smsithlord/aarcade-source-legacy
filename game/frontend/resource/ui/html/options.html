@@ -142,19 +142,11 @@
 			input[type=range]
 			{
 	    		-webkit-appearance: none;
-				/*background-color: #ddd;*/
 	    		border-radius: 3px;
-	    		/*border: 1px solid #bbb;*/
 	    		border-style: solid;
 	    		border-width: 1px;
 	    		height: 8px;
 	    		border-color: #bbb;
-	    		/*
-	    		border-top-color: #bbb;
-	    		border-left-color: #bbb;
-	    		border-bottom-color: #bbb;
-	    		border-right-color: #bbb;
-	    		*/
 			}
 
 			input[type=range]::-webkit-slider-runnable-track
@@ -178,22 +170,11 @@
 				background-color: #E5F1FB;
 				border: 1px solid #0078D7;
 			}
-/*
-			input[type=range]:focus::-webkit-slider-thumb
-			{
-				background-color: rgb(250, 50, 50);
-			}
 
-			input[type=range]:focus
+			#uiTable td:nth-child(2)
 			{
-			    outline: none;
+				width: 400px;
 			}
-
-			input[type=range]:focus::-webkit-slider-runnable-track
-			{
-
-			}
-*/
 		</style>
 	</head>
 	<body>
@@ -213,12 +194,6 @@
 		<script>
 			// prefer a tab ID given in the URL
 			var tabId = arcadeHud.getParameterByName("tab");
-
-			// otherwise, use session storage (disabled here)
-			//if( !!!tabId )
-			//	tabId = sessionStorage.getItem("aaMainTab", tabId);
-
-			// otherwise, let arcadeHud decide
 			if( !!!tabId )
 				tabId = "";
 
@@ -241,29 +216,29 @@
 						"title": "UI"
 					},
 					{
-						"id": "libretro",
-						"title": "Libretro"
-					},
-					{
-						"id": "kodi",
-						"title": "Kodi"
-					},
-					{
-						"id": "broadcast",
-						"title": "Broadcast"
-					},
-					{
 						"id": "engine",
 						"title": "Engine"
+					},
+					{
+						"id": "embedded",
+						"title": "Embedded"
+					},
+					{
+						"id": "addons",
+						"title": "Addons"
+					},
+					{
+						"id": "import",
+						"title": "Import"
 					}
 				],
 				"activeTabId": tabId
 			});
 			document.write(windowTabsHeaderHTML);
 
-			function configLibretro()
+			function gotoPage(page, tab)
 			{
-				window.location='asset://ui/libretroConfig.html?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=libretro';");
+				window.location='asset://ui/' + page + '?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=" + tab + "';");
 			}
 		</script>
 
@@ -280,24 +255,66 @@
 		</div>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="ui">
-			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+			<table id="uiTable" class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+			<br />
+			<input type="button" class="aaButton aaBigButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Unhide All Library Entries" onclick="unhideAll();" help="Unhide <b>everything</b> that you've hidden in your Library." />
 		</div>
 
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="libretro">
-			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
-			<input class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" onclick="configLibretro();" help="Each Libretro core can be configured independently." value="Configure Libretro Cores" />
-		</div>
-
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="kodi">
-			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
-		</div>
-
-		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="broadcast">
-			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
-		</div>
+		<script>
+			function unhideAll()
+			{
+				localStorage.removeItem("hiddenItems");
+			}
+		</script>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="engine">
 			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Source Engine Options" onclick="aaapi.system.showEngineOptionsMenu();" help="Change keybinds, texture quality, or other Source engine options. Use AArcade's launcher to change resolutions." /><br />
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Open Command Console" onclick="aaapi.system.consoleCommand('toggleconsole');" help="Open the Source engine command console." /><br />
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="addons">
+
+			<!-- Workshop -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Workshop"  onclick="gotoPage('workshop.html', 'addons');" help="Explore the Steam workshop or manage your current subscriptions." /><br />
+			
+			<!-- Mounted Games -->
+			<input type="button" class="aaButton aabigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Mounted Games" onclick="window.location='asset://ui/mounts.html';" help="Manage which of your games' assets get mounted when you launch AArcade." />
+
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="embedded">
+
+			<!-- Libretro Framework -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Libretro" onclick="gotoPage('libretroConfig.html', 'embedded');" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens." /><br />
+
+			<!-- Steamworks Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steamworks" onclick="gotoPage('steamworksBrowserConfig.html', 'embedded');" help="The Steamworks web browser is what displays web content on the in-game screens." /><br />
+
+			<!-- Awesomium Web Browser -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Awesomium" onclick="gotoPage('awesomiumConfig.html', 'embedded');" help="Awesomium is what displays the AArcade HUD & UI." />
+
+			<!-- Twitch Bot -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Twitch Bot" onclick="gotoPage('twitchBotConfig.html', 'embedded');" help="Are you a Twitch or other live streamer? AArcade can output events to a <i>.js</i> file for use in your custom bots! (ADVANCED)" /><br />
+
+			<!-- Kodi -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Kodi" onclick="gotoPage('kodiConfig.html', 'embedded');" help="Do you use Kodi media player? AArcade can be configured to play videos over the network via Kodi instead of locally launching video files." />
+
+		</div>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="import">
+
+			<!-- All My Steam Games -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Steam Games" onclick="gotoPage('importSteamGames.html', 'import');" help="Import your Steam games from your public Steam Community profile." /><br />
+
+			<!-- All Models In My Folders -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Models" onclick="askImportModels();" help="Detect all available MDL files and add them to your library." /><br />
+
+			<!-- All Maps In My Folders -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Maps" onclick="askImportMaps();" help="Detect all available BSP files and add them to your library." /><br />
+
+			<!-- All My Legacy Content -->
+			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Legacy Content" onclick="gotoPage('importLegacyContent.html', 'import');" help="Were you an Early Access user?  Import your old stuff here." />
+
 		</div>
 
 		<script>
@@ -376,24 +393,6 @@
 
 						}
 					},
-					/*"visible_hands":
-					{
-						"title": "Show Player Hands",
-						"type": "toggle",
-						"help": "You don't really need to SEE your hands, unless you're trying to shoot stuff.",
-						"valueTitles": {"0": "Hidden", "1": "Enabled"},
-						"value": null,
-						"getValue": function()
-						{
-							var val = aaapi.system.getConVarValue("r_drawviewmodel");
-							this.value = val;
-						},
-						"setValue": function(val)
-						{
-							this.value = val;
-							aaapi.system.consoleCommand("r_drawviewmodel " + this.value);
-						}
-					},*/
 					"hdr":
 					{
 						"title": "Show HDR Lighting",
@@ -409,7 +408,14 @@
 						"setValue": function(val)
 						{
 							this.value = val;
-							aaapi.system.consoleCommand("mat_hdr_level " + this.value);
+							var cmd = "mat_hdr_level " + this.value + ";";
+
+							if( val == "2" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 0.5;";
+							else if( val == "0" )
+								cmd += " mat_autoexposure_max 1; mat_autoexposure_min 1;";
+
+							aaapi.system.consoleCommand(cmd);
 						}
 					},
 					"reflections":
@@ -690,6 +696,26 @@
 							this.value = val;
 							aaapi.system.consoleCommand("volume " + this.value);
 						}
+					},
+					"botvoice":
+					{
+						"title": "Anarchy Bot Voice",
+						"type": "toggle",
+						"help": "The voice that tells you about important events.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (localStorage.getItem("shouldSpeak") === "yes") ? "1" : "0";//aaapi.system.getConVarValue("botvoice");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var goodVal = (val === "0") ? "no" : "yes";
+							localStorage.setItem("shouldSpeak", goodVal);
+							//aaapi.system.consoleCommand("botvoice " + this.value);
+						}
 					}
 				},
 				"camera":
@@ -773,7 +799,6 @@
 						"getValue": function()
 						{
 							var val = aaapi.system.getConVarValue("cam_idealdist");
-							console.log(val);
 							this.value = val;
 						},
 						"setValue": function(val)
@@ -799,7 +824,6 @@
 						"getValue": function()
 						{
 							var val = aaapi.system.getConVarValue("cam_idealdistright");
-							console.log(val);
 							this.value = val;
 						},
 						"setValue": function(val)
@@ -825,7 +849,6 @@
 						"getValue": function()
 						{
 							var val = aaapi.system.getConVarValue("cam_ideallag");
-							console.log(val);
 							this.value = val;
 						},
 						"setValue": function(val)
@@ -837,25 +860,51 @@
 				},
 				"ui":
 				{
-					/*
-					"hud":
+					"imageviewing":
 					{
-						"title": "Game & Weapon HUD",
-						"type": "toggle",
-						"help": "Hiding the HUD is less clutter, but it also hides your crosshair!",
-						"valueTitles": {"0": "Hidden", "1": "Enabled"},
+						"title": "Image Viewer Mode",
+						"type": "select",
+						/*"sliderMin": 0,
+						"sliderMax": 1,
+						"sliderStep": 1,*/
+						"help": "Adjust how images are displayed to you in Anarchy Arcade.",
+						"valueTitles": {"0": "Dynamic & Interactive", "1": "Always Stretched"},
 						"value": null,
 						"getValue": function()
 						{
-							var val = aaapi.system.getConVarValue("cl_drawhud");
+							var val = aaapi.system.getConVarValue("autoinspect_image_flags");
 							this.value = val;
 						},
 						"setValue": function(val)
 						{
 							this.value = val;
-							aaapi.system.consoleCommand("cl_drawhud " + this.value);
+							aaapi.system.consoleCommand("autoinspect_image_flags " + this.value);
 						}
-					},*/
+					},
+					"librarysearchmax":
+					{
+						"title": "Max Library Search Results",
+						"type": "slider",
+						"sliderMin": 20,
+						"sliderMax": 200,
+						"sliderStep": 1,
+						"help": "Adjust how many search results are shown in your Library Browser.<br /><br />Remember, the more letters you type, the fewer results there are to sift through.",
+						"valueTitles": {"20": "<b>20</b> (You are good at searching)", "200": "<b>200</b> (You like big lists)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("librarysearchmax");
+							if( !!!val )
+								val = "40";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.setItem("librarysearchmax", this.value);
+						}
+					},
 					"hovertitles":
 					{
 						"title": "Hover Titles",
@@ -903,8 +952,6 @@
 						{
 							var themeName = localStorage.getItem("aaColorThemeName");
 							this.value = themeName;
-							//var val = aaapi.system.getConVarValue("cl_drawhud");
-							//this.value = val;
 						},
 						"setValue": function(val)
 						{
@@ -915,9 +962,6 @@
 							localStorage.setItem("aaColorThemeName", themeName);
 							this.value = themeName;
 							window.location = "asset://ui/options.html?tab=ui";
-							//location.reload();
-							//this.value = val;
-							//aaapi.system.consoleCommand("cl_drawhud " + this.value);
 						}
 					},
 					"startupWallpaper":
@@ -944,8 +988,89 @@
 								window.location = "asset://ui/options.html?tab=ui";
 							}
 						}
+					},
+					"panohelp":
+					{
+						"title": "Show Panorama Instructions",
+						"type": "toggle",
+						"help": "Shows you the instructions for how to take panoramas prior to creating a new one.",
+						"valueTitles": {"0": "Skip", "1": "Show"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("show_pano_help");
+							if( !!!val )
+								val = "1";
+
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val + "";
+							localStorage.setItem("show_pano_help", this.value);
+						}
+					},
+					"tutorial_nag":
+					{
+						"title": "Main Menu Tutorial Nag",
+						"type": "toggle",
+						"help": "Show the Tutorial button on the Main Menu.",
+						"valueTitles": {"0": "No", "1": "Yes"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = (localStorage.getItem("tutorial_nag") == 0) ? "0" : "1";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							var goodVal = (val === "0") ? 0 : 1;
+							localStorage.setItem("tutorial_nag", goodVal);
+						}
+					},
+					"steamgames_nag":
+					{
+						"title": "Main Menu Steam Games Nag",
+						"type": "slider",
+						"sliderMin": 0,
+						"sliderMax": 14,
+						"sliderStep": 1,
+						"help": "Show the Steam Games button on the Main Menu.",
+						"valueTitles":
+						{
+							"0": "Never",
+							"1": "Once A Day",
+							"2": "Every Other Day",
+							"3": "Once Every 3 Days",
+							"4": "Once Every 4 Days",
+							"5": "Once Every 5 Days",
+							"6": "Once Every 6 Days",
+							"7": "Once Every Week",
+							"8": "Once Every 8 Days",
+							"9": "Once Every 9 Days",
+							"10": "Once Every 10 Days",
+							"11": "Once Every 11 Days",
+							"12": "Once Every 12 Days",
+							"13": "Once Every 13 Days",
+							"14": "Every Other Week"
+						},
+						"value": null,
+						"getValue": function()
+						{
+							var val = localStorage.getItem("steamgames_nag");
+							if( !!!val )
+								val = "14";
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							localStorage.removeItem("last_steamgames_nag");
+							localStorage.setItem("steamgames_nag", this.value);
+						}
 					}
-				},
+				}/*,
 				"libretro":
 				{
 					"autolibretro":
@@ -1152,7 +1277,7 @@
 							aaapi.system.consoleCommand("broadcast_folder \"" + this.value + "\"");
 						}
 					}
-				}
+				}*/
 			};
 
 			function findOptionById(optionId)
@@ -1246,6 +1371,9 @@
 				category = categories[categoryId];
 				optionsTable = document.querySelector("div[tabid='" + categoryId + "'] .aaKeyValueTable");
 
+				if( !!!optionsTable )
+					continue;
+
 				for( var optionId in category )
 				{
 					option = category[optionId];
@@ -1278,14 +1406,11 @@
 						toggleButtonValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
 						toggleButtonValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
 
-						//if( option.type === "toggle" )
-						//{
-							title = option.valueTitles[option.value.toString()];
-							toggleButtonValueLabel.innerHTML = title;
-						//}
+						title = option.valueTitles[option.value.toString()];
+						toggleButtonValueLabel.innerHTML = title;
 
 						toggleButton = document.createElement("div");
-						toggleButton.className = "inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground";//"inputOptionToggle aaTextColorTwoShadedBorderColor aaTextColorTwoShadedBackground";
+						toggleButton.className = "inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground";
 						toggleButton.inputOption = option;
 						toggleButton.addEventListener("click", function(e)
 						{
@@ -1297,11 +1422,12 @@
 
 						if( option.value + "" !== "0" )
 						{
-							toggleButtonMarker.className = "aaThemeColorOneHighBackgroundColor aaThemeColorOneHighBorderColor";//"aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+							toggleButtonMarker.className = "aaThemeColorOneHighBackgroundColor aaThemeColorOneHighBorderColor";
+
 							toggleButtonMarker.className += " toggleSwitchOn";
 						}
 						else
-							toggleButtonMarker.className = "aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor";//"aaTextColorTwoBackgroundColor aaTextColorTwoBorderColor";
+							toggleButtonMarker.className = "aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor";
 
 						// composite
 						toggleButton.appendChild(toggleButtonMarker);
@@ -1315,7 +1441,6 @@
 						sliderValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
 						sliderValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
 
-						//title = option.valueTitles[option.value.toString()];
 						var val = parseNumber(option.value);
 						var valTitle = option.valueTitles[val + ""];
 						if( !!valTitle )
@@ -1361,7 +1486,6 @@
 					{
 						selectBox = document.createElement("select");
 						selectBox.className = "aaTextSizeFontSize";
-						//selectBox.style.direction = "rtl";
 						selectBox.inputOption = option;
 
 						selectBox.addEventListener("change", function(e)
@@ -1378,8 +1502,6 @@
 							this.style.webkitTransition = "background-color 0.5s ease-in-out";
 							this.classList.remove("aaThemeColorOneBackgroundColor");
 						}.bind(selectBox), true);
-
-						//<option value="" disabled selected>Select your option</option>
 
 						if( !!option.valueTitles.placeholder )
 						{
@@ -1408,42 +1530,6 @@
 
 						// compose
 						optionValueCell.appendChild(selectBox);
-
-						/*
-						// TOGGLE BUTTON VALUE LABEL
-						toggleButtonValueLabel = document.createElement("div");
-						toggleButtonValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
-						toggleButtonValueLabel.style.cssText = "display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
-
-						title = option.valueTitles[option.value.toString()];
-						toggleButtonValueLabel.innerHTML = title;
-						*/
-
-						/*
-						toggleButton = document.createElement("div");
-						toggleButton.className = "inputOptionToggle aaTextColorTwoShadedBorderColor aaThemeColorTwoHoverShadedBackground";
-						toggleButton.inputOption = option;
-						toggleButton.addEventListener("click", function(e)
-						{
-							toggleSwitch(this);
-						}.bind(toggleButton), true);
-
-						toggleButtonMarker = document.createElement("div");
-						toggleButtonMarker.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
-
-						if( option.value + "" !== "0" )
-						{
-							toggleButtonMarker.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
-							toggleButtonMarker.className += " toggleSwitchOn";
-						}
-						else
-							toggleButtonMarker.className = "aaTextColorTwoBackgroundColor aaTextColorTwoBorderColor";
-
-						// composite
-						toggleButton.appendChild(toggleButtonMarker);
-						optionValueCell.appendChild(toggleButtonValueLabel);
-						optionValueCell.appendChild(toggleButton);
-						*/
 					}
 					else if( option.type === "webfile" )
 					{
@@ -1487,12 +1573,6 @@
 
 						optionValueCell.appendChild(textBox);
 					}
-/*
-					optionContainerElem.appendChild(optionTitleElem);
-					optionContainerElem.appendChild(inputOptionContainerElem);
-
-					optionsContainerElem.appendChild(optionContainerElem);
-					*/
 
 					optionRow.appendChild(optionTitleCell);
 					//optionRow.appendChild(optionValueTitleCell);
@@ -1562,8 +1642,170 @@
 				toggleButton.offsetTop;
 				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
 				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
-				//toggleButton.blur();
-				//aaTextColorTwoShadedBorderColor aaThemeColorTwoHoverShadedBackground
+			}
+
+
+			function yesImportMaps()
+			{
+				gotoPage('importMaps.html', 'import');
+			}
+
+			function noExportMaps()
+			{
+				//console.log("nope");
+			}
+
+			function askImportMaps()
+			{
+				createModalPrompt("Are You Sure?", "Importing ALL available maps may take a couple minutes if there are hundreds of maps found.", "yesImportMaps();", "noImportMaps();");
+			}
+
+			function yesExportModels()
+			{
+				gotoPage('importModels.html', 'import');
+			}
+
+			function noExportModels()
+			{
+				//console.log("nope");
+			}
+
+			function askImportModels()
+			{
+				createModalPrompt("Are You Sure?", "Importing ALL available models may take <b>dozens</b> of minutes if there are thousands of new models detected.", "yesExportModels();", "noExportModels();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					if( e.currentTarget !== e.target )
+						return;
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+
+				modalHTML += "</div>";
+				modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Continue" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
 			}
 		</script>
 

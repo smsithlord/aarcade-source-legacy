@@ -391,6 +391,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		std::string id = WebStringToCharString(args[1].ToString());
 		g_pAnarchyManager->GetMetaverseManager()->SendEntryUpdate(mode, id);
 	}
+	else if (method_name == WSLit("joinLobby"))
+	{
+		std::string lobbyId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->JoinLobby(lobbyId);
+	}
 	else if (method_name == WSLit("followPlayer"))
 	{
 		std::string userId = WebStringToCharString(args[0].ToString());
@@ -1009,6 +1014,10 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 	{
 		g_pAnarchyManager->Disconnect();
 	}
+	else if (method_name == WSLit("clearAwesomiumCache"))
+	{
+		g_pAnarchyManager->GetAwesomiumBrowserManager()->ClearCache();
+	}
 	/*
 	else if (method_name == WSLit("autoInspect"))
 	{
@@ -1022,7 +1031,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 			std::string uri = "file://";
 			uri += engine->GetGameDirectory();
-			uri += "/resource/ui/html/autoInspectItem.html?id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
+			uri += "/resource/ui/html/autoInspectItem.html?mode=" + g_pAnarchyManager->GetAutoInspectMode() + "&id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
 
 			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
 			if (pEmbeddedInstance)
@@ -1053,6 +1062,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 			}
 		}
 
+	}
+	else if (method_name == WSLit("playSound"))
+	{
+		std::string file = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->PlaySound(file);
 	}
 	else if (method_name == WSLit("viewObjectInfo"))
 	{
@@ -1677,6 +1691,11 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 		if (pEntity)
 			g_pAnarchyManager->AttemptSelectEntity(pEntity);
 	}
+	else if (method_name == WSLit("popout"))
+	{
+		std::string popoutId = WebStringToCharString(args[0].ToString());
+		g_pAnarchyManager->Popout(popoutId);
+	}
 	else if (method_name == WSLit("runLibretro"))
 	{
 		bool bLaunched = false;
@@ -1819,7 +1838,7 @@ void JSHandler::OnMethodCall(WebView* caller, unsigned int remote_object_id, con
 
 			std::string uri = "file://";
 			uri += engine->GetGameDirectory();
-			uri += "/resource/ui/html/autoInspectItem.html?id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
+			uri += "/resource/ui/html/autoInspectItem.html?imageflags=" + g_pAnarchyManager->GetAutoInspectImageFlags() + "&id=" + g_pAnarchyManager->encodeURIComponent(itemId) + "&title=" + g_pAnarchyManager->encodeURIComponent(active->GetString("title")) + "&screen=" + g_pAnarchyManager->encodeURIComponent(active->GetString("screen")) + "&marquee=" + g_pAnarchyManager->encodeURIComponent(active->GetString("marquee")) + "&preview=" + g_pAnarchyManager->encodeURIComponent(active->GetString("preview")) + "&reference=" + g_pAnarchyManager->encodeURIComponent(active->GetString("reference")) + "&file=" + g_pAnarchyManager->encodeURIComponent(active->GetString("file"));
 
 			// the active embeded instance might not be the right type, so get rdy to re-make it if needed...
 			C_EmbeddedInstance* pEmbeddedInstance = g_pAnarchyManager->GetInputManager()->GetEmbeddedInstance();
@@ -4425,6 +4444,14 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		response.SetProperty(WSLit("subscriptions"), subscriptions);
 		return response;
 	}
+	else if (method_name == WSLit("alphabetSafe"))
+	{
+		std::string text = WebStringToCharString(args[0].ToString());
+		std::string alphabet = WebStringToCharString(args[1].ToString());
+
+		bool bResponse = g_pAnarchyManager->AlphabetSafe(text, alphabet);
+		return JSValue(bResponse);
+	}
 	else if (method_name == WSLit("getConVarValue"))
 	{
 		std::string name = WebStringToCharString(args[0].ToString());
@@ -4503,6 +4530,11 @@ JSValue JSHandler::OnMethodCallWithReturnValue(WebView* caller, unsigned int rem
 		response.SetProperty(WSLit("success"), JSValue(true));
 		response.SetProperty(WSLit("mounts"), responseMounts);
 		return response;
+	}
+	else if (method_name == WSLit("isInGame"))
+	{
+		bool bResponse = engine->IsInGame();
+		return JSValue(bResponse);
 	}
 	else if (method_name == WSLit("setNearestObjectDist"))
 	{

@@ -21,6 +21,7 @@ public:
 
 	void Update();
 	void CloseAllInstances(bool bDeleteHudAndImages = false);
+	void ClearCache();
 
 	C_AwesomiumBrowserInstance* CreateAwesomiumBrowserInstance(std::string id = "", std::string initialURL = "", std::string title = "", bool alpha = false);
 	C_AwesomiumBrowserInstance* FindAwesomiumBrowserInstance(std::string id);

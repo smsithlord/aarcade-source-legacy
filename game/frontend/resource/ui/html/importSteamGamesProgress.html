@@ -111,6 +111,10 @@
 
 			function onFinished()
 			{
+				var now = new Date();
+				now = now.getTime();
+				localStorage.setItem("last_steamgames_nag", now);
+
 				if( !shouldClose )
 					window.location='asset://ui/welcome.html';
 				else

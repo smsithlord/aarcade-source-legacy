@@ -28,7 +28,7 @@ namespace Awesomium
 // MASTER
 void MasterLoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 {
-	DevMsg("MasterLoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
+	//DevMsg("MasterLoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
 
 	// IT IS NOW SAFE TO CREATE GLOBAL JAVASCRIPT OBJECTS
 //	C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
@@ -108,7 +108,7 @@ void LoadListener::OnFinishLoadingFrame(WebView* caller, int64 frame_id, bool is
 
 void LoadListener::OnDocumentReady(WebView* caller, const WebURL& url)
 {
-	DevMsg("LoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
+	//DevMsg("LoadListener: OnDocumentReady: %s\n", WebStringToCharString(url.spec()));
 
 	//C_WebBrowser* pWebBrowser = g_pAnarchyManager->GetWebManager()->GetWebBrowser();
 

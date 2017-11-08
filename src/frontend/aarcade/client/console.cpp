@@ -36,6 +36,7 @@ ConVar wait_for_libretro("wait_for_libretro", "1", FCVAR_ARCHIVE, "Allow AArcade
 ConVar cl_hovertitles("cl_hovertitles", "1", FCVAR_ARCHIVE, "Show the titles of items under your crosshair.");
 ConVar cl_toastmsgs("cl_toastmsgs", "1", FCVAR_ARCHIVE, "Show event notifications on the top-left of the screen.");
 ConVar workshop("workshop", "1", FCVAR_NONE);
+ConVar web_home("web_home", "", FCVAR_ARCHIVE, "The URL used as your home page for AArcade's Steamworks web browser.");
 ConVar aampPublic("aamp_public", "1", FCVAR_ARCHIVE);
 ConVar aampLobbyPassword("aamp_lobby_password", "", FCVAR_ARCHIVE);
 ConVar aampLobbyId("aamp_lobby_id", "", FCVAR_ARCHIVE);
@@ -44,8 +45,10 @@ ConVar aampClientKey("aamp_client_key", "", FCVAR_ARCHIVE);
 ConVar aampServerKey("aamp_server_key", "", FCVAR_ARCHIVE);
 ConVar disable_multiplayer("disable_multiplayer", "0", FCVAR_NONE);
 ConVar avatarUrl("avatar_url", "", FCVAR_HIDDEN, "");
+ConVar autoinspect_image_flags("autoinspect_image_flags", "0", FCVAR_ARCHIVE, "");
 ConVar sync_overview("sync_overview", "1", FCVAR_ARCHIVE, "");
 ConVar host_next_map("host_next_map", "0", FCVAR_NONE);
+ConVar ignore_next_tab_up("ignore_next_tab_up", "0", FCVAR_NONE);
 ConVar recent_model_id("recent_model_id", "acec221c", FCVAR_NONE, "Stores the most recently used model ID, so it can be quickly used again next time.");
 ConVar allow_weapons("allow_weapons", "0", FCVAR_ARCHIVE, "Allow weapons to be switched to & used.");
 ConVar process_batch_size("process_batch_size", "100", FCVAR_ARCHIVE, "Control how much of batch operations are processed between render cycles.");
@@ -864,13 +867,19 @@ ConCommand task_clear("task_clear", TaskClear, "Usage: closes all open instaces 
 
 void ShowTaskMenu(const CCommand &args)
 {
+	if (g_pAnarchyManager->GetInputManager()->GetInputMode() && g_pAnarchyManager->GetMetaverseManager()->GetSpawningObjectEntity())
+		g_pAnarchyManager->HandleUiToggle();
+
 	g_pAnarchyManager->ShowTaskMenu();
 }
 ConCommand showtaskmenu("+task_menu", ShowTaskMenu, "Usage: check which in-game tasks are open.");
 
 void HideTaskMenu(const CCommand &args)
 {
-	g_pAnarchyManager->HideTaskMenu();
+	if (!ignore_next_tab_up.GetBool())
+		g_pAnarchyManager->HideTaskMenu();
+	else
+		ignore_next_tab_up.SetValue(false);
 }
 ConCommand hidetaskmenu("-task_menu", HideTaskMenu, "Usage: hides the task menu.");
 

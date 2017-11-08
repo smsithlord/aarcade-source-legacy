@@ -2,6 +2,19 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<script>
+			var g_hiddenItems = localStorage.getItem("hiddenItems");
+			if( !!g_hiddenItems )
+				g_hiddenItems = JSON.parse(g_hiddenItems);
+			else
+				g_hiddenItems = {};
+
+			var g_librarySearchMax = localStorage.getItem("librarysearchmax");
+			if( !!!g_librarySearchMax )
+				g_librarySearchMax = "40";
+
+			g_librarySearchMax = parseInt(g_librarySearchMax);
+		</script>
 	</head>
 	<body>
 
@@ -253,6 +266,17 @@
 				padding-right: 20px;
 			}
 
+			.hideButton
+			{
+				background: none;
+				display: inline-block;
+				border-style: solid;
+				border-width: 0;
+				vertical-align: top;
+				padding: 3px;
+				border-radius: 5px;
+			}
+
 			.editButton
 			{
 				background: none;
@@ -262,6 +286,7 @@
 				vertical-align: top;
 				padding: 3px;
 				border-radius: 5px;
+				margin-right: 6px;
 			}
 
 			.buttonsContainer
@@ -618,7 +643,8 @@
 				if( category !== "models" || response.entry.dynamic != "1" )
 					appendEntry(response.entry);
 
-				var amt = (category === "apps") ? 999 : 40;
+				//var amt = (category === "apps") ? 999 : 100;
+				var amt = g_librarySearchMax;
 				libraryFetch(libraryQueryId, method, amt);
 			}
 
@@ -875,11 +901,14 @@
 				if( !!!entry )
 				{
 					console.log("Warning: Attempted to append an entry with no entry given.");
-					return;
+					return false;
 				}
 
 				if( !!types[entry.type] && types[entry.type].title === "node" && activeTabId !== "nodes" )
-					return;
+					return false;
+
+				if( !!g_hiddenItems[entry.info.id] )
+					return false;
 
 				// add this row to the table
 				var entryRow = document.createElement("tr");
@@ -964,7 +993,7 @@
 
 				var editButton = document.createElement("div");
 				editButton.className = "editButton aaThemeColorOneHoverShadedBackground helpNote";
-				editButton.setAttribute("help", "Edit this item's details.");
+				editButton.setAttribute("help", "Edit this entry's details.");
 				editButton.entry = entry;
 				editButton.addEventListener("click", function(e)
 				{
@@ -993,6 +1022,57 @@
 				var editButtonImage = document.createElement("img");
 				editButtonImage.src = "editicon.png";
 
+				var hideButton = document.createElement("div");
+				hideButton.className = "hideButton aaThemeColorOneHoverShadedBackground helpNote";
+				hideButton.setAttribute("help", "Hide this entry from your Library Browser.");
+				hideButton.entry = entry;
+				hideButton.addEventListener("mousedown", function(e)
+				{
+					var entryRow = this.parentNode.parentNode.parentNode;
+					entryRow.style.display = "none";
+
+					g_hiddenItems[this.entry.info.id] = "1";
+					localStorage.setItem("hiddenItems", JSON.stringify(g_hiddenItems));
+
+					var selectedEntry = document.querySelector(".selectedEntry");
+					if( !!selectedEntry && selectedEntry === entryRow)
+					{
+						deselectLibraryEntry(selectedEntry);
+
+						// reset the file box
+						entryValueInputElem.value = "";
+						onEntryValueChange();
+					}
+
+					e.preventDefault();
+					return true;
+					/*
+					if( category === "items" )
+					{
+						if( nodestyle != "" )
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?nodestyle=" + nodestyle + "&activeTabId=" + activeTabId + "';");
+						}
+						else
+						{
+							window.location = "asset://ui/editItem.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=" + activeTabId + "';");
+						}
+					}
+					else if( category === "models" )
+					{
+						window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+					else if( category === "apps" )
+					{
+						window.location = "asset://ui/editApp.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html?activeTabId=apps';");
+						//window.location = "asset://ui/editModel.html?id=" + encodeURIComponent(this.entry.info.id) + "&uiback=" + encodeURIComponent("window.location='asset://ui/libraryBrowser.html';");
+					}
+					*/
+				}.bind(hideButton), false);
+
+				var hideButtonImage = document.createElement("img");
+				hideButtonImage.src = "noeye.png";
+
 				// compose
 				// 1st cell
 				entryFilterContainer.appendChild(entryFilter);
@@ -1005,6 +1085,8 @@
 				entryTitleContainer.appendChild(entryTitle);
 				editButton.appendChild(editButtonImage);
 				buttonsContainer.appendChild(editButton);
+				hideButton.appendChild(hideButtonImage);
+				buttonsContainer.appendChild(hideButton);
 				entryTitleCell.appendChild(entryTitleContainer);
 				entryTitleCell.appendChild(buttonsContainer);
 
@@ -1012,7 +1094,7 @@
 				entryRow.appendChild(entryFilterCell);
 				entryRow.appendChild(entryTitleCell);
 				resultsBody.appendChild(entryRow);
-				return;
+				return true;
 			}
 
 			// update the category mode of the library browser
@@ -1136,8 +1218,8 @@
 						{
 							if( this.count < this.amount )//&& libraryEntry != 0 )
 							{
-								appendEntry(libraryEntry);
-								this.count++;
+								if( appendEntry(libraryEntry) )
+									this.count++;
 							}
 						}
 					}

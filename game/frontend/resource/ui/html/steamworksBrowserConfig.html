@@ -2,37 +2,926 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="asset://ui/hud.css"></link>
 		<script src="asset://ui/hud.js"></script>
+		<style>
+			.inputOptionToggle
+			{
+				display: inline-block;
+				width: 60px;
+				height: 20px;
+				vertical-align: middle;
+				border-radius: 6px;
+				border-style: solid;
+				border-width: 2px;
+			}
+
+			.inputOptionToggle div
+			{
+				display: inline-block;
+				width: 24px;
+				height: 14px;
+				float: left;
+				border-style: solid;
+				border-width: 3px;
+				border-radius: 4px;
+				vertical-align: middle;
+			}
+
+			.inputOptionToggle:hover
+			{
+			}
+
+			.inputOptionToggle div.toggleSwitchOn
+			{
+				float: right;
+			}
+
+			.inputOptionToggle:hover div
+			{
+			}
+
+			.inputOptionToggle:hover div.toggleSwitchOn
+			{
+			}
+
+			.inputOptionTitle
+			{
+				display: inline-block;
+				vertical-align: middle;
+				margin-right: 10px;
+				color: #999;
+				font-style: italic;
+			}
+
+			.inputOptionContainer
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin-right: 5px;
+			}
+
+			.toggleButton
+			{
+				display: inline-block;
+				float: right;
+				vertical-align: middle;
+				margin: 0;
+				margin-right: 5px;
+				border: 2px solid pink;
+			}
+
+			.inputOptionContainer input
+			{
+				background-color: transparent;
+				border: 1px solid red;
+				font-family: Arial;
+				font-weight: 900;
+				font-size: 18px;
+				padding-left: 2px;
+				padding-right: 2px;
+				color: #bbb;
+				background-color: rgb(8, 8, 8);
+				border-radius: 6px;
+				border: 3px solid rgb(30, 30, 30);
+				border-top: 3px solid rgb(50, 50, 50);
+				border-left: 3px solid rgb(50, 50, 50);
+				text-align: right;
+			}
+
+			.inputOptionContainer:hover input
+			{
+				border: 3px solid rgb(40, 40, 40);
+				border-top: 3px solid rgb(70, 70, 70);
+				border-left: 3px solid rgb(70, 70, 70);
+			}
+
+			.categoryContainer
+			{
+				width: 100%;
+				background-color: rgba(50, 50, 50, 0.5);
+				font-weight: bold;
+				font-family: Arial;
+				border-radius: 10px;
+			}
+
+			.categoryTitle
+			{
+				padding: 10px;
+				letter-spacing: 0.2em;
+				font-style: italic;
+			}
+
+			.optionContainer
+			{
+				font-weight: bold;
+				font-family: Arial;
+				padding: 8px;
+				height: 25px;
+				border-radius: 10px;
+				background-color: rgba(10, 10, 10, 0.5);
+			}
+
+			.optionContainer:nth-child(even)
+			{
+				background-color: rgba(30, 30, 30, 0.3);
+			}
+
+			.optionTitle
+			{
+				float: left;
+				margin-left: 5px;
+			}
+
+			.optionsContainer
+			{
+				margin-left: 15px;
+				margin-right: 15px;
+				margin-bottom: 15px;
+			}
+
+			input[type=range]
+			{
+	    		-webkit-appearance: none;
+	    		border-radius: 3px;
+	    		border-style: solid;
+	    		border-width: 1px;
+	    		height: 8px;
+	    		border-color: #bbb;
+			}
+
+			input[type=range]::-webkit-slider-runnable-track
+			{
+				border: 0;
+				background-color: transparent;
+			}
+
+			input[type=range]::-webkit-slider-thumb
+			{
+				-webkit-appearance: none;
+				width: 15px;
+				height: 24px;
+				background-color: #ddd;
+				border: 1px solid #bbb;
+				border-radius: 20%;
+			}
+
+			input[type=range]:hover::-webkit-slider-thumb
+			{
+				background-color: #E5F1FB;
+				border: 1px solid #0078D7;
+			}
+		</style>
 	</head>
 	<body>
-		<div class="hudContent" style="width: 40%; position: fixed; left: 0; right: 0; top: 50%; -webkit-transform: translate(0, -50%);">
-			<div class="hudContentHeader">
-				<div class="hudContentHeaderRow">
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" style="display: block;" onclick="window.location='asset://ui/embeddedApps.html';" help="Go back to the previous menu.">
-							&nbsp;<img src="asset://ui/backarrow.png" />&nbsp;
-						</div>
-					</div>
-					<div class="hudContentHeaderCell">
-						Steamworks Web Browser
-					</div>
-					<div class="hudContentHeaderCell">
-						<div class="hudContentHeaderButton helpNote" onclick="aaapi.system.deactivateInputMode();" help="Close the menu.">&nbsp;<img src="asset://ui/xicon.png" />&nbsp;</div>
+
+		<div style="pointer-events: none; position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+		<table style="width: 100%; height: 100%;">
+		<tr ><td valign="middle" align="center">
+		<div style="display: inline-block;">
+
+		<script>
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Steamworks Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			document.write(windowHeaderHTML);
+		</script>
+
+		<form id="entryForm" style="margin: 0;">
+
+		<script>
+			// prefer a tab ID given in the URL
+			var tabId = arcadeHud.getParameterByName("tab");
+			if( !!!tabId )
+				tabId = "";
+
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "general",
+						"title": "General"
+					},
+					{
+						"id": "about",
+						"title": "About"
+					}
+				],
+				"activeTabId": tabId
+			});
+			document.write(windowTabsHeaderHTML);
+
+			/*
+			function gotoPage(page, tab)
+			{
+				window.location='asset://ui/' + page + '?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=" + tab + "';");
+			}*/
+		</script>
+
+		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
+		</div>
+
+		<div class="aaScrollBars aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; max-width: 420px; font-family: Arial;" tabid="about">
+			<div onclick="aaapi.system.popout('steamworks');" style="text-align: center;">
+				<script>
+					var iconHTML = arcadeHud.generateIconHTML("steamworkslogo.png", 310, 74, "aaThemeColorOneColor");
+					document.write(iconHTML);
+				</script>
+				<br />
+				<div class="aaTitleText aaThemeColorOneColor aaTitleSizeFontSize">
+					<div style="display: inline; text-decoration: underline;">Visit Steamworks Website</div>
+					<div style="display: inline; position: relative; top: -4px;">
+						<script>
+							var iconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
+							document.write(iconHTML);
+						</script>
 					</div>
 				</div>
 			</div>
-<!--
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/importSteamGames.html';" help="Import your Steam games from your public Steam Community profile.">Import Steam Games</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/importLegacyContent.html';" help="Were you an Early Access user?  Import your old stuff here.">Import Legacy Content</div>
-			<div class="mainButton helpNote" onclick="window.location='asset://ui/libretro.html';" help="Libretro plays local video files, emulators, & other homebrew on the in-game screens.">Libretro</div>
-			<div class="mainButton disabledButton">Steamworks Web Browser</div>
-			<div class="mainButton disabledButton">Awesomium Web Browser</div>-->
-			<!-- <div class="mainButton disabledButton">Purge</div> -->
+			<br />
+			The Steamworks always-up-to-date HTMLSurface Interface is what powers the in-game web content in Anarchy Arcade.<br /><br />
+			It is maintained by Valve, bundled with Steam, and it is the <b>same</b> interface that powers the Steam client's web browser itself, as well as the Steam overlay.<br />
+			<br />
+			It shows up as Steam Client WebHelper in your Windows Task Manager. Pretty much anything that works in your Steam overlay web browser will work in AArcade's in-game screens.
+		</div>
 
-			<b>This menu will have general info & integration options for the Steamworks web browser.</b>
+		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
 
+		<table class="aaWindowActions" style="position: absolute; pointer-events: none; visibility: hidden;">
+			<tr>
+				<td>
+				</td>
+				<td style="width: 1%; white-space: nowrap;">
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="OK" />
+					<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Cancel" />
+					<input type="submit" class="aaButton aaButtonDisabled aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" value="Apply" />
+				</td>
+			</tr>
+		</table>
+		</form>
+
+		<script>
+			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
+			document.write(windowFooterHTML);
+		</script>
+
+		</div>
+		</td></tr>
+		</table>
 		</div>
 
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
+
+		<script>
+			var entryForm = document.querySelector("#entryForm");
+			entryForm.addEventListener("submit", function(e)
+			{
+				e.preventDefault();
+
+				var focusedElem = document.activeElement;
+				if( !!focusedElem && !!focusedElem.inputOption )
+				{
+					var option = focusedElem.inputOption;
+					focusedElem.style.webkitTransition = "initial";
+					focusedElem.classList.add("aaThemeColorOneBackgroundColor");
+					focusedElem.offsetTop;
+					focusedElem.style.webkitTransition = "background-color 0.5s ease-in-out";
+					focusedElem.classList.remove("aaThemeColorOneBackgroundColor");
+
+					onInputOptionTextFormSubmit(option, focusedElem.value);
+					focusedElem.blur();
+				}
+			}.bind(entryForm), true);
+
+			var categories = {
+				"general":
+				{
+					"web_home":
+					{
+						"title": "Homepage",
+						"type": "text",
+						"help": "The URL you want to use as your homepage.  If left blank (recommended), the dynamic Anarchy Portal is used.<br /><br />Custom homepage *must* start with http or https.",
+						"valueTitles": {"placeholder": "(Anarchy Portal)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("web_home");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("web_home \"" + this.value + "\"");
+						}
+					}
+					/*
+					"kodi_enable":
+					{
+						"title": "Enable Kodi Video Playback",
+						"type": "toggle",
+						"help": "Instead of opening normally when you click PLAY, video files can be sent to Kodi via the Web Server feature in Kodi's Options > Services > Web Server menu.  The info you enter on that Kodi menu is what you type into AArcade's option boxes here. You should be running Kodi on the same PC as AArcade because the file location of the video needs to be the same.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi " + this.value);
+						}
+					},
+					"kodi_ip":
+					{
+						"title": "Kodi IP",
+						"type": "text",
+						"help": "If you use Kodi, this is the IP of the PC running Kodi.  Usually your own LAN IP.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_ip");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_ip \"" + this.value + "\"");
+						}
+					},
+					"kodi_port":
+					{
+						"title": "Kodi Port",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PORT.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_port");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_port \"" + this.value + "\"");
+						}
+					},
+					"kodi_user":
+					{
+						"title": "Kodi User",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for USERNAME.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_user");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_user \"" + this.value + "\"");
+						}
+					},
+					"kodi_password":
+					{
+						"title": "Kodi Password",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PASSWORD.  Note that the Kodi web server API is accessed through GET requests, so your password is NOT encrypted and therfore NOT private and stored in a PUBLIC Source engine console variable.  Do NOT use a real password on your Kodi Web Server if you're using it for LAN stuff like this.",
+						"valueTitles": {"placeholder": "(NOT HIDDEN)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_password");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_password \"" + this.value + "\"");
+						}
+					}*/
+				}
+			};
+
+			function findOptionById(optionId)
+			{
+				var option;
+				var categoriesKeys = Object.keys(categories);
+				for( var i = 0; i < categoriesKeys.length; i++ )
+				{
+					category = categories[categoriesKeys[i]];
+					option = category[optionId];
+					if( !!option )
+						break;
+				}
+
+				return option;
+			}
+
+			function fileBrowse(optionId)
+			{
+				var option = findOptionById(optionId);
+				if( !!!option )
+					return;
+
+				var fieldElem;
+				var elems = document.querySelectorAll(".aaKeyValueTableValue > input[type='text']");
+				for( var i = 0; i < elems.length; i++ )
+				{
+					if( elems[i].inputOption === option )
+					{
+						fieldElem = elems[i];
+						break;
+					}
+				}
+
+				if( !!!fieldElem )
+					return;
+
+				arcadeHud.browseForFile(function(chosenFile)
+				{
+					fieldElem.value = chosenFile;
+					fieldElem.focus();
+					entryForm.querySelector("input[type='submit']").click();
+				}.bind(fieldElem));
+			}
+
+			function parseNumber(num)
+			{
+				return Number(parseFloat(num).toFixed(2));
+			}
+
+			function onSlide(e)
+			{
+				var option = this.inputOption;
+				var row = this.parentNode;
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var val = parseNumber(this.value);
+
+				var valTitle = option.valueTitles[val + ""];
+				if( !!valTitle )
+					labelDiv.innerHTML = valTitle;
+				else
+					labelDiv.innerHTML = val;
+
+				if( typeof option.onSlide === "function" )
+					option.onSlide.call(option, val);
+			}
+
+			var category;
+			var optionsTable;
+			var option;
+			var optionRow;
+			var optionTitleCell;
+			var optionValueCell;
+			var toggleButton;
+			var toggleButtonMarker;
+			var toggleButtonValueLabel;
+			var selectBox;
+			var selectBoxOption;
+			var sliderValueLabel;
+			var title;
+
+			// these might be obsolete!!
+			var optionContainerElem;
+			var inputOptionContainerElem;
+			var inputOptionTitleElem;
+			var inputOptionElem;
+			var inputOptionToggleMarkerElem;
+
+			for( var categoryId in categories )
+			{
+				category = categories[categoryId];
+				optionsTable = document.querySelector("div[tabid='" + categoryId + "'] .aaKeyValueTable");
+
+				if( !!!optionsTable )
+					continue;
+
+				for( var optionId in category )
+				{
+					option = category[optionId];
+					option.getValue();
+
+					// Now put stuff into it
+					optionRow = document.createElement("tr");
+					optionRow.className = "helpNote";
+					optionRow.setAttribute("help", option.help);
+
+					// OPTION TITLE
+					optionTitleCell = document.createElement("td");
+					optionTitleCell.className = "aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize";
+					optionTitleCell.innerHTML = option.title + ":";
+
+					// OPTION VALUE
+					optionValueCell = document.createElement("td");
+					optionValueCell.style.cssText = "text-align: right; padding: 4px; white-space: nowrap;";
+					optionValueCell.className = "aaKeyValueTableValue";
+
+					// AUX BUTTONS
+					optionAuxCell = document.createElement("td");
+					optionAuxCell.style.cssText = "";
+					optionAuxCell.className = "aaKeyValueTableAux";
+
+					if( option.type === "toggle" )
+					{
+						// TOGGLE BUTTON VALUE LABEL
+						toggleButtonValueLabel = document.createElement("div");
+						toggleButtonValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
+						toggleButtonValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
+
+						title = option.valueTitles[option.value.toString()];
+						toggleButtonValueLabel.innerHTML = title;
+
+						toggleButton = document.createElement("div");
+						toggleButton.className = "inputOptionToggle aaThemeColorTwoLowBorderColor aaThemeColorTwoHoverShadedBackground";
+						toggleButton.inputOption = option;
+						toggleButton.addEventListener("click", function(e)
+						{
+							toggleSwitch(this);
+						}.bind(toggleButton), true);
+
+						toggleButtonMarker = document.createElement("div");
+						toggleButtonMarker.className = "aaThemeColorOneHoverShadedBackground aaThemeColorOneShadedBorderColor";
+
+						if( option.value + "" !== "0" )
+						{
+							toggleButtonMarker.className = "aaThemeColorOneHighBackgroundColor aaThemeColorOneHighBorderColor";
+
+							toggleButtonMarker.className += " toggleSwitchOn";
+						}
+						else
+							toggleButtonMarker.className = "aaThemeColorTwoLowBackgroundColor aaThemeColorTwoLowBorderColor";
+
+						// composite
+						toggleButton.appendChild(toggleButtonMarker);
+						optionValueCell.appendChild(toggleButtonValueLabel);
+						optionValueCell.appendChild(toggleButton);
+					}
+					else if( option.type === "slider" )
+					{
+						// SLIDER VALUE LABEL
+						sliderValueLabel = document.createElement("div");
+						sliderValueLabel.className = "aaKeyValueTableValueTitle aaTextColorTwoColor aaTextSizeFontSize";
+						sliderValueLabel.style.cssText = "font-family: Arial; font-size: 14px; display: inline-block; vertical-align: middle; padding: 0; padding-left: 30px; padding-right: 8px;";
+
+						var val = parseNumber(option.value);
+						var valTitle = option.valueTitles[val + ""];
+						if( !!valTitle )
+							sliderValueLabel.innerHTML = valTitle;
+						else
+							sliderValueLabel.innerHTML = val;
+
+						var slider = document.createElement("input");
+						slider.inputOption = option;
+						slider.type = "range";
+						slider.min = option.sliderMin;
+						slider.max = option.sliderMax;
+						slider.step = option.sliderStep;
+						slider.value = val;
+						slider.style.backgroundColor = "#ddd";
+						slider.addEventListener("input", onSlide.bind(slider), true);
+
+						slider.addEventListener("mouseup", function(e)
+						{
+
+							var option = this.inputOption;
+
+							var val = parseNumber(this.value);
+							if( val == option.value )
+								return;
+
+							this.style.backgroundColor = "";
+							this.style.webkitTransition = "initial";
+							this.classList.add("aaThemeColorOneBackgroundColor");
+							this.offsetTop;
+							this.style.webkitTransition = "background-color 0.5s ease-in-out";
+							this.classList.remove("aaThemeColorOneBackgroundColor");
+							this.style.backgroundColor = "#ddd";
+
+							this.value = val;
+							option.setValue.call(option, val);
+						}.bind(slider), true);
+
+						optionValueCell.appendChild(sliderValueLabel);
+						optionValueCell.appendChild(slider);
+					}
+					else if( option.type === "select" )
+					{
+						selectBox = document.createElement("select");
+						selectBox.className = "aaTextSizeFontSize";
+						selectBox.inputOption = option;
+
+						selectBox.addEventListener("change", function(e)
+						{
+							var selectedIndex = this.selectedIndex;
+							var selectedOption = this.options[selectedIndex];
+
+							var option = this.inputOption;
+							option.setValue.call(option, selectedOption.value);
+
+							this.style.webkitTransition = "initial";
+							this.classList.add("aaThemeColorOneBackgroundColor");
+							this.offsetTop;
+							this.style.webkitTransition = "background-color 0.5s ease-in-out";
+							this.classList.remove("aaThemeColorOneBackgroundColor");
+						}.bind(selectBox), true);
+
+						if( !!option.valueTitles.placeholder )
+						{
+							selectBoxOption = document.createElement("option");
+							selectBoxOption.text = option.valueTitles.placeholder;
+							selectBoxOption.value = "";
+							selectBoxOption.selected = true;
+							selectBoxOption.disabled = true;
+							selectBox.appendChild(selectBoxOption);
+						}
+
+						for( var value in option.valueTitles )
+						{
+							if( value === "placeholder" )
+								continue;
+
+							selectBoxOption = document.createElement("option");
+							selectBoxOption.text = option.valueTitles[value];
+							selectBoxOption.value = value;
+
+							if( value == option.value )
+								selectBoxOption.selected = true;
+
+							selectBox.appendChild(selectBoxOption);
+						}
+
+						// compose
+						optionValueCell.appendChild(selectBox);
+					}
+					else if( option.type === "webfile" )
+					{
+						optionAuxCell.innerHTML = '\
+						<div class="aaButton aaKeyValuesRowButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="min-width: initial; padding: 6px; width: 18px; height: 18px; margin-left: 4px; display: inline-block;" onclick="fileBrowse(\'' + optionId + '\');">\
+								' + arcadeHud.generateIconHTML("browseicon.png", 18, 18, "aaTextColorTwoHighColor") + '\
+						</div>';
+
+						textBox = document.createElement("input");
+						textBox.type = "text";
+
+						textBox.className = "aaTextSizeFontSize";
+						textBox.inputOption = option;
+						textBox.value = option.value;
+						textBox.placeholder = option.valueTitles["placeholder"];
+						textBox.addEventListener("blur", function(e)
+						{
+							if( this.value != this.inputOption.value )
+								this.value = this.inputOption.value;
+						}.bind(textBox), true);
+
+						optionValueCell.appendChild(textBox);
+					}
+					else if( option.type === "text" || option.type === "password" )
+					{
+						textBox = document.createElement("input");
+
+						if( option.title.toLowerCase().indexOf("password") === -1 )
+							textBox.type = "text";
+						else
+							textBox.type = "password";
+
+						textBox.className = "aaTextSizeFontSize";
+						textBox.inputOption = option;
+						textBox.value = option.value;
+						textBox.placeholder = option.valueTitles["placeholder"];
+						textBox.addEventListener("blur", function(e)
+						{
+							this.value = this.inputOption.value;
+						}.bind(textBox), true);
+
+						optionValueCell.appendChild(textBox);
+					}
+
+					optionRow.appendChild(optionTitleCell);
+					//optionRow.appendChild(optionValueTitleCell);
+					optionRow.appendChild(optionValueCell);
+					optionRow.appendChild(optionAuxCell);
+					optionsTable.appendChild(optionRow);
+				}
+			}
+
+			function onInputOptionTextFormSubmit(option, value)
+			{
+				option.setValue.call(option, value);
+			}
+
+			function toggleSwitch(toggleButton)
+			{
+				var row = toggleButton.parentNode.parentNode;
+
+				var labelDiv = row.querySelector(".aaKeyValueTableValueTitle");
+				var toggleButtonMarker = toggleButton.querySelector("div");
+
+				if( toggleButtonMarker.classList.contains("toggleSwitchOn") )
+				{
+					toggleButtonMarker.classList.remove("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorOneHighBorderColor");
+
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorTwoLowBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( valueTitleKeys[i] !== toggleButton.inputOption.value.toString() )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+				else
+				{
+					toggleButtonMarker.classList.add("toggleSwitchOn");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBackgroundColor");
+					toggleButtonMarker.classList.remove("aaThemeColorTwoLowBorderColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBackgroundColor");
+					toggleButtonMarker.classList.add("aaThemeColorOneHighBorderColor");
+
+					var valueTitleKeys = Object.keys(toggleButton.inputOption.valueTitles);
+					var valueTitle;
+					for( var i = 0; i < valueTitleKeys.length; i++ )
+					{
+						if( valueTitleKeys[i] !== toggleButton.inputOption.value.toString() )
+						{
+							labelDiv.innerHTML = toggleButton.inputOption.valueTitles[valueTitleKeys[i]];
+							toggleButton.inputOption.setValue(valueTitleKeys[i]);
+							break;
+						}
+					}
+				}
+
+				var option = toggleButton.inputOption;
+				toggleButton.style.webkitTransition = "initial";
+				toggleButton.classList.add("aaThemeColorOneShadedBorderColor");
+				toggleButton.offsetTop;
+				toggleButton.style.webkitTransition = "border-color 0.5s ease-in-out";
+				toggleButton.classList.remove("aaThemeColorOneShadedBorderColor");
+			}
+
+
+			function yesExportModels()
+			{
+				gotoPage('importModels.html', 'import');
+			}
+
+			function noExportModels()
+			{
+				//console.log("nope");
+			}
+
+			function askImportModels()
+			{
+				createModalPrompt("Are You Sure?", "Importing ALL available models may take <b>dozens</b> of minutes if there are thousands of new models detected.", "yesExportModels();", "noExportModels();");
+			}
+
+			// from https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+			function formatBytes(a,b){if(0==a)return"0 Bytes";var c=1024,d=b||2,e=["Bytes","KB","MB","GB","TB","PB","EB","ZB","YB"],f=Math.floor(Math.log(a)/Math.log(c));return parseFloat((a/Math.pow(c,f)).toFixed(d))+" "+e[f]}
+
+			var aaModalPromptMenu;
+			function createModalPrompt(title, text, yesAction, noAction)
+			{
+				if( !!aaModalPromptMenu )
+				{
+					console.log("ERROR: A modal menu is already being displayed!");
+					return;
+				}
+
+				// Lets be modal.
+				var modalContainer = document.createElement("div");
+				modalContainer.style.cssText = "position: fixed; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8);";
+				modalContainer.addEventListener("click", function(e)
+				{
+					if( e.currentTarget !== e.target )
+						return;
+					else
+					{
+						if( !!!aaModalPromptMenu.flashInterval )
+						{
+							aaModalPromptMenu.flashInterval = setInterval(function()
+							{
+								var titleRow = this.querySelector("tr");
+								var titleBarElems = titleRow.querySelectorAll("td");
+								var titleBarElem;
+
+								if( !!!this.flashCount )
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+									}
+
+									clearInterval(this.flashInterval);
+									delete this.flashInterval;
+								}
+								else
+								{
+									for( var i = 0; i < titleBarElems.length; i++ )
+									{
+										titleBarElem = titleBarElems[i];
+										if( titleBarElem.classList.contains("aaThemeColorOneHighBackgroundColor") )
+										{
+											titleBarElem.classList.remove("aaThemeColorOneHighBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneBackgroundColor");
+										}
+										else if(titleBarElem.classList.contains("aaThemeColorOneBackgroundColor"))
+										{
+											titleBarElem.classList.remove("aaThemeColorOneBackgroundColor");
+											titleBarElem.classList.add("aaThemeColorOneHighBackgroundColor");
+										}
+									}
+
+									this.flashCount--;
+								}
+							}.bind(aaModalPromptMenu), 100);
+
+							aaModalPromptMenu.flashCount = 6;
+						}
+					}
+				}.bind(modalContainer), true);
+
+				var modalHTML = "";
+
+				// header
+				var modalYPos = (window.innerHeight / 3) + "px";
+				var modalWindowHeaderHTML = arcadeHud.generateWindowHeaderHTML(title, "margin-left: auto; margin-right: auto; top: " + modalYPos + "; width: 600px;", true, true, "", "");
+				modalHTML += modalWindowHeaderHTML;
+
+				// body
+				modalHTML += '<div class="aaWindowPaneContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTitleTextSizeFontSize aaTextColorTwoColor">';
+
+				modalHTML += "<table style='margin-left: 0; margin-right: 0;'>\
+					<tr>\
+						<td>\
+							<img src='clock.png' style='width: 78px;' />\
+						</td>\
+						<td style='padding-left: 15px;'>";
+
+				modalHTML += "<div style='font-family: Arial; text-align: justify; white-space: normal;' class='aaTextSizeFontSize aaTextColorTwoColor'>";
+				modalHTML += text;
+
+				modalHTML += "</div>";
+				modalHTML += "</td></tr></table>";
+				modalHTML += "</div>";
+
+				modalHTML += '\
+					<table class="aaWindowActions">\
+						<tr>\
+							<td>\
+							</td>\
+							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Continue" />\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Cancel" />\
+							</td>\
+						</tr>\
+					</table>\
+				';
+
+				// footer
+				var modalWindowFooterHTML = arcadeHud.generateWindowFooterHTML();
+				modalHTML += modalWindowFooterHTML;
+
+				modalContainer.innerHTML = modalHTML;
+				aaModalPromptMenu = modalContainer.querySelector(".aaWindow");
+				document.body.appendChild(modalContainer);
+
+				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
+				buttons[0].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(yesAction);
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
+					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
+					aaModalPromptMenu = undefined;
+
+					eval(noAction);
+				}, true);
+			}
+		</script>
 
 	</body>
 </html>

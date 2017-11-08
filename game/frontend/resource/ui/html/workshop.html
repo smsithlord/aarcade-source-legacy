@@ -11,7 +11,8 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Workshop", "", false, true, "window.location='asset://ui/addons.html';", "aaapi.system.deactivateInputMode();");
+			var uiBack = arcadeHud.getParameterByName("uiback");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Workshop", "", false, true, uiBack, "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
 

@@ -181,7 +181,7 @@
 
 		<script>
 			var uiBack = arcadeHud.getParameterByName("uiback");
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Awesomium Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Kodi Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
 
@@ -216,21 +216,18 @@
 		</script>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
-			<table class="aaKeyValueTable" style="display: none; width: 100%;" cellspacing="0"></table>
-
-			<!-- Clear Awesomium Cache -->
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Clear Awesomium Cache" onclick="doClearCache(this);" help="Misc. user preferences, your backpack, and object transforms are remembered in the Awesomium cache. Clearing your cache will reset these handful of not-so-important preferences." /><br />
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
 		</div>
 
 		<div class="aaScrollBars aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; max-width: 420px; font-family: Arial;" tabid="about">
-			<div onclick="aaapi.system.popout('awesomium');" style="text-align: center;">
+			<div onclick="aaapi.system.popout('kodi');" style="text-align: center;">
 				<script>
-					var iconHTML = arcadeHud.generateIconHTML("awesomiumlogo.png", 298, 69, "aaThemeColorOneColor");
+					var iconHTML = arcadeHud.generateIconHTML("kodilogo.png", 282, 96, "aaThemeColorOneColor");
 					document.write(iconHTML);
 				</script>
 				<br />
 				<div class="aaTitleText aaThemeColorOneColor aaTitleSizeFontSize">
-					<div style="display: inline; text-decoration: underline;">Visit Awesomium Website</div>
+					<div style="display: inline; text-decoration: underline;">Visit Kodi Website</div>
 					<div style="display: inline; position: relative; top: -4px;">
 						<script>
 							var iconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
@@ -240,13 +237,11 @@
 				</div>
 			</div>
 			<br />
-			Awesomium is a free HTML rendering & JavaScript framework that is <b>excellent</b> for building UIs with.<br />
+			AArcade <b>cannot</b> render Kodi to the in-game screens.  However, AArcade <b>can</b> use Kodi's network play features instead of launching video files locally.<br />
 			<br />
-			AArcade uses it to power its UI menus.<br />
+			Note that the Kodi that receives the network play messages <b>must</b> be able to access the video file at the <b>same</b> path that the local PC uses in the shortcut.<br />
 			<br />
-			Awesomium is <b>not</b> suitable to use for displaying web content because it is based on a very outdated Chromium build.<br />
-			<br />
-			The Awesomium project is currently undergoing a rennovation, as their website indicates, and could possibly become more useful in the future.
+			This feature is difficult to configure & only recommended for advanced users.
 		</div>
 
 		<script>
@@ -280,16 +275,6 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
-			function doClearCache(elem)
-			{
-				localStorage.clear();
-				aaapi.system.clearAwesomiumCache();
-				elem.style.pointerEvents = "none";
-				elem.classList.remove("aaThemeColorTwoHoverShadedBackground");
-				elem.classList.add("disabledButton");
-				elem.classList.add("aaThemeColorTwoLowShadedBackground");
-			}
-
 			var entryForm = document.querySelector("#entryForm");
 			entryForm.addEventListener("submit", function(e)
 			{
@@ -311,29 +296,99 @@
 			}.bind(entryForm), true);
 
 			var categories = {
-				/*
 				"general":
 				{
-					"web_home":
+					"kodi_enable":
 					{
-						"title": "Homepage",
-						"type": "text",
-						"help": "The URL you want to use as your homepage.  If left blank (recommended), the dynamic Anarchy Portal is used.<br /><br />Custom homepage *must* start with http or https.",
-						"valueTitles": {"placeholder": "(Anarchy Portal)"},
+						"title": "Enable Kodi Video Playback",
+						"type": "toggle",
+						"help": "Instead of opening normally when you click PLAY, video files can be sent to Kodi via the Web Server feature in Kodi's Options > Services > Web Server menu.  The info you enter on that Kodi menu is what you type into AArcade's option boxes here. You should be running Kodi on the same PC as AArcade because the file location of the video needs to be the same.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
 						"value": null,
 						"getValue": function()
 						{
-							var val = aaapi.system.getConVarValue("web_home");
+							var val = aaapi.system.getConVarValue("kodi");
 							this.value = val;
 						},
 						"setValue": function(val)
 						{
 							this.value = val;
-							aaapi.system.consoleCommand("web_home \"" + this.value + "\"");
+							aaapi.system.consoleCommand("kodi " + this.value);
+						}
+					},
+					"kodi_ip":
+					{
+						"title": "Kodi IP",
+						"type": "text",
+						"help": "If you use Kodi, this is the IP of the PC running Kodi.  Usually your own LAN IP.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_ip");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_ip \"" + this.value + "\"");
+						}
+					},
+					"kodi_port":
+					{
+						"title": "Kodi Port",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PORT.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_port");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_port \"" + this.value + "\"");
+						}
+					},
+					"kodi_user":
+					{
+						"title": "Kodi User",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for USERNAME.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_user");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_user \"" + this.value + "\"");
+						}
+					},
+					"kodi_password":
+					{
+						"title": "Kodi Password",
+						"type": "text",
+						"help": "If you use Kodi, this would be the same as what you have in Kodi's Options > Services > Web Server menu for PASSWORD.  Note that the Kodi web server API is accessed through GET requests, so your password is NOT encrypted and therfore NOT private and stored in a PUBLIC Source engine console variable.  Do NOT use a real password on your Kodi Web Server if you're using it for LAN stuff like this.",
+						"valueTitles": {"placeholder": "(NOT HIDDEN)"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("kodi_password");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("kodi_password \"" + this.value + "\"");
 						}
 					}
 				}
-				*/
 			};
 
 			function findOptionById(optionId)

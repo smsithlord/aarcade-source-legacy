@@ -126,7 +126,7 @@ function ArcadeHud()
 
 	this.onDOMReady().then(function()
 	{
-		console.log("DOM ready on " + document.location.href);
+		//console.log("DOM ready on " + document.location.href);
 		this.DOMParser = new DOMParser();
 
 		/*
@@ -861,7 +861,7 @@ function ArcadeHud()
 		}
 		else if( document.location.href !== "asset://ui/imageLoader.html" )
 		{
-			console.log("Requesting activate input mode from " + document.location.href);
+			//console.log("Requesting activate input mode from " + document.location.href);
 			aaapi.system.requestActivateInputMode();	// gets called needlessly when an object is de-selected, but fuck it.
 		}
 
@@ -1396,6 +1396,13 @@ ArcadeHud.prototype.onURLChanged = function(url, scraperId, itemId, field)
 		if( scraperId !== "" )
 			this.onBrowserFinishedRequest(url, scraperId, itemId, field);
 	}
+
+	if( this.activeScraperId === "importSteamGames" )
+	{
+		var headerContainerElem = document.querySelector(".hudHeaderContainer");
+		headerContainerElem.style.visibility = "hidden";
+		headerContainerElem.style.pointerEvents = "none";
+	}
 };
 
 ArcadeHud.prototype.onActivateInputMode = function(
@@ -1424,7 +1431,7 @@ ArcadeHud.prototype.onActivateInputMode = function(
 		connectedToUniverse
 	)
 {
-	console.log("onActivateInputMode received.");
+	//console.log("onActivateInputMode received.");
 	isFullscreen = parseInt(isFullscreen);
 	isHudPinned = parseInt(isHudPinned);
 	isMapLoaded = parseInt(isMapLoaded);
@@ -1437,9 +1444,15 @@ ArcadeHud.prototype.onActivateInputMode = function(
 	libretroCanRun = (libretroCanRun == "1") ? true : false;
 	connectedToUniverse = (connectedToUniverse == "1") ? true : false;
 
+	if( this.activeScraperId === "importSteamGames" )
+	{
+		var headerContainerElem = document.querySelector(".hudHeaderContainer");
+		headerContainerElem.style.visibility = "hidden";
+		headerContainerElem.style.pointerEvents = "none";
+	}
+
 	if( !!!activeScraperId )
 		activeScraperId = "";
-	console.log(activeScraperId);
 
 	// should we set active scraper ID for the arcadeHud here? (probably, why not.)
 	this.activeScraperId = activeScraperId;
@@ -2830,8 +2843,50 @@ ArcadeHud.prototype.onBrowserFinishedRequest = function(url, scraperId, itemId, 
 					{
 						if( response.validForScrape )
 						{
-							console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
+							var scrapeButtonElem = document.querySelector("#hudMetaScrapeButton");
+
+							//console.log("Display the 'scrape field' prompt for " + this.scraper.title + "'s " + this.field + " for item " + this.itemId);
+							var regex = /steamcommunity.com\/id\/.*\/games\?tab=all/g;
+							if( regex.test(url) )
+							{
+								//var headerContainerElem = document.querySelector(".hudHeaderContainer");
+								//headerContainerElem.style.visibility = "hidden";
+								//headerContainerElem.style.pointerEvents = "none";
+
+								document.querySelector("#dynamicScrapeButton").innerHTML = "IMPORT STEAM GAMES";
+								scrapeButtonElem.setAttribute("help", "Import all of these games into your Anarchy Arcade library.");
+
+								var shouldSpeak = localStorage.getItem("shouldSpeak");
+								if( !shouldSpeak || shouldSpeak === "yes" )
+									aaapi.system.playSound("hudvocals/importsteamgames.mp3");
+							}
+
 							container.style.display = "block";
+							container.style.left = -container.offsetWidth + "px";
+							container.style.display = "none";
+							container.offsetWidth;
+							//setTimeout(function()
+							//{
+								//var container = document.querySelector("#hudSideScrapeContainer");
+								container.style.display = "block";
+								container.offsetWidth;
+								container.style.left = "0px";
+
+								setInterval(function()
+								{
+									if( this.classList.contains("aaThemeColorOneHoverBackgroundColor") )
+									{
+										this.classList.remove("aaThemeColorOneHoverBackgroundColor");
+										this.classList.add("aaThemeColorOneHighHoverBackgroundColor");
+									}
+									else
+									{
+										this.classList.remove("aaThemeColorOneHighHoverBackgroundColor");
+										this.classList.add("aaThemeColorOneHoverBackgroundColor");
+									}
+								}.bind(scrapeButtonElem), 1000);
+							//}, 1000);
+
 							container.scraperId = this.scraper.id;
 							container.itemId = this.itemId;
 							container.field = this.field;

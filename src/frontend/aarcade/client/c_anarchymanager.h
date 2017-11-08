@@ -82,6 +82,10 @@ struct panoStuff_t {
 	std::string titles;
 	std::string toast;
 	std::string developer;
+	std::string exposuremin;
+	std::string exposuremax;
+	std::string hdrlevel;
+	//std::string firstperson;	// not sure how to check if we're already in 1st person, so gonna have to just switch into 1st and not switch back.
 };
 
 struct nextLoadInfo_t {
@@ -166,6 +170,7 @@ public:
 
 	std::string ExtractRelativeAssetPath(std::string fullPath);
 
+	void JoinLobby(std::string lobbyId);
 	void PopToast();
 	void AddToastMessage(std::string text);
 	void SetNextToastExpiration(float fValue) { m_fNextToastExpiration = fValue; }
@@ -221,6 +226,9 @@ public:
 	bool CompareLoadedFromKeyValuesFileId(const char* testId, const char* baseId);
 
 	void Feedback(std::string type);
+	void Popout(std::string popoutId, std::string auxId = "");
+
+	void PlaySound(std::string file);
 
 	void HardPause();
 	void WakeUp();
@@ -259,6 +267,8 @@ public:
 
 	void AddHoverGlowEffect(C_BaseEntity* pEntity);
 	void RemoveLastHoverGlowEffect();
+
+	std::string GetAutoInspectImageFlags();
 
 	void ShowFileBrowseMenu(std::string browseId);// const char* keyFieldName, KeyValues* itemKV);
 	void OnBrowseFileSelected(std::string browseId, std::string response);

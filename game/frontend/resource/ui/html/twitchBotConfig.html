@@ -181,7 +181,7 @@
 
 		<script>
 			var uiBack = arcadeHud.getParameterByName("uiback");
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Awesomium Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Twitch Bot Properties", "", true, true, uiBack, "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
 
@@ -208,29 +208,25 @@
 			});
 			document.write(windowTabsHeaderHTML);
 
-			/*
 			function gotoPage(page, tab)
 			{
 				window.location='asset://ui/' + page + '?uiback=' + encodeURIComponent("window.location='asset://ui/options.html?tab=" + tab + "';");
-			}*/
+			}
 		</script>
 
 		<div class="aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="general">
-			<table class="aaKeyValueTable" style="display: none; width: 100%;" cellspacing="0"></table>
-
-			<!-- Clear Awesomium Cache -->
-			<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="Clear Awesomium Cache" onclick="doClearCache(this);" help="Misc. user preferences, your backpack, and object transforms are remembered in the Awesomium cache. Clearing your cache will reset these handful of not-so-important preferences." /><br />
+			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0"></table>
 		</div>
 
 		<div class="aaScrollBars aaTabContent aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px; max-width: 420px; font-family: Arial;" tabid="about">
-			<div onclick="aaapi.system.popout('awesomium');" style="text-align: center;">
+			<div onclick="aaapi.system.popout('twitch');" style="text-align: center;">
 				<script>
-					var iconHTML = arcadeHud.generateIconHTML("awesomiumlogo.png", 298, 69, "aaThemeColorOneColor");
+					var iconHTML = arcadeHud.generateIconHTML("twitchlogo.png", 155, 100, "aaThemeColorOneColor");
 					document.write(iconHTML);
 				</script>
 				<br />
 				<div class="aaTitleText aaThemeColorOneColor aaTitleSizeFontSize">
-					<div style="display: inline; text-decoration: underline;">Visit Awesomium Website</div>
+					<div style="display: inline; text-decoration: underline;">Visit Twitch Website</div>
 					<div style="display: inline; position: relative; top: -4px;">
 						<script>
 							var iconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
@@ -240,13 +236,11 @@
 				</div>
 			</div>
 			<br />
-			Awesomium is a free HTML rendering & JavaScript framework that is <b>excellent</b> for building UIs with.<br />
+			AArcade has <b>extremely primitive</b> bot support. There is not even documentation for it yet; however, if you are a good programmer & have your own bot, you will likely be able to hook it all up pretty quickly w/ some effort.<br />
 			<br />
-			AArcade uses it to power its UI menus.<br />
+			AArcade events, such as clicking on objects or launching shortcuts, can have their meta info written to a <i>.js</i> and <i>XML</i> file that you can monitor for changes.<br />
 			<br />
-			Awesomium is <b>not</b> suitable to use for displaying web content because it is based on a very outdated Chromium build.<br />
-			<br />
-			The Awesomium project is currently undergoing a rennovation, as their website indicates, and could possibly become more useful in the future.
+			After you get your code hooked into the events, the sky's the limit. May the Force be with you.
 		</div>
 
 		<script>
@@ -280,16 +274,6 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
-			function doClearCache(elem)
-			{
-				localStorage.clear();
-				aaapi.system.clearAwesomiumCache();
-				elem.style.pointerEvents = "none";
-				elem.classList.remove("aaThemeColorTwoHoverShadedBackground");
-				elem.classList.add("disabledButton");
-				elem.classList.add("aaThemeColorTwoLowShadedBackground");
-			}
-
 			var entryForm = document.querySelector("#entryForm");
 			entryForm.addEventListener("submit", function(e)
 			{
@@ -311,29 +295,81 @@
 			}.bind(entryForm), true);
 
 			var categories = {
-				/*
 				"general":
 				{
-					"web_home":
+					"broadcast_enable":
 					{
-						"title": "Homepage",
-						"type": "text",
-						"help": "The URL you want to use as your homepage.  If left blank (recommended), the dynamic Anarchy Portal is used.<br /><br />Custom homepage *must* start with http or https.",
-						"valueTitles": {"placeholder": "(Anarchy Portal)"},
+						"title": "Enable Broadcast Mode Meta Output",
+						"type": "toggle",
+						"help": "This is for Twitch streamers to tie AArcade into their OBS overlay. It causes META info about the selected item be outputted into a file in the specified folder. It also outputs an event when a game is launched that includes the title of the game.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
 						"value": null,
 						"getValue": function()
 						{
-							var val = aaapi.system.getConVarValue("web_home");
+							var val = aaapi.system.getConVarValue("broadcast_mode");
 							this.value = val;
 						},
 						"setValue": function(val)
 						{
 							this.value = val;
-							aaapi.system.consoleCommand("web_home \"" + this.value + "\"");
+							aaapi.system.consoleCommand("broadcast_mode " + this.value);
+						}
+					},
+					"broadcast_game":
+					{
+						"title": "Game Name",
+						"type": "text",
+						"help": "This is to control the name of the game you are set as broadcasting.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("broadcast_game");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("set_broadcast_game \"" + this.value + "\"");
+						}
+					},
+					"broadcast_auto_game":
+					{
+						"title": "Automatically Set Game Name",
+						"type": "toggle",
+						"help": "This will cause AArcade to automatically set your game to the title of any item you launch, and then set it back to AArcade upon returning to AArcade & unpausing it after.",
+						"valueTitles": {"0": "Disabled", "1": "Enabled"},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("broadcast_auto_game");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("broadcast_auto_game " + this.value);
+						}
+					},
+					"broadcast_folder":
+					{
+						"title": "Broadcast Folder",
+						"type": "text",
+						"help": "This is the folder that meta output is written to, if enabled.",
+						"valueTitles": {"placeholder": ""},
+						"value": null,
+						"getValue": function()
+						{
+							var val = aaapi.system.getConVarValue("broadcast_folder");
+							this.value = val;
+						},
+						"setValue": function(val)
+						{
+							this.value = val;
+							aaapi.system.consoleCommand("broadcast_folder \"" + this.value + "\"");
 						}
 					}
 				}
-				*/
 			};
 
 			function findOptionById(optionId)

@@ -209,6 +209,14 @@
 
 		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; padding: 20px; max-height: 600px; max-width: 400px;">
 			<table class="aaKeyValueTable" style="width: 100%;" cellspacing="0">
+				<tr class="helpNote" help="yadda">
+					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
+						Instance Title:
+					</td>
+					<td style="text-align: right; padding: 4px; white-space: nowrap;" class="aaKeyValueTableValue">
+						<input type="text" class="aaTextSizeFontSize" value="" placeholder="" id="title" />
+					</td>
+				</tr>
 				<tr class="helpNote" help="The name of your lobby is used in your invite URL. Leave blank if you don't care.<br /><br />Keep it as short as you can.  Letters & numbers only, and must start with a letter.">
 					<td class="aaKeyValueTableKey aaTextColorTwoColor aaTextSizeFontSize">
 						Lobby Name:
@@ -256,6 +264,7 @@
 		<a href="javascript:location.reload();" class="devReload">&bull;&nbsp;</a>
 
 		<script>
+			var titleElem = document.querySelector("#title");
 			var lobbyElem = document.querySelector("#lobby");
 			var passwordElem = document.querySelector("#password");
 			var isPublicElem = document.querySelector("#isPrivate");
@@ -263,6 +272,8 @@
 			var lobbyValue = aaapi.system.getConVarValue("aamp_lobby_id");
 			var passwordValue = aaapi.system.getConVarValue("aamp_lobby_password");
 
+			var worldInfo = aaapi.system.getWorldInfo();
+			titleElem.value = worldInfo.instance.title;
 			lobbyElem.value = lobbyValue;
 			passwordElem.value = passwordValue;
 
@@ -355,14 +366,30 @@
 
 			function doHostNow()
 			{
-				// first save our changes
-				var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
-				cmd += " aamp_lobby_id \"" + lobbyElem.value + "\";";
-				cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
-				aaapi.system.consoleCommand(cmd);
+				var titleValue = titleElem.value;
 
-				// then start hosting
-				window.location = 'asset://ui/hostSessionProgress.html';
+				// first, check if our session name is valid
+				var letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				var alphabet = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				if( !aaapi.system.alphabetSafe(lobbyElem.value[0], letters) || !aaapi.system.alphabetSafe(lobbyElem.value, alphabet) )
+				{
+					console.log("YOOOO! Your title is whack, yo.");
+					return;
+				}
+
+				// then continue
+				var success = aaapi.library.updateInstance(worldInfo.instance.id, ["title", titleValue]);
+				if( success )
+				{
+					// first save our changes
+					var cmd = "aamp_public " + isPublicElem.inputOption.value + ";";
+					cmd += " aamp_lobby_id \"" + lobbyElem.value + "\";";
+					cmd += " aamp_lobby_password \"" + passwordElem.value + "\"; host_writeconfig;";
+					aaapi.system.consoleCommand(cmd);
+
+					// then start hosting
+					window.location = 'asset://ui/hostSessionProgress.html';
+				}
 			}
 		</script>
 	</body>

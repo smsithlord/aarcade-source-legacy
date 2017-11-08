@@ -167,6 +167,7 @@
         elemImage.style.height = "100%";
       }
 
+      var isInitialResize = true;
       var maxRatioDifference = 0.4;
       var originalWidth;
       var originalHeight;
@@ -185,7 +186,7 @@
 
         var targetRatio = window.innerWidth/window.innerHeight;
         var actualRatio = (imageWidth * 1.0) / (imageHeight * 1.0);
-        if( Math.abs(targetRatio - actualRatio) > maxRatioDifference )
+        if( (!isInitialResize || g_imageModeFlags === "0") && Math.abs(targetRatio - actualRatio) > maxRatioDifference )
         {
           if( imageWidth/imageHeight > window.innerWidth/window.innerHeight )
           {
@@ -212,6 +213,8 @@
           elemImage.style.height = "100%";
           bIsFullscreenImage = true;
         }
+
+        isInitialResize = false;
       }
     </script>
 
@@ -226,6 +229,8 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+
+var g_imageModeFlags = getParameterByName("imageflags");
 
 function ExtractYouTubePlaylistId(trailerURL)
 {
@@ -303,6 +308,12 @@ function showImage(title, fieldValue)
   {
     ResizeImage();
    // window.location = "http://jk.smsithlord.com/";
+  }, true);
+  
+  imageElem.addEventListener("wheel", function(e)
+  {
+    if( bShouldScroll )
+      ClearScrollImage();
   }, true);
 
   var lastClick;// = new Date();

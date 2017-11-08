@@ -237,6 +237,7 @@
 							<td>\
 							</td>\
 							<td style="width: 1%; white-space: nowrap;">\
+								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Abort" />\
 								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Create Backup" />\
 								<input type="button" class="aaButton aaTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" style="padding: 6px; padding-left: 12px; padding-right: 12px;" value="Continue Importing Models" />\
 							</td>\
@@ -276,13 +277,18 @@
 				var buttons = modalContainer.querySelectorAll(".aaWindowActions input[type='button']");
 				buttons[0].addEventListener("click", function(e)
 				{
+					aaapi.system.deactivateInputMode();
+				}, true);
+
+				buttons[1].addEventListener("click", function(e)
+				{
 					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
 					aaModalPromptMenu = undefined;
 
 					eval(yesAction);
 				}, true);
 
-				buttons[1].addEventListener("click", function(e)
+				buttons[2].addEventListener("click", function(e)
 				{
 					aaModalPromptMenu.parentNode.parentNode.removeChild(aaModalPromptMenu.parentNode);
 					aaModalPromptMenu = undefined;

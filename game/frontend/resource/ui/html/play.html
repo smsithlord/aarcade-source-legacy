@@ -17,6 +17,25 @@
 		<div style="display: inline-block;">
 
 		<script>
+
+			// get the current mapHistory (or create an empty mapHistory)
+			var mapHistory;
+			var g_serversInitialized = false;
+			var g_mapsInitialized = false;
+			var maps = new Array();
+			var mapz;
+			var badMapFiles;
+			var worldContextContainer;
+			var searchingForServersElem;
+			var earlyaccessElem;
+			var serversTable;
+			var g_localUserIP;
+			var g_localUserHashedIP;
+			var rootRef;
+			var html = "Instances";
+			var iconSize = arcadeHud.themeSizes.IconSize;
+			var iconHTML = arcadeHud.generateIconHTML("popouticon.png", 24, 24, "aaThemeColorOneColor");
+
 			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Play", "", true, true, "window.location='asset://ui/welcome.html';", "aaapi.system.deactivateInputMode();");
 			document.write(windowHeaderHTML);
 		</script>
@@ -42,6 +61,10 @@
 					{
 						"id": "custom",
 						"title": "Maps"
+					},
+					{
+						"id": "servers",
+						"title": "Servers"
 					}
 				],
 				"activeTabId": tabId,
@@ -52,31 +75,58 @@
 			function onChangeCallback(tabId)
 			{
 				sessionStorage.setItem("aaPlayTab", tabId);
-			}
 
-			// get the current mapHistory (or create an empty mapHistory)
-			var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
-/*
-			var sortedMapHistory = [];
-			var mapHistoryKeys = Object.keys(mapHistory);
-			for( var i = 0; i < mapHistoryKeys.length; i++ )
-				sortedMapHistory.push(mapHistory[////]);
+				if( tabId !== "worlds" )
+					worldContextContainer.style.display = "none";
+				else
+					worldContextContainer.style.display = "block";
 
-			sortedMapHistory.sort()
-*/
-			var worldContextContainer = document.querySelector("#worldContextContainer");
-			worldContextContainer.mapFileShort = null;
+				if( tabId === "servers" )
+				{
+					if( !g_serversInitialized )
+						initServersTab();
+				}
+				else if( tabId === "custom" )
+				{
+					if( !g_mapsInitialized )
+					{
+						g_mapsInitialized = true;
+						
+						worldContextContainer.mapFileShort = null;
+						mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
+						mapz = aaapi.system.getAllMaps();
 
-			var mapz = aaapi.system.getAllMaps();
+						// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
+						badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
 
-			// TODO: badMaps needs to be something users define in the UI that gets passed to this menu.
-			var badMapFiles = ["beefcaike.bsp", "sm_anarchy.bsp", "ge_transition.bsp"];
+						for( var y in mapz )
+						{
+							if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
+								maps.push(mapz[y]);
+						}
 
-			var maps = new Array();
-			for( var y in mapz )
-			{
-				if( mapz[y].title.indexOf("background") !== 0 &&  mapz[y].title !== "blank" && badMapFiles.indexOf(mapz[y].platforms[arcadeHud.platformId].file.toLowerCase()) === -1 )
-					maps.push(mapz[y]);
+						// create a container for the most recent maps and add it to the top of the maps list.
+						var recentContainer = document.createElement("div");
+						recentContainer.id = "recentContainer";
+						recentContainer.className = "aaThemeColorTwoShadedBackground aaThemeColorTwoBorderColor helpNote";
+						recentContainer.setAttribute("help", "These are your 4 most recently loaded maps.");
+						recentContainer.style.cssText = "border-style: solid; border-width: 2px; border-radius: 20px; padding: 20px; text-align: center;";
+
+						// spawn the most recent maps
+						maps.sort(sortRecent);
+						for( var x = 0; x < maps.length && x < 4; x++)
+							generateMap(maps, x, recentContainer);
+
+						mapsContainer.appendChild(recentContainer);
+
+						// spawn all of the maps, alphabetically.
+						maps.sort(sortFilename);
+						for( var x = 0; x < maps.length; x++)
+							generateMap(maps, x);
+
+						deadSea(document.querySelector("#mapsContainer"));
+					}
+				}
 			}
 
 			function sortFilename(a, b)
@@ -335,7 +385,141 @@
 			</div>
 		</div>
 
+		<style>
+			#searchingForServers
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#earlyaccess
+			{
+				font-family: Arial;
+				font-size: 20px;
+				font-weight: 900;
+				text-align: center;
+				padding: 20px;
+				padding-top: 0;
+			}
+
+			#serversTable
+			{
+				width: 100%;
+				max-width: 700px;
+			}
+
+			#serversTable td
+			{
+				font-family: Arial;
+				padding: 8px;
+			}
+
+			#serversTable tr td:nth-child(1)
+			{
+				border-top-left-radius: 8px;
+				border-bottom-left-radius: 8px;
+				padding-right: 12px;
+				min-width: 420px;
+				max-width: 600px;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+
+			#serversTable tr:hover td:nth-child(1)
+			{
+				text-decoration: underline;
+			}
+
+			#serversTable tr td:nth-child(2)
+			{
+				border-top-right-radius: 8px;
+				border-bottom-right-radius: 8px;
+				margin-right: 12px;
+				white-space: nowrap;
+				width: 1px;
+			}
+
+			#serversTable tr:nth-child(even) td
+			{
+				background-color: transparent;
+			}
+		</style>
+
+		<style>
+			.loadingIndicator
+			{
+				width: 50px;
+				height: 50px;
+				border-width: 10px;
+				border-radius: 50%;
+				border-style: dashed;
+				-webkit-animation: spin 4s infinite linear;
+			}
+
+			@-webkit-keyframes spin
+			{
+				0%  {-webkit-transform: rotate(0deg);}
+				100% {-webkit-transform: rotate(360deg);}   
+			}
+
+			.animatedEllipsis
+			{
+				display: inline;
+			}
+
+			.animatedEllipsis div
+			{
+				display: inline;
+				visibility: hidden;
+			}
+		</style>
+
+		<div class="aaTabContent aaScrollBars aaTextSize aaTextColorTwoColor aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor" tabid="servers" style="max-height: 600px; padding-right: 32px;">
+			<div id="searchingForServers">
+				<center>
+					<br />
+					<div class="loadingIndicator aaThemeColorOneBorderColor"></div>
+					<br />
+					Searching for servers<div class="animatedEllipsis"><div>.</div><div>.</div><div>.</div></div>
+				</center>
+			</div>
+			<div id="earlyaccess" style="display: none;"><div class="aaTitleText aaThemeColorOneColor aaTitleTextSizeFontSize">EARLY ACCESS</div>Servers can only be joined in a web browser, for now.</div>
+			<table id="serversTable" cellspacing="0" cellpadding="0">
+			</table>
+		</div>
+
 		<script>
+			setInterval(function()
+			{
+				var animatedEllipsisElems = document.querySelectorAll(".animatedEllipsis");
+				var animatedEllipsisElem, animatedEllipsisDivs;
+				for( var i = 0; i < animatedEllipsisElems.length; i++ )
+				{
+					animatedEllipsisElem = animatedEllipsisElems[i];
+					if( !!!animatedEllipsisElem.state )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisElem.state++;
+
+					if( animatedEllipsisElem.state > 3 )
+						animatedEllipsisElem.state = 0;
+
+					animatedEllipsisDivs = animatedEllipsisElem.querySelectorAll("div");
+					for( var j = 0; j < animatedEllipsisDivs.length; j++ )
+					{
+						if( j < animatedEllipsisElem.state )
+							animatedEllipsisDivs[j].style.visibility = "visible";
+						else
+							animatedEllipsisDivs[j].style.visibility = "hidden";
+					}
+				}
+			}, 500);
+
 			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
 			document.write(windowTabsFooterHTML);
 		</script>
@@ -366,10 +550,9 @@
 
 		<script>
 			var tga = new TGA();
-			var mapsContainer = document.querySelector("#mapsContainer");
 
+			var mapsContainer = document.querySelector("#mapsContainer");
 			var g_screenshots = aaapi.system.getAllMapScreenshots();
-			
 
 			function compareIds(testId, baseId)
 			{
@@ -486,41 +669,6 @@
 				//}
 			}
 
-				var iconSize = arcadeHud.themeSizes.IconSize;
-				var html = "Instances";//arcadeHud.generateIconHTML("close.png", iconSize, iconSize, "aaTextColorOneColor");
-			//var count = 0;
-
-			var recentContainer = document.createElement("div");
-			recentContainer.id = "recentContainer";
-			recentContainer.className = "aaThemeColorTwoShadedBackground aaThemeColorTwoBorderColor helpNote";
-			recentContainer.setAttribute("help", "These are your 4 most recently loaded maps.");
-			recentContainer.style.cssText = "border-style: solid; border-width: 2px; border-radius: 20px; padding: 20px; text-align: center;";
-
-			/*var recentTitleContainer = document.createElement("div");
-			recentTitleContainer.id = "recentTitleContainer";
-			recentTitleContainer.className = "aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize";
-			recentTitleContainer.innerHTML = "Recently Visited<hr />";
-			recentContainer.appendChild(recentTitleContainer);*/
-
-			maps.sort(sortRecent);
-			for( var x = 0; x < maps.length && x < 4; x++)
-				generateMap(maps, x, recentContainer);
-
-			//recentContainer.appendChild(document.createElement("hr"));
-			mapsContainer.appendChild(recentContainer);
-/*
-			var allTitleContainer = document.createElement("div");
-			allTitleContainer.className = "aaThemeColorOneColor aaTitleText aaTitleTextSizeFontSize";
-			allTitleContainer.innerHTML = "All<hr />";
-			mapsContainer.appendChild(allTitleContainer);
-*/
-			maps.sort(sortFilename);
-			for( var x = 0; x < maps.length; x++)
-				generateMap(maps, x);
-
-			// cause the initially visible cards to load their thumbnails
-			deadSea(mapsContainer);
-
 			//var scrollElemHeight;
 			function deadSea(scrollElem)
 			{
@@ -571,6 +719,225 @@
 				// cause the initially visible search result cards to load their thumbnails
 				deadSea(mapsContainer);
 			}
+
+			function addServerRow(lobbyId, title, count)
+			{
+				//var lobbyId = "huh";
+				//var title = "Yaddaz";
+				//var count = 420;
+
+				if( searchingForServersElem.style.display !== "none" )
+				{
+					searchingForServersElem.style.display = "none";
+					earlyaccessElem.style.display = "block";
+				}
+
+				var row = document.createElement("tr");
+				row.className = "aaTitleTextSizeFontSize aaTextColorTwoColor";
+				row.setAttribute("lobbyId", lobbyId);
+				row.addEventListener("click", function()
+				{
+					console.log(this.getAttribute("lobbyId"));
+					aaapi.network.joinLobby(this.getAttribute("lobbyId"));
+				}.bind(row), false);
+
+				var titleCel = document.createElement("td");
+				titleCel.className = "aaThemeColorTwoBackgroundColor";
+
+				var iconElem = document.createElement("div");
+				iconElem.style.cssText = "display: inline; position: relative; top: -4px; padding-right: 12px;";
+				iconElem.innerHTML = iconHTML;
+
+				var titleText = document.createTextNode(title);
+
+				var playersCel = document.createElement("td");
+				playersCel.className = "aaTextSizeFontSize aaThemeColorTwoBackgroundColor"
+				playersCel.innerHTML = "(<div class='playersNumber' style='display: inline;'>" + count + "</div> players)";
+
+				row.appendChild(titleCel);
+				titleCel.appendChild(iconElem);
+				titleCel.appendChild(titleText);
+				row.appendChild(playersCel);
+				serversTable.appendChild(row);
+			}
+
+			function loadJavaScripts(fileNames)
+			{
+				// Decalre some important variables
+				var filesLoaded = 0;
+
+				// Async
+				return {
+						"then": function(loadJavaScriptsCallback)
+						{
+							//loadJavaScriptsCallback(fileNames[filesLoaded], loadJavaScriptsCallback);
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+						}
+					};
+
+				// Helper functions (that use the important variables)
+				function loadAJavaScript(fileName, loadJavaScriptsCallback)
+				{
+					var elem = document.createElement("script");
+					elem.type = "text/javascript";
+					elem.src = fileName;
+
+					elem.addEventListener("load", function()
+					{
+						filesLoaded++;
+
+						if( filesLoaded === fileNames.length )
+							loadJavaScriptsCallback();
+						else
+							loadAJavaScript(fileNames[filesLoaded], loadJavaScriptsCallback);
+					});
+
+					// We are added to the head so loading will begin immediately & asynchronously
+					document.getElementsByTagName("head")[0].appendChild(elem);
+				}
+			};
+
+			// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+			Number.prototype.unsign = function(bytes)
+			{
+				return this >= 0 ? this : Math.pow(256, bytes || 4) + this;
+			};
+
+			// kodi crc code originally from: http://forum.kodi.tv/showthread.php?tid=58389
+			function generateCRC(data_in)
+			{
+				var data = data_in.toLowerCase();
+				data = data.replace(/\//g,"\\");
+
+			    var CRC = 0xffffffff;
+			    data = data.toLowerCase();
+			    for ( var j = 0; j < data.length; j++) {
+			        var c = data.charCodeAt(j);
+			        CRC ^= c << 24;
+			        for ( var i = 0; i < 8; i++) {
+			            if (CRC.unsign(8) & 0x80000000) {
+			                CRC = (CRC << 1) ^ 0x04C11DB7;
+			            } else {
+			                CRC <<= 1;
+			            }
+			        }
+			    }
+			    if (CRC < 0)
+			        CRC = CRC >>> 0;
+			    var CRC_str = CRC.toString(16);
+			    while (CRC_str.length < 8) {
+			        CRC_str = '0' + CRC_str;
+			    }
+
+			    return CRC_str;
+			};
+
+			function lobbyAdded(child, prevChildKey)
+			{
+				var lobbyInfo = child.val();
+				if( !lobbyInfo.isPublic )
+					return;
+
+				rootRef.child(lobbyInfo.universe).child("info").child("banned").child(g_localUserHashedIP).once("value", function(bannedSnapshot)
+				{
+					if( !bannedSnapshot.exists() )
+					{
+						rootRef.child(lobbyInfo.universe).child("library").child("instances").child(lobbyInfo.instance).child("current").once("value", function(instanceSnapshot)
+						{
+							var instanceInfo = instanceSnapshot.val();
+							if( !!!instanceInfo )
+							{
+								console.log("Error.  Instance was null.");
+								return;
+							}
+
+							if( !!!instanceInfo.password || instanceInfo.password === "" )
+							{
+								// fetch all users in this universe
+								rootRef.child(lobbyInfo.universe).child("users").once("value", function(usersSnapshot)
+								{
+									var users = usersSnapshot.val();
+									if( !!users )
+									{
+										var userCount = 0;
+										var usersKeys = Object.keys(users);
+										for( var i = 0; i < usersKeys.length; i++ )
+										{
+											var user = users[usersKeys[i]];
+											if( !!user.sessions )
+												userCount++;
+										}
+
+										//console.log(instanceInfo.title + " has " + userCount + " player(s).");
+										addServerRow(lobbyInfo.id, instanceInfo.title, userCount);
+/*
+										pleaseWaitElem.style.display = "none";
+
+										instanceContainerElem = document.createElement("div");
+										instanceContainerElem.className = "instanceContainer aaPrettyPanel";
+										instanceContainerElem.setAttribute("lobbyId", lobbyInfo.id);
+										instanceContainerElem.numUsers = userCount;
+										instanceContainerElem.addEventListener("click", function(e)
+										{
+											window.location = "live/" + this.getAttribute("lobbyId");
+										}.bind(instanceContainerElem), true);
+
+										var instanceTitleElem = document.createElement("div");
+										instanceTitleElem.className = "instanceTitle";
+
+										var instanceLiveImage = document.createElement("img");
+										instanceLiveImage.src = "live.gif";
+										instanceLiveImage.style.cssText = "height: 32px; vertical-align: middle; margin-right: 16px;";
+
+										var instanceTitleTextNode = document.createTextNode(instanceInfo.title);
+
+										var instanceNumPlayersElem = document.createElement("div");
+										instanceNumPlayersElem.className = "instanceNumPlayers";
+										if( userCount === 1 )
+											instanceNumPlayersElem.innerHTML = "(1 player)";
+										else
+											instanceNumPlayersElem.innerHTML = "(" + userCount + " players)";
+
+										instanceContainerElem.appendChild(instanceTitleElem);
+										instanceTitleElem.appendChild(instanceLiveImage);
+										instanceTitleElem.appendChild(instanceTitleTextNode);
+										instanceContainerElem.appendChild(instanceNumPlayersElem);
+										instanceListElem.appendChild(instanceContainerElem);
+*/
+									}
+								});
+							}
+						});
+					}
+				});
+			}
+
+			function lobbyRemoved(snapshot)
+			{
+			}
+
+			function initServersTab()
+			{
+				g_serversInitialized = true;
+
+				loadJavaScripts(["firebase.js"]).then(function()
+				{
+					var userId = aaapi.system.getConVarValue("aamp_client_id");
+
+					g_localUserIP = userId;
+					g_localUserHashedIP = generateCRC(g_localUserIP);
+
+					rootRef = new Firebase("https://metaverse.firebaseio.com/");
+					rootRef.child("lobbies").on("child_added", lobbyAdded);
+					rootRef.child("lobbies").on("child_removed", lobbyRemoved);
+				});
+
+			}
+
+			searchingForServersElem = document.querySelector("#searchingForServers");
+			earlyaccessElem = document.querySelector("#earlyaccess");
+			serversTable = document.querySelector("#serversTable");
+			worldContextContainer = document.querySelector("#worldContextContainer");
 		</script>
 	</body>
 </html>

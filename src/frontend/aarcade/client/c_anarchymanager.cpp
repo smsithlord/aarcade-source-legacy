@@ -902,7 +902,7 @@ void C_AnarchyManager::Update(float frametime)
 				m_pWebManager->Update();
 			*/
 
-			if (m_fNextToastExpiration > 0 && m_fNextToastExpiration <= engine->Time())
+			if (m_fNextToastExpiration > 0 && m_fNextToastExpiration <= engine->Time() || !m_pHoverTitlesConVar->GetBool() )
 				this->PopToast();
 
 			if (m_fHoverTitleExpiration > 0 && m_fHoverTitleExpiration <= engine->Time())
@@ -1179,6 +1179,16 @@ std::string C_AnarchyManager::ExtractRelativeAssetPath(std::string fullPath)
 		return fullPath;
 }
 
+void C_AnarchyManager::JoinLobby(std::string lobbyId)
+{
+	//std::string firstLetter = VarArgs("%c", lobbyId.at(0));
+	//if (!this->AlphabetSafe(firstLetter, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || !this->AlphabetSafe(lobbyId, "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+	//	return;
+
+	// just pop-out for now, and do security checks at the last possible moment (for the least chance of haxing)
+	this->Popout("lobby", lobbyId);
+}
+
 void C_AnarchyManager::PopToast()
 {
 	std::vector<KeyValues*> deadMessages;
@@ -1191,7 +1201,7 @@ void C_AnarchyManager::PopToast()
 	for (KeyValues *pMessageKV = m_pToastMessagesKV->GetFirstSubKey(); pMessageKV; pMessageKV = pMessageKV->GetNextKey())
 	{
 		fTesterTime = pMessageKV->GetFloat("end");
-		if (fTesterTime <= fCurrentTime)
+		if (fTesterTime <= fCurrentTime || !m_pHoverTitlesConVar->GetBool() )
 			deadMessages.push_back(pMessageKV);
 		else if (fNextBestExpirationTime == 0 || fTesterTime < fNextBestExpirationTime)
 			fNextBestExpirationTime = fTesterTime;
@@ -1816,7 +1826,7 @@ C_SteamBrowserInstance* C_AnarchyManager::AutoInspect(KeyValues* pItemKV, std::s
 
 	std::string uri = "file://";
 	uri += engine->GetGameDirectory();
-	uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
+	uri += "/resource/ui/html/autoInspectItem.html?imageflags=" + g_pAnarchyManager->GetAutoInspectImageFlags() + "&id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
 	//uri = "http://smsithlord.com/";
 	// FIXME: Need to allow HTTP redirection (302).
 	//DevMsg("Test URI is: %s\n", uri.c_str());	// FIXME: Might want to make the slashes in the game path go foward.
@@ -2849,7 +2859,7 @@ void C_AnarchyManager::RunAArcade()
 
 void C_AnarchyManager::HudStateNotify()
 {
-	DevMsg("HudStateNotify\n");
+	//DevMsg("HudStateNotify\n");
 	std::vector<std::string> params;
 
 	// isFullscreen
@@ -2998,7 +3008,7 @@ void C_AnarchyManager::ShowTaskMenu()
 	//{
 		C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
 		//pHudBrowserInstance->SetUrl(VarArgs("asset://ui/%s", this->GetTabMenuFile().c_str()));//taskMenu.html");
-		pHudBrowserInstance->SetUrl("asset://ui/welcome.html?tab=tasks");
+		pHudBrowserInstance->SetUrl("asset://ui/tabMenu.html");//?tab=tasks
 		m_pInputManager->ActivateInputMode(true, true);
 	//}
 }
@@ -3167,7 +3177,7 @@ void C_AnarchyManager::ShowScreenshotMenu()
 		g_pAnarchyManager->TaskRemember();
 
 	C_AwesomiumBrowserInstance* pHudBrowserInstance = m_pAwesomiumBrowserManager->FindAwesomiumBrowserInstance("hud");
-	pHudBrowserInstance->SetUrl("asset://ui/welcome.html?tab=screenshots");
+	pHudBrowserInstance->SetUrl("asset://ui/tabMenu.html?tab=screenshots");
 	m_pInputManager->ActivateInputMode(true, true);
 }
 
@@ -3258,6 +3268,34 @@ bool C_AnarchyManager::CompareLoadedFromKeyValuesFileId(const char* testId, cons
 		return false;
 }
 
+void C_AnarchyManager::Popout(std::string popoutId, std::string auxId)
+{
+	std::string goodUrl = "";
+	if (popoutId == "kodi")
+		goodUrl = "https://kodi.tv/";
+	else if (popoutId == "libretro")
+		goodUrl = "https://www.libretro.com/";
+	else if (popoutId == "steamworks")
+		goodUrl = "https://partner.steamgames.com/doc/api/ISteamHTMLSurface";
+	else if (popoutId == "awesomium")
+		goodUrl = "http://www.awesomium.com/";
+	else if (popoutId == "twitch")
+		goodUrl = "http://www.twitch.tv/";
+	else if (popoutId == "lobby")
+	{
+		std::string firstLetter = VarArgs("%c", auxId.at(0));
+		if (this->AlphabetSafe(firstLetter, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") && this->AlphabetSafe(auxId, "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+		{
+			goodUrl = "http://aarcade.tv/live/";
+			goodUrl += auxId;
+		}
+	}
+
+	if (goodUrl != "")
+		this->Acquire(goodUrl);
+		//steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage(goodUrl.c_str());
+}
+
 void C_AnarchyManager::Feedback(std::string type)
 {
 	std::string discussionsUrl = "http://steamcommunity.com/app/266430/discussions/5/";
@@ -3283,6 +3321,12 @@ void C_AnarchyManager::Feedback(std::string type)
 
 	if (goodUrl != "")
 		steamapicontext->SteamFriends()->ActivateGameOverlayToWebPage(goodUrl.c_str());
+}
+
+#include "baseviewport.h"
+void C_AnarchyManager::PlaySound(std::string file)
+{
+	vgui::surface()->PlaySound(file.c_str());
 }
 
 void C_AnarchyManager::HardPause()
@@ -4498,7 +4542,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 						active = g_pAnarchyManager->GetMetaverseManager()->GetActiveKeyValues(item);
 
 						/*
-						std::string uri = "asset://ui/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+						std::string uri = "asset://ui/autoInspectItem.html?mode=" + g_pAnarchyManager->GetAutoInspectMode() + "&id=" + encodeURIComponent(itemId) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
 						WebURL url = WebURL(WSLit(uri.c_str()));
 						*/
 
@@ -4530,7 +4574,7 @@ bool C_AnarchyManager::SelectEntity(C_BaseEntity* pEntity)
 						{
 							std::string uri = "file://";
 							uri += engine->GetGameDirectory();
-							uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(active->GetString("title")) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
+							uri += "/resource/ui/html/autoInspectItem.html?imageflags=" + g_pAnarchyManager->GetAutoInspectImageFlags() + "&id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(active->GetString("title")) + "&screen=" + encodeURIComponent(active->GetString("screen")) + "&marquee=" + encodeURIComponent(active->GetString("marquee")) + "&preview=" + encodeURIComponent(active->GetString("preview")) + "&reference=" + encodeURIComponent(active->GetString("reference")) + "&file=" + encodeURIComponent(active->GetString("file"));
 							//uri = "http://smsithlord.com/";
 							// FIXME: Might want to make the slashes in the game path go foward.  Also, need to allow HTTP redirection (302).
 							//DevMsg("Test URI is: %s\n", uri.c_str());
@@ -4653,6 +4697,12 @@ void C_AnarchyManager::RemoveLastHoverGlowEffect()
 		engine->ServerCmd(VarArgs("removehovergloweffect %i", m_pHoverGlowEntity->entindex()), false);
 		m_pHoverGlowEntity = null;
 	}
+}
+
+std::string C_AnarchyManager::GetAutoInspectImageFlags()
+{
+	std::string flags = cvar->FindVar("autoinspect_image_flags")->GetString();
+	return flags;
 }
 
 void C_AnarchyManager::AddGlowEffect(C_BaseEntity* pEntity)
@@ -5089,7 +5139,7 @@ void C_AnarchyManager::ManagePanoshot()
 						g_pFullFileSystem->RemoveFile(VarArgs("screenshots/%s", panoshots[i].c_str()), "DEFAULT_WRITE_PATH");
 
 						// restore previous settings
-						engine->ClientCmd(VarArgs("cl_drawhud %s; r_drawviewmodel %s; cl_hovertitles %s; cl_toastmsgs %s; developer %s;", m_pPanoStuff->hud.c_str(), m_pPanoStuff->weapons.c_str(), m_pPanoStuff->titles.c_str(), m_pPanoStuff->toast.c_str(), m_pPanoStuff->developer.c_str()));
+						engine->ClientCmd(VarArgs("cl_drawhud %s; r_drawviewmodel %s; cl_hovertitles %s; cl_toastmsgs %s; developer %s; mat_hdr_level %s; mat_autoexposure_max %s; mat_autoexposure_min %s;", m_pPanoStuff->hud.c_str(), m_pPanoStuff->weapons.c_str(), m_pPanoStuff->titles.c_str(), m_pPanoStuff->toast.c_str(), m_pPanoStuff->developer.c_str(), m_pPanoStuff->hdrlevel.c_str(), m_pPanoStuff->exposuremax.c_str(), m_pPanoStuff->exposuremin.c_str()));
 					}
 				}
 
@@ -5130,8 +5180,11 @@ void C_AnarchyManager::Panoshot()
 	m_pPanoStuff->titles = cvar->FindVar("cl_hovertitles")->GetString();
 	m_pPanoStuff->toast = cvar->FindVar("cl_toastmsgs")->GetString();
 	m_pPanoStuff->developer = cvar->FindVar("developer")->GetString();
+	m_pPanoStuff->hdrlevel = cvar->FindVar("mat_hdr_level")->GetString();
+	m_pPanoStuff->exposuremax = cvar->FindVar("mat_autoexposure_max")->GetString();
+	m_pPanoStuff->exposuremin = cvar->FindVar("mat_autoexposure_min")->GetString();
 
-	engine->ExecuteClientCmd("cl_drawhud 0; r_drawviewmodel 0; cl_hovertitles 0; cl_toastmsgs 0; developer 0; jpeg_quality 97; fov 106;");
+	engine->ExecuteClientCmd("firstperson; cl_drawhud 0; r_drawviewmodel 0; cl_hovertitles 0; cl_toastmsgs 0; developer 0; jpeg_quality 97; fov 106;");
 	m_panoshotState = PANO_ORIENT_SHOT_0;
 }
 
@@ -5702,10 +5755,15 @@ void C_AnarchyManager::SetNextLoadInfo(std::string instanceId, std::string posit
 
 std::string C_AnarchyManager::GetHomeURL()
 {
-	std::string uri = "file://";
-	uri += engine->GetGameDirectory();
-	//uri += "/resource/ui/html/autoInspectItem.html?id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
-	uri += "/resource/ui/html/anarchyPortal.html";
+	std::string uri = cvar->FindVar("web_home")->GetString();
+	if (uri == "" || (uri.find("http:") != 0 && uri.find("https:") != 0 && uri.find("HTTP:") != 0 && uri.find("HTTPS:") != 0))
+	{
+		uri = "file://";
+		uri += engine->GetGameDirectory();
+		//uri += "/resource/ui/html/autoInspectItem.html?mode=" + g_pAnarchyManager->GetAutoInspectMode() + "&id=" + encodeURIComponent(itemId) + "&title=" + encodeURIComponent(pItemKV->GetString("title")) + "&screen=" + encodeURIComponent(pItemKV->GetString("screen")) + "&marquee=" + encodeURIComponent(pItemKV->GetString("marquee")) + "&preview=" + encodeURIComponent(pItemKV->GetString("preview")) + "&reference=" + encodeURIComponent(pItemKV->GetString("reference")) + "&file=" + encodeURIComponent(pItemKV->GetString("file"));
+		uri += "/resource/ui/html/anarchyPortal.html";
+	}
+
 	return uri;
 }
 

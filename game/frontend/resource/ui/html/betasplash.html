@@ -7,7 +7,7 @@
 			var autoLoadMapVal = aaapi.system.getConVarValue("auto_load_map");
 			var lastMapLoadedVal = aaapi.system.getConVarValue("last_map_loaded");
 			//console.log("Test val: " + (autoLoadMapVal == "1"));
-			if( autoLoadMapVal == "1" && lastMapLoadedVal == "1" )
+			if( autoLoadMapVal == "1" && lastMapLoadedVal == "1" && !aaapi.system.isInGame() )
 			{
 				// get the current mapHistory (or create an empty mapHistory)
 				var mapHistory = (localStorage.getItem("mapHistory")) ? JSON.parse(localStorage.getItem("mapHistory")) : {};
@@ -56,6 +56,23 @@
 				/*border: 2px solid rgba(255, 0, 0, 0.5);*/
 				border-radius: 10px;
 			}
+
+			.aaCheckbox
+			{
+				-webkit-appearance: none;
+				width: 38px;
+				height: 38px;
+				border-width: 2px;
+				border-style: solid;
+				border-radius: 4px;
+			}
+
+			.aaCheckbox:checked
+			{
+				background-image: url('checkicon.png');
+				background-repeat: no-repeat;
+				background-position: center center;
+			}
 /*
 			#briefing::-webkit-scrollbar
 			{
@@ -92,71 +109,368 @@
 		<div style="display: inline-block;">
 
 		<script>
-			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Early Access", "width: 600px;", false, true, "", "window.location='asset://ui/welcome.html';");
+			var windowHeaderHTML = arcadeHud.generateWindowHeaderHTML("Tutorial", "width: 850px;", true, true, "", "aaapi.system.consoleCommand('stopsound'); window.location='asset://ui/welcome.html';");
 			document.write(windowHeaderHTML);
 		</script>
 
-		<div class="aaWindowPaneContent aaWindowPaneContentScrollable aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;">
+		<script>
+			var windowTabsHeaderHTML = arcadeHud.generateWindowTabsHeaderHTML({
+				"tabs": [
+					{
+						"id": "intro",
+						"title": "Intro"
+					},
+					{
+						"id": "instructions",
+						"title": "How To Play"
+					},
+					{
+						"id": "windows",
+						"title": "Windows"
+					},
+					{
+						"id": "shortcuts",
+						"title": "Shortcuts"
+					},
+					{
+						"id": "library",
+						"title": "Library"
+					},
+					{
+						"id": "realtime",
+						"title": "Realtime"
+					},
+					{
+						"id": "early",
+						"title": "Early Access"
+					}
+				],
+				"onChangeCallbackName": "onChangeCallback"
+			});
+			document.write(windowTabsHeaderHTML);
+
+			var lines = {
+				"handle": undefined,
+				"intro":
+				{
+					"file": "hudvocals/introtab.mp3",
+					"duration": 18.0//,
+					//"played": undefined
+				},
+				"how to play":
+				{
+					"file": "hudvocals/howtotab.mp3",
+					"duration": 22.0//,
+					//"played": undefined
+				},
+				"windows":
+				{
+					"file": "hudvocals/windowstab.mp3",
+					"duration": 17.0//,
+					//"played": undefined
+				},
+				"shortcuts":
+				{
+					"file": "hudvocals/shortcutstab.mp3",
+					"duration": 13.0//,
+					//"played": undefined
+				},
+				"library":
+				{
+					"file": "hudvocals/librarytab.mp3",
+					"duration": 13.0//,
+					//"played": undefined
+				},
+				"realtime":
+				{
+					"file": "hudvocals/realtimetab.mp3",
+					"duration": 22.5//,
+					//"played": undefined
+				},
+				"early access":
+				{
+					"file": "hudvocals/earlyaccesstab.mp3",
+					"duration": 0//,
+					//"played": undefined
+				}
+			};
+
+			function onChangeCallback()
+			{
+				var aaTabs = document.querySelectorAll(".aaTab");
+				var aaActiveTab = document.querySelector(".aaTabActive");
+
+				var wasAdjusted = false;
+				for( var i = 0; i < aaTabs.length; i++ )
+				{
+					if( aaTabs[i] === aaActiveTab && i === aaTabs.length-1 )
+					{
+						document.querySelector("#nextButton").value = "OK";
+						wasAdjusted = true;
+					}
+				}
+
+				if( !wasAdjusted )
+					document.querySelector("#nextButton").value = "Next";
+
+				if( document.querySelector("#speakBox").checked )
+					speak();
+
+				//var lines = "Anarchy Arcade is a 3D version of your regular desktop wallpaper!";
+				//responsiveVoice.speak(lines);
+				//aaapi.system.speak(lines);
+			}
+
+			function unspeak()
+			{
+				var needsMute = false;
+				for( x in lines )
+				{
+					if( x === "handle" )
+						continue;
+
+					if( !!lines[x].handle )
+					{
+						clearTimeout(lines[x].handle);
+						needsMute = true;
+					}
+
+					delete lines[x].handle;
+					//delete lines[x].played;
+				}
+
+				if( needsMute )
+					aaapi.system.consoleCommand("stopsound");
+			}
+
+			function speak()
+			{
+				var needsMute = false;
+				for( x in lines )
+				{
+					if( x === "handle" )
+						continue;
+
+					if( !!lines[x].handle )
+					{
+						needsMute = true;
+						break;
+					}
+				}
+
+				if( needsMute )
+					unspeak();
+					//aaapi.system.consoleCommand("stopsound");
+
+				setTimeout(function()
+				{
+					var speakBoxElem = document.querySelector("#speakBox");
+					if( !speakBoxElem.checked )
+						speakBoxElem.checked = true;
+
+					var aaActiveTab = document.querySelector(".aaTabActive");
+					var line = lines[aaActiveTab.innerText.toLowerCase()];
+
+
+
+					if( !!line && !!!line.handle )
+					{
+						aaapi.system.playSound(line.file);
+
+						if( line.duration > 0 )
+						{
+							line.handle = setTimeout(function()
+							{
+								this.handle = undefined;
+
+								var speakBoxElem = document.querySelector("#speakBox");
+								if( speakBoxElem.checked )
+									nextClicked();
+							}.bind(line), line.duration * 1000.0);
+						}
+						else
+							line.handle = setTimeout(function()
+							{
+								// do nothing.
+							}.bind(line), line.duration * 1000.0);
+							//line.handle = undefined;
+					}
+				}, 100);
+			}
+
+			function speakChecked(elem)
+			{
+				var val = (elem.checked) ? "yes" : "no";
+				localStorage.setItem("shouldSpeak", val);
+
+				if( elem.checked )
+					speak();
+				else
+					unspeak();
+			}
+			// aaWindowPaneContentScrollable
+		</script>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="early">
 			<table style="margin-left: 0; margin-right: 0;">
 				<tr>
 					<td>
 						<img src="wip.png" style="width: 150px;" />
 					</td>
 					<td>
-						<div class="aaTextSizeFontSize aaTitleText aaThemeColorOneColor" style="white-space: normal;">Here are notes on features I'm currently working on improving.<br /><br />Thank you for having patience.</div>
+						<div class="aaTitleTextSizeFontSize aaTextColorTwoColor" style="font-family: Arial; white-space: normal;">The following important features are still under construction. Thank you for having patience.</div>
 					</td>
 				</tr>
 			</table>
 			<hr size="0" style="border-top: 1px dashed #8c8b8b;" />
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Display Resolution</div>
-			<div style='font-family: Arial; text-align: justify;'>
-				Internal resolution is locked to 16:9 for now & will SCALE to what ever your AArcade resolution is.  You should only change your resolution from AArcade's launcher.
+			<div class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+				<ul>
+					<li>Display Resolution
+						<div style="font-size: 14px; padding-bottom: 10px; padding-left: 10px; font-weight: bold; font-family: Arial;">Must be set from the LAUNCHER's Configuration menu. UI resolution stretched from 16:9.</div></li>
+					<li>Source Engine'ception
+						<div style="font-size: 14px; padding-bottom: 10px; padding-left: 10px; font-weight: bold; font-family: Arial;">You can't launch other Source engine games yet, like TF2, L4D, CSGO, etc.</div></li>
+					<li>Steam Workshop
+						<div style="font-size: 14px; padding-bottom: 10px; padding-left: 10px; font-weight: bold; font-family: Arial;">Limited workshop support. You have to restart AArcade to detect new subscriptions.</div></li>
+					<li>Multiplayer
+						<div style="font-size: 14px; padding-bottom: 10px; padding-left: 10px; font-weight: bold; font-family: Arial;">Limited multiplayer support. Only web users can join your sessions right now.</div></li>
+				</ul>
 			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Steam Games</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				You can go to Addons > Import Games & Content to get all of your games into your library.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Multiplayer</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Redux has no multiplayer mode yet.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Pause Mode</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Redux only has an improved "minimal" pause mode when you launch shortcuts. It cannot dump system resources & "hard pause" yet.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Source Engine Games</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Redux will automatically mount any compatible Source engine games that you have installed.  However, Redux is not able to launch other Source engine games yet.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Steam Workshop</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Your current workshop subscriptions ARE compatible with Redux. AArcade should be CLOSED when you subscribe to workshop items. Also, you can't publish new workshop items from Redux yet.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Open-With Apps & Libretro</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Apps cannot be configured yet, so you won't be able to setup your emulators to launch.  Libretro support is also limited until there is a way to configure apps.  Local video files DO currently work though.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Import Library</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				You can go to Options > Manage Library > Import Legacy Content if you are an old-school AArcade user and want to use all your old stuff in Redux.
-			</div>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">VR Mode</div>
-			<div style='font-weight: bold; font-family: Arial; margin-left: 25px; margin-right: 25px; margin-bottom: 25px; text-align: justify'>
-				Redux does not have VR support yet.  It will receive preliminary VR support thanks to the Marulu Source 1 VR Fix.  This should happen within a couple months.
-			</div>
-			<br /><br />
-			<center>
-			<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">THANKS FOR PLAYING!</div>
-			<center>
-			<br />
-
 		</div>
 
-		<input type="button" class="aaButton aaBigButton aaTitleTextSizeFontSize aaThemeColorTwoHoverShadedBackground aaTextColorTwoColor aaThemeColorTwoLowBorderColor helpNote" value="OK" onclick="window.location='asset://ui/welcome.html';" help="Welcome to Anarchy Arcade!" />
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="intro">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					Anarchy Arcade is a 3D version of your regular desktop wallpaper! It makes using your PC more fun, without getting in the way. 
+				</div>
+				<br />
+				<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">The Basics</div>
+				<div class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor" style="font-family: Arial;"><li>Your wallpaper is a 3D world.</li><li>Your shortcuts are arcade cabinets.</li><li>You're still using Windows, as always!</li></div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="instructions">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					Since Anarchy Arcade is your wallpaper, you only see it between actually playing games & doing other stuff. It is chill & casual. It's not the boss of you.
+				</div>
+				<br />
+				<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Build Your Arcade</div>
+				<div class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					<li>Load a map to use as your 3D desktop.</li>
+					<li>Place your shortcuts as arcade cabinets.</li>
+					<li>Launch your shortcuts & play your games!</li>
+				</div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="windows">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					Anarchy Arcade is just your 3D wallpaper. You aren't trapped inside of it. Remember to use Windows, just like normal! 
+				</div>
+				<br />
+				<div class="aaTitleText aaTitleTextSizeFontSize aaTitleSizeFontSize aaThemeColorOneColor">Useful Buttons</div>
+				<div class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor" style="font-family: Arial;">
+					<li><b>ALT+Tab</b> lets you switch between apps.</li>
+					<li><b>Windows key</b> lets you access your start menu & task bar.</li>
+					<li><b>CTRL+C</b> / <b>CTRL+V</b> to copy and paste text.</li>
+				</div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="shortcuts">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					You can spawn <b>shortcuts</b> to any Steam game, any local file, or any website.<br />
+					<br />
+					At first, they'll just look like icons. You customize them with images & videos to make them look how you want.
+				</div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="library">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					When you spawn a shortcut & customize how it looks, your customizations are saved into your <b>library</b>.<br />
+					<br />
+					The <b>Library Browser</b> lets you easily spawn the shortcut again, and it will look just like it did the last time.
+				</div>
+			</div>
+		</div>
+
+		<div class="aaTabContent aaScrollBars aaThemeColorTwoHighBackgroundColor aaThemeColorTwoLowBorderColor aaTextSizeFontSize aaTextColorTwoColor" style="max-height: 600px;" tabid="realtime">
+			<div style="padding: 10px;">
+				<div style='font-family: Arial;' class="aaTitleTextSizeFontSize aaTitleSizeFontSize aaTextColorTwoColor">
+					Just as it takes time for your desktop to get cluttered with shortcuts, it also takes time for your arcades to get built.<br />
+					<br />
+					Casually spawn shortcuts, <i>as you launch them</i>, over days, weeks, or months.<br />
+					<br />
+					When your arcade gets full, <b>then</b> it's time to move on to a fresh new map.<br />
+					<br />Anarchy Arcade is <b>your</b> world between worlds! Have fun!
+				</div>
+			</div>
+		</div>
 
 		<script>
+			var windowTabsFooterHTML = arcadeHud.generateWindowTabsFooterHTML();
+			document.write(windowTabsFooterHTML);
+		</script>
+
+		<input id="nextButton" type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Next" onclick="nextClicked();" help="Welcome to Anarchy Arcade!" style="float: right; margin-top: 6px; padding-left: 24px; padding-right: 24px;" />
+		
+		<table style="float: left;" cellspacing="0" cellpadding="0">
+			<tr valign="bottom">
+				<td>
+					<input id="speakBox" onchange="speakChecked(this);" type="checkbox" class="aaThemeColorOneInverseShadedBorderColor aaThemeColorOneHoverBackgroundColor aaCheckbox" checked />
+				</td>
+				<td>
+					<input id="speakButton" type="button" class="aaButton aaTitleTextSizeFontSize aaThemeColorOneHoverShadedBackground aaTextColorOneColor aaThemeColorOneLowBorderColor" value="Speak" onclick="speak();" help="Welcome to Anarchy Arcade!" style=" margin-top: 6px; padding-left: 24px; padding-right: 24px;" />
+				</td>
+			</tr>
+		</table>
+
+		<script>
+			var shouldSpeak = localStorage.getItem("shouldSpeak");
+			if( !!shouldSpeak )
+				document.querySelector("#speakBox").checked = (shouldSpeak === "yes");
+
 			var windowFooterHTML = arcadeHud.generateWindowFooterHTML();
 			document.write(windowFooterHTML);
+
+			var nextButtonElem = document.querySelector("#nextButton");
+			function nextClicked()
+			{
+				if( nextButtonElem.value === "Next" )
+				{
+					var aaTabs = document.querySelectorAll(".aaTab");
+					var aaActiveTab = document.querySelector(".aaTabActive");
+					var wasUsed = false;
+					var useNext = false;
+					for( var i = 0; i < aaTabs.length; i++ )
+					{
+						if( useNext)
+						{
+							arcadeHud.activateMenuTab(aaTabs[i]);
+							wasUsed = true;
+
+							if( i === aaTabs.length-1)
+								nextButtonElem.value = "OK";
+							break;
+						}
+						else if( aaTabs[i] === aaActiveTab )
+							useNext = true;
+					}
+
+					if( !wasUsed )
+						arcadeHud.activateMenuTab(aaTabs[0]);
+				}
+				else
+				{
+					localStorage.setItem("tutorial_nag", 0);
+					aaapi.system.consoleCommand("stopsound");
+					window.location='asset://ui/welcome.html';
+				}
+			}
 		</script>
 
 		</div>

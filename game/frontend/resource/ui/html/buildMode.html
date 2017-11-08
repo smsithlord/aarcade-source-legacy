@@ -3,6 +3,14 @@
 		<link rel="stylesheet" type="text/css" href="hud.css"></link>
 		<script src="hud.js"></script>
 		<script>
+			var g_hiddenItems = localStorage.getItem("hiddenItems");
+			if( !!g_hiddenItems )
+				g_hiddenItems = JSON.parse(g_hiddenItems);
+			else
+				g_hiddenItems = {};
+		</script>
+		
+		<script>
 
 			var originalItemId = arcadeHud.getParameterByName("itemId");
 			if( !!!originalItemId )
@@ -1044,7 +1052,7 @@
 					var max = 999;	// FIXME: arbitraty limit!!!!  Also, should get these async, not all at once.
 					while( response.success && count < max )
 					{
-						if( category !== "models" || entry.dynamic !== "1")
+						if( (category !== "models" || entry.dynamic !== "1") && !!!g_hiddenItems[entry.info.id] )
 							entries.push(entry);
 
 						if( method === "get" )

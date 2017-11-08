@@ -314,6 +314,13 @@ void C_AwesomiumBrowserManager::PrepareWebView(Awesomium::WebView* pWebView, std
 	}
 }
 
+
+void C_AwesomiumBrowserManager::ClearCache()
+{
+	m_pWebSession->ClearCache();
+	m_pWebSession->ClearCookies();
+}
+
 void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 {
 	DevMsg("Adding AAAPI...\n");
@@ -374,14 +381,17 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("getLibretroOptions"), true);
 	systemObject.SetCustomMethod(WSLit("spawnNearestObject"), false);
 	systemObject.SetCustomMethod(WSLit("setNearestObjectDist"), true);
+	systemObject.SetCustomMethod(WSLit("isInGame"), true);
 	systemObject.SetCustomMethod(WSLit("fileBrowse"), false);
 	systemObject.SetCustomMethod(WSLit("metaSearch"), false);
 	systemObject.SetCustomMethod(WSLit("getDOM"), false);
+	systemObject.SetCustomMethod(WSLit("clearAwesomiumCache"), false);
 	systemObject.SetCustomMethod(WSLit("disconnect"), false);
 	systemObject.SetCustomMethod(WSLit("viewStream"), false);
 	systemObject.SetCustomMethod(WSLit("autoInspect"), false);
 	systemObject.SetCustomMethod(WSLit("viewPreview"), false);
 	systemObject.SetCustomMethod(WSLit("runLibretro"), false);
+	systemObject.SetCustomMethod(WSLit("popout"), false);
 	systemObject.SetCustomMethod(WSLit("cabinetSelected"), false);
 	systemObject.SetCustomMethod(WSLit("modelSelected"), false);
 	systemObject.SetCustomMethod(WSLit("objectHover"), false);
@@ -410,6 +420,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("goForward"), false);
 	systemObject.SetCustomMethod(WSLit("reload"), false);
 	systemObject.SetCustomMethod(WSLit("goHome"), false);
+	systemObject.SetCustomMethod(WSLit("playSound"), false);
 	systemObject.SetCustomMethod(WSLit("libretroPause"), false);
 	systemObject.SetCustomMethod(WSLit("libretroReset"), false);
 	systemObject.SetCustomMethod(WSLit("libretroSetOverlay"), false);
@@ -444,6 +455,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	systemObject.SetCustomMethod(WSLit("consoleCommand"), false);
 	systemObject.SetCustomMethod(WSLit("specialReady"), false);
 	systemObject.SetCustomMethod(WSLit("selectTaskObject"), false);
+	systemObject.SetCustomMethod(WSLit("alphabetSafe"), true);
 	systemObject.SetCustomMethod(WSLit("getConVarValue"), true);
 	systemObject.SetCustomMethod(WSLit("getAllMounts"), true);
 	systemObject.SetCustomMethod(WSLit("getMount"), true);
@@ -546,6 +558,7 @@ void C_AwesomiumBrowserManager::CreateAaApi(WebView* pWebView)
 	networkObject.SetCustomMethod(WSLit("disconnected"), false);
 	networkObject.SetCustomMethod(WSLit("networkEvent"), false);
 	networkObject.SetCustomMethod(WSLit("followPlayer"), false);
+	networkObject.SetCustomMethod(WSLit("joinLobby"), false);
 	networkObject.SetCustomMethod(WSLit("banPlayer"), false);
 	networkObject.SetCustomMethod(WSLit("syncPano"), false);
 	networkObject.SetCustomMethod(WSLit("unbanPlayer"), false);
